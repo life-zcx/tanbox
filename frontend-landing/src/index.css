@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #ffffff;
+    color: #000000;
+    font-family: 'Plus Jakarta Sans', 'Manrope', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: 'Montserrat', 'Manrope', sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Custom crisp slider track for price calculator */
+input[type=range] {
+  accent-color: #000000;
+}

@@ -1,0 +1,104 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: tanbox_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tanbox_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tanbox_pass_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-tanbox_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tanbox_user} -d ${POSTGRES_DB:-tanbox_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: tanbox_backend
+    restart: always
+    ports:
+      - "5050:5050"
+    environment:
+      PORT: ${PORT:-5050}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://tanbox_user:tanbox_pass_2026@postgres:5432/tanbox_db?schema=public}
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: ${NODE_ENV:-development}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend-landing:
+    build:
+      context: ./frontend-landing
+      dockerfile: Dockerfile.dev
+    container_name: tanbox_frontend_landing
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=/api
+    volumes:
+      - ./frontend-landing:/app
+      - /app/node_modules
+
+  frontend-lk:
+    build:
+      context: .
+      dockerfile: ./frontend-lk/Dockerfile.dev
+    container_name: tanbox_frontend_lk
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - VITE_API_URL=/api
+    volumes:
+      - ./frontend-lk:/app
+      - ./shared:/shared
+      - /app/node_modules
+
+  frontend-admin:
+    build:
+      context: .
+      dockerfile: ./frontend-admin/Dockerfile.dev
+    container_name: tanbox_frontend_admin
+    restart: always
+    ports:
+      - "3002:3002"
+    environment:
+      - VITE_API_URL=/api
+    volumes:
+      - ./frontend-admin:/app
+      - ./shared:/shared
+      - /app/node_modules
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: tanbox_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend-landing
+      - frontend-lk
+      - frontend-admin
+      - backend
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

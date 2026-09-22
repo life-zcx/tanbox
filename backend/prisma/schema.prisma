@@ -1,0 +1,85 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  ADMIN
+}
+
+enum OrderCategory {
+  SHOES
+  TEXTILE
+  MEDICINE
+  WATER
+  TOBACCO
+  OTHER
+}
+
+enum TariffType {
+  DIGITAL
+  PRINT
+  STANDARD
+  PRO
+}
+
+enum OrderStatus {
+  NEW
+  PROCESSING
+  PRINTING
+  STICKERING
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  companyName String
+  binIin      String
+  phone       String
+  role        Role     @default(CLIENT)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders      Order[]
+}
+
+model Order {
+  id             String        @id @default(uuid())
+  orderNumber    String        @unique
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category       OrderCategory
+  tariffType     TariffType
+  itemsCount     Int
+  pricePerItem   Float
+  totalPrice     Float
+  status         OrderStatus   @default(NEW)
+  extraServices  String[]      @default([])
+  ssccNeeded     Boolean       @default(false)
+  pdfUrl         String?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Tariff {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String
+  fitFor      String
+  priceMin    Float
+  priceMax    Float
+  marginEst   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

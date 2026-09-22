@@ -1,0 +1,14 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY frontend-lk/package*.json ./
+
+RUN npm install
+
+COPY frontend-lk/ .
+COPY shared/ /shared
+
+EXPOSE 3001
+
+CMD ["npm", "run", "dev"]
