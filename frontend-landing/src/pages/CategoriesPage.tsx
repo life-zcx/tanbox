@@ -254,12 +254,12 @@ export const CategoriesPage: React.FC = () => {
     <div className="space-y-10 pb-16">
       
       {/* Header Banner */}
-      <section className="bg-black text-white py-8 sm:py-12 relative overflow-hidden">
+      <section className="bg-gray-50/80 border-b border-gray-200 py-8 sm:py-12 relative overflow-hidden">
         <div className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16 space-y-4 text-center">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight max-w-4xl mx-auto">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-black tracking-tight leading-tight max-w-4xl mx-auto">
             Реестр подлежащих маркировке <br className="hidden sm:block" /> товаров в Казахстане
           </h1>
-          <p className="text-base text-gray-300 max-w-3xl mx-auto font-normal">
+          <p className="text-base text-gray-600 max-w-3xl mx-auto font-normal">
             Полный перечень действующей обязательной маркировки и календарный график введения новых групп товаров согласно законодательству РК (DataMatrix GS1).
           </p>
         </div>

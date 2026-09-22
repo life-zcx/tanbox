@@ -144,13 +144,8 @@ export const CategoriesSection: React.FC = () => {
                       <IconComponent className="w-5 h-5" />
                     </div>
 
-                    <span
-                      className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
-                        cat.isUpcoming
-                          ? 'bg-gray-100 text-gray-700 border-gray-200'
-                          : 'bg-[#E6F4F9] text-[#00739B] border-[#0088B6]/30'
-                      }`}
-                    >
+                    <span className="text-[11px] font-semibold text-gray-600 flex items-center gap-1.5">
+                      <span className={`w-1.5 h-1.5 rounded-full ${cat.isUpcoming ? 'bg-[#0088B6]' : 'bg-emerald-500'}`} />
                       {cat.badge}
                     </span>
                   </div>

@@ -67,50 +67,43 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
     <div className="bg-white pb-20">
       
       {/* Top Banner / Hero */}
-      <section className="bg-black text-white py-10 sm:py-14 relative overflow-hidden">
+      <section className="bg-gray-50/80 border-b border-gray-200 py-8 sm:py-12 relative overflow-hidden">
         <div className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16 space-y-6">
           
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
-            <Link to="/" className="hover:text-white transition-colors">Главная</Link>
+          <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+            <Link to="/" className="hover:text-black transition-colors">Главная</Link>
             <span>/</span>
-            <Link to="/categories" className="hover:text-white transition-colors">Категории товаров</Link>
+            <Link to="/categories" className="hover:text-black transition-colors">Категории товаров</Link>
             <span>/</span>
             <span className="text-[#0088B6] font-bold">{category.shortTitle}</span>
           </div>
 
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pt-2">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pt-1">
             
             <div className="space-y-4 max-w-4xl">
               
-              <div className="flex items-center gap-3 flex-wrap">
-                <span
-                  className={`text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider ${
-                    isActive ? 'bg-emerald-500 text-white' : 'bg-[#0088B6] text-white font-extrabold'
-                  }`}
-                >
+              <div className="flex items-center gap-3 text-xs font-semibold text-gray-600 flex-wrap">
+                <span className="inline-flex items-center gap-2 text-black font-bold">
+                  <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0088B6]'}`} />
                   {isActive ? 'Обязательная маркировка' : 'Внедрение 2026–2027'}
                 </span>
-
-                <span className="text-xs font-mono font-bold bg-gray-800 text-gray-200 px-3 py-1 rounded-lg">
-                  ТН ВЭД: {category.tnved}
-                </span>
-
-                <span className="text-xs font-bold text-gray-300 bg-gray-800/80 px-3 py-1 rounded-lg">
-                  {category.dateFull}
-                </span>
+                <span className="text-gray-300">•</span>
+                <span>ТН ВЭД: <strong className="text-black font-mono font-bold">{category.tnved}</strong></span>
+                <span className="text-gray-300">•</span>
+                <span>{category.dateFull}</span>
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-[#0088B6] text-white flex items-center justify-center shrink-0 shadow-lg">
+                <div className="w-14 h-14 rounded-2xl bg-[#0088B6] text-white flex items-center justify-center shrink-0 shadow-md">
                   <IconComponent className="w-7 h-7" />
                 </div>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-black tracking-tight leading-tight">
                   {category.title}
                 </h1>
               </div>
 
-              <p className="text-base sm:text-lg text-gray-300 leading-relaxed font-normal pt-1">
+              <p className="text-base sm:text-lg text-gray-600 leading-relaxed font-normal pt-1">
                 {category.fullDesc}
               </p>
 
@@ -120,7 +113,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
             <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-3">
               <Link
                 to={`/calculator?category=${category.calcCategoryCode || 'OTHER'}`}
-                className="inline-flex items-center justify-center gap-2 bg-[#0088B6] text-white font-extrabold text-sm px-7 py-4 rounded-xl hover:bg-[#00739B] transition-all active:scale-95 shadow-xl"
+                className="inline-flex items-center justify-center gap-2 bg-[#0088B6] text-white font-extrabold text-sm px-7 py-4 rounded-xl hover:bg-[#00739B] transition-all active:scale-95 shadow-md"
               >
                 <Calculator className="w-4 h-4" />
                 Рассчитать стоимость
