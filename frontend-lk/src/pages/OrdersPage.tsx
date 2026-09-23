@@ -37,18 +37,18 @@ export const OrdersPage: React.FC = () => {
       />
 
       {/* Filter Bar */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
+      <div className="bg-white border border-gray-100 rounded-3xl p-5 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
         
         {/* Status Dropdown Filter */}
         <div className="relative w-full md:w-64">
-          <div className="absolute left-3 top-2.5 pointer-events-none text-gray-400 flex items-center gap-1.5 text-xs font-bold">
-            <Filter className="w-3.5 h-3.5 text-gray-500" />
-            <span className="text-gray-400">Статус:</span>
+          <div className="absolute left-3.5 top-3 pointer-events-none text-[#64748B] flex items-center gap-1.5 text-xs font-bold">
+            <Filter className="w-3.5 h-3.5 text-[#0082FB]" />
+            <span className="text-[#64748B]">Статус:</span>
           </div>
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full bg-gray-50 border border-gray-300 rounded-xl pl-20 pr-8 py-2 text-xs font-extrabold text-black focus:outline-none focus:border-black appearance-none cursor-pointer"
+            className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-20 pr-8 py-2.5 text-xs font-bold text-[#111827] focus:outline-none focus:border-[#0082FB] appearance-none cursor-pointer"
           >
             {Object.entries(STATUS_LABELS).map(([val, label]) => (
               <option key={val} value={val}>
@@ -56,64 +56,64 @@ export const OrdersPage: React.FC = () => {
               </option>
             ))}
           </select>
-          <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2.5 top-2.5 pointer-events-none" />
+          <ChevronDown className="w-4 h-4 text-[#64748B] absolute right-3 top-3 pointer-events-none" />
         </div>
 
         {/* Search Input */}
         <div className="relative w-full md:w-64">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+          <Search className="w-4 h-4 text-[#64748B] absolute left-3.5 top-3.5" />
           <input
             type="text"
             placeholder="Поиск по номеру заказа..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold focus:outline-none focus:border-black"
+            className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-10 pr-3 py-2.5 text-xs font-medium focus:outline-none focus:border-[#0082FB]"
           />
         </div>
 
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
         {loading ? (
-          <div className="text-center py-12 text-gray-400 text-sm">Загрузка данных...</div>
+          <div className="text-center py-12 text-[#64748B] text-sm">Загрузка данных...</div>
         ) : filteredOrders.length === 0 ? (
-          <div className="text-center py-12 text-gray-400 text-sm">Заказы не найдены.</div>
+          <div className="text-center py-12 text-[#64748B] text-sm font-normal">Заказы не найдены.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-xs font-extrabold text-gray-500 uppercase tracking-wider">
-                  <th className="py-3.5 px-4">№ Заказа</th>
-                  <th className="py-3.5 px-4">Дата</th>
-                  <th className="py-3.5 px-4">Категория</th>
-                  <th className="py-3.5 px-4">Тариф</th>
-                  <th className="py-3.5 px-4">Объем (шт)</th>
-                  <th className="py-3.5 px-4">Стоимость (₸)</th>
-                  <th className="py-3.5 px-4">Статус</th>
-                  <th className="py-3.5 px-4 text-right">Действие</th>
+                <tr className="bg-[#F4F6F9]/60 border-b border-gray-100 text-xs font-extrabold text-[#64748B] uppercase tracking-wider">
+                  <th className="py-4 px-5">№ Заказа</th>
+                  <th className="py-4 px-5">Дата</th>
+                  <th className="py-4 px-5">Категория</th>
+                  <th className="py-4 px-5">Тариф</th>
+                  <th className="py-4 px-5">Объем (шт)</th>
+                  <th className="py-4 px-5">Стоимость (₸)</th>
+                  <th className="py-4 px-5">Статус</th>
+                  <th className="py-4 px-5 text-right">Действие</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm font-semibold">
                 {filteredOrders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-4 px-4 font-mono font-bold text-black">
-                      <Link to={`/orders/${ord.id}`} className="hover:underline hover:text-emerald-600 transition-colors">
+                  <tr key={ord.id} className="hover:bg-[#F4F6F9]/50 transition-colors">
+                    <td className="py-4 px-5 font-mono font-bold text-[#111827]">
+                      <Link to={`/orders/${ord.id}`} className="hover:underline hover:text-[#0082FB] transition-colors">
                         {ord.orderNumber}
                       </Link>
                     </td>
-                    <td className="py-4 px-4 text-xs text-gray-500">
+                    <td className="py-4 px-5 text-xs text-[#64748B] font-normal">
                       {new Date(ord.createdAt).toLocaleDateString('ru-RU')}
                     </td>
-                    <td className="py-4 px-4 text-gray-800">{ord.category}</td>
-                    <td className="py-4 px-4 text-gray-800">{ord.tariffType}</td>
-                    <td className="py-4 px-4 font-extrabold text-black">{ord.itemsCount.toLocaleString()}</td>
-                    <td className="py-4 px-4 font-bold text-black">{ord.totalPrice.toLocaleString()} ₸</td>
-                    <td className="py-4 px-4"><StatusBadge status={ord.status} /></td>
-                    <td className="py-4 px-4 text-right">
+                    <td className="py-4 px-5 text-[#475569]">{ord.category}</td>
+                    <td className="py-4 px-5 text-[#475569]">{ord.tariffType}</td>
+                    <td className="py-4 px-5 font-extrabold text-[#111827]">{ord.itemsCount.toLocaleString()}</td>
+                    <td className="py-4 px-5 font-bold text-[#111827]">{ord.totalPrice.toLocaleString()} ₸</td>
+                    <td className="py-4 px-5"><StatusBadge status={ord.status} /></td>
+                    <td className="py-4 px-5 text-right">
                       <Link
                         to={`/orders/${ord.id}`}
-                        className="inline-flex items-center gap-1.5 bg-gray-100 text-black hover:bg-black hover:text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all"
+                        className="inline-flex items-center gap-1.5 bg-[#EBF5FF] text-[#0082FB] hover:bg-[#0082FB] hover:text-white px-4 py-2 rounded-xl text-xs font-extrabold transition-all shadow-sm"
                       >
                         <Eye className="w-3.5 h-3.5" /> Детали
                       </Link>

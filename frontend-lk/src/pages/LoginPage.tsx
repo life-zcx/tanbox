@@ -49,13 +49,13 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white border border-gray-200 rounded-3xl shadow-xl max-w-md w-full p-8 space-y-6">
+    <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center p-4">
+      <div className="bg-white border border-gray-100 rounded-3xl shadow-xl max-w-md w-full p-8 space-y-6">
         
         <div className="text-center space-y-2">
           <img src="/tanbox-dark.svg" alt="tanbox" className="h-8 w-auto mx-auto mb-2" />
-          <h2 className="text-2xl font-black text-black tracking-tight">Добро пожаловать</h2>
-          <p className="text-xs text-gray-500">Пожалуйста, введите ваши данные для входа в систему.</p>
+          <h2 className="text-2xl font-extrabold text-[#111827] tracking-tight">Добро пожаловать</h2>
+          <p className="text-xs text-[#64748B]">Пожалуйста, введите ваши данные для входа в личный кабинет.</p>
         </div>
 
         {error && (
@@ -67,31 +67,31 @@ export const LoginPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs font-extrabold text-black uppercase mb-1 block">E-mail адрес</label>
+            <label className="text-xs font-extrabold text-[#111827] uppercase mb-1 block">E-mail адрес</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
+              <Mail className="w-4 h-4 text-[#64748B] absolute left-3.5 top-3.5" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="client@tanbox.kz"
-                className="w-full bg-gray-50 border border-gray-300 rounded-xl pl-10 pr-4 py-3 text-sm font-semibold text-black focus:outline-none focus:border-black"
+                className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-10 pr-4 py-3 text-sm font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-extrabold text-black uppercase mb-1 block">Пароль</label>
+            <label className="text-xs font-extrabold text-[#111827] uppercase mb-1 block">Пароль</label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
+              <Lock className="w-4 h-4 text-[#64748B] absolute left-3.5 top-3.5" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-gray-50 border border-gray-300 rounded-xl pl-10 pr-4 py-3 text-sm font-semibold text-black focus:outline-none focus:border-black"
+                className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-10 pr-4 py-3 text-sm font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
               />
             </div>
           </div>
@@ -99,20 +99,20 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-black text-white font-extrabold text-sm py-3.5 rounded-xl hover:bg-gray-800 transition-all active:scale-95 shadow-md disabled:opacity-50"
+            className="w-full bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 rounded-xl transition-all active:scale-95 shadow-md shadow-[#0082FB]/25 disabled:opacity-50"
           >
             {loading ? 'Авторизация...' : 'Войти в кабинет'}
           </button>
         </form>
 
-        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs text-gray-600 space-y-1">
-          <p className="font-bold text-black uppercase">Тестовые данные для входа (DEV):</p>
-          <p>E-mail: <code className="font-mono bg-white px-1 font-bold text-black">client@tanbox.kz</code></p>
-          <p>Пароль: <code className="font-mono bg-white px-1 font-bold text-black">client123</code></p>
+        <div className="bg-[#EBF5FF]/50 p-4 rounded-xl border border-[#0082FB]/10 text-xs text-[#475569] space-y-1">
+          <p className="font-extrabold text-[#0082FB] uppercase">Тестовые данные для входа (DEV):</p>
+          <p>E-mail: <code className="font-mono bg-white px-1.5 py-0.5 rounded font-bold text-[#111827]">client@tanbox.kz</code></p>
+          <p>Пароль: <code className="font-mono bg-white px-1.5 py-0.5 rounded font-bold text-[#111827]">client123</code></p>
         </div>
 
         <div className="text-center pt-2">
-          <Link to="/register" className="text-xs font-bold text-gray-700 hover:text-black underline underline-offset-4">
+          <Link to="/register" className="text-xs font-bold text-[#64748B] hover:text-[#0082FB] underline underline-offset-4">
             Нет аккаунта? Зарегистрировать компанию
           </Link>
         </div>

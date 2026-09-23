@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Lock, Mail, Building2, Phone, Hash, UserCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Lock, Mail, Building2, Phone, Hash } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -16,6 +16,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     phone: '',
   });
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -25,7 +36,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-md w-full p-8 relative space-y-6 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Close Button */}

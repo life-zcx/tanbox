@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, CheckCircle2, PackageCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, CheckCircle2 } from 'lucide-react';
 import { TariffCode } from '../../types';
 
 interface OrderQuickModalProps {
@@ -25,6 +25,17 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
     notes: '',
   });
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -33,7 +44,7 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-lg w-full p-8 relative space-y-6">
         
         <button
@@ -64,9 +75,6 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
         ) : (
           <>
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-2 bg-black text-white px-3 py-1 rounded-full text-xs font-bold">
-                <PackageCheck className="w-3.5 h-3.5" /> Быстрое оформление
-              </div>
               <h3 className="text-2xl font-extrabold text-black">Подтверждение заказа</h3>
               <p className="text-xs text-gray-500">Укажите реквизиты вашей компании для формирования счета</p>
             </div>

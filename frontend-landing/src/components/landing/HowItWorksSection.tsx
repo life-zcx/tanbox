@@ -30,30 +30,36 @@ export const HowItWorksSection: React.FC = () => {
   ];
 
   return (
-    <section className="py-20 bg-white border-b border-gray-200">
-      <div className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16">
-        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-black tracking-tight">
+    <section className="py-12 sm:py-16 bg-[#F4F6F9]">
+      <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 space-y-2">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
             Пошаговый процесс маркировки
           </h2>
-          <p className="text-base text-gray-600">
+          <p className="text-sm sm:text-base text-[#64748B]">
             Всего 4 простых шага от подачи заявки до полной готовности товара к продаже.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {steps.map((s, idx) => {
             const Icon = s.icon;
             return (
-              <div key={idx} className="bg-gray-50 border border-gray-200 rounded-2xl p-6 relative">
-                <span className="text-4xl font-black text-gray-200 absolute top-4 right-6">
+              <div 
+                key={idx} 
+                className="bg-white rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group flex flex-col justify-between"
+              >
+                <span className="text-3xl sm:text-4xl font-extrabold text-[#E2E8F0] absolute top-5 right-6 group-hover:text-[#CBD5E1] transition-colors">
                   {s.num}
                 </span>
-                <div className="w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center mb-4">
-                  <Icon className="w-5 h-5" />
+
+                <div>
+                  <div className="w-12 h-12 bg-[#EBF5FF] text-[#0082FB] rounded-full flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                    <Icon className="w-6 h-6 stroke-[2]" />
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-[#111827] mb-2">{s.title}</h3>
+                  <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed">{s.desc}</p>
                 </div>
-                <h3 className="text-lg font-bold text-black mb-2">{s.title}</h3>
-                <p className="text-xs text-gray-600 leading-relaxed">{s.desc}</p>
               </div>
             );
           })}

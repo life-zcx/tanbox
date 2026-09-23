@@ -83,3 +83,24 @@ model Tariff {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+enum LeadStatus {
+  NEW
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+model ServiceLead {
+  id           String     @id @default(uuid())
+  serviceTitle String
+  companyName  String
+  phone        String
+  email        String?
+  binIin       String?
+  notes        String?
+  status       LeadStatus @default(NEW)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+

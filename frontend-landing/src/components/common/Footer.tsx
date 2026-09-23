@@ -21,9 +21,9 @@ export const Footer: React.FC = () => {
           <h4 className="text-sm font-bold uppercase tracking-wider text-gray-300 mb-4">Навигация</h4>
           <ul className="space-y-2.5 text-sm text-gray-400">
             <li><Link to="/" className="hover:text-white transition-colors">Главная страница</Link></li>
-            <li><Link to="/calculator" className="hover:text-white transition-colors">Калькулятор тарифов</Link></li>
+            <li><Link to="/calculator" className="hover:text-white transition-colors">Калькулятор стоимости</Link></li>
             <li><Link to="/categories" className="hover:text-white transition-colors">Категории товаров РК</Link></li>
-            <li><Link to="/tariffs" className="hover:text-white transition-colors">Тарифная сетка</Link></li>
+            <li><Link to="/services" className="hover:text-white transition-colors">Услуги под ключ (ВЭД, НКТ)</Link></li>
             <li><Link to="/contacts" className="hover:text-white transition-colors">Контакты и Реквизиты</Link></li>
           </ul>
         </div>

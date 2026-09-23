@@ -6,8 +6,8 @@
 
 @layer base {
   body {
-    background-color: #ffffff;
-    color: #000000;
+    background-color: #F4F6F9;
+    color: #111827;
     font-family: 'Plus Jakarta Sans', 'Manrope', sans-serif;
   }
 
@@ -19,5 +19,18 @@
 
 /* Custom crisp slider track for price calculator */
 input[type=range] {
-  accent-color: #000000;
+  accent-color: #0082FB;
 }
+
+/* Tanba Card subtle hover animation */
+.tanba-card {
+  background-color: #ffffff;
+  border-radius: 1.5rem; /* 24px */
+  transition: all 0.25s ease-in-out;
+}
+
+.tanba-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -10px rgba(0, 130, 251, 0.08);
+}
+

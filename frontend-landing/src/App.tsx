@@ -1,15 +1,27 @@
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Header } from './components/common/Header';
 import { Footer } from './components/common/Footer';
 import { HomePage } from './pages/HomePage';
 import { CalculatorPage } from './pages/CalculatorPage';
-import { TariffsPage } from './pages/TariffsPage';
+import { ServicesPage } from './pages/ServicesPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { CategoryDetailPage } from './pages/CategoryDetailPage';
 import { ContactsPage } from './pages/ContactsPage';
 import { OrderQuickModal } from './components/modals/OrderQuickModal';
 import { TariffCode } from './types';
+
+const ScrollToTop: React.FC = () => {
+  const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname, hash]);
+
+  return null;
+};
 
 export const App: React.FC = () => {
   const handleOpenAuth = () => {
@@ -39,6 +51,7 @@ export const App: React.FC = () => {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <div className="min-h-screen flex flex-col justify-between bg-white text-black">
         <Header onOpenAuth={handleOpenAuth} />
 
@@ -58,7 +71,8 @@ export const App: React.FC = () => {
           />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/categories/:categoryId" element={<CategoryDetailPage onOrderQuick={handleOpenQuickOrder} />} />
-          <Route path="/tariffs" element={<TariffsPage />} />
+          <Route path="/services" element={<ServicesPage />} />
+          <Route path="/tariffs" element={<ServicesPage />} />
           <Route path="/contacts" element={<ContactsPage />} />
         </Routes>
 

@@ -5,6 +5,7 @@ import { AdminSidebar } from './components/common/AdminSidebar';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { AdminOrdersPage } from './pages/AdminOrdersPage';
+import { AdminLeadsPage } from './pages/AdminLeadsPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AdminTariffsPage } from './pages/AdminTariffsPage';
 
@@ -12,7 +13,7 @@ const LoadingScreen: React.FC = () => (
   <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
     <div className="flex flex-col items-center space-y-4">
       <img src="/tanbox-dark.svg" alt="tanbox" className="h-8 w-auto animate-pulse" />
-      <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+      <div className="w-5 h-5 border-2 border-[#0082FB] border-t-transparent rounded-full animate-spin"></div>
     </div>
   </div>
 );
@@ -29,7 +30,7 @@ const ProtectedAdminLayout: React.FC<{ children: React.ReactNode }> = ({ childre
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-[#F4F6F9]">
       <AdminSidebar user={adminUser} onLogout={logoutAdmin} />
       <main className="flex-1 p-8 overflow-y-auto min-h-screen">
         {children}
@@ -50,6 +51,15 @@ export const App: React.FC = () => {
             element={
               <ProtectedAdminLayout>
                 <AdminDashboardPage />
+              </ProtectedAdminLayout>
+            }
+          />
+
+          <Route
+            path="/leads"
+            element={
+              <ProtectedAdminLayout>
+                <AdminLeadsPage />
               </ProtectedAdminLayout>
             }
           />

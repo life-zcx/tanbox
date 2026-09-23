@@ -1,9 +1,11 @@
 import React from 'react';
 import { HeroSection } from '../components/landing/HeroSection';
 import { CategoriesSection } from '../components/landing/CategoriesSection';
+import { DataMatrixInfoSection } from '../components/landing/DataMatrixInfoSection';
 import { CalculatorSection } from '../components/landing/CalculatorSection';
 import { HowItWorksSection } from '../components/landing/HowItWorksSection';
 import { FaqSection } from '../components/landing/FaqSection';
+import { ContactsSection } from '../components/landing/ContactsSection';
 import { TariffCode } from '../types';
 
 interface HomePageProps {
@@ -18,12 +20,14 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) 
   };
 
   return (
-    <main className="space-y-0">
+    <main className="space-y-0 bg-[#F4F6F9]">
       <HeroSection onOpenCalculator={scrollToCalculator} onOpenAuth={onOpenAuth} />
       <CategoriesSection />
+      <DataMatrixInfoSection />
       <CalculatorSection onOrderQuick={onOrderQuick} />
       <HowItWorksSection />
       <FaqSection />
+      <ContactsSection />
     </main>
   );
 };

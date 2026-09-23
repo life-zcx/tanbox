@@ -114,58 +114,56 @@ export const CategoriesSection: React.FC = () => {
   ];
 
   return (
-    <section className="py-8 sm:py-12 bg-white border-b border-gray-200">
-      <div className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16">
+    <section className="py-12 sm:py-16 bg-[#F4F6F9]">
+      <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Header */}
-        <div className="text-center max-w-4xl mx-auto mb-10 space-y-3">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-black tracking-tight">
-            Какие товары подлежат маркировке
+        {/* Header - Left aligned matching tanba.telecom.kz */}
+        <div className="mb-8 space-y-2">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
+            Наши сервисы и категории товаров
           </h2>
-          <p className="text-base text-gray-600">
+          <p className="text-sm sm:text-base text-[#64748B]">
             В Казахстане система обязательной маркировки товаров через нанесение кодов DataMatrix GS1 внедряется поэтапно.
           </p>
         </div>
 
-        {/* 10-Card Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5">
+        {/* Bento/Grid style cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {categories.map((cat) => {
             const IconComponent = cat.icon;
             return (
               <Link
                 key={cat.id}
                 to={`/categories/${cat.id}`}
-                className="bg-white border border-gray-200/90 rounded-2xl p-5 hover:border-[#0088B6] hover:shadow-xl transition-all duration-300 flex flex-col justify-between group h-full min-h-[175px] shadow-sm relative overflow-hidden"
+                className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group min-h-[200px] relative overflow-hidden"
               >
-                {/* Top Section: Icon + Badge */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-[#0088B6] text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                      <IconComponent className="w-5 h-5" />
-                    </div>
-
-                    <span className="text-[11px] font-semibold text-gray-600 flex items-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${cat.isUpcoming ? 'bg-[#0088B6]' : 'bg-emerald-500'}`} />
-                      {cat.badge}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-extrabold text-black leading-snug group-hover:text-[#0088B6] transition-colors">
+                {/* Top Row: Title + Description on left, Icon on right */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <h3 className="text-base sm:text-lg font-bold text-[#111827] leading-snug group-hover:text-[#0082FB] transition-colors">
                       {cat.title}
                     </h3>
-                    <p className="text-[11px] text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-[#64748B] leading-relaxed line-clamp-2">
                       {cat.desc}
                     </p>
                   </div>
+
+                  {/* Icon Badge */}
+                  <div className="w-11 h-11 rounded-full bg-[#EBF5FF] text-[#0082FB] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <IconComponent className="w-5 h-5 stroke-[2]" />
+                  </div>
                 </div>
 
-                {/* Bottom Row: Date & Circular Arrow Button */}
-                <div className="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500 font-medium">
-                  <span className="font-semibold text-gray-700">{cat.date}</span>
-                  <div className="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-[#0088B6] group-hover:text-white flex items-center justify-center text-gray-600 transition-all shrink-0">
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
+                {/* Bottom Row: Pill Button + Date Tag */}
+                <div className="pt-4 mt-4 flex items-center justify-between text-xs border-t border-gray-100">
+                  <span className="bg-[#F0F4F8] group-hover:bg-[#E0F2FE] group-hover:text-[#0082FB] text-[#475569] font-medium px-3.5 py-1.5 rounded-xl transition-colors inline-flex items-center gap-1">
+                    Подробнее
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </span>
+
+                  <span className="text-[11px] font-semibold text-[#64748B] bg-gray-50 px-2.5 py-1 rounded-lg">
+                    {cat.date}
+                  </span>
                 </div>
               </Link>
             );

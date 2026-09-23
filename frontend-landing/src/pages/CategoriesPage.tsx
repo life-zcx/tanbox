@@ -251,28 +251,28 @@ export const CategoriesPage: React.FC = () => {
   });
 
   return (
-    <div className="space-y-10 pb-16">
+    <div className="bg-[#F4F6F9] min-h-screen pb-16 space-y-8">
       
       {/* Header Banner */}
-      <section className="bg-gray-50/80 border-b border-gray-200 py-8 sm:py-12 relative overflow-hidden">
-        <div className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16 space-y-4 text-center">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-black tracking-tight leading-tight max-w-4xl mx-auto">
-            Реестр подлежащих маркировке <br className="hidden sm:block" /> товаров в Казахстане
+      <section className="py-10 sm:py-16 bg-white border-b border-gray-200/80">
+        <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+          <h1 className="text-3xl sm:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight max-w-4xl">
+            Реестр подлежащих маркировке товаров в Казахстане
           </h1>
-          <p className="text-base text-gray-600 max-w-3xl mx-auto font-normal">
+          <p className="text-base sm:text-lg text-[#64748B] max-w-3xl font-normal leading-relaxed">
             Полный перечень действующей обязательной маркировки и календарный график введения новых групп товаров согласно законодательству РК (DataMatrix GS1).
           </p>
         </div>
       </section>
 
       {/* Main Filter & Content Section */}
-      <section className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16 space-y-10">
+      <section className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
         {/* Filter Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-gray-200 pb-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-gray-200/80 pb-6">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-500" />
-            <span className="text-xs font-extrabold text-black uppercase tracking-wider">Фильтр категорий:</span>
+            <Filter className="w-4 h-4 text-[#0082FB]" />
+            <span className="text-xs font-extrabold text-[#111827] uppercase tracking-wider">Фильтр категорий:</span>
           </div>
 
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
@@ -280,8 +280,8 @@ export const CategoriesPage: React.FC = () => {
               onClick={() => setActiveFilter('ALL')}
               className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-all ${
                 activeFilter === 'ALL'
-                  ? 'bg-[#0088B6] text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-[#0082FB] text-white shadow-md'
+                  : 'bg-white text-[#475569] hover:bg-gray-100 shadow-sm'
               }`}
             >
               Все категории ({categories.length})
@@ -291,8 +291,8 @@ export const CategoriesPage: React.FC = () => {
               onClick={() => setActiveFilter('ACTIVE')}
               className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-all ${
                 activeFilter === 'ACTIVE'
-                  ? 'bg-[#0088B6] text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-[#0082FB] text-white shadow-md'
+                  : 'bg-white text-[#475569] hover:bg-gray-100 shadow-sm'
               }`}
             >
               Действующая маркировка (5)
@@ -302,8 +302,8 @@ export const CategoriesPage: React.FC = () => {
               onClick={() => setActiveFilter('UPCOMING')}
               className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-all ${
                 activeFilter === 'UPCOMING'
-                  ? 'bg-[#0088B6] text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-[#0082FB] text-white shadow-md'
+                  : 'bg-white text-[#475569] hover:bg-gray-100 shadow-sm'
               }`}
             >
               Внедряется в 2026–2027 (5)
@@ -312,7 +312,7 @@ export const CategoriesPage: React.FC = () => {
         </div>
 
         {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredCategories.map((item) => {
             const isActive = item.status === 'ACTIVE';
             const IconComponent = item.icon;
@@ -321,62 +321,62 @@ export const CategoriesPage: React.FC = () => {
               <div
                 key={item.id}
                 id={item.id}
-                className="bg-white border border-gray-200 rounded-3xl p-7 shadow-sm hover:shadow-xl hover:border-[#0088B6] transition-all flex flex-col justify-between space-y-6 relative overflow-hidden"
+                className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-6 relative overflow-hidden"
               >
                 <div className="space-y-5">
                   {/* Top Badge & TNVED */}
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <span
-                      className={`text-xs font-extrabold px-3 py-1 rounded-full border ${
+                      className={`text-xs font-extrabold px-3 py-1 rounded-full ${
                         isActive
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : 'bg-[#E6F4F9] text-[#00739B] border-[#0088B6]/30'
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-[#EBF5FF] text-[#0082FB]'
                       }`}
                     >
                       {isActive ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
+                        <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-emerald-600" />
                       ) : (
-                        <Clock className="w-3.5 h-3.5 inline mr-1" />
+                        <Clock className="w-3.5 h-3.5 inline mr-1 text-[#0082FB]" />
                       )}
                       {item.statusText}
                     </span>
 
-                    <span className="text-xs font-mono font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded-lg">
+                    <span className="text-xs font-mono font-bold text-[#64748B] bg-[#F8FAFC] px-3 py-1 rounded-lg">
                       ТН ВЭД: {item.tnved}
                     </span>
                   </div>
 
                   {/* Title & Icon */}
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#0088B6] text-white flex items-center justify-center shrink-0 shadow-sm">
-                      <IconComponent className="w-6 h-6" />
+                    <div className="w-12 h-12 rounded-full bg-[#EBF5FF] text-[#0082FB] flex items-center justify-center shrink-0 shadow-sm">
+                      <IconComponent className="w-6 h-6 stroke-[2]" />
                     </div>
 
                     <div>
-                      <h3 className="text-xl font-extrabold text-black tracking-tight">{item.title}</h3>
-                      <p className="text-xs font-bold text-gray-500 mt-1 flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                      <h3 className="text-xl font-bold text-[#111827] tracking-tight">{item.title}</h3>
+                      <p className="text-xs font-bold text-[#64748B] mt-1 flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-[#0082FB]" />
                         {item.date}
                       </p>
                     </div>
                   </div>
 
                   {/* Description */}
-                  <p className="text-sm text-gray-600 leading-relaxed font-normal">
+                  <p className="text-sm text-[#64748B] leading-relaxed font-normal">
                     {item.description}
                   </p>
 
                   {/* Stages Breakdown (if available) */}
                   {item.stages && item.stages.length > 0 && (
-                    <div className="bg-[#E6F4F9]/60 border border-[#0088B6]/20 rounded-2xl p-4 space-y-2">
-                      <p className="text-xs font-extrabold text-[#00739B] uppercase tracking-wider flex items-center gap-1.5">
-                        <Layers className="w-4 h-4 text-[#0088B6]" />
+                    <div className="bg-[#F8FAFC] border border-gray-100 rounded-2xl p-4 space-y-2">
+                      <p className="text-xs font-bold text-[#0082FB] uppercase tracking-wider flex items-center gap-1.5">
+                        <Layers className="w-4 h-4 text-[#0082FB]" />
                         Этапы вступления в силу:
                       </p>
                       <ul className="space-y-2">
                         {item.stages.map((stg, sIdx) => (
-                          <li key={sIdx} className="text-xs text-gray-800 font-medium leading-relaxed flex items-start gap-2">
-                            <span className="font-extrabold bg-[#0088B6] text-white px-2 py-0.5 rounded text-[11px] shrink-0 whitespace-nowrap">
+                          <li key={sIdx} className="text-xs text-[#111827] font-medium leading-relaxed flex items-start gap-2">
+                            <span className="font-extrabold bg-[#0082FB] text-white px-2 py-0.5 rounded text-[11px] shrink-0 whitespace-nowrap">
                               {stg.date}
                             </span>
                             <span>{stg.title}</span>
@@ -387,12 +387,12 @@ export const CategoriesPage: React.FC = () => {
                   )}
 
                   {/* Key Features Details */}
-                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-2">
-                    <p className="text-xs font-extrabold text-black uppercase tracking-wider">Ключевые особенности:</p>
+                  <div className="bg-[#F8FAFC] rounded-2xl p-4 border border-gray-100 space-y-2">
+                    <p className="text-xs font-bold text-[#111827] uppercase tracking-wider">Ключевые особенности:</p>
                     <ul className="space-y-1.5">
                       {item.details.map((detail, idx) => (
-                        <li key={idx} className="text-xs text-gray-700 flex items-start gap-2 font-medium">
-                          <PackageCheck className="w-4 h-4 text-[#0088B6] shrink-0 mt-0.5" />
+                        <li key={idx} className="text-xs text-[#64748B] flex items-start gap-2 font-medium">
+                          <PackageCheck className="w-4 h-4 text-[#0082FB] shrink-0 mt-0.5" />
                           <span>{detail}</span>
                         </li>
                       ))}
@@ -404,14 +404,14 @@ export const CategoriesPage: React.FC = () => {
                 <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3 flex-wrap">
                   <Link
                     to={`/categories/${item.id}`}
-                    className="inline-flex items-center gap-2 bg-[#0088B6] text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-[#00739B] transition-all active:scale-95 shrink-0 shadow-sm"
+                    className="inline-flex items-center gap-2 bg-[#0082FB] text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl hover:bg-[#0070DA] transition-all active:scale-95 shrink-0 shadow-sm"
                   >
                     Подробнее о категории <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
 
                   <Link
                     to={item.link}
-                    className="inline-flex items-center gap-2 bg-gray-100 text-black font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-gray-200 transition-all active:scale-95 shrink-0"
+                    className="inline-flex items-center gap-2 bg-[#F0F4F8] hover:bg-[#E2E8F0] text-[#111827] font-bold text-xs px-4 py-2.5 rounded-2xl transition-all active:scale-95 shrink-0"
                   >
                     Рассчитать стоимость
                   </Link>
@@ -424,20 +424,20 @@ export const CategoriesPage: React.FC = () => {
       </section>
 
       {/* Bottom CTA Banner */}
-      <section className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16">
-        <div className="bg-gray-900 text-white rounded-3xl p-10 md:p-14 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl">
-          <div className="space-y-3 max-w-2xl text-center md:text-left">
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+      <section className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-[#0F172A] text-white rounded-3xl p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl">
+          <div className="space-y-2 max-w-2xl text-center md:text-left">
+            <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
               Готовитесь к маркировке в 2026–2027 годах?
             </h3>
-            <p className="text-sm text-gray-300">
+            <p className="text-sm text-slate-300">
               Наши специалисты по ИС Танба проведут бесплатный аудит ТН ВЭД, проверят номенклатуру и настроят интеграцию для поштучного сканирования DataMatrix.
             </p>
           </div>
 
           <Link
             to="/contacts"
-            className="bg-white text-black font-extrabold text-sm px-8 py-4 rounded-xl hover:bg-gray-100 transition-all shrink-0 active:scale-95 shadow-md"
+            className="bg-[#0082FB] text-white font-extrabold text-sm px-8 py-3.5 rounded-2xl hover:bg-[#0070DA] transition-all shrink-0 active:scale-95 shadow-md"
           >
             Получить консультацию
           </Link>

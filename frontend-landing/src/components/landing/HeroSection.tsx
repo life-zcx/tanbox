@@ -8,34 +8,34 @@ interface HeroSectionProps {
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onOpenAuth }) => {
   return (
-    <section className="bg-white border-b border-gray-200 min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center relative overflow-hidden py-16 lg:py-24">
-      {/* Background subtle radial gradient accent */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-100 via-white to-white pointer-events-none opacity-80" />
+    <section className="bg-[#F4F6F9] min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center relative overflow-hidden py-16 lg:py-24">
+      {/* Background subtle radial ambient light */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-blue-100/40 via-blue-50/20 to-transparent pointer-events-none blur-2xl" />
 
-      <div className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16 text-center space-y-10 relative z-10 my-auto">
+      <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 relative z-10 my-auto">
         
-        <h1 className="text-5xl sm:text-7xl lg:text-8xl xl:text-[92px] font-black text-black tracking-tight leading-[1.06] max-w-6xl mx-auto font-heading">
-          Маркировка товаров в Казахстане <span className="underline decoration-[6px] underline-offset-[12px] decoration-black">под ключ</span>
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl xl:text-[84px] font-extrabold text-[#111827] tracking-tight leading-[1.08] max-w-5xl mx-auto">
+          Маркировка товаров в Казахстане <span className="text-[#0082FB] relative inline-block">под ключ</span>
         </h1>
 
-        <p className="text-xl sm:text-2xl lg:text-3xl text-gray-600 font-normal leading-relaxed max-w-5xl mx-auto font-body">
+        <p className="text-base sm:text-xl lg:text-2xl text-[#64748B] font-normal leading-relaxed max-w-4xl mx-auto">
           Эмиссия кодов Data Matrix в ИС Танба, высокоскоростная термотрансферная печать, выездные бригады оклейщиков на склад и формирование SSCC агрегации для импортеров и производителей.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-5 pt-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
           <button
             onClick={onOpenCalculator}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-black text-white text-xl font-extrabold px-10 py-5 rounded-2xl hover:bg-gray-800 transition-all shadow-xl active:scale-95"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-[#0082FB] text-white text-base sm:text-lg font-extrabold px-8 py-4 rounded-2xl hover:bg-[#0070DA] transition-all shadow-lg shadow-blue-500/20 active:scale-95"
           >
             Рассчитать стоимость (₸)
-            <ArrowRight className="w-6 h-6" />
+            <ArrowRight className="w-5 h-5" />
           </button>
 
           <a
             href="http://127.0.0.1:3001/orders/new"
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-black border-2 border-black text-xl font-extrabold px-10 py-5 rounded-2xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-[#111827] border border-gray-200 text-base sm:text-lg font-extrabold px-8 py-4 rounded-2xl hover:bg-gray-50 transition-all active:scale-95 shadow-xs"
           >
             Оформить заявку
           </a>

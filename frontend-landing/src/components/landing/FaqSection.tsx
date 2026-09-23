@@ -24,37 +24,36 @@ export const FaqSection: React.FC = () => {
   ];
 
   return (
-    <section className="py-20 bg-gray-50 border-b border-gray-200">
-      <div className="max-w-[1200px] w-full mx-auto px-6 sm:px-10 lg:px-16">
-        <div className="text-center mb-14 space-y-4">
-          <div className="inline-flex items-center gap-2 bg-black text-white text-xs font-bold px-3 py-1 rounded-full">
-            <HelpCircle className="w-3.5 h-3.5" /> FAQ
-          </div>
-          <h2 className="text-3xl font-extrabold text-black tracking-tight">Часто задаваемые вопросы</h2>
+    <section className="py-12 sm:py-16 bg-[#F4F6F9]">
+      <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 space-y-2">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
+            Часто задаваемые вопросы
+          </h2>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3 max-w-4xl">
           {faqs.map((faq, idx) => {
             const isOpen = openIdx === idx;
             return (
               <div
                 key={idx}
-                className="bg-white border border-gray-200 rounded-2xl overflow-hidden transition-all"
+                className="bg-white rounded-2xl shadow-sm overflow-hidden transition-all duration-200"
               >
                 <button
                   onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  className="w-full p-6 text-left font-bold text-base text-black flex justify-between items-center gap-4 hover:bg-gray-50"
+                  className="w-full p-5 sm:p-6 text-left font-bold text-base text-[#111827] flex justify-between items-center gap-4 hover:bg-[#F8FAFC] transition-colors"
                 >
-                  <span>{faq.q}</span>
+                  <span className={isOpen ? 'text-[#0082FB]' : ''}>{faq.q}</span>
                   <ChevronDown
-                    className={`w-5 h-5 text-gray-500 transition-transform ${
-                      isOpen ? 'rotate-180 text-black' : ''
+                    className={`w-5 h-5 transition-transform duration-200 shrink-0 ${
+                      isOpen ? 'rotate-180 text-[#0082FB]' : 'text-[#64748B]'
                     }`}
                   />
                 </button>
 
                 {isOpen && (
-                  <div className="px-6 pb-6 text-sm text-gray-600 leading-relaxed border-t border-gray-100 pt-4">
+                  <div className="px-5 pb-6 sm:px-6 text-sm text-[#64748B] leading-relaxed border-t border-gray-100 pt-4">
                     {faq.a}
                   </div>
                 )}

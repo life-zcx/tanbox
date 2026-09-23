@@ -7,6 +7,7 @@ import ordersRoutes from './routes/orders.routes';
 import usersRoutes from './routes/users.routes';
 import metricsRoutes from './routes/metrics.routes';
 import logsRoutes from './routes/logs.routes';
+import leadsRoutes from './routes/leads.routes';
 import { logger } from './utils/logger';
 
 dotenv.config();
@@ -40,6 +41,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/calculator', calculatorRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/leads', leadsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/logs', logsRoutes);
