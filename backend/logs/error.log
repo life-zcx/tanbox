@@ -96,3 +96,4 @@
     at IncomingMessage.emit (node:events:519:28)
     at endReadableNT (node:internal/streams/readable:1698:12)
     at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
+[2026-09-23T12:12:38.069Z] [FRONTEND-ERROR] Landing API Error [400] /leads: {"message":"Обязательные поля: услуга, название компании и телефон"} {"url":"http://127.0.0.1:3000/services","clientIp":"::ffff:172.20.0.6","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 Edg/153.0.0.0"}

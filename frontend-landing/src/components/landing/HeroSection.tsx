@@ -19,7 +19,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onOp
         </h1>
 
         <p className="text-base sm:text-xl lg:text-2xl text-[#64748B] font-normal leading-relaxed max-w-4xl mx-auto">
-          Эмиссия кодов Data Matrix в ИС Танба, высокоскоростная термотрансферная печать, выездные бригады оклейщиков на склад и формирование SSCC агрегации для импортеров и производителей.
+          Комплексные решения для импортеров и производителей: таможенное оформление, заведение товаров в НКТ, эмиссия кодов Data Matrix в ИС Танба, высокоскоростная печать, выездная оклейка на вашем складе и SSCC-агрегация с интеграцией в 1С.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">

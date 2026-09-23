@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, CheckCircle2 } from 'lucide-react';
 import { TariffCode } from '../../types';
+
+import { apiClient } from '../../api/client';
 
 interface OrderQuickModalProps {
   isOpen: boolean;
@@ -38,14 +41,53 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    const serviceTitle = `Быстрый заказ (${tariffType} • ${itemsCount.toLocaleString()} шт. • ${totalPrice.toLocaleString()} ₸)`;
+    
+    // 1. Save locally for instant UI update
+    const leadObject = {
+      id: `lead-${Date.now()}`,
+      serviceTitle,
+      companyName: form.companyName,
+      phone: form.phone,
+      binIin: form.binIin || undefined,
+      notes: form.notes || undefined,
+      status: 'NEW',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      const existing = JSON.parse(localStorage.getItem('tanbox_service_leads') || '[]');
+      localStorage.setItem('tanbox_service_leads', JSON.stringify([leadObject, ...existing]));
+    } catch (err) {}
+
+    // 2. Post to backend DB
+    try {
+      await apiClient.post('/leads', {
+        serviceTitle,
+        companyName: form.companyName,
+        phone: form.phone,
+        binIin: form.binIin || undefined,
+        notes: form.notes || undefined,
+      });
+    } catch (err) {
+      console.warn('Backend API quick lead warning:', err);
+    } finally {
+      setSubmitted(true);
+    }
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-lg w-full p-8 relative space-y-6">
+  return createPortal(
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-lg w-full p-8 relative space-y-6"
+      >
         
         <button
           onClick={onClose}
@@ -151,6 +193,7 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
         )}
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

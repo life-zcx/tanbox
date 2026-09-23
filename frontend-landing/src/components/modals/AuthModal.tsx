@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Lock, Mail, Building2, Phone, Hash } from 'lucide-react';
 
 interface AuthModalProps {
@@ -35,8 +36,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     window.location.href = `http://127.0.0.1:3001/${isLoginMode ? 'login' : 'register'}`;
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-md w-full p-8 relative space-y-6 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Close Button */}
@@ -163,6 +164,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

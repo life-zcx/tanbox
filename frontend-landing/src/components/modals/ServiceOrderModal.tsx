@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
@@ -34,29 +35,89 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (initialServiceTitle) {
-      setSelectedService(initialServiceTitle);
-    }
-  }, [initialServiceTitle]);
+  // Field validation error states
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [binError, setBinError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  // Phone Auto-Formatter (+7 7XX XXX-XX-XX)
+  const formatKazakhPhone = (value: string): string => {
+    let digits = value.replace(/\D/g, '');
 
-  if (!isOpen) return null;
+    if (digits.startsWith('8')) {
+      digits = '7' + digits.slice(1);
+    }
+    if (!digits.startsWith('7') && digits.length > 0) {
+      digits = '7' + digits;
+    }
+
+    // Strictly limit to 11 digits (+7 + 10 digits)
+    digits = digits.slice(0, 11);
+
+    if (digits.length === 0) return '';
+    if (digits.length <= 1) return '+7';
+    if (digits.length <= 4) return `+7 (${digits.slice(1)}`;
+    if (digits.length <= 7) return `+7 (${digits.slice(1, 4)}) ${digits.slice(4)}`;
+    if (digits.length <= 9) return `+7 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+    return `+7 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 9)}-${digits.slice(9, 11)}`;
+  };
+
+  const validatePhone = (val: string): boolean => {
+    const digitsOnly = val.replace(/\D/g, '');
+    if (!val.trim()) {
+      setPhoneError('Укажите контактный номер телефона');
+      return false;
+    }
+    if (digitsOnly.length !== 11) {
+      setPhoneError('Номер должен содержать 11 цифр (+7 7XX XXX-XX-XX)');
+      return false;
+    }
+    setPhoneError(null);
+    return true;
+  };
+
+  const validateEmail = (val: string): boolean => {
+    if (!val.trim()) {
+      setEmailError(null);
+      return true; // Optional field
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(val.trim())) {
+      setEmailError('Некорректный e-mail (пример: info@company.kz)');
+      return false;
+    }
+    setEmailError(null);
+    return true;
+  };
+
+  const validateBinIin = (val: string): boolean => {
+    if (!val.trim()) {
+      setBinError(null);
+      return true; // Optional field
+    }
+    const digitsOnly = val.replace(/\D/g, '');
+    if (digitsOnly.length !== 12 || val.trim().length !== 12) {
+      setBinError('БИН/ИИН должен состоять ровно из 12 цифр');
+      return false;
+    }
+    setBinError(null);
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    const isPhoneValid = validatePhone(phone);
+    const isEmailValid = validateEmail(email);
+    const isBinValid = validateBinIin(binIin);
+
+    if (!isPhoneValid || !isEmailValid || !isBinValid) {
+      setError('Пожалуйста, проверьте правильность заполнения полей.');
+      return;
+    }
+
+    setLoading(true);
 
     const leadObject = {
       id: `lead-${Date.now()}`,
@@ -97,6 +158,25 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (initialServiceTitle) {
+      setSelectedService(initialServiceTitle);
+    } else {
+      setSelectedService(SERVICE_OPTIONS[0]);
+    }
+  }, [initialServiceTitle, isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   const handleResetAndClose = () => {
     setSubmitted(false);
     setCompanyName('');
@@ -105,12 +185,23 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     setBinIin('');
     setNotes('');
     setError(null);
+    setPhoneError(null);
+    setEmailError(null);
+    setBinError(null);
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-2xl max-w-lg w-full p-6 sm:p-8 relative space-y-6 max-h-[90vh] overflow-y-auto">
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      onClick={handleResetAndClose}
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-3xl border border-gray-100 shadow-2xl max-w-lg w-full p-6 sm:p-8 relative space-y-6 max-h-[90vh] overflow-y-auto"
+      >
         
         {/* Close Button */}
         <button
@@ -200,46 +291,73 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
 
               {/* Phone */}
               <div>
-                <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1">
-                  Контактный телефон <span className="text-red-500">*</span>
+                <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1 flex items-center justify-between">
+                  <span>Контактный телефон <span className="text-red-500">*</span></span>
+                  {phoneError && <span className="text-red-500 text-[10px] font-normal normal-case">{phoneError}</span>}
                 </label>
                 <input
                   type="tel"
                   required
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onFocus={() => {
+                    if (!phone) setPhone('+7 (7');
+                  }}
+                  onChange={(e) => {
+                    const formatted = formatKazakhPhone(e.target.value);
+                    setPhone(formatted);
+                    if (phoneError) validatePhone(formatted);
+                  }}
+                  onBlur={(e) => validatePhone(e.target.value)}
                   placeholder="+7 (701) 000-0000"
-                  className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                  maxLength={18}
+                  className={`w-full bg-[#F4F6F9] border rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none transition-colors ${
+                    phoneError ? 'border-red-500 focus:border-red-500' : 'border-gray-200/80 focus:border-[#0082FB]'
+                  }`}
                 />
               </div>
 
               {/* Grid: Email & BIN */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1">
-                    E-mail (необязательно)
+                  <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1 flex items-center justify-between">
+                    <span>E-mail</span>
                   </label>
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError) validateEmail(e.target.value);
+                    }}
+                    onBlur={(e) => validateEmail(e.target.value)}
                     placeholder="info@company.kz"
-                    className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                    className={`w-full bg-[#F4F6F9] border rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none transition-colors ${
+                      emailError ? 'border-red-500 focus:border-red-500' : 'border-gray-200/80 focus:border-[#0082FB]'
+                    }`}
                   />
+                  {emailError && <p className="text-red-500 text-[10px] mt-1">{emailError}</p>}
                 </div>
 
                 <div>
-                  <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1">
-                    БИН / ИИН (необязательно)
+                  <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1 flex items-center justify-between">
+                    <span>БИН / ИИН (12 цифр)</span>
                   </label>
                   <input
                     type="text"
                     maxLength={12}
                     value={binIin}
-                    onChange={(e) => setBinIin(e.target.value)}
-                    placeholder="12 знаков"
-                    className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setBinIin(val);
+                      if (binError) validateBinIin(val);
+                    }}
+                    onBlur={(e) => validateBinIin(e.target.value)}
+                    placeholder="123456789012"
+                    className={`w-full bg-[#F4F6F9] border rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none transition-colors ${
+                      binError ? 'border-red-500 focus:border-red-500' : 'border-gray-200/80 focus:border-[#0082FB]'
+                    }`}
                   />
+                  {binError && <p className="text-red-500 text-[10px] mt-1">{binError}</p>}
                 </div>
               </div>
 
@@ -278,6 +396,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
         )}
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
