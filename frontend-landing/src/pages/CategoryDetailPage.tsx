@@ -64,7 +64,6 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
     );
   }
 
-  const IconComponent = ICON_MAP[category.iconName] || PackageCheck;
   const isActive = category.status === 'ACTIVE';
 
   return (
@@ -98,14 +97,9 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
                 <span>{category.dateFull}</span>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-[#EBF5FF] text-[#0082FB] flex items-center justify-center shrink-0 shadow-sm">
-                  <IconComponent className="w-7 h-7 stroke-[2]" />
-                </div>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#111827] tracking-tight leading-tight">
-                  {category.title}
-                </h1>
-              </div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#111827] tracking-tight leading-tight">
+                {category.title}
+              </h1>
 
               <p className="text-sm sm:text-base text-[#64748B] leading-relaxed font-normal pt-1">
                 {category.fullDesc}

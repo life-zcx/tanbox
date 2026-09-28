@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useOrders } from '../hooks/useOrders';
 import { OrderItem, OrderStatus } from '../types';
 import { StatusBadge, PageHeader } from '@shared';
-import { Search, Eye, Filter, ChevronDown } from 'lucide-react';
+import { Search, Eye, Filter, ChevronDown, Plus } from 'lucide-react';
+import { getCategoryLabel } from '../data/categories';
 
 const STATUS_LABELS: Record<string, string> = {
   ALL: 'Все заказы',
@@ -22,9 +23,11 @@ export const OrdersPage: React.FC = () => {
 
   const filteredOrders = orders.filter((o) => {
     const matchStatus = selectedStatus === 'ALL' || o.status === selectedStatus;
+    const catLabel = getCategoryLabel(o.category);
     const matchSearch =
       o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.category.toLowerCase().includes(searchQuery.toLowerCase());
+      o.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      catLabel.toLowerCase().includes(searchQuery.toLowerCase());
     return matchStatus && matchSearch;
   });
 
@@ -34,6 +37,15 @@ export const OrdersPage: React.FC = () => {
       <PageHeader
         title="Мои заказы"
         description="Реестр и отслеживание статуса всех партий маркировки ИС Танба"
+        action={
+          <Link
+            to="/orders/new"
+            className="inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-500/20 active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Создать заказ</span>
+          </Link>
+        }
       />
 
       {/* Filter Bar */}
@@ -105,7 +117,7 @@ export const OrdersPage: React.FC = () => {
                     <td className="py-4 px-5 text-xs text-[#64748B] font-normal">
                       {new Date(ord.createdAt).toLocaleDateString('ru-RU')}
                     </td>
-                    <td className="py-4 px-5 text-[#475569]">{ord.category}</td>
+                    <td className="py-4 px-5 text-[#475569]">{getCategoryLabel(ord.category)}</td>
                     <td className="py-4 px-5 text-[#475569]">{ord.tariffType}</td>
                     <td className="py-4 px-5 font-extrabold text-[#111827]">{ord.itemsCount.toLocaleString()}</td>
                     <td className="py-4 px-5 font-bold text-[#111827]">{ord.totalPrice.toLocaleString()} ₸</td>

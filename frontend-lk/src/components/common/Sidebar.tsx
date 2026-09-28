@@ -13,6 +13,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
 
   const links = [
     { to: '/dashboard', label: 'Обзор и Статистика', icon: LayoutDashboard },
+    { to: '/orders/new', label: 'Создать заказ', icon: PackagePlus },
     { to: '/orders', label: 'Мои заказы', icon: FileText },
     { to: '/profile', label: 'Профиль компании', icon: User },
   ];

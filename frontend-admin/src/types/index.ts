@@ -46,3 +46,30 @@ export interface AdminMetrics {
   totalRevenue: number;
   estimatedProfitMargin: number;
 }
+
+export interface TariffItem {
+  id: string;
+  code: 'DIGITAL' | 'PRINT' | 'STANDARD' | 'PRO';
+  name: string;
+  description: string;
+  fitFor: string;
+  priceRetail: number;
+  priceWholesale: number;
+  priceLargeWholesale: number;
+  costEstimate: number;
+  priceMin: number;
+  priceMax: number;
+  marginEst: string;
+}
+
+export interface PricingSettingsItem {
+  id?: string;
+  key?: string;
+  ssccPrice: number;
+  stickerLayoutPrice: number;
+  urgentPercent: number;
+  expressDeliveryPrice: number;
+  volumeTier1: number;
+  volumeTier2: number;
+}
+

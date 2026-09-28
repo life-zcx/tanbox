@@ -4,6 +4,7 @@ import { useOrders } from '../hooks/useOrders';
 import { useAuth } from '../hooks/useAuth';
 import { FileText, Cpu, CheckCircle2, ArrowRight } from 'lucide-react';
 import { StatusBadge, PageHeader } from '@shared';
+import { getCategoryLabel } from '../data/categories';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -114,7 +115,7 @@ export const DashboardPage: React.FC = () => {
                         {ord.orderNumber}
                       </Link>
                     </td>
-                    <td className="py-3.5 px-4 text-[#475569]">{ord.category}</td>
+                    <td className="py-3.5 px-4 text-[#475569]">{getCategoryLabel(ord.category)}</td>
                     <td className="py-3.5 px-4 text-[#475569]">{ord.tariffType}</td>
                     <td className="py-3.5 px-4 font-extrabold text-[#111827]">{ord.itemsCount.toLocaleString()} шт</td>
                     <td className="py-3.5 px-4 font-bold text-[#111827]">{ord.totalPrice.toLocaleString()} ₸</td>

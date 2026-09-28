@@ -137,7 +137,6 @@ export const ServicesPage: React.FC = () => {
       <section className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {services.map((srv) => {
-            const IconComponent = srv.icon;
             return (
               <div
                 key={srv.id}
@@ -145,17 +144,9 @@ export const ServicesPage: React.FC = () => {
                 className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-6 group relative overflow-hidden cursor-pointer"
               >
                 <div className="space-y-4">
-                  
-                  {/* Icon */}
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="w-12 h-12 rounded-full bg-[#EBF5FF] text-[#0082FB] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <IconComponent className="w-6 h-6 stroke-[2]" />
-                    </div>
-                  </div>
-
                   {/* Title & Desc */}
                   <div>
-                    <h3 className="text-xl font-bold text-[#111827] leading-snug">
+                    <h3 className="text-xl font-bold text-[#111827] leading-snug group-hover:text-[#0082FB] transition-colors">
                       {srv.title}
                     </h3>
                     <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed mt-2 font-normal">

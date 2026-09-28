@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import { X, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
@@ -30,6 +31,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
   const [email, setEmail] = useState('');
   const [binIin, setBinIin] = useState('');
   const [notes, setNotes] = useState('');
+  const [consent, setConsent] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -117,6 +119,11 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
       return;
     }
 
+    if (!consent) {
+      setError('Необходимо подтвердить согласие на сбор и обработку персональных данных (Закон РК № 94-V).');
+      return;
+    }
+
     setLoading(true);
 
     const leadObject = {
@@ -184,6 +191,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     setEmail('');
     setBinIin('');
     setNotes('');
+    setConsent(false);
     setError(null);
     setPhoneError(null);
     setEmailError(null);
@@ -373,6 +381,30 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
                   placeholder="Объем партии, сроки, адрес склада..."
                   className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl p-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
                 />
+              </div>
+
+              {/* Personal Data Consent Checkbox (Закон РК № 94-V) */}
+              <div className="flex items-start gap-2 pt-1 text-left">
+                <input
+                  type="checkbox"
+                  id="modal-consent"
+                  required
+                  checked={consent}
+                  onChange={(e) => {
+                    setConsent(e.target.checked);
+                    if (e.target.checked && error?.includes('согласие')) {
+                      setError(null);
+                    }
+                  }}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0082FB] focus:ring-[#0082FB] cursor-pointer shrink-0"
+                />
+                <label htmlFor="modal-consent" className="text-[11px] text-[#64748B] leading-relaxed cursor-pointer select-none">
+                  Я даю согласие на сбор и обработку персональных данных в соответствии с{' '}
+                  <Link to="/privacy" target="_blank" className="text-[#0082FB] hover:underline font-semibold">
+                    Политикой конфиденциальности
+                  </Link>{' '}
+                  и Законом РК № 94-V.
+                </label>
               </div>
 
               <button

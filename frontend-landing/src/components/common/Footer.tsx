@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Barcode, Phone, Mail, MapPin } from 'lucide-react';
+import { COMPANY_CONTACTS } from '../../data/companyContacts';
 
 export const Footer: React.FC = () => {
   return (
@@ -42,28 +43,34 @@ export const Footer: React.FC = () => {
 
         {/* Col 4 */}
         <div>
-          <h4 className="text-sm font-bold uppercase tracking-wider text-gray-300 mb-4">Контакты HQ</h4>
+          <h4 className="text-sm font-bold uppercase tracking-wider text-gray-300 mb-4">Контакты</h4>
           <ul className="space-y-3 text-sm text-gray-400">
             <li className="flex items-center gap-2.5">
               <Phone className="w-4 h-4 text-white" />
-              <span>+7 (727) 355-10-20</span>
+              <a href={`tel:${COMPANY_CONTACTS.phones.hotlineRaw}`} className="hover:text-white transition-colors">
+                {COMPANY_CONTACTS.phones.hotline}
+              </a>
             </li>
             <li className="flex items-center gap-2.5">
               <Mail className="w-4 h-4 text-white" />
-              <span>info@tanbox.kz</span>
+              <a href={`mailto:${COMPANY_CONTACTS.emails.info}`} className="hover:text-white transition-colors">
+                {COMPANY_CONTACTS.emails.info}
+              </a>
             </li>
             <li className="flex items-start gap-2.5">
               <MapPin className="w-4 h-4 text-white mt-1 shrink-0" />
-              <span>г. Алматы, пр. Аль-Фараби 77/7, Бизнес-Центр Esentai Tower</span>
+              <span>{COMPANY_CONTACTS.address.short}</span>
             </li>
           </ul>
         </div>
       </div>
 
-      <div className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16 mt-12 pt-8 border-t border-gray-900 flex flex-col md:flex-row items-center justify-between text-xs text-gray-500">
-        <p>© 2026 TANBOX.KZ — Все права защищены. Оператор маркировки в Казахстанe.</p>
-        <div className="flex gap-6 mt-4 md:mt-0">
-          <span className="hover:text-gray-300 cursor-pointer">Политика конфиденциальности</span>
+      <div className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16 mt-12 pt-8 border-t border-gray-900 flex flex-col md:flex-row items-center justify-between text-xs text-gray-500 gap-4">
+        <p>© 2026 TANBOX.KZ — Все права защищены. Оператор маркировки в Казахстане.</p>
+        <div className="flex flex-wrap gap-6">
+          <Link to="/privacy" className="hover:text-white transition-colors">Политика конфиденциальности</Link>
+          <Link to="/terms" className="hover:text-white transition-colors">Пользовательское соглашение</Link>
+          <Link to="/cookies" className="hover:text-white transition-colors">Политика cookie</Link>
         </div>
       </div>
     </footer>

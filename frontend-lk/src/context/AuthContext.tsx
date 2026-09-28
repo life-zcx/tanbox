@@ -6,7 +6,7 @@ interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<any>;
-  register: (data: { email: string; password: string; companyName: string; binIin: string; phone: string }) => Promise<any>;
+  register: (data: { email: string; password: string; companyName: string; binIin: string; phone: string; consent?: boolean }) => Promise<any>;
   logout: () => void;
 }
 

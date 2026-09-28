@@ -1,5 +1,6 @@
 import React from 'react';
 import { Send, Mail } from 'lucide-react';
+import { COMPANY_CONTACTS } from '../../data/companyContacts';
 
 interface ContactsSectionProps {
   showTitle?: boolean;
@@ -53,7 +54,7 @@ export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = tr
             {/* Link at Bottom Left */}
             <div className="relative z-10 pt-4 mt-2">
               <a 
-                href="https://t.me/tanbox_kz" 
+                href={COMPANY_CONTACTS.links.telegramChannel} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-sm font-semibold text-[#0082FB] hover:text-[#0060C7] transition-colors inline-flex items-center gap-1"
@@ -96,14 +97,14 @@ export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = tr
               </h3>
               <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed font-normal">
                 Свяжитесь с нами по адресу: <br className="hidden sm:inline"/>
-                <span className="font-semibold text-[#111827]">info@tanbox.kz</span>
+                <span className="font-semibold text-[#111827]">{COMPANY_CONTACTS.emails.info}</span>
               </p>
             </div>
 
             {/* Link at Bottom Left */}
             <div className="relative z-10 pt-4 mt-2">
               <a 
-                href="mailto:info@tanbox.kz" 
+                href={`mailto:${COMPANY_CONTACTS.emails.info}`}
                 className="text-sm font-semibold text-[#0082FB] hover:text-[#0060C7] transition-colors inline-flex items-center gap-1"
               >
                 Подробнее

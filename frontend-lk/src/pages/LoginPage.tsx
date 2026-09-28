@@ -6,8 +6,8 @@ import { useAuth } from '../hooks/useAuth';
 export const LoginPage: React.FC = () => {
   const { user, loading: authLoading, login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('client@tanbox.kz');
-  const [password, setPassword] = useState('client123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -104,12 +104,6 @@ export const LoginPage: React.FC = () => {
             {loading ? 'Авторизация...' : 'Войти в кабинет'}
           </button>
         </form>
-
-        <div className="bg-[#EBF5FF]/50 p-4 rounded-xl border border-[#0082FB]/10 text-xs text-[#475569] space-y-1">
-          <p className="font-extrabold text-[#0082FB] uppercase">Тестовые данные для входа (DEV):</p>
-          <p>E-mail: <code className="font-mono bg-white px-1.5 py-0.5 rounded font-bold text-[#111827]">client@tanbox.kz</code></p>
-          <p>Пароль: <code className="font-mono bg-white px-1.5 py-0.5 rounded font-bold text-[#111827]">client123</code></p>
-        </div>
 
         <div className="text-center pt-2">
           <Link to="/register" className="text-xs font-bold text-[#64748B] hover:text-[#0082FB] underline underline-offset-4">

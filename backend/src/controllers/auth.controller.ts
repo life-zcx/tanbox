@@ -7,10 +7,25 @@ import { AuthRequest } from '../middleware/auth.middleware';
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, companyName, binIin, phone } = req.body;
+    const { email, password, companyName, binIin, phone, consent } = req.body;
+
+    if (consent === false) {
+      return res.status(400).json({
+        message: 'Регистрация невозможна без согласия на сбор и обработку персональных данных (Закон РК № 94-V)',
+      });
+    }
 
     if (!email || !password || !companyName || !binIin || !phone) {
       return res.status(400).json({ message: 'Все поля обязательны для заполнения' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Пароль должен содержать минимум 8 символов' });
+    }
+
+    const binDigits = binIin.replace(/\D/g, '');
+    if (binDigits.length !== 12) {
+      return res.status(400).json({ message: 'БИН/ИИН должен содержать ровно 12 цифр' });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });

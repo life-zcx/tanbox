@@ -7,8 +7,8 @@ export const AdminLoginPage: React.FC = () => {
   const { adminUser, loading: authLoading, loginAdmin } = useAdminAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('admin@tanbox.kz');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -42,7 +42,7 @@ export const AdminLoginPage: React.FC = () => {
       } else if (!err.response) {
         setError('Не удалось связаться с сервером. Проверьте запуск контейнеров в Docker.');
       } else {
-        setError(err.message || err.response?.data?.message || 'Ошибка входа в админ-панель');
+        setError(err.response?.data?.message || err.message || 'Ошибка входа в админ-панель');
       }
     } finally {
       setLoading(false);
@@ -105,13 +105,6 @@ export const AdminLoginPage: React.FC = () => {
             {loading ? 'Авторизация...' : 'Войти в панель администратора'}
           </button>
         </form>
-
-        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs text-gray-600 space-y-1">
-          <p className="font-bold text-black uppercase">Учётные данные для теста (DEV):</p>
-          <p>Email: <code className="font-mono bg-white px-1 font-bold text-black">admin@tanbox.kz</code></p>
-          <p>Пароль: <code className="font-mono bg-white px-1 font-bold text-black">admin123</code></p>
-        </div>
-
       </div>
     </div>
   );

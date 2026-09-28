@@ -96,7 +96,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <a
-              href={order.pdfUrl || '/samples/data_matrix_sample.pdf'}
+              href={
+                order.pdfUrl && (order.pdfUrl.startsWith('/') || order.pdfUrl.startsWith('https://') || order.pdfUrl.startsWith('http://'))
+                  ? order.pdfUrl
+                  : '/samples/data_matrix_sample.pdf'
+              }
               download
               target="_blank"
               rel="noopener noreferrer"

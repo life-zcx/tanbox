@@ -4,15 +4,28 @@ import { logger } from '../utils/logger';
 export const handleFrontendLogs = (req: Request, res: Response) => {
   try {
     const { level = 'info', message, meta, userAgent, url } = req.body;
-    if (!message) {
-      return res.status(400).json({ message: 'Поле message обязательно' });
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ message: 'Поле message обязательно и должно быть строкой' });
     }
 
-    logger.frontend(level, message, {
-      ...meta,
-      url,
+    // Sanitize and limit log lengths to prevent disk bloat and CRLF injection
+    const cleanLevel = ['info', 'warn', 'error'].includes(String(level).toLowerCase())
+      ? String(level).toLowerCase()
+      : 'info';
+
+    // Strip carriage returns and newlines to prevent log injection
+    const cleanMessage = String(message)
+      .slice(0, 500)
+      .replace(/[\r\n]+/g, ' ');
+
+    const cleanUrl = url ? String(url).slice(0, 200).replace(/[\r\n]+/g, '') : undefined;
+    const cleanUserAgent = userAgent ? String(userAgent).slice(0, 200).replace(/[\r\n]+/g, '') : undefined;
+
+    logger.frontend(cleanLevel, cleanMessage, {
+      ...(meta && typeof meta === 'object' ? meta : {}),
+      url: cleanUrl,
       clientIp: req.ip || req.headers['x-forwarded-for'],
-      userAgent: userAgent || req.headers['user-agent'],
+      userAgent: cleanUserAgent || req.headers['user-agent'],
     });
 
     return res.status(200).json({ status: 'ok' });

@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import calculatorRoutes from './routes/calculator.routes';
@@ -8,16 +9,39 @@ import usersRoutes from './routes/users.routes';
 import metricsRoutes from './routes/metrics.routes';
 import logsRoutes from './routes/logs.routes';
 import leadsRoutes from './routes/leads.routes';
+import tariffsRoutes from './routes/tariffs.routes';
+import labelTemplatesRoutes from './routes/labelTemplates.routes';
 import { logger } from './utils/logger';
+import { generalApiLimiter } from './middleware/rateLimiter';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5050;
 
-// Middlewares
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+// Enable proxy trusting (running behind Caddy / reverse proxy)
+app.set('trust proxy', 1);
+
+// Security Headers with Helmet
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+
+// CORS configuration - dynamic origin reflection to support localhost, 127.0.0.1, LAN IPs, and domain names
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Apply general API rate limiting
+app.use('/api/', generalApiLimiter);
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -45,14 +69,18 @@ app.use('/api/leads', leadsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/logs', logsRoutes);
+app.use('/api/tariffs', tariffsRoutes);
+app.use('/api/label-templates', labelTemplatesRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err?.message === 'CORS access blocked by policy') {
+    return res.status(403).json({ message: 'Доступ запрещён политикой CORS' });
+  }
   logger.error(`Unhandled Error on ${req.method} ${req.url}:`, err);
-  res.status(500).json({ message: 'Внутренняя ошибка сервера' });
+  return res.status(500).json({ message: 'Внутренняя ошибка сервера' });
 });
 
 app.listen(PORT, () => {
   logger.info(`🚀 TANBOX Backend REST API running on port ${PORT}`);
 });
-

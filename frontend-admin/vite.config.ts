@@ -17,6 +17,10 @@ export default defineConfig({
       usePolling: true,
     },
     proxy: {
+      '/api/labels': {
+        target: process.env.VITE_LABEL_SERVICE_URL || 'http://label-generator:5060',
+        changeOrigin: true,
+      },
       '/api': {
         target: process.env.VITE_BACKEND_URL || 'http://backend:5050',
         changeOrigin: true,

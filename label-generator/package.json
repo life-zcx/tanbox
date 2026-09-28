@@ -1,0 +1,31 @@
+{
+  "name": "tanbox-label-generator",
+  "version": "1.0.0",
+  "description": "High-performance microservice for DataMatrix generation, label templating and roll PDF printing",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@zxing/library": "^0.21.3",
+    "bwip-js": "^4.5.1",
+    "cors": "^2.8.5",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "pdfkit": "^0.15.0",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.11",
+    "@types/node": "^20.11.24",
+    "@types/pdfkit": "^0.13.4",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}

@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Header } from './components/common/Header';
 import { Footer } from './components/common/Footer';
+import { CookieBanner } from './components/common/CookieBanner';
 import { HomePage } from './pages/HomePage';
 import { CalculatorPage } from './pages/CalculatorPage';
 import { ServicesPage } from './pages/ServicesPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { CategoryDetailPage } from './pages/CategoryDetailPage';
 import { ContactsPage } from './pages/ContactsPage';
-import { OrderQuickModal } from './components/modals/OrderQuickModal';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { TermsPage } from './pages/TermsPage';
+import { CookiePolicyPage } from './pages/CookiePolicyPage';
 import { TariffCode } from './types';
 
 const ScrollToTop: React.FC = () => {
@@ -28,25 +31,19 @@ export const App: React.FC = () => {
     window.open('http://127.0.0.1:3001/dashboard', '_blank', 'noopener,noreferrer');
   };
 
-  const [quickOrderState, setQuickOrderState] = useState<{
-    isOpen: boolean;
-    tariffType: TariffCode;
-    itemsCount: number;
-    totalPrice: number;
-  }>({
-    isOpen: false,
-    tariffType: 'STANDARD',
-    itemsCount: 10000,
-    totalPrice: 550000,
-  });
-
   const handleOpenQuickOrder = (tariffType: TariffCode, itemsCount: number, totalPrice: number) => {
-    setQuickOrderState({
-      isOpen: true,
-      tariffType,
-      itemsCount,
-      totalPrice,
-    });
+    try {
+      localStorage.setItem(
+        'tanbox_pending_order',
+        JSON.stringify({
+          tariffType,
+          itemsCount,
+          totalPrice,
+          createdAt: new Date().toISOString(),
+        })
+      );
+    } catch {}
+    window.location.href = `http://127.0.0.1:3001/register?tariff=${tariffType}&count=${itemsCount}&price=${totalPrice}`;
   };
 
   return (
@@ -74,21 +71,16 @@ export const App: React.FC = () => {
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/tariffs" element={<ServicesPage />} />
           <Route path="/contacts" element={<ContactsPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/cookies" element={<CookiePolicyPage />} />
         </Routes>
 
         <Footer />
-
-        {/* Modals */}
-
-        <OrderQuickModal
-          isOpen={quickOrderState.isOpen}
-          onClose={() => setQuickOrderState({ ...quickOrderState, isOpen: false })}
-          tariffType={quickOrderState.tariffType}
-          itemsCount={quickOrderState.itemsCount}
-          totalPrice={quickOrderState.totalPrice}
-        />
+        <CookieBanner />
       </div>
     </BrowserRouter>
   );
 };
 export default App;
+

@@ -97,3 +97,16 @@
     at endReadableNT (node:internal/streams/readable:1698:12)
     at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
 [2026-09-23T12:12:38.069Z] [FRONTEND-ERROR] Landing API Error [400] /leads: {"message":"Обязательные поля: услуга, название компании и телефон"} {"url":"http://127.0.0.1:3000/services","clientIp":"::ffff:172.20.0.6","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 Edg/153.0.0.0"}
+[2026-09-28T09:09:50.598Z] [FRONTEND-ERROR] LK API Error [500] /orders: {"message":"Ошибка при создании заказа"} {"url":"http://127.0.0.1:3001/orders/new","clientIp":"::ffff:172.20.0.5","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0"}
+[2026-09-28T10:26:26.738Z] [ERROR] Unhandled Error on POST /api/auth/login: Expected property name or '}' in JSON at position 1 - Stack: SyntaxError: Expected property name or '}' in JSON at position 1
+    at JSON.parse (<anonymous>)
+    at parse (/app/node_modules/body-parser/lib/types/json.js:96:19)
+    at /app/node_modules/body-parser/lib/read.js:128:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:206:9)
+    at invokeCallback (/app/node_modules/raw-body/index.js:238:16)
+    at done (/app/node_modules/raw-body/index.js:227:7)
+    at IncomingMessage.onEnd (/app/node_modules/raw-body/index.js:287:7)
+    at IncomingMessage.emit (node:events:524:28)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+[2026-09-28T10:31:03.326Z] [ERROR] Unhandled Error on POST /api/auth/login: Expected property name or '}' in JSON at position 1 - Stack: SyntaxError: Expected property name or '}' in JSON at position 1     at JSON.parse (<anonymous>)     at parse (/app/node_modules/body-parser/lib/types/json.js:96:19)     at /app/node_modules/body-parser/lib/read.js:128:18     at AsyncResource.runInAsyncScope (node:async_hooks:206:9)     at invokeCallback (/app/node_modules/raw-body/index.js:238:16)     at done (/app/node_modules/raw-body/index.js:227:7)     at IncomingMessage.onEnd (/app/node_modules/raw-body/index.js:287:7)     at IncomingMessage.emit (node:events:524:28)     at endReadableNT (node:internal/streams/readable:1698:12)     at process.processTicksAndRejections (node:internal/process/task_queues:82:21)

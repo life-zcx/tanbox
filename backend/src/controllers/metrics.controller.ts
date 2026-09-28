@@ -1,27 +1,32 @@
 import { Response } from 'express';
 import { prisma } from '../config/db';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { OrderStatus } from '@prisma/client';
 
 export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
   try {
-    const totalUsersCount = await prisma.user.count({ where: { role: 'CLIENT' } });
-    const totalOrdersCount = await prisma.order.count();
+    const [totalUsersCount, totalOrdersCount, activeOrdersCount, totals] = await Promise.all([
+      prisma.user.count({ where: { role: 'CLIENT' } }),
+      prisma.order.count(),
+      prisma.order.count({
+        where: {
+          status: {
+            notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+          },
+        },
+      }),
+      prisma.order.aggregate({
+        _sum: {
+          totalPrice: true,
+          itemsCount: true,
+        },
+      }),
+    ]);
 
-    const orders = await prisma.order.findMany();
+    const totalRevenue = totals._sum.totalPrice || 0;
+    const totalItems = totals._sum.itemsCount || 0;
 
-    let totalRevenue = 0;
-    let totalItems = 0;
-    let activeOrdersCount = 0;
-
-    orders.forEach((o) => {
-      totalRevenue += o.totalPrice;
-      totalItems += o.itemsCount;
-      if (o.status !== 'COMPLETED' && o.status !== 'CANCELLED') {
-        activeOrdersCount++;
-      }
-    });
-
-    // Approximate platform profit margin (~70%)
+    // Approximate platform profit margin (~72%)
     const totalMarginEst = Math.round(totalRevenue * 0.72);
 
     return res.json({

@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { OrderItem } from '../types';
 import { StatusBadge, PageHeader } from '@shared';
+import { getCategoryLabel } from '../data/categories';
 import {
   ArrowLeft,
   Calendar,
@@ -161,7 +162,7 @@ export const OrderDetailPage: React.FC = () => {
           
           <div className="bg-gray-50 border border-gray-200/80 rounded-2xl p-4">
             <span className="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider block">Категория</span>
-            <span className="text-base font-black text-black mt-1 block truncate">{order.category}</span>
+            <span className="text-base font-black text-black mt-1 block truncate">{getCategoryLabel(order.category)}</span>
           </div>
 
           <div className="bg-gray-50 border border-gray-200/80 rounded-2xl p-4">
@@ -255,7 +256,11 @@ export const OrderDetailPage: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
           <a
-            href={order.pdfUrl || '/samples/data_matrix_sample.pdf'}
+            href={
+              order.pdfUrl && (order.pdfUrl.startsWith('/') || order.pdfUrl.startsWith('https://') || order.pdfUrl.startsWith('http://'))
+                ? order.pdfUrl
+                : '/samples/data_matrix_sample.pdf'
+            }
             download
             target="_blank"
             rel="noopener noreferrer"

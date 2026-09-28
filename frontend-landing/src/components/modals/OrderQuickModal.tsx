@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import { X, CheckCircle2 } from 'lucide-react';
 import { TariffCode } from '../../types';
-
 import { apiClient } from '../../api/client';
 
 interface OrderQuickModalProps {
@@ -21,6 +21,7 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
   totalPrice,
 }) => {
   const [submitted, setSubmitted] = useState(false);
+  const [consent, setConsent] = useState(false);
   const [form, setForm] = useState({
     companyName: '',
     binIin: '',
@@ -43,6 +44,10 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!consent) {
+      alert('Пожалуйста, подтвердите согласие на обработку персональных данных (Закон РК № 94-V).');
+      return;
+    }
     const serviceTitle = `Быстрый заказ (${tariffType} • ${itemsCount.toLocaleString()} шт. • ${totalPrice.toLocaleString()} ₸)`;
     
     // 1. Save locally for instant UI update
@@ -182,9 +187,27 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
                 />
               </div>
 
+              {/* Personal Data Consent Checkbox (Закон РК № 94-V) */}
+              <div className="flex items-start gap-2 pt-1 text-left">
+                <input
+                  type="checkbox"
+                  id="quick-consent"
+                  required
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer shrink-0"
+                />
+                <label htmlFor="quick-consent" className="text-xs text-gray-500 leading-relaxed cursor-pointer select-none">
+                  Я согласен на сбор и обработку персональных данных в соответствии с{' '}
+                  <Link to="/privacy" target="_blank" className="text-black font-bold underline">
+                    Политикой конфиденциальности РК
+                  </Link>.
+                </label>
+              </div>
+
               <button
                 type="submit"
-                className="w-full bg-black text-white font-extrabold text-sm py-3.5 rounded-xl hover:bg-gray-800 transition-all active:scale-95 shadow-md mt-2"
+                className="w-full bg-black text-white font-extrabold text-sm py-3.5 rounded-xl hover:bg-gray-800 transition-all active:scale-95 shadow-md mt-2 cursor-pointer"
               >
                 Отправить заявку на маркировку
               </button>

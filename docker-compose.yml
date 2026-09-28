@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tanbox_pass_2026}
       POSTGRES_DB: ${POSTGRES_DB:-tanbox_db}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -24,11 +24,11 @@ services:
     container_name: tanbox_backend
     restart: always
     ports:
-      - "5050:5050"
+      - "127.0.0.1:5050:5050"
     environment:
       PORT: ${PORT:-5050}
       DATABASE_URL: ${DATABASE_URL:-postgresql://tanbox_user:tanbox_pass_2026@postgres:5432/tanbox_db?schema=public}
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:-tanbox_kz_jwt_secret_key_super_secure_2026}
       NODE_ENV: ${NODE_ENV:-development}
     depends_on:
       postgres:
@@ -44,7 +44,7 @@ services:
     container_name: tanbox_frontend_landing
     restart: always
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       - VITE_API_URL=/api
     volumes:
@@ -58,7 +58,7 @@ services:
     container_name: tanbox_frontend_lk
     restart: always
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     environment:
       - VITE_API_URL=/api
     volumes:
@@ -73,12 +73,31 @@ services:
     container_name: tanbox_frontend_admin
     restart: always
     ports:
-      - "3002:3002"
+      - "127.0.0.1:3002:3002"
     environment:
       - VITE_API_URL=/api
+      - VITE_BACKEND_URL=http://backend:5050
+      - VITE_LABEL_SERVICE_URL=http://label-generator:5060
+    depends_on:
+      - backend
     volumes:
       - ./frontend-admin:/app
       - ./shared:/shared
+      - /app/node_modules
+
+  label-generator:
+    build:
+      context: ./label-generator
+      dockerfile: Dockerfile.dev
+    container_name: tanbox_label_generator
+    restart: always
+    ports:
+      - "127.0.0.1:5060:5060"
+    environment:
+      PORT: 5060
+      NODE_ENV: ${NODE_ENV:-development}
+    volumes:
+      - ./label-generator:/app
       - /app/node_modules
 
   caddy:
@@ -87,7 +106,6 @@ services:
     restart: always
     ports:
       - "80:80"
-      - "8080:80"
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
@@ -98,6 +116,7 @@ services:
       - frontend-lk
       - frontend-admin
       - backend
+      - label-generator
 
 volumes:
   pgdata:

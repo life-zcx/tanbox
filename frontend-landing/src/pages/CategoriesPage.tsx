@@ -20,6 +20,7 @@ import {
   Calendar,
   Layers
 } from 'lucide-react';
+import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
 
 export interface CategoryDetailItem {
   id: string;
@@ -38,6 +39,8 @@ export interface CategoryDetailItem {
 
 export const CategoriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'ACTIVE' | 'UPCOMING'>('ALL');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedServiceTitle, setSelectedServiceTitle] = useState('Аудит ТН ВЭД и подготовка к маркировке 2026–2027');
   const location = useLocation();
 
   useEffect(() => {
@@ -317,87 +320,82 @@ export const CategoriesPage: React.FC = () => {
         </div>
 
         {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filteredCategories.map((item) => {
             const isActive = item.status === 'ACTIVE';
-            const IconComponent = item.icon;
 
             return (
               <div
                 key={item.id}
                 id={item.id}
-                className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-6 relative overflow-hidden"
+                className="bg-white rounded-2xl p-5 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between space-y-4 border border-gray-100"
               >
-                <div className="space-y-5">
+                <div className="space-y-3.5">
                   {/* Top Badge & TNVED */}
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
                     <span
-                      className={`text-xs font-extrabold px-3 py-1 rounded-full ${
+                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
                         isActive
                           ? 'bg-emerald-50 text-emerald-700'
                           : 'bg-[#EBF5FF] text-[#0082FB]'
                       }`}
                     >
                       {isActive ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-emerald-600" />
+                        <CheckCircle2 className="w-3 h-3 inline mr-1 text-emerald-600" />
                       ) : (
-                        <Clock className="w-3.5 h-3.5 inline mr-1 text-[#0082FB]" />
+                        <Clock className="w-3 h-3 inline mr-1 text-[#0082FB]" />
                       )}
                       {item.statusText}
                     </span>
 
-                    <span className="text-xs font-mono font-bold text-[#64748B] bg-[#F8FAFC] px-3 py-1 rounded-lg">
+                    <span className="text-[11px] font-mono font-bold text-[#64748B] bg-[#F8FAFC] px-2.5 py-0.5 rounded-md">
                       ТН ВЭД: {item.tnved}
                     </span>
                   </div>
 
-                  {/* Title & Icon */}
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-[#EBF5FF] text-[#0082FB] flex items-center justify-center shrink-0 shadow-sm">
-                      <IconComponent className="w-6 h-6 stroke-[2]" />
-                    </div>
-
-                    <div>
-                      <h3 className="text-xl font-bold text-[#111827] tracking-tight">{item.title}</h3>
-                      <p className="text-xs font-bold text-[#64748B] mt-1 flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-[#0082FB]" />
-                        {item.date}
-                      </p>
-                    </div>
+                  {/* Title without AI icon */}
+                  <div>
+                    <h3 className="text-lg font-bold text-[#111827] tracking-tight leading-snug">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-[#64748B] mt-1 flex items-center gap-1.5 font-medium">
+                      <Calendar className="w-3.5 h-3.5 text-[#0082FB]" />
+                      {item.date}
+                    </p>
                   </div>
 
                   {/* Description */}
-                  <p className="text-sm text-[#64748B] leading-relaxed font-normal">
+                  <p className="text-xs sm:text-[13px] text-[#64748B] leading-relaxed font-normal">
                     {item.description}
                   </p>
 
-                  {/* Stages Breakdown (if available) */}
+                  {/* Stages Breakdown (if available) - compact */}
                   {item.stages && item.stages.length > 0 && (
-                    <div className="bg-[#F8FAFC] border border-gray-100 rounded-2xl p-4 space-y-2">
-                      <p className="text-xs font-bold text-[#0082FB] uppercase tracking-wider flex items-center gap-1.5">
-                        <Layers className="w-4 h-4 text-[#0082FB]" />
+                    <div className="bg-[#F8FAFC] border border-gray-100 rounded-xl p-3 space-y-1.5">
+                      <p className="text-[11px] font-bold text-[#0082FB] uppercase tracking-wider flex items-center gap-1">
+                        <Layers className="w-3.5 h-3.5 text-[#0082FB]" />
                         Этапы вступления в силу:
                       </p>
-                      <ul className="space-y-2">
+                      <ul className="space-y-1.5">
                         {item.stages.map((stg, sIdx) => (
                           <li key={sIdx} className="text-xs text-[#111827] font-medium leading-relaxed flex items-start gap-2">
-                            <span className="font-extrabold bg-[#0082FB] text-white px-2 py-0.5 rounded text-[11px] shrink-0 whitespace-nowrap">
+                            <span className="font-bold bg-[#0082FB] text-white px-1.5 py-0.5 rounded text-[10px] shrink-0 whitespace-nowrap">
                               {stg.date}
                             </span>
-                            <span>{stg.title}</span>
+                            <span className="text-xs">{stg.title}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
                   )}
 
-                  {/* Key Features Details */}
-                  <div className="bg-[#F8FAFC] rounded-2xl p-4 border border-gray-100 space-y-2">
-                    <p className="text-xs font-bold text-[#111827] uppercase tracking-wider">Ключевые особенности:</p>
-                    <ul className="space-y-1.5">
+                  {/* Key Features Details - Compact & without AI box icons */}
+                  <div className="bg-[#F8FAFC] rounded-xl p-3 border border-gray-100 space-y-1.5">
+                    <p className="text-[11px] font-bold text-[#111827] uppercase tracking-wider">Ключевые особенности:</p>
+                    <ul className="space-y-1">
                       {item.details.map((detail, idx) => (
-                        <li key={idx} className="text-xs text-[#64748B] flex items-start gap-2 font-medium">
-                          <PackageCheck className="w-4 h-4 text-[#0082FB] shrink-0 mt-0.5" />
+                        <li key={idx} className="text-xs text-[#475569] flex items-start gap-2 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#0082FB] shrink-0 mt-1.5" />
                           <span>{detail}</span>
                         </li>
                       ))}
@@ -405,18 +403,18 @@ export const CategoriesPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Bottom Action */}
-                <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+                {/* Bottom Action - Compact */}
+                <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2.5 flex-wrap">
                   <Link
                     to={`/categories/${item.id}`}
-                    className="inline-flex items-center gap-2 bg-[#0082FB] text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl hover:bg-[#0070DA] transition-all active:scale-95 shrink-0 shadow-sm"
+                    className="inline-flex items-center gap-1.5 bg-[#0082FB] text-white font-bold text-xs px-3.5 py-2 rounded-xl hover:bg-[#0070DA] transition-all active:scale-95 shrink-0 shadow-sm"
                   >
                     Подробнее о категории <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
 
                   <Link
                     to={item.link}
-                    className="inline-flex items-center gap-2 bg-[#F0F4F8] hover:bg-[#E2E8F0] text-[#111827] font-bold text-xs px-4 py-2.5 rounded-2xl transition-all active:scale-95 shrink-0"
+                    className="inline-flex items-center gap-1.5 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#111827] font-bold text-xs px-3.5 py-2 rounded-xl transition-all active:scale-95 shrink-0"
                   >
                     Рассчитать стоимость
                   </Link>
@@ -440,14 +438,24 @@ export const CategoriesPage: React.FC = () => {
             </p>
           </div>
 
-          <Link
-            to="/contacts"
-            className="bg-[#0082FB] text-white font-extrabold text-sm px-8 py-3.5 rounded-2xl hover:bg-[#0070DA] transition-all shrink-0 active:scale-95 shadow-md"
+          <button
+            onClick={() => {
+              setSelectedServiceTitle('Бесплатный аудит ТН ВЭД и подготовка к маркировке 2026–2027');
+              setIsModalOpen(true);
+            }}
+            className="bg-[#0082FB] text-white font-extrabold text-sm px-8 py-3.5 rounded-2xl hover:bg-[#0070DA] transition-all shrink-0 active:scale-95 shadow-md cursor-pointer"
           >
             Получить консультацию
-          </Link>
+          </button>
         </div>
       </section>
+
+      {/* Service Order Modal */}
+      <ServiceOrderModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        initialServiceTitle={selectedServiceTitle}
+      />
 
     </div>
   );

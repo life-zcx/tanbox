@@ -27,7 +27,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onOrderQuick }) 
       </section>
 
       <div className="pt-2">
-        <CalculatorSection onOrderQuick={onOrderQuick} />
+        <CalculatorSection onOrderQuick={onOrderQuick} hideHeading={true} />
       </div>
     </div>
   );

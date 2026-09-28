@@ -2,16 +2,51 @@ import { Response } from 'express';
 import { prisma } from '../config/db';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { OrderCategory, TariffType, OrderStatus } from '@prisma/client';
+import { computeOrderPricing } from '../utils/pricing';
+
+function isSafeUrl(url?: string | null): boolean {
+  if (!url) return true;
+  const trimmed = url.trim();
+  // Safe relative paths or http/https URLs
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
 
-    const { category, tariffType, itemsCount, pricePerItem, totalPrice, extraServices, ssccNeeded, notes } = req.body;
+    const { category, tariffType, itemsCount, extraServices, ssccNeeded, notes } = req.body;
 
-    if (!category || !tariffType || !itemsCount || itemsCount <= 0) {
+    if (!category || !tariffType || !itemsCount) {
       return res.status(400).json({ message: 'Заполните обязательные поля заказа' });
     }
+
+    if (!Object.values(OrderCategory).includes(category as OrderCategory)) {
+      return res.status(400).json({ message: 'Недопустимая категория товара' });
+    }
+
+    if (!Object.values(TariffType).includes(tariffType as TariffType)) {
+      return res.status(400).json({ message: 'Недопустимый тариф' });
+    }
+
+    const countNum = parseInt(itemsCount, 10);
+    if (isNaN(countNum) || countNum <= 0 || countNum > 10000000) {
+      return res.status(400).json({ message: 'Количество должно быть положительным целым числом до 10 000 000' });
+    }
+
+    // Authoritative server-side price calculation (tamper-proof)
+    const pricing = await computeOrderPricing({
+      tariffType: tariffType as TariffType,
+      itemsCount: countNum,
+      extraServices: Array.isArray(extraServices) ? extraServices.map(String) : [],
+      ssccNeeded: Boolean(ssccNeeded),
+    });
 
     // Generate readable order number: TB-2026-XXXX
     const count = await prisma.order.count();
@@ -23,12 +58,12 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         userId: req.user.id,
         category: category as OrderCategory,
         tariffType: tariffType as TariffType,
-        itemsCount: Number(itemsCount),
-        pricePerItem: Number(pricePerItem),
-        totalPrice: Number(totalPrice),
-        extraServices: extraServices || [],
+        itemsCount: pricing.safeItemsCount,
+        pricePerItem: pricing.unitPrice,
+        totalPrice: pricing.totalPrice,
+        extraServices: Array.isArray(extraServices) ? extraServices.map((s) => String(s).slice(0, 50)) : [],
         ssccNeeded: Boolean(ssccNeeded),
-        notes: notes || '',
+        notes: typeof notes === 'string' ? notes.slice(0, 1000) : '',
         status: OrderStatus.NEW,
       },
     });
@@ -100,7 +135,7 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Заказ не найден' });
     }
 
-    // Check ownership if not admin
+    // Check ownership if not admin (IDOR protection)
     if (req.user.role !== 'ADMIN' && order.userId !== req.user.id) {
       return res.status(403).json({ message: 'Нет доступа к данному заказу' });
     }
@@ -120,6 +155,14 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { status, pdfUrl } = req.body;
 
+    if (status && !Object.values(OrderStatus).includes(status as OrderStatus)) {
+      return res.status(400).json({ message: 'Некорректный статус заказа' });
+    }
+
+    if (pdfUrl !== undefined && !isSafeUrl(pdfUrl)) {
+      return res.status(400).json({ message: 'Недопустимый формат URL документа' });
+    }
+
     const existing = await prisma.order.findUnique({ where: { id } });
     if (!existing) {
       return res.status(404).json({ message: 'Заказ не найден' });
@@ -128,8 +171,8 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: {
-        status: status as OrderStatus,
-        pdfUrl: pdfUrl !== undefined ? pdfUrl : existing.pdfUrl,
+        ...(status ? { status: status as OrderStatus } : {}),
+        ...(pdfUrl !== undefined ? { pdfUrl } : {}),
       },
     });
 

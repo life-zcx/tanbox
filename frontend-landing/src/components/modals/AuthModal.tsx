@@ -16,6 +16,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     binIin: '',
     phone: '',
   });
+  const [agreePolicy, setAgreePolicy] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -32,6 +33,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLoginMode && !agreePolicy) {
+      alert('Пожалуйста, подтвердите согласие на сбор и обработку персональных данных');
+      return;
+    }
     // Redirect to client cabinet auth endpoint
     window.location.href = `http://127.0.0.1:3001/${isLoginMode ? 'login' : 'register'}`;
   };
@@ -142,6 +147,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               />
             </div>
           </div>
+
+          {!isLoginMode && (
+            <label className="flex items-start gap-2.5 pt-1 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                required
+                checked={agreePolicy}
+                onChange={(e) => setAgreePolicy(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+              />
+              <span className="text-[11px] text-gray-500 leading-snug">
+                Я соглашаюсь на{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-black font-semibold underline underline-offset-2 hover:opacity-75">
+                  обработку персональных данных
+                </a>{' '}
+                и принимаю условия{' '}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-black font-semibold underline underline-offset-2 hover:opacity-75">
+                  публичной оферты
+                </a>
+              </span>
+            </label>
+          )}
 
           <button
             type="submit"

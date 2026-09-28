@@ -5,7 +5,7 @@
 # DEV & Production Domain Routing for tanbox.kz platform
 
 # 1. Landing (tanbox.kz)
-http://tanbox.local:80, http://localhost:80, http://127.0.0.1:80, http://tanbox.kz {
+http://tanbox.local:80, http://localhost:80, http://127.0.0.1:80, http://tanbox.kz, :80 {
     handle /api/* {
         reverse_proxy backend:5050
     }
@@ -26,6 +26,9 @@ http://lk.tanbox.local:80, http://lk.tanbox.kz {
 
 # 3. Admin Cabinet (admin.tanbox.kz)
 http://admin.tanbox.local:80, http://admin.tanbox.kz {
+    handle /api/labels/* {
+        reverse_proxy label-generator:5060
+    }
     handle /api/* {
         reverse_proxy backend:5050
     }
@@ -34,8 +37,11 @@ http://admin.tanbox.local:80, http://admin.tanbox.kz {
     }
 }
 
-# 4. Backend REST API (api.tanbox.kz)
+# 4. Backend REST API & Label Generator (api.tanbox.kz)
 http://api.tanbox.local:80, http://api.tanbox.kz {
+    handle /api/labels/* {
+        reverse_proxy label-generator:5060
+    }
     reverse_proxy backend:5050
 }
 

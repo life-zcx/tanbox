@@ -1,9 +1,16 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/db';
+import { logger } from '../utils/logger';
 
 export const createLead = async (req: Request, res: Response) => {
   try {
-    const { serviceTitle, companyName, phone, email, binIin, notes } = req.body;
+    const { serviceTitle, companyName, phone, email, binIin, notes, consent } = req.body;
+
+    if (consent === false) {
+      return res.status(400).json({
+        message: 'Необходимо подтвердить согласие на сбор и обработку персональных данных (Закон РК № 94-V)',
+      });
+    }
 
     if (!serviceTitle || !companyName || !phone) {
       return res.status(400).json({
@@ -11,14 +18,22 @@ export const createLead = async (req: Request, res: Response) => {
       });
     }
 
+    // Input sanitization and length restriction
+    const cleanServiceTitle = String(serviceTitle).slice(0, 100);
+    const cleanCompanyName = String(companyName).slice(0, 150);
+    const cleanPhone = String(phone).slice(0, 30);
+    const cleanEmail = email ? String(email).slice(0, 100) : null;
+    const cleanBinIin = binIin ? String(binIin).slice(0, 20) : null;
+    const cleanNotes = notes ? String(notes).slice(0, 1000) : null;
+
     const lead = await prisma.serviceLead.create({
       data: {
-        serviceTitle,
-        companyName,
-        phone,
-        email: email || null,
-        binIin: binIin || null,
-        notes: notes || null,
+        serviceTitle: cleanServiceTitle,
+        companyName: cleanCompanyName,
+        phone: cleanPhone,
+        email: cleanEmail,
+        binIin: cleanBinIin,
+        notes: cleanNotes,
         status: 'NEW',
       },
     });
@@ -28,10 +43,9 @@ export const createLead = async (req: Request, res: Response) => {
       lead,
     });
   } catch (error: any) {
-    console.error('Error creating service lead:', error);
+    logger.error('Error creating service lead:', error);
     return res.status(500).json({
       message: 'Ошибка сервера при создании заявки на услугу',
-      error: error.message,
     });
   }
 };
@@ -44,10 +58,9 @@ export const getLeads = async (req: Request, res: Response) => {
 
     return res.json(leads);
   } catch (error: any) {
-    console.error('Error fetching leads:', error);
+    logger.error('Error fetching leads:', error);
     return res.status(500).json({
       message: 'Ошибка при получении списка заявок',
-      error: error.message,
     });
   }
 };
@@ -73,10 +86,9 @@ export const updateLeadStatus = async (req: Request, res: Response) => {
       lead: updated,
     });
   } catch (error: any) {
-    console.error('Error updating lead status:', error);
+    logger.error('Error updating lead status:', error);
     return res.status(500).json({
       message: 'Ошибка обновления статуса заявки',
-      error: error.message,
     });
   }
 };
