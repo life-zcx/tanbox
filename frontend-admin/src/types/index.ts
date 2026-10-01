@@ -1,4 +1,5 @@
 export type OrderStatus = 'NEW' | 'PROCESSING' | 'PRINTING' | 'STICKERING' | 'COMPLETED' | 'CANCELLED';
+export type OrderCategory = string;
 
 export interface UserClient {
   id: string;
@@ -28,6 +29,14 @@ export interface OrderAdminItem {
   extraServices: string[];
   ssccNeeded: boolean;
   pdfUrl?: string;
+  codesFileUrl?: string;
+  codesFileName?: string;
+  stickerWidth?: number;
+  stickerHeight?: number;
+  stickerLayout?: any;
+  stickerApprovalStatus?: string;
+  stickerApprovalNotes?: string;
+  stickerSentAt?: string;
   notes?: string;
   createdAt: string;
   user?: {
@@ -72,4 +81,19 @@ export interface PricingSettingsItem {
   volumeTier1: number;
   volumeTier2: number;
 }
+
+export interface UserStickerTemplate {
+  id: string;
+  userId: string;
+  name: string;
+  category?: OrderCategory | null;
+  widthMm: number;
+  heightMm: number;
+  elements: any[];
+  previewUrl?: string | null;
+  sourceOrderId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 

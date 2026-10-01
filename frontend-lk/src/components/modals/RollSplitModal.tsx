@@ -1,0 +1,371 @@
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  X,
+  Printer,
+  Download,
+  Check,
+  Layers,
+  ChevronRight,
+  Info,
+  Sliders,
+  CheckCircle2,
+  FileText,
+  AlertTriangle,
+  AlertCircle,
+} from 'lucide-react';
+import { apiClient } from '../../api/client';
+
+interface RollSplitModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  orderId: string;
+  orderNumber: string;
+  totalCodes: number;
+  labelWidth?: number;
+  labelHeight?: number;
+  hasCodesFile?: boolean;
+  hasLayout?: boolean;
+}
+
+export const RollSplitModal: React.FC<RollSplitModalProps> = ({
+  isOpen,
+  onClose,
+  orderId,
+  orderNumber,
+  totalCodes,
+  labelWidth = 58,
+  labelHeight = 40,
+  hasCodesFile = true,
+  hasLayout = true,
+}) => {
+  const [rollSize, setRollSize] = useState<number>(() => {
+    if (totalCodes <= 1000) return 500;
+    if (totalCodes <= 5000) return 1000;
+    return 1000;
+  });
+  const [customSize, setCustomSize] = useState<string>('');
+  const [isCustom, setIsCustom] = useState<boolean>(false);
+  const [downloadingRoll, setDownloadingRoll] = useState<number | null>(null);
+  const [downloadedRolls, setDownloadedRolls] = useState<Record<number, boolean>>({});
+  const [downloadAllProgress, setDownloadAllProgress] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Lock body scroll while modal is visible
+  useEffect(() => {
+    if (isOpen) {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = original;
+      };
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const isDownloadBlocked = !hasCodesFile || !hasLayout;
+  const effectiveRollSize = isCustom ? Math.max(1, parseInt(customSize, 10) || 1000) : rollSize;
+  const safeTotalCodes = Math.max(1, totalCodes);
+  const totalRolls = Math.ceil(safeTotalCodes / effectiveRollSize);
+
+  // Generate roll items
+  const rolls = Array.from({ length: totalRolls }, (_, i) => {
+    const rollNum = i + 1;
+    const start = i * effectiveRollSize;
+    const end = Math.min(safeTotalCodes, start + effectiveRollSize);
+    const count = end - start;
+    return { rollNum, start, end, count };
+  });
+
+  const handleDownloadRoll = async (rollNum: number, start: number, count: number) => {
+    if (isDownloadBlocked) return;
+    setDownloadingRoll(rollNum);
+    setErrorMessage(null);
+    try {
+      const res = await apiClient.get(
+        `/orders/${orderId}/pdf?roll=${rollNum}&offset=${start}&limit=${count}`,
+        { responseType: 'blob' }
+      );
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', `Roll_${rollNum}_(${start + 1}-${start + count})_${orderNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+
+      setDownloadedRolls((prev) => ({ ...prev, [rollNum]: true }));
+    } catch (err: any) {
+      console.error('Download roll error:', err);
+      let errMsg = 'Не удалось сгенерировать PDF рулона.';
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const json = JSON.parse(text);
+          if (json.message) errMsg = json.message;
+        } catch {}
+      } else if (err.response?.data?.message) {
+        errMsg = err.response.data.message;
+      }
+      setErrorMessage(errMsg);
+    } finally {
+      setDownloadingRoll(null);
+    }
+  };
+
+  const handleDownloadAll = async () => {
+    if (isDownloadBlocked || rolls.length === 0) return;
+    setErrorMessage(null);
+    for (let i = 0; i < rolls.length; i++) {
+      const r = rolls[i];
+      setDownloadAllProgress(`Скачивание рулона ${r.rollNum} из ${rolls.length}...`);
+      await handleDownloadRoll(r.rollNum, r.start, r.count);
+      // Brief pause between browser download prompts
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
+    setDownloadAllProgress(null);
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-2xl w-full p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-start justify-between border-b border-gray-100 pb-4 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-[#111827]">
+                Дробление тиража на рулоны
+              </h3>
+              <p className="text-xs text-[#64748B] mt-0.5">
+                Заказ {orderNumber} • {safeTotalCodes.toLocaleString()} этикеток ({labelWidth}×{labelHeight} мм)
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-black p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Validation Warnings if Codes or Layout are missing */}
+        {!hasCodesFile && (
+          <div className="p-3.5 bg-amber-50 border border-amber-200/90 rounded-2xl flex items-start gap-3 text-xs text-amber-950 shrink-0">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <strong className="font-extrabold block">Файл кодов ещё не загружен</strong>
+              <span className="text-[11px] text-amber-900 leading-relaxed">
+                В заказе отсутствуют коды маркировки Data Matrix. Загрузите файл кодов (CSV или TXT) перед формированием рулонов для термопечати.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {!hasLayout && (
+          <div className="p-3.5 bg-blue-50 border border-blue-200/90 rounded-2xl flex items-start gap-3 text-xs text-blue-950 shrink-0">
+            <AlertCircle className="w-4 h-4 text-[#0082FB] shrink-0 mt-0.5" />
+            <div>
+              <strong className="font-extrabold block">Макет этикетки ещё не утверждён</strong>
+              <span className="text-[11px] text-blue-900 leading-relaxed">
+                Макет стикера ещё не настроен или не утверждён в конструкторе этикеток. Печать рулонов станет доступна после утверждения макета.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-xs font-bold text-red-700 shrink-0">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Roll Size Configuration */}
+        <div className="bg-gray-50 border border-gray-200/80 rounded-2xl p-4 space-y-3 shrink-0">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-gray-500" />
+              Количество этикеток в одном рулоне:
+            </span>
+            <span className="text-xs font-extrabold text-[#0082FB]">
+              Итого: {totalRolls} рулонов
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[500, 1000, 2000].map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => {
+                  setRollSize(size);
+                  setIsCustom(false);
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                  !isCustom && rollSize === size
+                    ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-xs'
+                    : 'bg-white hover:bg-gray-100 text-gray-700 border-gray-200'
+                }`}
+              >
+                {size.toLocaleString()} шт.
+                {size === 1000 && <span className="block text-[9px] opacity-80 font-normal">стандарт</span>}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsCustom(true);
+                if (!customSize) setCustomSize(String(rollSize));
+              }}
+              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                isCustom
+                  ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-xs'
+                  : 'bg-white hover:bg-gray-100 text-gray-700 border-gray-200'
+              }`}
+            >
+              Свой размер
+              <span className="block text-[9px] opacity-80 font-normal">вручную</span>
+            </button>
+          </div>
+
+          {isCustom && (
+            <div className="pt-2 flex items-center gap-3">
+              <input
+                type="number"
+                min="50"
+                max="50000"
+                step="50"
+                value={customSize}
+                onChange={(e) => setCustomSize(e.target.value)}
+                placeholder="Например: 1500"
+                className="w-48 bg-white border border-gray-300 rounded-xl px-3 py-1.5 text-xs text-[#111827] font-semibold focus:outline-none focus:border-[#0082FB]"
+              />
+              <span className="text-xs text-gray-500">этикеток на рулон (до 50 000)</span>
+            </div>
+          )}
+
+          {/* Breakdown summary */}
+          <div className="flex items-center gap-2 text-[11px] text-gray-600 bg-white/80 p-2.5 rounded-xl border border-gray-200/60">
+            <Info className="w-4 h-4 text-blue-500 shrink-0" />
+            <span>
+              Партия из {safeTotalCodes.toLocaleString()} кодов разбита на{' '}
+              <strong className="text-[#111827] font-bold">{totalRolls} рулонов</strong> по{' '}
+              {effectiveRollSize.toLocaleString()} этикеток.
+            </span>
+          </div>
+        </div>
+
+        {/* Rolls List */}
+        <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[140px]">
+          {rolls.map((r) => {
+            const isDownloaded = downloadedRolls[r.rollNum];
+            const isCurrent = downloadingRoll === r.rollNum;
+
+            return (
+              <div
+                key={r.rollNum}
+                className="flex items-center justify-between p-3.5 bg-gray-50/70 hover:bg-gray-50 rounded-xl border border-gray-200/80 transition-all text-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-black text-xs text-gray-700 shadow-2xs">
+                    {isDownloaded ? (
+                      <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
+                    ) : (
+                      `№${r.rollNum}`
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-[#111827]">
+                        Рулон {r.rollNum}
+                      </span>
+                      <span className="text-[11px] text-gray-500">
+                        {r.count.toLocaleString()} этикеток
+                      </span>
+                      {isDownloaded && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
+                          ✓ Скачан
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-gray-400 font-mono">
+                      коды: {r.start + 1} — {r.end}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleDownloadRoll(r.rollNum, r.start, r.count)}
+                  disabled={isCurrent || isDownloadBlocked}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 ${
+                    isDownloaded
+                      ? 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-200'
+                      : 'bg-[#0082FB] hover:bg-[#0070DA] text-white'
+                  }`}
+                >
+                  <Download className={`w-3.5 h-3.5 ${isCurrent ? 'animate-bounce' : ''}`} />
+                  {isCurrent
+                    ? 'Генерация...'
+                    : isDownloaded
+                    ? 'Скачать повторно'
+                    : 'Скачать PDF'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="border-t border-gray-100 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+          <div className="text-xs text-gray-500">
+            {downloadAllProgress ? (
+              <span className="text-[#0082FB] font-bold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#0082FB] animate-ping" />
+                {downloadAllProgress}
+              </span>
+            ) : (
+              <span>Каждый PDF сформирован индивидуально для прямой термопечати.</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:text-black hover:bg-gray-100 transition-colors cursor-pointer"
+            >
+              Закрыть
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadAll}
+              disabled={Boolean(downloadAllProgress) || isDownloadBlocked}
+              className="inline-flex items-center gap-1.5 bg-[#111827] hover:bg-black text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Скачать все ({totalRolls}) рулонов
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+export default RollSplitModal;

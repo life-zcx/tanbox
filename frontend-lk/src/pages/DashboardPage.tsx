@@ -19,64 +19,49 @@ export const DashboardPage: React.FC = () => {
       <PageHeader
         title="Обзор и Статистика"
         description="Сводные метрики, статус выгрузок в ИС Танба и активные заказы организации"
+        action={
+          <Link
+            to="/orders/new"
+            className="inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs px-5 py-3 rounded-2xl shadow-sm transition-all active:scale-95"
+          >
+            + Создать заказ
+          </Link>
+        }
       />
-      
-      {/* Banner */}
-      <div className="bg-gradient-to-r from-[#0082FB] to-[#0052CC] text-white rounded-3xl p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-lg shadow-[#0082FB]/15 relative overflow-hidden">
-        <div className="space-y-2 z-10">
-          <span className="text-xs font-extrabold uppercase tracking-wider text-blue-100 bg-white/15 px-3 py-1 rounded-full">Кабинет организации</span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            Приветствуем, {user?.companyName || 'Клиент'}!
-          </h2>
-          <p className="text-sm text-blue-50 max-w-xl font-normal leading-relaxed">
-            БИН/ИИН: <span className="font-mono text-white font-bold">{user?.binIin}</span> • Все операции по маркировке товаров соответствуют стандарту ИС Танба РК.
-          </p>
-        </div>
-        <Link
-          to="/orders/new"
-          className="z-10 shrink-0 bg-white text-[#0082FB] hover:bg-blue-50 font-extrabold text-xs px-6 py-3.5 rounded-2xl shadow-md transition-all active:scale-95 flex items-center gap-2"
-        >
-          + Создать заказ
-        </Link>
-      </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center gap-3 text-[#64748B] mb-3">
-            <div className="w-10 h-10 rounded-full bg-[#EBF5FF] text-[#0082FB] flex items-center justify-center shrink-0">
-              <FileText className="w-5 h-5 stroke-[2]" />
-            </div>
-            <span className="text-xs font-extrabold uppercase tracking-wider text-[#64748B]">Всего заказов</span>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Всего заказов</span>
+            <FileText className="w-4 h-4 text-gray-400" />
           </div>
-          <p className="text-3xl font-extrabold text-[#111827]">{totalOrders}</p>
+          <p className="text-2xl font-extrabold text-[#111827]">{totalOrders}</p>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center gap-3 text-[#64748B] mb-3">
-            <div className="w-10 h-10 rounded-full bg-[#EBF5FF] text-[#0082FB] flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-5 h-5 stroke-[2]" />
-            </div>
-            <span className="text-xs font-extrabold uppercase tracking-wider text-[#64748B]">Заказов в работе</span>
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Заказов в работе</span>
+            <CheckCircle2 className="w-4 h-4 text-gray-400" />
           </div>
-          <p className="text-3xl font-extrabold text-[#111827]">{activeOrders}</p>
+          <p className="text-2xl font-extrabold text-[#111827]">{activeOrders}</p>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center gap-3 text-[#64748B] mb-3">
-            <div className="w-10 h-10 rounded-full bg-[#EBF5FF] text-[#0082FB] flex items-center justify-center shrink-0">
-              <Cpu className="w-5 h-5 stroke-[2]" />
-            </div>
-            <span className="text-xs font-extrabold uppercase tracking-wider text-[#64748B]">Сгенерировано кодов</span>
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Сгенерировано кодов</span>
+            <Cpu className="w-4 h-4 text-gray-400" />
           </div>
-          <p className="text-3xl font-extrabold text-[#111827]">{totalCodesCount.toLocaleString()} <span className="text-xs font-normal text-[#64748B]">шт.</span></p>
+          <p className="text-2xl font-extrabold text-[#111827]">
+            {totalCodesCount.toLocaleString()} <span className="text-xs font-semibold text-[#64748B]">шт.</span>
+          </p>
         </div>
       </div>
 
       {/* Recent Orders Preview */}
-      <div className="bg-white border border-gray-100 rounded-3xl p-7 space-y-6 shadow-sm">
+      <div className="bg-white border border-gray-200/80 rounded-2xl p-6 space-y-5 shadow-xs">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-extrabold text-[#111827]">Последние заказы</h3>
+          <h3 className="text-base font-extrabold text-[#111827]">Последние заказы</h3>
           <Link to="/orders" className="text-xs font-extrabold text-[#0082FB] hover:text-[#0070DA] flex items-center gap-1 transition-colors">
             Смотреть все <ArrowRight className="w-3.5 h-3.5" />
           </Link>

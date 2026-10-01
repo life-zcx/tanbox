@@ -108,3 +108,23 @@ export async function generateCode128Buffer(text: string): Promise<Buffer> {
     );
   });
 }
+
+export async function generateQRCodeBuffer(text: string): Promise<Buffer> {
+  const cleanText = text.trim();
+
+  return new Promise((resolve, reject) => {
+    bwipjs.toBuffer(
+      {
+        bcid: 'qrcode',
+        text: cleanText,
+        scale: 4,
+        padding: 1,
+      },
+      (err, png) => {
+        if (err) return reject(err);
+        resolve(png);
+      }
+    );
+  });
+}
+

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAdminOrders } from '../hooks/useAdminOrders';
 import { OrderAdminItem, OrderStatus } from '../types';
-import { OrderStatusModal } from '../components/modals/OrderStatusModal';
-import { Search, Edit, FileText, Download, Filter, ChevronDown } from 'lucide-react';
+import { Search, FileText, Download, Filter, ChevronDown } from 'lucide-react';
 import { PageHeader, StatusBadge } from '@shared';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -19,7 +19,6 @@ export const AdminOrdersPage: React.FC = () => {
   const { orders, loading, updateStatus } = useAdminOrders();
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeModalOrder, setActiveModalOrder] = useState<OrderAdminItem | null>(null);
 
   const filteredOrders = orders.filter((o) => {
     const matchStatus = selectedStatus === 'ALL' || o.status === selectedStatus;
@@ -95,43 +94,53 @@ export const AdminOrdersPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm font-semibold">
-                {filteredOrders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-4 px-4 font-mono font-bold text-black">{ord.orderNumber}</td>
-                    <td className="py-4 px-4">
-                      <div className="text-xs font-extrabold text-black">{ord.user?.companyName}</div>
-                      <div className="text-[11px] font-mono text-gray-500">БИН: {ord.user?.binIin}</div>
-                    </td>
-                    <td className="py-4 px-4 text-xs text-gray-700">{ord.category}</td>
-                    <td className="py-4 px-4 text-xs text-gray-700">{ord.tariffType}</td>
-                    <td className="py-4 px-4 font-extrabold text-black">{ord.itemsCount.toLocaleString()} шт</td>
-                    <td className="py-4 px-4 font-bold text-black">{ord.totalPrice.toLocaleString()} ₸</td>
-                    <td className="py-4 px-4">
-                      <StatusBadge status={ord.status} />
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <button
-                        onClick={() => setActiveModalOrder(ord)}
-                        className="inline-flex items-center gap-1.5 bg-black text-white hover:bg-gray-800 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                      >
-                        <Edit className="w-3.5 h-3.5" /> Сменить статус
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredOrders.map((ord) => {
+                  const hasStickerDesign =
+                    ord.extraServices?.includes('STICKER_LAYOUT_DESIGN') ||
+                    ord.notes?.includes('ТРЕБОВАНИЯ К МАКЕТУ СТИКЕРА');
+
+                  return (
+                    <tr key={ord.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-4 px-4 font-mono font-bold text-black">
+                        <Link
+                          to={`/orders/${ord.id}`}
+                          className="hover:text-[#0082FB] hover:underline inline-flex items-center gap-1.5"
+                        >
+                          {ord.orderNumber}
+                          {hasStickerDesign && (
+                            <span className="text-[10px] font-sans font-bold bg-blue-50 text-[#0082FB] border border-blue-200/80 px-1.5 py-0.5 rounded">
+                              Макет
+                            </span>
+                          )}
+                        </Link>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="text-xs font-extrabold text-black">{ord.user?.companyName || '—'}</div>
+                        <div className="text-[11px] font-mono text-gray-500">БИН: {ord.user?.binIin || '—'}</div>
+                      </td>
+                      <td className="py-4 px-4 text-xs text-gray-700">{ord.category}</td>
+                      <td className="py-4 px-4 text-xs text-gray-700">{ord.tariffType}</td>
+                      <td className="py-4 px-4 font-extrabold text-black">{ord.itemsCount.toLocaleString()} шт</td>
+                      <td className="py-4 px-4 font-bold text-black">{ord.totalPrice.toLocaleString()} ₸</td>
+                      <td className="py-4 px-4">
+                        <StatusBadge status={ord.status} />
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <Link
+                          to={`/orders/${ord.id}`}
+                          className="inline-flex items-center gap-1.5 bg-[#111827] text-white hover:bg-black px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                        >
+                          Открыть заказ
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
-
-      <OrderStatusModal
-        order={activeModalOrder}
-        onClose={() => setActiveModalOrder(null)}
-        onSave={async (id, status, pdfUrl) => {
-          await updateStatus(id, status, pdfUrl);
-        }}
-      />
 
     </div>
   );

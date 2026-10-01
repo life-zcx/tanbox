@@ -16,7 +16,7 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('tanbox_admin_token');
+  const token = localStorage.getItem('tanbox_admin_token') || localStorage.getItem('tanbox_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

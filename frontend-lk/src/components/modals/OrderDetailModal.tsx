@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, Download, Calendar, Layers, FileText, CheckCircle2, Building2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, Download, Calendar, Layers, FileText, CheckCircle2, Building2, MapPin } from 'lucide-react';
 import { OrderItem } from '../../types';
-import { StatusBadge } from '@shared';
+import { StatusBadge, parseOrderNotes } from '@shared';
 
 interface OrderDetailModalProps {
   order: OrderItem | null;
@@ -11,13 +12,18 @@ interface OrderDetailModalProps {
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) => {
   if (!order) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-2xl w-full p-8 relative space-y-6 max-h-[90vh] overflow-y-auto">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-2xl w-full p-8 relative space-y-6 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
         
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 text-gray-400 hover:text-black transition-colors"
+          className="absolute top-6 right-6 text-gray-400 hover:text-black transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -57,24 +63,33 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
             <span className="text-sm font-extrabold text-black mt-1 block">{order.pricePerItem} ₸</span>
           </div>
 
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 sm:col-span-2">
-            <span className="text-[11px] font-bold text-gray-500 uppercase block">Итоговая стоимость</span>
-            <span className="text-xl font-black text-black mt-1 block">{order.totalPrice.toLocaleString()} ₸</span>
+          <div className="bg-blue-50/60 border border-blue-200/80 rounded-xl p-4 sm:col-span-2">
+            <span className="text-[11px] font-bold text-[#0082FB] uppercase block">Итоговая стоимость</span>
+            <span className="text-xl font-black text-[#0082FB] mt-1 block">{order.totalPrice.toLocaleString()} ₸</span>
           </div>
         </div>
 
         {/* Extra options */}
         {order.extraServices && order.extraServices.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-xs font-extrabold text-black uppercase tracking-wider">Подключенные опции</h4>
+            <h4 className="text-xs font-bold text-[#111827] uppercase tracking-wider">Подключенные опции</h4>
             <div className="flex flex-wrap gap-2">
-              {order.extraServices.map((srv, i) => (
-                <span key={i} className="text-xs font-bold bg-gray-100 text-black px-3 py-1 rounded-lg border border-gray-200">
-                  {srv}
-                </span>
-              ))}
+              {order.extraServices.map((srv, i) => {
+                const SERVICE_NAMES: Record<string, string> = {
+                  ON_SITE_STICKERING: 'Стикеровка на складе',
+                  STICKER_LAYOUT_DESIGN: 'Разработка макета стикера',
+                  URGENT_PROCESSING: 'Срочное исполнение (24ч)',
+                  EXPRESS_DELIVERY: 'Экспресс-доставка рулонов',
+                  SSCC_AGGREGATION: 'SSCC Агрегация коробов',
+                };
+                return (
+                  <span key={i} className="text-xs font-bold bg-gray-50 text-[#111827] px-3 py-1 rounded-lg border border-gray-200/80">
+                    {SERVICE_NAMES[srv] || srv}
+                  </span>
+                );
+              })}
               {order.ssccNeeded && (
-                <span className="text-xs font-bold bg-black text-white px-3 py-1 rounded-lg">
+                <span className="text-xs font-bold bg-blue-50 text-[#0082FB] border border-blue-200 px-3 py-1 rounded-lg">
                   SSCC Агрегация
                 </span>
               )}
@@ -83,50 +98,98 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
         )}
 
         {/* PDF Download section if generated */}
-        <div className="bg-gray-900 text-white rounded-2xl p-6 space-y-4">
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-5 space-y-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <FileText className="w-6 h-6 text-emerald-400" />
+              <div className="bg-blue-50 p-2 rounded-lg text-[#0082FB]">
+                <FileText className="w-5 h-5" />
+              </div>
               <div>
-                <h4 className="text-sm font-bold text-white">Макеты кодов и Акт выполненных работ</h4>
-                <p className="text-xs text-gray-400">Сгенерировано в соответствии с ИС Танба РК</p>
+                <h4 className="text-sm font-bold text-[#111827]">Макеты кодов и Акт выполненных работ</h4>
+                <p className="text-xs text-[#64748B]">Сгенерировано в соответствии с ИС Танба РК</p>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <a
-              href={
-                order.pdfUrl && (order.pdfUrl.startsWith('/') || order.pdfUrl.startsWith('https://') || order.pdfUrl.startsWith('http://'))
-                  ? order.pdfUrl
-                  : '/samples/data_matrix_sample.pdf'
-              }
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-white text-black font-extrabold text-xs px-5 py-3 rounded-xl hover:bg-gray-100 transition-all"
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                const token = localStorage.getItem('tanbox_token') || '';
+                const url = `/api/orders/${order.id}/pdf?token=${encodeURIComponent(token)}`;
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `Labels_${order.orderNumber}.pdf`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              className="inline-flex items-center justify-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer"
             >
               <Download className="w-4 h-4" /> Скачать макеты Data Matrix (PDF)
-            </a>
+            </button>
 
             <button
-              onClick={() => alert(`Акт сверки по заказу ${order.orderNumber} сформирован.`)}
-              className="inline-flex items-center justify-center gap-2 bg-gray-800 text-white font-bold text-xs px-5 py-3 rounded-xl hover:bg-gray-700 transition-all border border-gray-700"
+              type="button"
+              onClick={() => {
+                const token = localStorage.getItem('tanbox_token') || '';
+                const url = `/api/orders/${order.id}/act?token=${encodeURIComponent(token)}`;
+                window.open(url, '_blank');
+              }}
+              className="inline-flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-[#111827] font-bold text-xs px-5 py-2.5 rounded-xl border border-gray-200/80 transition-all cursor-pointer"
             >
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Скачать Акт приема-передачи
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Открыть Акт приема-передачи
             </button>
           </div>
         </div>
 
-        {/* Notes */}
-        {order.notes && (
-          <div className="border-t border-gray-100 pt-4 space-y-1">
-            <span className="text-xs font-bold text-black uppercase">Примечание клиента:</span>
-            <p className="text-xs text-gray-600 bg-gray-50 p-3 rounded-xl border border-gray-200">{order.notes}</p>
-          </div>
-        )}
+        {/* Separated Address and Notes */}
+        {order.notes && (() => {
+          const parsed = parseOrderNotes(order.notes);
+          if (!parsed.address && !parsed.clientNote && !parsed.stickerDesign) return null;
+
+          return (
+            <div className="border-t border-gray-100 pt-4 space-y-3">
+              {parsed.address && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#111827] uppercase tracking-wider">
+                    <MapPin className="w-3.5 h-3.5 text-[#0082FB]" />
+                    <span>Адрес склада в РК:</span>
+                  </div>
+                  <div className="text-xs font-semibold text-[#111827] bg-[#F8FAFC] p-3 rounded-xl border border-gray-200 leading-relaxed">
+                    {parsed.address}
+                  </div>
+                </div>
+              )}
+
+              {parsed.clientNote && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#111827] uppercase tracking-wider">
+                    <FileText className="w-3.5 h-3.5 text-[#64748B]" />
+                    <span>Примечание клиента:</span>
+                  </div>
+                  <div className="text-xs text-[#334155] bg-[#F8FAFC] p-3 rounded-xl border border-gray-200 leading-relaxed whitespace-pre-wrap">
+                    {parsed.clientNote}
+                  </div>
+                </div>
+              )}
+
+              {parsed.stickerDesign && (
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-[#111827] uppercase tracking-wider block">
+                    Параметры макета стикера:
+                  </span>
+                  <pre className="text-[11px] font-mono text-[#334155] bg-[#F8FAFC] p-3 rounded-xl border border-gray-200 whitespace-pre-wrap leading-relaxed">
+                    {parsed.stickerDesign}
+                  </pre>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

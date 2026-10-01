@@ -54,7 +54,8 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  orders      Order[]
+  orders           Order[]
+  stickerTemplates UserStickerTemplate[]
 }
 
 model Order {
@@ -68,12 +69,19 @@ model Order {
   pricePerItem   Float
   totalPrice     Float
   status         OrderStatus   @default(NEW)
-  extraServices  String[]      @default([])
-  ssccNeeded     Boolean       @default(false)
-  pdfUrl         String?
-  notes          String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  extraServices         String[]      @default([])
+  ssccNeeded            Boolean       @default(false)
+  pdfUrl                String?
+  codesFileUrl          String?
+  codesFileName         String?
+  stickerLayout         Json?
+  stickerApprovalStatus String?       @default("IN_DESIGN")
+  stickerApprovalNotes  String?
+  stickerSentAt         DateTime?
+  templateId            String?
+  notes                 String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 }
 
 model Tariff {
@@ -135,6 +143,21 @@ model LabelTemplate {
   elements    Json
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model UserStickerTemplate {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  category      OrderCategory?
+  widthMm       Float          @default(58)
+  heightMm      Float          @default(40)
+  elements      Json           @default("[]")
+  previewUrl    String?
+  sourceOrderId String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 

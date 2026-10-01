@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
@@ -11,6 +12,7 @@ import logsRoutes from './routes/logs.routes';
 import leadsRoutes from './routes/leads.routes';
 import tariffsRoutes from './routes/tariffs.routes';
 import labelTemplatesRoutes from './routes/labelTemplates.routes';
+import userTemplatesRoutes from './routes/userTemplates.routes';
 import { logger } from './utils/logger';
 import { generalApiLimiter } from './middleware/rateLimiter';
 
@@ -37,8 +39,11 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Static file serving for uploads
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
 // Apply general API rate limiting
 app.use('/api/', generalApiLimiter);
@@ -71,6 +76,7 @@ app.use('/api/metrics', metricsRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/tariffs', tariffsRoutes);
 app.use('/api/label-templates', labelTemplatesRoutes);
+app.use('/api/user-templates', userTemplatesRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

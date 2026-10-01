@@ -256,79 +256,7 @@ export const AdminTariffsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Market Guidance Box (Какие цены брать) */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50/40 border border-blue-200/80 rounded-3xl p-6 sm:p-7 space-y-4 shadow-sm">
-        <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowGuide(!showGuide)}>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#0082FB] text-white flex items-center justify-center shrink-0">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-extrabold text-[#111827]">
-                Рекомендованные рыночные цены маркировки в Казахстане (2026 г.)
-              </h3>
-              <p className="text-xs text-[#64748B]">
-                Аналитика себестоимости и среднерыночных тарифов операторов маркировки РК (ИС Танба / ЦРПТ)
-              </p>
-            </div>
-          </div>
 
-          <button
-            type="button"
-            className="text-xs font-bold text-[#0082FB] hover:underline shrink-0"
-          >
-            {showGuide ? 'Свернуть' : 'Подробнее'}
-          </button>
-        </div>
-
-        {showGuide && (
-          <div className="pt-3 border-t border-blue-200/60 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            <div className="bg-white/80 backdrop-blur rounded-2xl p-4 border border-blue-100 space-y-1.5">
-              <span className="text-[11px] font-extrabold text-[#0082FB] uppercase tracking-wider block">
-                «Цифровой» (Эмиссия)
-              </span>
-              <div className="text-base font-black text-black">10 – 15 ₸ / шт</div>
-              <p className="text-[11px] text-gray-600 leading-relaxed">
-                <strong>Себестоимость:</strong> 2.68 ₸ (госпошлина ЦРПТ РК за 1 код). Расходников 0 ₸.
-                Маржа оператора: <strong>75 – 82%</strong>.
-              </p>
-            </div>
-
-            <div className="bg-white/80 backdrop-blur rounded-2xl p-4 border border-blue-100 space-y-1.5">
-              <span className="text-[11px] font-extrabold text-[#0082FB] uppercase tracking-wider block">
-                «Печатный» (Рулоны)
-              </span>
-              <div className="text-base font-black text-black">25 – 35 ₸ / шт</div>
-              <p className="text-[11px] text-gray-600 leading-relaxed">
-                <strong>Себестоимость:</strong> код (2.68 ₸) + рулон термотрансфера 58х40 + риббон (~3.5 ₸) = ~6 ₸.
-                Маржа оператора: <strong>75 – 80%</strong>.
-              </p>
-            </div>
-
-            <div className="bg-white/80 backdrop-blur rounded-2xl p-4 border border-blue-100 space-y-1.5">
-              <span className="text-[11px] font-extrabold text-[#0082FB] uppercase tracking-wider block">
-                «Стандарт» (Под ключ)
-              </span>
-              <div className="text-base font-black text-black">50 – 65 ₸ / шт</div>
-              <p className="text-[11px] text-gray-600 leading-relaxed">
-                <strong>Себестоимость:</strong> код + стикер (~6 ₸) + зарплата маркировщика (~10–12 ₸/шт) = ~18 ₸.
-                Маржа оператора: <strong>65 – 70%</strong>.
-              </p>
-            </div>
-
-            <div className="bg-white/80 backdrop-blur rounded-2xl p-4 border border-blue-100 space-y-1.5">
-              <span className="text-[11px] font-extrabold text-[#0082FB] uppercase tracking-wider block">
-                «PRO» (Сверка + SSCC)
-              </span>
-              <div className="text-base font-black text-black">90 – 120 ₸ / шт</div>
-              <p className="text-[11px] text-gray-600 leading-relaxed">
-                <strong>Себестоимость:</strong> вскрытие обувных коробок/одежды, сверка размеров, агрегация коробов = ~35 ₸.
-                Маржа оператора: <strong>60 – 70%</strong>.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Global Volume Tiers & Extra Options Configuration */}
       <div className="bg-white border border-gray-200/90 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">

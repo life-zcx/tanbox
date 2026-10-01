@@ -36,6 +36,14 @@ export interface OrderItem {
   extraServices: string[];
   ssccNeeded: boolean;
   pdfUrl?: string;
+  codesFileUrl?: string;
+  codesFileName?: string;
+  stickerWidth?: number;
+  stickerHeight?: number;
+  stickerLayout?: any;
+  stickerApprovalStatus?: string;
+  stickerApprovalNotes?: string;
+  stickerSentAt?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -46,3 +54,18 @@ export interface OrderItem {
     phone: string;
   };
 }
+
+export interface UserStickerTemplate {
+  id: string;
+  userId: string;
+  name: string;
+  category?: OrderCategory | null;
+  widthMm: number;
+  heightMm: number;
+  elements: any[];
+  previewUrl?: string | null;
+  sourceOrderId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+

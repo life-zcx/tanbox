@@ -9,6 +9,7 @@ import { AdminLeadsPage } from './pages/AdminLeadsPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AdminTariffsPage } from './pages/AdminTariffsPage';
 import { AdminLabelDesignerPage } from './pages/AdminLabelDesignerPage';
+import { AdminOrderDetailPage } from './pages/AdminOrderDetailPage';
 
 const LoadingScreen: React.FC = () => (
   <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
@@ -79,6 +80,15 @@ export const App: React.FC = () => {
             element={
               <ProtectedAdminLayout>
                 <AdminOrdersPage />
+              </ProtectedAdminLayout>
+            }
+          />
+
+          <Route
+            path="/orders/:id"
+            element={
+              <ProtectedAdminLayout>
+                <AdminOrderDetailPage />
               </ProtectedAdminLayout>
             }
           />
