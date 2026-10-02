@@ -15,6 +15,8 @@ export function mmToPt(mm: number): number {
 export class LabelPdfGenerator {
   private regularFontPath: string;
   private boldFontPath: string;
+  private regularFontBuffer: Buffer | null = null;
+  private boldFontBuffer: Buffer | null = null;
 
   constructor() {
     const candidateDirs = [
@@ -46,6 +48,17 @@ export class LabelPdfGenerator {
         break;
       }
     }
+
+    if (this.regularFontPath && fs.existsSync(this.regularFontPath)) {
+      try {
+        this.regularFontBuffer = fs.readFileSync(this.regularFontPath);
+        this.boldFontBuffer = (this.boldFontPath && fs.existsSync(this.boldFontPath))
+          ? fs.readFileSync(this.boldFontPath)
+          : this.regularFontBuffer;
+      } catch (err) {
+        console.warn('Failed to preload font buffers:', err);
+      }
+    }
   }
 
   /**
@@ -66,11 +79,11 @@ export class LabelPdfGenerator {
       autoFirstPage: false,
     });
 
-    // Register Cyrillic Unicode fonts
-    const hasCustomFonts = fs.existsSync(this.regularFontPath);
-    if (hasCustomFonts) {
-      doc.registerFont('AppFont', this.regularFontPath);
-      doc.registerFont('AppFontBold', this.boldFontPath);
+    // Register Cyrillic Unicode fonts using preloaded in-memory Buffers (prevents repeated fs.readFileSync ENOMEM)
+    const hasCustomFonts = Boolean(this.regularFontBuffer);
+    if (this.regularFontBuffer && this.boldFontBuffer) {
+      doc.registerFont('AppFont', this.regularFontBuffer);
+      doc.registerFont('AppFontBold', this.boldFontBuffer);
     }
 
     doc.pipe(outputStream);
@@ -99,7 +112,7 @@ export class LabelPdfGenerator {
       });
       allowPageAddition = false;
 
-      await this.renderLabelElements(doc, template.elements, row, hasCustomFonts, heightPt);
+      await this.renderLabelElements(doc, template.elements, row, hasCustomFonts, heightPt, widthPt);
     }
 
     allowPageAddition = true;
@@ -111,7 +124,8 @@ export class LabelPdfGenerator {
     elements: LabelElement[],
     row: Record<string, string>,
     hasCustomFonts: boolean,
-    pageHeightPt?: number
+    pageHeightPt?: number,
+    pageWidthPt?: number
   ): Promise<void> {
     // In LabelCanvas.tsx: baseScale = 7 px/mm, font size = el.fontSize * 1.33 px.
     // True physical 1 pt = (25.4 / 72) mm. On a 7 px/mm canvas, 1 pt is (25.4 / 72) * 7 = 2.4694 px.
@@ -262,6 +276,26 @@ export class LabelPdfGenerator {
       if (rotation !== 0) {
         doc.restore();
       }
+    }
+
+    // Automatic neat label serial number in bottom right corner if not explicitly placed in template
+    const hasCustomNumber = elements.some(
+      (el) => el.type === 'text' && /\{(index|number|номер)\}/i.test(el.content || '')
+    );
+    const labelNum = row.index || row.number;
+    if (!hasCustomNumber && labelNum && pageHeightPt && pageWidthPt) {
+      const fontName = hasCustomFonts ? 'AppFont' : 'Helvetica';
+      const labelText = `№ ${labelNum}`;
+      doc.save();
+      doc.font(fontName)
+        .fontSize(5.5)
+        .fillColor('#64748B')
+        .text(labelText, pageWidthPt - mmToPt(16), pageHeightPt - mmToPt(3.5), {
+          width: mmToPt(14),
+          align: 'right',
+          lineGap: 0,
+        });
+      doc.restore();
     }
   }
 

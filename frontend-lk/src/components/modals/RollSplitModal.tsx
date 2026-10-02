@@ -7,12 +7,19 @@ import {
   Check,
   Layers,
   ChevronRight,
+  ChevronLeft,
   Info,
   Sliders,
   CheckCircle2,
   FileText,
   AlertTriangle,
   AlertCircle,
+  Lock,
+  Search,
+  RotateCcw,
+  Hash,
+  ArrowRight,
+  Copy,
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
@@ -26,6 +33,8 @@ interface RollSplitModalProps {
   labelHeight?: number;
   hasCodesFile?: boolean;
   hasLayout?: boolean;
+  canPrintBatch?: boolean;
+  blockReason?: string;
 }
 
 export const RollSplitModal: React.FC<RollSplitModalProps> = ({
@@ -38,7 +47,12 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
   labelHeight = 40,
   hasCodesFile = true,
   hasLayout = true,
+  canPrintBatch = true,
+  blockReason,
 }) => {
+  const [activeTab, setActiveTab] = useState<'rolls' | 'reprint'>('rolls');
+
+  // Roll tab state
   const [rollSize, setRollSize] = useState<number>(() => {
     if (totalCodes <= 1000) return 500;
     if (totalCodes <= 5000) return 1000;
@@ -51,6 +65,22 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
   const [downloadAllProgress, setDownloadAllProgress] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Reprint tab state
+  const [singleNum, setSingleNum] = useState<string>('');
+  const [rangeFrom, setRangeFrom] = useState<string>('');
+  const [rangeTo, setRangeTo] = useState<string>('');
+  const [downloadingSingle, setDownloadingSingle] = useState<number | null>(null);
+  const [downloadingRange, setDownloadingRange] = useState<boolean>(false);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+
+  // Search & table items state
+  const [items, setItems] = useState<any[]>([]);
+  const [itemsLoading, setItemsLoading] = useState<boolean>(false);
+  const [itemsSearch, setItemsSearch] = useState<string>('');
+  const [itemsPage, setItemsPage] = useState<number>(1);
+  const [itemsTotalPages, setItemsTotalPages] = useState<number>(1);
+  const [itemsTotal, setItemsTotal] = useState<number>(0);
+
   // Lock body scroll while modal is visible
   useEffect(() => {
     if (isOpen) {
@@ -62,9 +92,44 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
     }
   }, [isOpen]);
 
+  // Fetch items when entering reprint tab or pagination/search changes
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'reprint') return;
+    let isCancelled = false;
+    setItemsLoading(true);
+    const timeout = setTimeout(() => {
+      apiClient
+        .get(`/orders/${orderId}/items`, {
+          params: {
+            page: itemsPage,
+            limit: 15,
+            search: itemsSearch.trim() || undefined,
+          },
+        })
+        .then((res) => {
+          if (!isCancelled) {
+            setItems(res.data.items || []);
+            setItemsTotalPages(res.data.totalPages || 1);
+            setItemsTotal(res.data.total || 0);
+          }
+        })
+        .catch((err) => {
+          console.error('Fetch order items error:', err);
+        })
+        .finally(() => {
+          if (!isCancelled) setItemsLoading(false);
+        });
+    }, 200);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [isOpen, activeTab, orderId, itemsPage, itemsSearch]);
+
   if (!isOpen) return null;
 
-  const isDownloadBlocked = !hasCodesFile || !hasLayout;
+  const isDownloadBlocked = !hasCodesFile || !hasLayout || !canPrintBatch;
   const effectiveRollSize = isCustom ? Math.max(1, parseInt(customSize, 10) || 1000) : rollSize;
   const safeTotalCodes = Math.max(1, totalCodes);
   const totalRolls = Math.ceil(safeTotalCodes / effectiveRollSize);
@@ -123,10 +188,104 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
       const r = rolls[i];
       setDownloadAllProgress(`Скачивание рулона ${r.rollNum} из ${rolls.length}...`);
       await handleDownloadRoll(r.rollNum, r.start, r.count);
-      // Brief pause between browser download prompts
       await new Promise((resolve) => setTimeout(resolve, 600));
     }
     setDownloadAllProgress(null);
+  };
+
+  const handleDownloadSingle = async (num: number) => {
+    if (isDownloadBlocked || isNaN(num) || num < 1) return;
+    setDownloadingSingle(num);
+    setErrorMessage(null);
+    try {
+      const res = await apiClient.get(`/orders/${orderId}/items/${num}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', `Label_№${num}_${orderNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+
+      setItems((prev) =>
+        prev.map((it) => (it.index === num ? { ...it, status: 'REPRINTED' } : it))
+      );
+    } catch (err: any) {
+      console.error('Download single item error:', err);
+      let errMsg = `Не удалось сгенерировать этикетку №${num}`;
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const json = JSON.parse(text);
+          if (json.message) errMsg = json.message;
+        } catch {}
+      } else if (err.response?.data?.message) {
+        errMsg = err.response.data.message;
+      }
+      setErrorMessage(errMsg);
+    } finally {
+      setDownloadingSingle(null);
+    }
+  };
+
+  const handleDownloadRange = async () => {
+    const from = parseInt(rangeFrom, 10);
+    const to = parseInt(rangeTo, 10);
+    if (isNaN(from) || isNaN(to) || from < 1 || to < from) {
+      setErrorMessage('Укажите корректный диапазон этикеток (например: от 400 до 405)');
+      return;
+    }
+    if (to - from > 1000) {
+      setErrorMessage('Диапазон не должен превышать 1000 этикеток за один запрос');
+      return;
+    }
+    setDownloadingRange(true);
+    setErrorMessage(null);
+    try {
+      const res = await apiClient.get(`/orders/${orderId}/items-range/pdf?from=${from}&to=${to}`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', `Labels_(${from}-${to})_${orderNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+
+      setItems((prev) =>
+        prev.map((it) =>
+          it.index >= from && it.index <= to ? { ...it, status: 'REPRINTED' } : it
+        )
+      );
+    } catch (err: any) {
+      console.error('Download range error:', err);
+      let errMsg = `Не удалось сгенерировать этикетки с ${from} по ${to}`;
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const json = JSON.parse(text);
+          if (json.message) errMsg = json.message;
+        } catch {}
+      } else if (err.response?.data?.message) {
+        errMsg = err.response.data.message;
+      }
+      setErrorMessage(errMsg);
+    } finally {
+      setDownloadingRange(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 1500);
   };
 
   return createPortal(
@@ -136,16 +295,16 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-2xl w-full p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-2xl w-full p-6 sm:p-7 space-y-4 animate-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-gray-100 pb-4 shrink-0">
+        <div className="flex items-start justify-between border-b border-gray-100 pb-3 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
               <Layers className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-extrabold text-[#111827]">
-                Дробление тиража на рулоны
+                Печать и управление тиражом
               </h3>
               <p className="text-xs text-[#64748B] mt-0.5">
                 Заказ {orderNumber} • {safeTotalCodes.toLocaleString()} этикеток ({labelWidth}×{labelHeight} мм)
@@ -161,14 +320,42 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
           </button>
         </div>
 
-        {/* Validation Warnings if Codes or Layout are missing */}
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 border-b border-gray-100 pb-3 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('rolls')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'rolls'
+                ? 'bg-[#0082FB] text-white shadow-xs'
+                : 'bg-gray-50 hover:bg-gray-100 text-gray-600'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            Рулоны для термопринтера ({totalRolls})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('reprint')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'reprint'
+                ? 'bg-[#0082FB] text-white shadow-xs'
+                : 'bg-gray-50 hover:bg-gray-100 text-gray-600'
+            }`}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Поштучная печать и перепечатка брака
+          </button>
+        </div>
+
+        {/* Validation Warnings */}
         {!hasCodesFile && (
           <div className="p-3.5 bg-amber-50 border border-amber-200/90 rounded-2xl flex items-start gap-3 text-xs text-amber-950 shrink-0">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div>
               <strong className="font-extrabold block">Файл кодов ещё не загружен</strong>
               <span className="text-[11px] text-amber-900 leading-relaxed">
-                В заказе отсутствуют коды маркировки Data Matrix. Загрузите файл кодов (CSV или TXT) перед формированием рулонов для термопечати.
+                В заказе отсутствуют коды маркировки Data Matrix. Загрузите файл кодов перед печатью.
               </span>
             </div>
           </div>
@@ -180,7 +367,21 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
             <div>
               <strong className="font-extrabold block">Макет этикетки ещё не утверждён</strong>
               <span className="text-[11px] text-blue-900 leading-relaxed">
-                Макет стикера ещё не настроен или не утверждён в конструкторе этикеток. Печать рулонов станет доступна после утверждения макета.
+                Макет стикера ещё не настроен или не утверждён в конструкторе этикеток.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {!canPrintBatch && (
+          <div className="p-3.5 bg-gradient-to-r from-blue-50/90 via-sky-50/40 to-white border border-blue-200/90 rounded-2xl flex items-start gap-3.5 text-xs text-slate-700 shrink-0 shadow-xs">
+            <div className="w-8 h-8 rounded-xl bg-[#0082FB] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+              <Lock className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <strong className="font-extrabold text-[#0B3A78] text-xs block">Печать партии заблокирована</strong>
+              <span className="text-[11px] text-[#334D6E] leading-relaxed mt-0.5 block">
+                {blockReason || 'Печать станет доступна после согласования макета и подтверждения оплаты администратором.'}
               </span>
             </div>
           </div>
@@ -193,175 +394,398 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
           </div>
         )}
 
-        {/* Roll Size Configuration */}
-        <div className="bg-gray-50 border border-gray-200/80 rounded-2xl p-4 space-y-3 shrink-0">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
-              <Sliders className="w-3.5 h-3.5 text-gray-500" />
-              Количество этикеток в одном рулоне:
-            </span>
-            <span className="text-xs font-extrabold text-[#0082FB]">
-              Итого: {totalRolls} рулонов
-            </span>
-          </div>
+        {/* TAB 1: ROLLS VIEW */}
+        {activeTab === 'rolls' && (
+          <>
+            {/* Roll Size Configuration */}
+            <div className="bg-gray-50 border border-gray-200/80 rounded-2xl p-4 space-y-3 shrink-0">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-gray-500" />
+                  Количество этикеток в одном рулоне:
+                </span>
+                <span className="text-xs font-extrabold text-[#0082FB]">
+                  Итого: {totalRolls} рулонов
+                </span>
+              </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {[500, 1000, 2000].map((size) => (
-              <button
-                key={size}
-                type="button"
-                onClick={() => {
-                  setRollSize(size);
-                  setIsCustom(false);
-                }}
-                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
-                  !isCustom && rollSize === size
-                    ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-xs'
-                    : 'bg-white hover:bg-gray-100 text-gray-700 border-gray-200'
-                }`}
-              >
-                {size.toLocaleString()} шт.
-                {size === 1000 && <span className="block text-[9px] opacity-80 font-normal">стандарт</span>}
-              </button>
-            ))}
-
-            <button
-              type="button"
-              onClick={() => {
-                setIsCustom(true);
-                if (!customSize) setCustomSize(String(rollSize));
-              }}
-              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
-                isCustom
-                  ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-xs'
-                  : 'bg-white hover:bg-gray-100 text-gray-700 border-gray-200'
-              }`}
-            >
-              Свой размер
-              <span className="block text-[9px] opacity-80 font-normal">вручную</span>
-            </button>
-          </div>
-
-          {isCustom && (
-            <div className="pt-2 flex items-center gap-3">
-              <input
-                type="number"
-                min="50"
-                max="50000"
-                step="50"
-                value={customSize}
-                onChange={(e) => setCustomSize(e.target.value)}
-                placeholder="Например: 1500"
-                className="w-48 bg-white border border-gray-300 rounded-xl px-3 py-1.5 text-xs text-[#111827] font-semibold focus:outline-none focus:border-[#0082FB]"
-              />
-              <span className="text-xs text-gray-500">этикеток на рулон (до 50 000)</span>
-            </div>
-          )}
-
-          {/* Breakdown summary */}
-          <div className="flex items-center gap-2 text-[11px] text-gray-600 bg-white/80 p-2.5 rounded-xl border border-gray-200/60">
-            <Info className="w-4 h-4 text-blue-500 shrink-0" />
-            <span>
-              Партия из {safeTotalCodes.toLocaleString()} кодов разбита на{' '}
-              <strong className="text-[#111827] font-bold">{totalRolls} рулонов</strong> по{' '}
-              {effectiveRollSize.toLocaleString()} этикеток.
-            </span>
-          </div>
-        </div>
-
-        {/* Rolls List */}
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[140px]">
-          {rolls.map((r) => {
-            const isDownloaded = downloadedRolls[r.rollNum];
-            const isCurrent = downloadingRoll === r.rollNum;
-
-            return (
-              <div
-                key={r.rollNum}
-                className="flex items-center justify-between p-3.5 bg-gray-50/70 hover:bg-gray-50 rounded-xl border border-gray-200/80 transition-all text-xs"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-black text-xs text-gray-700 shadow-2xs">
-                    {isDownloaded ? (
-                      <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
-                    ) : (
-                      `№${r.rollNum}`
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-[#111827]">
-                        Рулон {r.rollNum}
-                      </span>
-                      <span className="text-[11px] text-gray-500">
-                        {r.count.toLocaleString()} этикеток
-                      </span>
-                      {isDownloaded && (
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
-                          ✓ Скачан
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-gray-400 font-mono">
-                      коды: {r.start + 1} — {r.end}
-                    </span>
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[500, 1000, 2000].map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      setRollSize(size);
+                      setIsCustom(false);
+                    }}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                      !isCustom && rollSize === size
+                        ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-xs'
+                        : 'bg-white hover:bg-gray-100 text-gray-700 border-gray-200'
+                    }`}
+                  >
+                    {size.toLocaleString()} шт.
+                    {size === 1000 && <span className="block text-[9px] opacity-80 font-normal">стандарт</span>}
+                  </button>
+                ))}
 
                 <button
                   type="button"
-                  onClick={() => handleDownloadRoll(r.rollNum, r.start, r.count)}
-                  disabled={isCurrent || isDownloadBlocked}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 ${
-                    isDownloaded
-                      ? 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-200'
-                      : 'bg-[#0082FB] hover:bg-[#0070DA] text-white'
+                  onClick={() => {
+                    setIsCustom(true);
+                    if (!customSize) setCustomSize(String(rollSize));
+                  }}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                    isCustom
+                      ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-xs'
+                      : 'bg-white hover:bg-gray-100 text-gray-700 border-gray-200'
                   }`}
                 >
-                  <Download className={`w-3.5 h-3.5 ${isCurrent ? 'animate-bounce' : ''}`} />
-                  {isCurrent
-                    ? 'Генерация...'
-                    : isDownloaded
-                    ? 'Скачать повторно'
-                    : 'Скачать PDF'}
+                  Свой размер
+                  <span className="block text-[9px] opacity-80 font-normal">вручную</span>
                 </button>
               </div>
-            );
-          })}
-        </div>
 
-        {/* Footer Actions */}
-        <div className="border-t border-gray-100 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-          <div className="text-xs text-gray-500">
-            {downloadAllProgress ? (
-              <span className="text-[#0082FB] font-bold flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#0082FB] animate-ping" />
-                {downloadAllProgress}
-              </span>
-            ) : (
-              <span>Каждый PDF сформирован индивидуально для прямой термопечати.</span>
-            )}
-          </div>
+              {isCustom && (
+                <div className="pt-2 flex items-center gap-3">
+                  <input
+                    type="number"
+                    min="50"
+                    max="50000"
+                    step="50"
+                    value={customSize}
+                    onChange={(e) => setCustomSize(e.target.value)}
+                    placeholder="Например: 1500"
+                    className="w-48 bg-white border border-gray-300 rounded-xl px-3 py-1.5 text-xs text-[#111827] font-semibold focus:outline-none focus:border-[#0082FB]"
+                  />
+                  <span className="text-xs text-gray-500">этикеток на рулон (до 50 000)</span>
+                </div>
+              )}
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:text-black hover:bg-gray-100 transition-colors cursor-pointer"
-            >
-              Закрыть
-            </button>
-            <button
-              type="button"
-              onClick={handleDownloadAll}
-              disabled={Boolean(downloadAllProgress) || isDownloadBlocked}
-              className="inline-flex items-center gap-1.5 bg-[#111827] hover:bg-black text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              Скачать все ({totalRolls}) рулонов
-            </button>
+              {/* Breakdown summary */}
+              <div className="flex items-center gap-2 text-[11px] text-gray-600 bg-white/80 p-2.5 rounded-xl border border-gray-200/60">
+                <Info className="w-4 h-4 text-blue-500 shrink-0" />
+                <span>
+                  Партия из {safeTotalCodes.toLocaleString()} кодов разбита на{' '}
+                  <strong className="text-[#111827] font-bold">{totalRolls} рулонов</strong> по{' '}
+                  {effectiveRollSize.toLocaleString()} этикеток.
+                </span>
+              </div>
+            </div>
+
+            {/* Rolls List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[140px]">
+              {rolls.map((r) => {
+                const isDownloaded = downloadedRolls[r.rollNum];
+                const isCurrent = downloadingRoll === r.rollNum;
+
+                return (
+                  <div
+                    key={r.rollNum}
+                    className="flex items-center justify-between p-3.5 bg-gray-50/70 hover:bg-gray-50 rounded-xl border border-gray-200/80 transition-all text-xs"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center font-black text-xs text-gray-700 shadow-2xs">
+                        {isDownloaded ? (
+                          <Check className="w-4 h-4 text-emerald-600 stroke-[3]" />
+                        ) : (
+                          `№${r.rollNum}`
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-[#111827]">
+                            Рулон {r.rollNum}
+                          </span>
+                          <span className="text-[11px] text-gray-500">
+                            {r.count.toLocaleString()} этикеток
+                          </span>
+                          {isDownloaded && (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
+                              ✓ Скачан
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-gray-400 font-mono">
+                          коды: {r.start + 1} — {r.end}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadRoll(r.rollNum, r.start, r.count)}
+                      disabled={isCurrent || isDownloadBlocked}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 ${
+                        isDownloaded
+                          ? 'bg-white hover:bg-gray-100 text-gray-700 border border-gray-200'
+                          : 'bg-[#0082FB] hover:bg-[#0070DA] text-white'
+                      }`}
+                    >
+                      <Download className={`w-3.5 h-3.5 ${isCurrent ? 'animate-bounce' : ''}`} />
+                      {isCurrent
+                        ? 'Генерация...'
+                        : isDownloaded
+                        ? 'Скачать повторно'
+                        : 'Скачать PDF'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="border-t border-gray-100 pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <div className="text-xs text-gray-500">
+                {downloadAllProgress ? (
+                  <span className="text-[#0082FB] font-bold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#0082FB] animate-ping" />
+                    {downloadAllProgress}
+                  </span>
+                ) : (
+                  <span>Каждый PDF сформирован индивидуально для прямой термопечати.</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:text-black hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  Закрыть
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadAll}
+                  disabled={Boolean(downloadAllProgress) || isDownloadBlocked}
+                  className="inline-flex items-center gap-1.5 bg-[#111827] hover:bg-black text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Скачать все ({totalRolls}) рулонов
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* TAB 2: REPRINT & DEFECT MANAGEMENT */}
+        {activeTab === 'reprint' && (
+          <div className="flex-1 flex flex-col min-h-0 space-y-4 overflow-hidden">
+            {/* Quick Actions Panel */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0">
+              {/* Single Label Reprint */}
+              <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <Hash className="w-4 h-4 text-[#0082FB]" />
+                  <span className="text-xs font-extrabold text-[#111827]">
+                    Перепечатать 1 этикетку
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max={safeTotalCodes}
+                    value={singleNum}
+                    onChange={(e) => setSingleNum(e.target.value)}
+                    placeholder="Номер (например: 402)"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-3 py-1.5 text-xs text-[#111827] font-semibold focus:outline-none focus:border-[#0082FB]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadSingle(parseInt(singleNum, 10))}
+                    disabled={
+                      !singleNum ||
+                      downloadingSingle !== null ||
+                      isDownloadBlocked
+                    }
+                    className="shrink-0 px-3 py-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    {downloadingSingle === parseInt(singleNum, 10) ? 'Генерация...' : 'Печать'}
+                  </button>
+                </div>
+                <span className="text-[10px] text-gray-500 block">
+                  Скачивает PDF на 1 наклейку для замены замятой или испорченной.
+                </span>
+              </div>
+
+              {/* Range Reprint */}
+              <div className="bg-gray-50 border border-gray-200/80 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-gray-700" />
+                  <span className="text-xs font-extrabold text-[#111827]">
+                    Перепечатать диапазон
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max={safeTotalCodes}
+                    value={rangeFrom}
+                    onChange={(e) => setRangeFrom(e.target.value)}
+                    placeholder="С №"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs text-[#111827] font-semibold focus:outline-none focus:border-[#0082FB]"
+                  />
+                  <span className="text-xs text-gray-400">—</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={safeTotalCodes}
+                    value={rangeTo}
+                    onChange={(e) => setRangeTo(e.target.value)}
+                    placeholder="По №"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs text-[#111827] font-semibold focus:outline-none focus:border-[#0082FB]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleDownloadRange}
+                    disabled={
+                      !rangeFrom ||
+                      !rangeTo ||
+                      downloadingRange ||
+                      isDownloadBlocked
+                    }
+                    className="shrink-0 px-3 py-1.5 bg-[#111827] hover:bg-black text-white rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    {downloadingRange ? '...' : 'Скачать'}
+                  </button>
+                </div>
+                <span className="text-[10px] text-gray-500 block">
+                  Например, с 400 по 405 при замятии пачки на линии.
+                </span>
+              </div>
+            </div>
+
+            {/* Search and Table of Codes */}
+            <div className="flex-1 flex flex-col min-h-0 bg-white border border-gray-200/80 rounded-2xl p-3.5 space-y-3">
+              {/* Search Bar */}
+              <div className="flex items-center justify-between gap-3 shrink-0">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={itemsSearch}
+                    onChange={(e) => {
+                      setItemsSearch(e.target.value);
+                      setItemsPage(1);
+                    }}
+                    placeholder="Поиск по номеру этикетки, GTIN или серийному номеру..."
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-[#111827] focus:outline-none focus:border-[#0082FB] focus:bg-white"
+                  />
+                </div>
+                <div className="text-[11px] font-bold text-gray-500 shrink-0">
+                  Всего: {itemsTotal.toLocaleString()} кодов
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="flex-1 overflow-y-auto min-h-[140px] border border-gray-100 rounded-xl">
+                {itemsLoading ? (
+                  <div className="flex items-center justify-center h-32 text-xs text-gray-400">
+                    Загрузка списка кодов маркировки...
+                  </div>
+                ) : items.length === 0 ? (
+                  <div className="flex items-center justify-center h-32 text-xs text-gray-400">
+                    Коды маркировки не найдены
+                  </div>
+                ) : (
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50/80 text-[11px] font-extrabold text-gray-500 uppercase border-b border-gray-100 sticky top-0 bg-white">
+                      <tr>
+                        <th className="py-2 px-3 w-16">№</th>
+                        <th className="py-2 px-3">Код DataMatrix</th>
+                        <th className="py-2 px-3 w-28">Статус</th>
+                        <th className="py-2 px-3 w-24 text-right">Действие</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 font-mono text-[11px]">
+                      {items.map((it) => (
+                        <tr key={it.id} className="hover:bg-blue-50/30 transition-colors">
+                          <td className="py-2 px-3 font-extrabold text-[#111827]">
+                            #{it.index}
+                          </td>
+                          <td className="py-2 px-3 text-gray-700 max-w-[280px] truncate">
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate" title={it.code}>
+                                {it.code}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(it.code, it.id)}
+                                className="text-gray-400 hover:text-gray-700 p-0.5 shrink-0 cursor-pointer"
+                                title="Скопировать полный код"
+                              >
+                                {copiedCodeId === it.id ? (
+                                  <Check className="w-3 h-3 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-2 px-3 font-sans">
+                            {it.status === 'REPRINTED' ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                Перепечатан
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600">
+                                В партии
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 text-right font-sans">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadSingle(it.index)}
+                              disabled={downloadingSingle === it.index || isDownloadBlocked}
+                              className="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-lg text-[10px] font-bold transition-all shadow-2xs cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                              title="Распечатать только эту этикетку"
+                            >
+                              <Printer className="w-3 h-3 text-[#0082FB]" />
+                              {downloadingSingle === it.index ? '...' : 'Печать'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Table Pagination */}
+              {itemsTotalPages > 1 && (
+                <div className="flex items-center justify-between pt-1 text-xs shrink-0">
+                  <span className="text-[11px] text-gray-500">
+                    Страница {itemsPage} из {itemsTotalPages}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setItemsPage((p) => Math.max(1, p - 1))}
+                      disabled={itemsPage <= 1}
+                      className="p-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setItemsPage((p) => Math.min(itemsTotalPages, p + 1))}
+                      disabled={itemsPage >= itemsTotalPages}
+                      className="p-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>,
     document.body

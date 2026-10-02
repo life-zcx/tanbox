@@ -13,84 +13,114 @@
  * - Auto-detecting whether row 1 is a header or already data
  */
 export function parseFlexibleCsv(rawContent: string): Record<string, string>[] {
-  let content = rawContent.replace(/^\uFEFF/, '').trim();
+  const content = rawContent.replace(/^\uFEFF/, '').trim();
   if (!content) return [];
 
   const lines = content.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
   if (lines.length === 0) return [];
 
-  // Helper: check if a field contains a marking code (starts with AI 01 + 14 digits)
   const isMarkingCode = (str: string): boolean => {
     const clean = str.replace(/^["']|["']$/g, '').trim();
     return /^01\d{14}/.test(clean);
   };
 
-  const firstLine = lines[0];
+  const stripOuterQuotes = (val: string): string => {
+    let s = val.trim();
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+      if (s.length >= 2) s = s.slice(1, -1);
+    }
+    return s.trim();
+  };
 
-  // Auto-detect delimiter
-  let delimiter: string | null = null;
-  const semiCount = (firstLine.match(/;/g) || []).length;
-  const tabCount = (firstLine.match(/\t/g) || []).length;
-  const commaCount = (firstLine.match(/,/g) || []).length;
-
-  if (semiCount > 0) {
-    delimiter = ';';
-  } else if (tabCount > 0) {
-    delimiter = '\t';
-  } else if (commaCount > 0 && !isMarkingCode(firstLine)) {
-    delimiter = ',';
-  }
-
-  // Case A: 1-column list of codes (pure TANBA export, each line is 1 code)
-  if (!delimiter) {
-    const isHeader = !isMarkingCode(firstLine) && lines.length > 1;
-    const startIdx = isHeader ? 1 : 0;
-    const rows: Record<string, string>[] = [];
-
-    for (let i = startIdx; i < lines.length; i++) {
-      let codeVal = lines[i].trim();
-      // Remove outer enclosing quotes if present, but preserve all inner quotes
-      if (codeVal.startsWith('"') && codeVal.endsWith('"') && codeVal.length >= 2) {
-        codeVal = codeVal.slice(1, -1);
-      } else if (codeVal.startsWith("'") && codeVal.endsWith("'") && codeVal.length >= 2) {
-        codeVal = codeVal.slice(1, -1);
-      }
-      if (codeVal) {
-        rows.push({ code: codeVal });
+  const parseCsvTokens = (line: string, delimiter: string): string[] => {
+    const tokens: string[] = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === delimiter && !inQuotes) {
+        tokens.push(cur);
+        cur = '';
+      } else {
+        cur += ch;
       }
     }
-    return rows;
+    tokens.push(cur);
+    return tokens.map((t) => stripOuterQuotes(t));
+  };
+
+  const firstLine = lines[0];
+  const firstClean = stripOuterQuotes(firstLine);
+
+  const isSingleHeader = /^(code|код|marking|маркировка|киз|км|datamatrix)$/i.test(firstClean);
+  const sample = lines.slice(0, Math.min(lines.length, 25));
+  const markingCount = sample.filter((l) => isMarkingCode(l)).length;
+  const isPredominantlyMarking = markingCount >= Math.min(3, sample.length) || isMarkingCode(firstLine);
+
+  const headerKeywords = /^(code|код|marking|маркировка|gtin|serial|sn|barcode|штрихкод|номенклатура|артикул|article|brand|бренд|наименование|название|цена|price|кол-во|количество)/i;
+
+  let hasExplicitHeader = false;
+  let testDelim: string | null = null;
+  const semiCount0 = (firstLine.match(/;/g) || []).length;
+  const tabCount0 = (firstLine.match(/\t/g) || []).length;
+  const commaCount0 = (firstLine.match(/,/g) || []).length;
+
+  if (semiCount0 > 0 && firstLine.split(';').some((c) => headerKeywords.test(stripOuterQuotes(c)))) {
+    testDelim = ';';
+    hasExplicitHeader = true;
+  } else if (tabCount0 > 0 && firstLine.split('\t').some((c) => headerKeywords.test(stripOuterQuotes(c)))) {
+    testDelim = '\t';
+    hasExplicitHeader = true;
+  } else if (commaCount0 > 0 && !isMarkingCode(firstLine) && firstLine.split(',').some((c) => headerKeywords.test(stripOuterQuotes(c)))) {
+    testDelim = ',';
+    hasExplicitHeader = true;
   }
 
-  // Case B: Delimited CSV (multiple columns)
-  const firstField = firstLine.split(delimiter)[0];
-  const isHeader = !isMarkingCode(firstField);
-  let headers: string[] = [];
-  let startIdx = 0;
+  if (!hasExplicitHeader) {
+    if (isSingleHeader || isPredominantlyMarking) {
+      const startIndex = isSingleHeader ? 1 : 0;
+      const rows: Record<string, string>[] = [];
+      for (let i = startIndex; i < lines.length; i++) {
+        const code = stripOuterQuotes(lines[i]);
+        if (code) {
+          rows.push({ code });
+        }
+      }
+      return rows;
+    }
 
-  if (isHeader) {
-    headers = firstLine
-      .split(delimiter)
-      .map((h, i) => h.trim().replace(/^["']|["']$/g, '') || `col_${i + 1}`);
-    startIdx = 1;
-  } else {
-    const colCount = firstLine.split(delimiter).length;
-    headers = ['code', ...Array.from({ length: colCount - 1 }, (_, i) => `col_${i + 2}`)];
+    if (semiCount0 > 0) testDelim = ';';
+    else if (tabCount0 > 0) testDelim = '\t';
+    else if (commaCount0 > 0) testDelim = ',';
   }
+
+  const delimiter = testDelim;
+  if (!delimiter) {
+    const startIndex = isSingleHeader ? 1 : 0;
+    return lines.slice(startIndex).map((l) => ({ code: stripOuterQuotes(l) })).filter((r) => r.code);
+  }
+
+  // Multi-column CSV
+  const firstCols = parseCsvTokens(firstLine, delimiter);
+  const startIndex = hasExplicitHeader ? 1 : 0;
+  const headers = hasExplicitHeader
+    ? firstCols
+    : firstCols.map((c, idx) => (idx === 0 || isMarkingCode(c) ? 'code' : `col_${idx + 1}`));
 
   const rows: Record<string, string>[] = [];
-  for (let i = startIdx; i < lines.length; i++) {
-    const parts = lines[i].split(delimiter);
+  for (let i = startIndex; i < lines.length; i++) {
+    const cols = parseCsvTokens(lines[i], delimiter);
     const row: Record<string, string> = {};
     headers.forEach((h, idx) => {
-      let val = (parts[idx] || '').trim();
-      if (val.startsWith('"') && val.endsWith('"') && val.length >= 2) {
-        val = val.slice(1, -1);
-      }
-      row[h] = val;
+      row[h] = cols[idx] !== undefined ? cols[idx] : '';
     });
-
-    // Ensure 'code' key exists if any field in the row has the marking code
     if (!row.code) {
       for (const v of Object.values(row)) {
         if (isMarkingCode(v)) {
@@ -98,8 +128,10 @@ export function parseFlexibleCsv(rawContent: string): Record<string, string>[] {
           break;
         }
       }
+      if (!row.code && cols.length > 0) {
+        row.code = cols[0];
+      }
     }
-
     rows.push(row);
   }
 

@@ -89,6 +89,35 @@ export const PreviewSymbolSvg: React.FC<{ symbolType: SymbolType; sizePx: number
           <text x="50" y="73" textAnchor="middle" fill="currentColor" stroke="none" fontSize="13" fontWeight="bold" fontFamily="Arial, sans-serif">PAP</text>
         </svg>
       );
+    case 'RECYCLE_LDPE':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="50,10 92,80 8,80" />
+          <text x="50" y="52" textAnchor="middle" fill="currentColor" stroke="none" fontSize="22" fontWeight="bold" fontFamily="Arial, sans-serif">04</text>
+          <text x="50" y="73" textAnchor="middle" fill="currentColor" stroke="none" fontSize="12" fontWeight="bold" fontFamily="Arial, sans-serif">LDPE</text>
+        </svg>
+      );
+    case 'RECYCLE_PP':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="50,10 92,80 8,80" />
+          <text x="50" y="52" textAnchor="middle" fill="currentColor" stroke="none" fontSize="22" fontWeight="bold" fontFamily="Arial, sans-serif">05</text>
+          <text x="50" y="73" textAnchor="middle" fill="currentColor" stroke="none" fontSize="13" fontWeight="bold" fontFamily="Arial, sans-serif">PP</text>
+        </svg>
+      );
+    case 'GLASS_FORK':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M 15 20 L 45 20 L 40 55 Q 30 65 20 55 Z" />
+          <line x1="30" y1="65" x2="30" y2="85" />
+          <line x1="18" y1="85" x2="42" y2="85" />
+          <line x1="72" y1="45" x2="72" y2="85" />
+          <line x1="62" y1="20" x2="62" y2="45" />
+          <line x1="72" y1="20" x2="72" y2="45" />
+          <line x1="82" y1="20" x2="82" y2="45" />
+          <line x1="62" y1="45" x2="82" y2="45" />
+        </svg>
+      );
     case 'FRAGILE':
       return (
         <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
@@ -108,6 +137,126 @@ export const PreviewSymbolSvg: React.FC<{ symbolType: SymbolType; sizePx: number
           <polyline points="54,38 68,18 82,38" />
         </svg>
       );
+    case 'TIDY_MAN':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="40" cy="22" r="8" fill="currentColor" />
+          <line x1="40" y1="30" x2="38" y2="58" />
+          <line x1="38" y1="58" x2="30" y2="85" />
+          <line x1="38" y1="58" x2="46" y2="85" />
+          <line x1="40" y1="35" x2="60" y2="42" />
+          <circle cx="63" cy="49" r="3" fill="currentColor" />
+          <polyline points="60,55 63,85 80,85 83,55" />
+        </svg>
+      );
+    case 'KEEP_AWAY_SUN':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="50" cy="60" r="16" />
+          <line x1="50" y1="40" x2="50" y2="30" />
+          <line x1="50" y1="80" x2="50" y2="90" />
+          <line x1="30" y1="60" x2="20" y2="60" />
+          <line x1="70" y1="60" x2="80" y2="60" />
+          <polyline points="15,25 50,15 85,25" />
+        </svg>
+      );
+    case 'TEMPERATURE_LIMIT':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="43" y="15" width="14" height="50" rx="7" />
+          <circle cx="50" cy="75" r="14" fill="currentColor" />
+          <line x1="57" y1="25" x2="69" y2="25" />
+          <line x1="57" y1="40" x2="69" y2="40" />
+          <line x1="57" y1="55" x2="69" y2="55" />
+        </svg>
+      );
+    case 'WASH_30':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M 10 30 L 20 80 L 80 80 L 90 30" />
+          <path d="M 10 45 Q 30 35 50 45 Q 70 55 90 45" />
+          <text x="50" y="73" textAnchor="middle" fill="currentColor" stroke="none" fontSize="25" fontWeight="bold" fontFamily="Arial, sans-serif">30°</text>
+        </svg>
+      );
+    case 'WASH_40':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M 10 30 L 20 80 L 80 80 L 90 30" />
+          <path d="M 10 45 Q 30 35 50 45 Q 70 55 90 45" />
+          <text x="50" y="73" textAnchor="middle" fill="currentColor" stroke="none" fontSize="25" fontWeight="bold" fontFamily="Arial, sans-serif">40°</text>
+        </svg>
+      );
+    case 'WASH_HAND':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M 10 30 L 20 80 L 80 80 L 90 30" />
+          <path d="M 10 45 Q 30 35 50 45 Q 70 55 90 45" />
+          <polyline points="35,15 50,50 65,35" strokeWidth="5" />
+        </svg>
+      );
+    case 'DO_NOT_WASH':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M 10 30 L 20 80 L 80 80 L 90 30" />
+          <path d="M 10 45 Q 30 35 50 45 Q 70 55 90 45" />
+          <line x1="15" y1="85" x2="85" y2="25" strokeWidth="7" />
+          <line x1="15" y1="25" x2="85" y2="85" strokeWidth="7" />
+        </svg>
+      );
+    case 'NO_BLEACH':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="50,15 88,85 12,85" />
+          <line x1="20" y1="80" x2="80" y2="20" />
+          <line x1="20" y1="20" x2="80" y2="80" />
+        </svg>
+      );
+    case 'BLEACH_OK':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="50,15 88,85 12,85" />
+        </svg>
+      );
+    case 'IRON_LOW':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M 15 75 L 75 75 Q 90 50 60 35 L 15 35 Z" />
+          <circle cx="45" cy="55" r="5" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case 'IRON_MED':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M 15 75 L 75 75 Q 90 50 60 35 L 15 35 Z" />
+          <circle cx="38" cy="55" r="4.5" fill="currentColor" stroke="none" />
+          <circle cx="52" cy="55" r="4.5" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case 'DO_NOT_IRON':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M 15 75 L 75 75 Q 90 50 60 35 L 15 35 Z" />
+          <line x1="15" y1="80" x2="85" y2="30" strokeWidth="7" />
+          <line x1="15" y1="30" x2="85" y2="80" strokeWidth="7" />
+        </svg>
+      );
+    case 'NO_TUMBLE_DRY':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="15" y="15" width="70" height="70" />
+          <circle cx="50" cy="50" r="28" />
+          <line x1="15" y1="85" x2="85" y2="15" strokeWidth="6" />
+          <line x1="15" y1="15" x2="85" y2="85" strokeWidth="6" />
+        </svg>
+      );
+    case 'NO_DRY_CLEAN':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="50" cy="50" r="38" />
+          <line x1="15" y1="85" x2="85" y2="15" strokeWidth="7" />
+          <line x1="15" y1="15" x2="85" y2="85" strokeWidth="7" />
+        </svg>
+      );
     case 'KEEP_DRY':
       return (
         <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
@@ -117,11 +266,7 @@ export const PreviewSymbolSvg: React.FC<{ symbolType: SymbolType; sizePx: number
         </svg>
       );
     default:
-      return (
-        <div className="w-full h-full border border-black flex items-center justify-center font-bold text-[8px]">
-          {symbolType}
-        </div>
-      );
+      return null;
   }
 };
 

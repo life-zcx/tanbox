@@ -206,7 +206,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
     }
 
     const { id } = req.params;
-    const { status, pdfUrl } = req.body;
+    const { status, pdfUrl, printAllowed, paymentStatus } = req.body;
 
     if (status && !Object.values(OrderStatus).includes(status as OrderStatus)) {
       return res.status(400).json({ message: 'Некорректный статус заказа' });
@@ -226,6 +226,8 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
       data: {
         ...(status ? { status: status as OrderStatus } : {}),
         ...(pdfUrl !== undefined ? { pdfUrl } : {}),
+        ...(printAllowed !== undefined ? { printAllowed: Boolean(printAllowed) } : {}),
+        ...(paymentStatus !== undefined ? { paymentStatus: String(paymentStatus) } : {}),
       },
     });
 
@@ -235,6 +237,37 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     return res.status(500).json({ message: 'Ошибка при обновлении статуса заказа' });
+  }
+};
+
+export const updateOrderPrintPermission = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Только администратор может изменять доступ к печати' });
+    }
+
+    const { id } = req.params;
+    const { printAllowed, paymentStatus } = req.body;
+
+    const existing = await findOrderByIdOrNumber(id);
+    if (!existing) {
+      return res.status(404).json({ message: 'Заказ не найден' });
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: existing.id },
+      data: {
+        ...(printAllowed !== undefined ? { printAllowed: Boolean(printAllowed) } : {}),
+        ...(paymentStatus !== undefined ? { paymentStatus: String(paymentStatus) } : {}),
+      },
+    });
+
+    return res.json({
+      message: 'Доступ к печати партии обновлен',
+      order: updatedOrder,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ message: 'Ошибка при обновлении прав на печать' });
   }
 };
 
@@ -411,6 +444,21 @@ export const uploadOrderCodesFile = async (req: AuthRequest, res: Response) => {
 
     const relativeUrl = `/uploads/orders/${existing.id}/${req.file.filename}`;
 
+    // Invalidate previously cached PDFs since new codes were uploaded
+    const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', existing.id);
+    if (fs.existsSync(orderDir)) {
+      try {
+        const files = fs.readdirSync(orderDir);
+        for (const f of files) {
+          if (f.toLowerCase().endsWith('.pdf')) {
+            fs.unlinkSync(path.join(orderDir, f));
+          }
+        }
+      } catch (cacheErr) {
+        console.warn('Could not clear cached PDFs:', cacheErr);
+      }
+    }
+
     const updatedOrder = await prisma.order.update({
       where: { id: existing.id },
       data: {
@@ -418,6 +466,39 @@ export const uploadOrderCodesFile = async (req: AuthRequest, res: Response) => {
         codesFileName: req.file.originalname,
       },
     });
+
+    // Populate OrderCodeItem table in database for fast access, numbering, and single-item reprinting
+    try {
+      const rawContent = fs.readFileSync(req.file.path, 'utf-8');
+      const { rows } = parseCodesFile(rawContent);
+      if (rows.length > 0) {
+        await prisma.orderCodeItem.deleteMany({ where: { orderId: existing.id } });
+        const items = rows.map((r, idx) => {
+          const code = r.code || Object.values(r)[0] || '';
+          let gtin: string | null = null;
+          let serial: string | null = null;
+          const m = code.match(/^01(\d{14})21([^\u001d\s]+)/);
+          if (m) {
+            gtin = m[1];
+            serial = m[2];
+          }
+          return {
+            orderId: existing.id,
+            index: idx + 1,
+            code,
+            gtin,
+            serial,
+            status: 'NEW',
+          };
+        });
+        const BATCH_SIZE = 2000;
+        for (let b = 0; b < items.length; b += BATCH_SIZE) {
+          await prisma.orderCodeItem.createMany({ data: items.slice(b, b + BATCH_SIZE) });
+        }
+      }
+    } catch (dbErr) {
+      console.warn('Failed to populate OrderCodeItem on upload:', dbErr);
+    }
 
     return res.json({
       message: 'Файл кодов успешно загружен и привязан к заказу',
@@ -521,41 +602,134 @@ export const getOrderCodesContent = async (req: AuthRequest, res: Response) => {
 };
 
 function parseCodesFile(raw: string): { headers: string[]; rows: Record<string, string>[] } {
-  const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+  const content = raw.replace(/^\uFEFF/, '').trim();
+  if (!content) return { headers: [], rows: [] };
+
+  const lines = content.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
   if (lines.length === 0) return { headers: [], rows: [] };
 
+  const isMarkingCode = (str: string): boolean => {
+    const clean = str.replace(/^["']|["']$/g, '').trim();
+    return /^01\d{14}/.test(clean);
+  };
+
+  const stripOuterQuotes = (val: string): string => {
+    let s = val.trim();
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+      if (s.length >= 2) s = s.slice(1, -1);
+    }
+    return s.trim();
+  };
+
+  const parseCsvTokens = (line: string, delimiter: string): string[] => {
+    const tokens: string[] = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === delimiter && !inQuotes) {
+        tokens.push(cur);
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    tokens.push(cur);
+    return tokens.map((t) => stripOuterQuotes(t));
+  };
+
   const firstLine = lines[0];
-  let delimiter = ',';
-  if ((firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length) delimiter = ';';
-  if ((firstLine.match(/\t/g) || []).length > (firstLine.match(/[,;]/g) || []).length) delimiter = '\t';
+  const firstClean = stripOuterQuotes(firstLine);
 
-  const firstCols = firstLine.split(delimiter).map((c) => c.replace(/^["']|["']$/g, '').trim());
-  const hasHeader = firstCols.some((c) =>
-    /^(code|код|marking|маркировка|gtin|serial|sn|barcode|штрихкод|номенклатура|артикул|article|brand|бренд|наименование)/i.test(c)
-  );
+  // Check if first line is a single-column header
+  const isSingleHeader = /^(code|код|marking|маркировка|киз|км|datamatrix)$/i.test(firstClean);
 
-  let headers: string[] = [];
-  let startIndex = 0;
-  if (hasHeader) {
-    headers = firstCols;
-    startIndex = 1;
-  } else {
-    headers = firstCols.length === 1 ? ['code'] : firstCols.map((_, idx) => (idx === 0 ? 'code' : `col_${idx + 1}`));
-    startIndex = 0;
+  // Check if sample lines are pure marking codes
+  const sample = lines.slice(0, Math.min(lines.length, 25));
+  const markingCount = sample.filter((l) => isMarkingCode(l)).length;
+  const isPredominantlyMarking = markingCount >= Math.min(3, sample.length) || isMarkingCode(firstLine);
+
+  const headerKeywords = /^(code|код|marking|маркировка|gtin|serial|sn|barcode|штрихкод|номенклатура|артикул|article|brand|бренд|наименование|название|цена|price|кол-во|количество)/i;
+
+  let hasExplicitHeader = false;
+  let testDelim: string | null = null;
+  const semiCount0 = (firstLine.match(/;/g) || []).length;
+  const tabCount0 = (firstLine.match(/\t/g) || []).length;
+  const commaCount0 = (firstLine.match(/,/g) || []).length;
+
+  if (semiCount0 > 0 && firstLine.split(';').some((c) => headerKeywords.test(stripOuterQuotes(c)))) {
+    testDelim = ';';
+    hasExplicitHeader = true;
+  } else if (tabCount0 > 0 && firstLine.split('\t').some((c) => headerKeywords.test(stripOuterQuotes(c)))) {
+    testDelim = '\t';
+    hasExplicitHeader = true;
+  } else if (commaCount0 > 0 && !isMarkingCode(firstLine) && firstLine.split(',').some((c) => headerKeywords.test(stripOuterQuotes(c)))) {
+    testDelim = ',';
+    hasExplicitHeader = true;
   }
+
+  // If no explicit multi-column header found, check if it's a 1-column list of codes
+  if (!hasExplicitHeader) {
+    if (isSingleHeader || isPredominantlyMarking) {
+      // 1-COLUMN LIST OF CODES: every line is 1 complete code. Do NOT split by commas/semicolons!
+      const startIndex = isSingleHeader ? 1 : 0;
+      const rows: Record<string, string>[] = [];
+      for (let i = startIndex; i < lines.length; i++) {
+        const code = stripOuterQuotes(lines[i]);
+        if (code) {
+          rows.push({ code });
+        }
+      }
+      return { headers: ['code'], rows };
+    }
+
+    if (semiCount0 > 0) testDelim = ';';
+    else if (tabCount0 > 0) testDelim = '\t';
+    else if (commaCount0 > 0) testDelim = ',';
+  }
+
+  const delimiter = testDelim;
+  if (!delimiter) {
+    const startIndex = isSingleHeader ? 1 : 0;
+    const rows = lines.slice(startIndex).map((l) => ({ code: stripOuterQuotes(l) })).filter((r) => r.code);
+    return { headers: ['code'], rows };
+  }
+
+  // Multi-column CSV parsing
+  const firstCols = parseCsvTokens(firstLine, delimiter);
+  const startIndex = hasExplicitHeader ? 1 : 0;
+  const headers = hasExplicitHeader
+    ? firstCols
+    : firstCols.map((c, idx) => (idx === 0 || isMarkingCode(c) ? 'code' : `col_${idx + 1}`));
 
   const rows: Record<string, string>[] = [];
   for (let i = startIndex; i < lines.length; i++) {
-    const cols = lines[i].split(delimiter).map((c) => c.replace(/^["']|["']$/g, '').trim());
+    const cols = parseCsvTokens(lines[i], delimiter);
     const r: Record<string, string> = {};
     headers.forEach((h, idx) => {
       r[h] = cols[idx] !== undefined ? cols[idx] : '';
     });
-    if (headers.length === 1 && !r['code']) {
-      r['code'] = cols[0];
+    if (!r['code']) {
+      for (const val of cols) {
+        if (isMarkingCode(val)) {
+          r['code'] = val;
+          break;
+        }
+      }
+      if (!r['code'] && cols.length > 0) {
+        r['code'] = cols[0];
+      }
     }
     rows.push(r);
   }
+
   return { headers, rows };
 }
 
@@ -655,18 +829,37 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
     const limitQuery = req.query.limit !== undefined ? parseInt(String(req.query.limit), 10) : undefined;
     const isRoll = !isSample && (rollQuery !== undefined || (offsetQuery !== undefined && limitQuery !== undefined));
 
+    // Guard: Clients can only print production batch/rolls if layout is approved AND admin permitted print (payment confirmed)
+    // Calibration sample (?sample=true) remains accessible for printer test
+    if (req.user.role !== 'ADMIN' && !isSample) {
+      if (existing.stickerApprovalStatus !== 'APPROVED') {
+        return res.status(403).json({
+          message: 'Печать партии заблокирована: макет этикетки ещё не согласован. Сначала согласуйте макет.',
+        });
+      }
+
+      const isPrintAllowed = (existing as any).printAllowed === true || (existing as any).paymentStatus === 'PAID';
+      if (!isPrintAllowed) {
+        return res.status(403).json({
+          message: 'Печать партии заблокирована: ожидается подтверждение оплаты и разрешение администратора.',
+        });
+      }
+    }
+
     const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', existing.id);
     const pdfPath = path.join(orderDir, 'labels.pdf');
 
+    const forceRegenerate = req.query.force === 'true' || req.query.refresh === 'true';
+
     // Return full batch PDF if already generated on disk
-    if (!isSample && !isRoll && fs.existsSync(pdfPath)) {
+    if (!isSample && !isRoll && !forceRegenerate && fs.existsSync(pdfPath)) {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="Labels_${existing.orderNumber}.pdf"`);
       return fs.createReadStream(pdfPath).pipe(res);
     }
 
     // Return cached roll PDF if already generated on disk
-    if (isRoll) {
+    if (isRoll && !forceRegenerate) {
       const rollNum = rollQuery || Math.floor((offsetQuery || 0) / (limitQuery || 1000)) + 1;
       const rollCacheFile = path.join(orderDir, `roll_${rollNum}_${offsetQuery || 0}_${limitQuery || 1000}.pdf`);
       if (fs.existsSync(rollCacheFile)) {
@@ -737,15 +930,37 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
       elements: templateElements,
     };
 
-    // Prepare code rows from client's uploaded CSV/TXT file
+    // Prepare code rows from database or client's uploaded CSV/TXT file
     let rows: Record<string, string>[] = [];
-    if (existing.codesFileUrl) {
+    const dbCount = await prisma.orderCodeItem.count({ where: { orderId: existing.id } });
+    if (dbCount > 0) {
+      const dbItems = await prisma.orderCodeItem.findMany({
+        where: { orderId: existing.id },
+        orderBy: { index: 'asc' },
+        select: { index: true, code: true, gtin: true, serial: true },
+      });
+      rows = dbItems.map((it) => ({
+        code: it.code,
+        index: String(it.index),
+        number: String(it.index),
+        total: String(dbCount),
+        gtin: it.gtin || '',
+        serial: it.serial || '',
+        orderNumber: existing.orderNumber,
+      }));
+    } else if (existing.codesFileUrl) {
       const csvPath = path.resolve(process.cwd(), '.' + existing.codesFileUrl);
       if (fs.existsSync(csvPath)) {
         try {
           const raw = fs.readFileSync(csvPath, 'utf-8');
           const parsed = parseCodesFile(raw);
-          rows = parsed.rows;
+          rows = parsed.rows.map((r, idx) => ({
+            ...r,
+            index: String(idx + 1),
+            number: String(idx + 1),
+            total: String(parsed.rows.length),
+            orderNumber: existing.orderNumber,
+          }));
         } catch (e) {
           console.warn('Could not parse CSV for PDF generation:', e);
         }
@@ -1018,6 +1233,276 @@ export const downloadOrderAct = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('Download order act error:', error);
     return res.status(500).json({ message: 'Ошибка формирования Акта выполненных работ' });
+  }
+};
+
+export const getOrderCodeItems = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    const { id } = req.params;
+    const existing = await findOrderByIdOrNumber(id);
+    if (!existing) return res.status(404).json({ message: 'Заказ не найден' });
+    if (req.user.role !== 'ADMIN' && existing.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Нет доступа к этому заказу' });
+    }
+
+    const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit), 10) || 50));
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const status = typeof req.query.status === 'string' ? req.query.status.trim() : '';
+
+    const where: any = { orderId: existing.id };
+    if (status) {
+      where.status = status;
+    }
+    if (search) {
+      const searchNum = parseInt(search, 10);
+      if (!isNaN(searchNum)) {
+        where.OR = [
+          { index: searchNum },
+          { code: { contains: search, mode: 'insensitive' } },
+          { gtin: { contains: search } },
+          { serial: { contains: search, mode: 'insensitive' } },
+        ];
+      } else {
+        where.OR = [
+          { code: { contains: search, mode: 'insensitive' } },
+          { gtin: { contains: search } },
+          { serial: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+    }
+
+    const [total, items] = await Promise.all([
+      prisma.orderCodeItem.count({ where }),
+      prisma.orderCodeItem.findMany({
+        where,
+        orderBy: { index: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    return res.json({
+      items,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      limit,
+    });
+  } catch (error: any) {
+    console.error('Get order code items error:', error);
+    return res.status(500).json({ message: 'Ошибка получения списка кодов маркировки' });
+  }
+};
+
+export const downloadSingleItemPdf = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    const { id, itemIndex } = req.params;
+    const existing = await findOrderByIdOrNumber(id);
+    if (!existing) return res.status(404).json({ message: 'Заказ не найден' });
+    if (req.user.role !== 'ADMIN' && existing.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Нет доступа к этому заказу' });
+    }
+
+    const idx = parseInt(String(itemIndex), 10);
+    if (isNaN(idx) || idx < 1) {
+      return res.status(400).json({ message: 'Некорректный номер этикетки' });
+    }
+
+    const item = await prisma.orderCodeItem.findUnique({
+      where: { orderId_index: { orderId: existing.id, index: idx } },
+    });
+    if (!item) {
+      return res.status(404).json({ message: `Этикетка №${idx} не найдена в заказе` });
+    }
+
+    const stickerLayout = existing.stickerLayout as any;
+    let templateElements = stickerLayout?.elements || [];
+    let w = stickerLayout?.widthMm || 58;
+    let h = stickerLayout?.heightMm || 40;
+
+    if (templateElements.length === 0) {
+      return res.status(400).json({
+        message: 'Макет этикетки ещё не разработан и не утверждён в конструкторе.',
+      });
+    }
+
+    const template = {
+      name: `Стикер ${w}×${h} мм - Заказ ${existing.orderNumber} №${idx}`,
+      widthMm: w,
+      heightMm: h,
+      elements: templateElements,
+    };
+
+    const row = {
+      code: item.code,
+      index: String(item.index),
+      number: String(item.index),
+      gtin: item.gtin || '',
+      serial: item.serial || '',
+      orderNumber: existing.orderNumber,
+    };
+
+    const requestLabelGeneratorPdf = (payload: any): Promise<Buffer> => {
+      return new Promise((resolve, reject) => {
+        const postData = JSON.stringify(payload);
+        const request = http.request(
+          {
+            hostname: process.env.LABEL_GENERATOR_HOST || 'label-generator',
+            port: parseInt(process.env.LABEL_GENERATOR_PORT || '5060', 10),
+            path: '/api/labels/generate-pdf',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(postData),
+            },
+          },
+          (microRes) => {
+            if (microRes.statusCode && microRes.statusCode >= 400) {
+              let errData = '';
+              microRes.on('data', (c) => (errData += c));
+              microRes.on('end', () =>
+                reject(new Error(`Label generator error: ${errData}`))
+              );
+              return;
+            }
+            const chunks: Buffer[] = [];
+            microRes.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+            microRes.on('end', () => resolve(Buffer.concat(chunks)));
+          }
+        );
+        request.on('error', (err) => reject(err));
+        request.write(postData);
+        request.end();
+      });
+    };
+
+    const buffer = await requestLabelGeneratorPdf({ template, csvData: [row] });
+
+    await prisma.orderCodeItem.update({
+      where: { id: item.id },
+      data: { status: 'REPRINTED', printedAt: new Date() },
+    });
+
+    const filename = `Label_№${idx}_${existing.orderNumber}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(buffer);
+  } catch (error: any) {
+    console.error('Download single item PDF error:', error);
+    return res.status(500).json({ message: 'Ошибка при генерации этикетки: ' + error.message });
+  }
+};
+
+export const downloadRangeItemsPdf = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    const { id } = req.params;
+    const existing = await findOrderByIdOrNumber(id);
+    if (!existing) return res.status(404).json({ message: 'Заказ не найден' });
+    if (req.user.role !== 'ADMIN' && existing.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Нет доступа к этому заказу' });
+    }
+
+    const fromIdx = Math.max(1, parseInt(String(req.query.from || req.body?.from), 10) || 1);
+    const toIdx = Math.max(fromIdx, parseInt(String(req.query.to || req.body?.to), 10) || fromIdx);
+
+    if (toIdx - fromIdx > 2000) {
+      return res.status(400).json({ message: 'Диапазон перепечатки не должен превышать 2000 этикеток за один запрос' });
+    }
+
+    const items = await prisma.orderCodeItem.findMany({
+      where: {
+        orderId: existing.id,
+        index: { gte: fromIdx, lte: toIdx },
+      },
+      orderBy: { index: 'asc' },
+    });
+
+    if (items.length === 0) {
+      return res.status(404).json({ message: `Этикетки в диапазоне с ${fromIdx} по ${toIdx} не найдены` });
+    }
+
+    const stickerLayout = existing.stickerLayout as any;
+    let templateElements = stickerLayout?.elements || [];
+    let w = stickerLayout?.widthMm || 58;
+    let h = stickerLayout?.heightMm || 40;
+
+    if (templateElements.length === 0) {
+      return res.status(400).json({
+        message: 'Макет этикетки ещё не разработан и не утверждён в конструкторе.',
+      });
+    }
+
+    const template = {
+      name: `Стикеры ${w}×${h} мм - Заказ ${existing.orderNumber} (${fromIdx}-${toIdx})`,
+      widthMm: w,
+      heightMm: h,
+      elements: templateElements,
+    };
+
+    const rows = items.map((it) => ({
+      code: it.code,
+      index: String(it.index),
+      number: String(it.index),
+      gtin: it.gtin || '',
+      serial: it.serial || '',
+      orderNumber: existing.orderNumber,
+    }));
+
+    const requestLabelGeneratorPdf = (payload: any): Promise<Buffer> => {
+      return new Promise((resolve, reject) => {
+        const postData = JSON.stringify(payload);
+        const request = http.request(
+          {
+            hostname: process.env.LABEL_GENERATOR_HOST || 'label-generator',
+            port: parseInt(process.env.LABEL_GENERATOR_PORT || '5060', 10),
+            path: '/api/labels/generate-pdf',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(postData),
+            },
+          },
+          (microRes) => {
+            if (microRes.statusCode && microRes.statusCode >= 400) {
+              let errData = '';
+              microRes.on('data', (c) => (errData += c));
+              microRes.on('end', () =>
+                reject(new Error(`Label generator error: ${errData}`))
+              );
+              return;
+            }
+            const chunks: Buffer[] = [];
+            microRes.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+            microRes.on('end', () => resolve(Buffer.concat(chunks)));
+          }
+        );
+        request.on('error', (err) => reject(err));
+        request.write(postData);
+        request.end();
+      });
+    };
+
+    const buffer = await requestLabelGeneratorPdf({ template, csvData: rows });
+
+    await prisma.orderCodeItem.updateMany({
+      where: {
+        orderId: existing.id,
+        index: { gte: fromIdx, lte: toIdx },
+      },
+      data: { status: 'REPRINTED', printedAt: new Date() },
+    });
+
+    const filename = `Labels_(${fromIdx}-${toIdx})_${existing.orderNumber}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(buffer);
+  } catch (error: any) {
+    console.error('Download range items PDF error:', error);
+    return res.status(500).json({ message: 'Ошибка при генерации диапазона этикеток: ' + error.message });
   }
 };
 

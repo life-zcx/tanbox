@@ -38,10 +38,18 @@ export const CreateOrderPage: React.FC = () => {
   const [category, setCategory] = useState<OrderCategory>('SHOES');
   const [tariffType, setTariffType] = useState<TariffType>('STANDARD');
   const [itemsCount, setItemsCount] = useState<number>(5000);
+  const [itemsCountInput, setItemsCountInput] = useState<string>('5 000');
   const [ssccNeeded, setSsccNeeded] = useState<boolean>(false);
   const [extraServices, setExtraServices] = useState<string[]>([]);
   const [warehouseAddress, setWarehouseAddress] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+
+  // Keep itemsCountInput in sync when itemsCount changes externally (presets, slider, pending order)
+  useEffect(() => {
+    if (itemsCount > 0) {
+      setItemsCountInput(itemsCount.toLocaleString('ru-RU'));
+    }
+  }, [itemsCount]);
 
   // Custom sticker design states
   const [labelWidth, setLabelWidth] = useState<number | string>(58);
@@ -273,9 +281,11 @@ export const CreateOrderPage: React.FC = () => {
     }
   }, [searchParams]);
 
-  // Recalculate price on changes
+  // Recalculate price on changes (debounced by 200ms to prevent race conditions and server spam)
   useEffect(() => {
-    const calc = async () => {
+    if (!itemsCount || itemsCount < 1) return;
+
+    const timer = setTimeout(async () => {
       setLoading(true);
       try {
         const res = await apiClient.post('/calculator/calculate', {
@@ -294,8 +304,9 @@ export const CreateOrderPage: React.FC = () => {
       } finally {
         setLoading(false);
       }
-    };
-    calc();
+    }, 200);
+
+    return () => clearTimeout(timer);
   }, [tariffType, itemsCount, ssccNeeded, extraServices]);
 
   // Filtered categories
@@ -351,13 +362,90 @@ export const CreateOrderPage: React.FC = () => {
     },
   ];
 
-  const presets = [1000, 5000, 10000, 25000, 50000, 100000];
-  const sliderMin = 500;
-  const sliderMax = 200000;
-  const sliderProgress = Math.min(
-    100,
-    Math.max(0, ((itemsCount - sliderMin) / (sliderMax - sliderMin)) * 100)
+  const presets = [100, 500, 1000, 5000, 10000, 25000, 50000];
+
+  // Breakpoints mapping batch size to non-linear slider percentage (0 to 100)
+  // Supports any batch size from 1 to 200 000+
+  const SLIDER_POINTS = useMemo(
+    () => [
+      { count: 1, p: 0 },
+      { count: 100, p: 8 },
+      { count: 500, p: 20 },
+      { count: 1000, p: 32 },
+      { count: 5000, p: 48 },
+      { count: 10000, p: 62 },
+      { count: 25000, p: 74 },
+      { count: 50000, p: 84 },
+      { count: 100000, p: 92 },
+      { count: 200000, p: 100 },
+    ],
+    []
   );
+
+  const countToSliderPercent = (count: number): number => {
+    if (count <= 1) return 0;
+    if (count >= 200000) return 100;
+    for (let i = 0; i < SLIDER_POINTS.length - 1; i++) {
+      const p1 = SLIDER_POINTS[i];
+      const p2 = SLIDER_POINTS[i + 1];
+      if (count >= p1.count && count <= p2.count) {
+        const ratio = (count - p1.count) / (p2.count - p1.count);
+        return p1.p + ratio * (p2.p - p1.p);
+      }
+    }
+    return 100;
+  };
+
+  const sliderPercentToCount = (percent: number): number => {
+    if (percent <= 0) return 1;
+    if (percent >= 100) return 200000;
+    for (let i = 0; i < SLIDER_POINTS.length - 1; i++) {
+      const p1 = SLIDER_POINTS[i];
+      const p2 = SLIDER_POINTS[i + 1];
+      if (percent >= p1.p && percent <= p2.p) {
+        const ratio = (percent - p1.p) / (p2.p - p1.p);
+        const rawCount = p1.count + ratio * (p2.count - p1.count);
+        if (rawCount <= 20) return Math.max(1, Math.round(rawCount));
+        if (rawCount <= 100) return Math.round(rawCount / 5) * 5;
+        if (rawCount < 1000) return Math.round(rawCount / 50) * 50;
+        if (rawCount < 10000) return Math.round(rawCount / 500) * 500;
+        if (rawCount < 50000) return Math.round(rawCount / 1000) * 1000;
+        return Math.round(rawCount / 5000) * 5000;
+      }
+    }
+    return 200000;
+  };
+
+  const sliderProgress = countToSliderPercent(itemsCount);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    if (!raw) {
+      setItemsCountInput('');
+      setItemsCount(0);
+      return;
+    }
+    const val = Math.min(1000000, parseInt(raw, 10) || 0);
+    setItemsCountInput(val.toLocaleString('ru-RU'));
+    setItemsCount(val);
+  };
+
+  const handleInputBlur = () => {
+    if (!itemsCount || itemsCount < 1) {
+      const fallback = 1;
+      setItemsCount(fallback);
+      setItemsCountInput('1');
+    } else {
+      setItemsCountInput(itemsCount.toLocaleString('ru-RU'));
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      (e.target as HTMLElement).blur();
+    }
+  };
 
   const toggleService = (code: string) => {
     setExtraServices((prev) =>
@@ -728,49 +816,111 @@ export const CreateOrderPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Formatted Number Input */}
-            <div className="flex items-center gap-2 bg-[#F4F6F9] border border-gray-200 rounded-xl px-3 py-1.5">
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={7}
-                value={itemsCount === 0 ? '' : itemsCount}
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/\D/g, '');
-                  const val = parseInt(raw, 10) || 0;
-                  setItemsCount(Math.min(1000000, val));
-                }}
-                onBlur={() => {
-                  if (!itemsCount || itemsCount < 100) {
-                    setItemsCount(500);
-                  }
-                }}
-                className="w-28 text-right text-sm font-black text-[#111827] bg-transparent focus:outline-none"
-              />
-              <span className="text-xs font-bold text-[#64748B]">шт.</span>
+            {/* Formatted Number Input & Live Price Preview */}
+            <div className="flex items-center gap-3">
+              {calculated && (
+                <div className="hidden sm:flex flex-col items-end text-right pr-1">
+                  <span className="text-xs font-black text-[#0082FB] tracking-tight">
+                    ≈ {calculated.totalPrice.toLocaleString('ru-RU')} ₸
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-semibold">
+                    {calculated.unitPrice} ₸ / шт.
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 bg-[#F4F6F9] hover:bg-white focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0082FB]/20 border border-gray-200 focus-within:border-[#0082FB] rounded-xl px-3 py-1.5 transition-all shadow-2xs">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={itemsCountInput}
+                  onChange={handleInputChange}
+                  onBlur={handleInputBlur}
+                  onKeyDown={handleInputKeyDown}
+                  placeholder="500"
+                  className="w-28 text-right text-sm font-black text-[#111827] bg-transparent focus:outline-none"
+                />
+                <span className="text-xs font-bold text-[#64748B]">шт.</span>
+              </div>
             </div>
           </div>
 
-          {/* Interactive Slider */}
+          {/* Interactive Responsive Slider */}
           <div className="space-y-2">
             <input
               type="range"
-              min={sliderMin}
-              max={sliderMax}
-              step={500}
-              value={itemsCount}
-              onChange={(e) => setItemsCount(parseInt(e.target.value, 10) || sliderMin)}
+              min={0}
+              max={100}
+              step={0.5}
+              value={sliderProgress}
+              onChange={(e) => {
+                const nextCount = sliderPercentToCount(parseFloat(e.target.value));
+                setItemsCount(nextCount);
+              }}
               style={{
                 background: `linear-gradient(to right, #0082FB 0%, #0082FB ${sliderProgress}%, #E2E8F0 ${sliderProgress}%, #E2E8F0 100%)`,
               }}
               className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#0082FB]"
             />
 
-            <div className="flex items-center justify-between text-[10px] font-bold text-[#64748B]">
-              <span>500 шт.</span>
-              <span>50 000 шт.</span>
-              <span>100 000 шт.</span>
-              <span>200 000+ шт.</span>
+            <div className="flex items-center justify-between text-[10px] font-bold text-[#64748B] select-none pt-0.5">
+              <button
+                type="button"
+                onClick={() => setItemsCount(1)}
+                className="hover:text-[#0082FB] transition-colors cursor-pointer"
+              >
+                1 шт.
+              </button>
+              <button
+                type="button"
+                onClick={() => setItemsCount(100)}
+                className="hover:text-[#0082FB] transition-colors cursor-pointer hidden sm:inline"
+              >
+                100 шт.
+              </button>
+              <button
+                type="button"
+                onClick={() => setItemsCount(500)}
+                className="hover:text-[#0082FB] transition-colors cursor-pointer"
+              >
+                500 шт.
+              </button>
+              <button
+                type="button"
+                onClick={() => setItemsCount(5000)}
+                className="hover:text-[#0082FB] transition-colors cursor-pointer"
+              >
+                5 000 шт.
+              </button>
+              <button
+                type="button"
+                onClick={() => setItemsCount(25000)}
+                className="hover:text-[#0082FB] transition-colors cursor-pointer"
+              >
+                25 000 шт.
+              </button>
+              <button
+                type="button"
+                onClick={() => setItemsCount(50000)}
+                className="hover:text-[#0082FB] transition-colors cursor-pointer"
+              >
+                50 000 шт.
+              </button>
+              <button
+                type="button"
+                onClick={() => setItemsCount(100000)}
+                className="hover:text-[#0082FB] transition-colors cursor-pointer hidden sm:inline"
+              >
+                100 000 шт.
+              </button>
+              <button
+                type="button"
+                onClick={() => setItemsCount(200000)}
+                className="hover:text-[#0082FB] transition-colors cursor-pointer"
+              >
+                200 000+ шт.
+              </button>
             </div>
           </div>
 
@@ -789,18 +939,20 @@ export const CreateOrderPage: React.FC = () => {
                       : 'bg-[#F0F4F8] hover:bg-[#E2E8F0] text-[#111827]'
                   }`}
                 >
-                  {preset.toLocaleString()} шт.
+                  {preset.toLocaleString('ru-RU')} шт.
                 </button>
               ))}
             </div>
 
-            {/* Discount note */}
-            <div className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200/60 self-start sm:self-auto">
-              {itemsCount > 100000
-                ? '★ Применен максимальный оптовый тариф (партия > 100k)'
-                : itemsCount > 20000
-                ? '✓ Применен оптовый тариф (партия > 20k)'
-                : '• Базовый тариф партии'}
+            {/* Discount note & Volume summary */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200/60 self-start sm:self-auto">
+                {itemsCount > 100000
+                  ? '★ Применен максимальный оптовый тариф (партия > 100k)'
+                  : itemsCount > 20000
+                  ? '✓ Применен оптовый тариф (партия > 20k)'
+                  : '• Базовый тариф партии'}
+              </div>
             </div>
           </div>
         </div>

@@ -10,6 +10,8 @@ import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AdminTariffsPage } from './pages/AdminTariffsPage';
 import { AdminLabelDesignerPage } from './pages/AdminLabelDesignerPage';
 import { AdminOrderDetailPage } from './pages/AdminOrderDetailPage';
+import { AdminOrderLabelsPage } from './pages/AdminOrderLabelsPage';
+import { AdminLabelsHubPage } from './pages/AdminLabelsHubPage';
 
 const LoadingScreen: React.FC = () => (
   <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
@@ -61,6 +63,15 @@ export const App: React.FC = () => {
             path="/labels"
             element={
               <ProtectedAdminLayout>
+                <AdminLabelsHubPage />
+              </ProtectedAdminLayout>
+            }
+          />
+
+          <Route
+            path="/label-designer"
+            element={
+              <ProtectedAdminLayout>
                 <AdminLabelDesignerPage />
               </ProtectedAdminLayout>
             }
@@ -89,6 +100,15 @@ export const App: React.FC = () => {
             element={
               <ProtectedAdminLayout>
                 <AdminOrderDetailPage />
+              </ProtectedAdminLayout>
+            }
+          />
+
+          <Route
+            path="/orders/:id/labels"
+            element={
+              <ProtectedAdminLayout>
+                <AdminOrderLabelsPage />
               </ProtectedAdminLayout>
             }
           />

@@ -37,6 +37,8 @@ export interface OrderAdminItem {
   stickerApprovalStatus?: string;
   stickerApprovalNotes?: string;
   stickerSentAt?: string;
+  printAllowed?: boolean;
+  paymentStatus?: string;
   notes?: string;
   createdAt: string;
   user?: {

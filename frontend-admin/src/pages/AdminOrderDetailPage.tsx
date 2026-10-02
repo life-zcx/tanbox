@@ -23,11 +23,16 @@ import {
   Download,
   Upload,
   Printer,
+  Eye,
   ChevronRight,
   RefreshCw,
   AlertTriangle,
   Layers,
   BookmarkCheck,
+  Lock,
+  Unlock,
+  ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 import axios from 'axios';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
@@ -104,6 +109,10 @@ export const AdminOrderDetailPage: React.FC = () => {
   const [codesSummary, setCodesSummary] = useState<{ totalRows: number; fileName: string } | null>(null);
   const [adjustingCount, setAdjustingCount] = useState<boolean>(false);
   const [adjustSuccessMsg, setAdjustSuccessMsg] = useState<string | null>(null);
+
+  // Print permission and payment state
+  const [updatingPrintPermission, setUpdatingPrintPermission] = useState<boolean>(false);
+  const [printPermissionMsg, setPrintPermissionMsg] = useState<string | null>(null);
 
   const fetchOrder = async () => {
     if (!id) return;
@@ -193,12 +202,18 @@ export const AdminOrderDetailPage: React.FC = () => {
       const chunk = order.notes.split(startTag)[1].split(endTag)[0];
       const lines = chunk.split('\n').map((l) => l.trim()).filter(Boolean);
 
-      const getVal = (prefix: string) => {
-        const match = lines.find((l) => l.startsWith(prefix));
-        return match ? match.replace(prefix, '').trim() : '';
+      const getVal = (...prefixes: string[]) => {
+        for (const prefix of prefixes) {
+          const match = lines.find((l) => l.startsWith(prefix));
+          if (match) {
+            const val = match.replace(prefix, '').trim();
+            if (val) return val;
+          }
+        }
+        return '';
       };
 
-      const sizeStr = getVal('Размер:') || '58 × 40 мм';
+      const sizeStr = getVal('Размер этикетки:', 'Размер:') || '58 × 40 мм';
       let widthMm = 58;
       let heightMm = 40;
       const sizeMatch = sizeStr.match(/(\d+)\s*[×x*]\s*(\d+)/i);
@@ -211,12 +226,12 @@ export const AdminOrderDetailPage: React.FC = () => {
         size: sizeStr,
         widthMm,
         heightMm,
-        productName: getVal('Товар:'),
+        productName: getVal('Наименование товара:', 'Товар:'),
         brand: getVal('Бренд:'),
         article: getVal('Артикул:'),
-        composition: getVal('Состав:'),
-        symbols: getVal('Знаки:'),
-        wishes: getVal('Пожелания/текст:'),
+        composition: getVal('Состав/Материал:', 'Состав:'),
+        symbols: getVal('Обязательные знаки:', 'Знаки:'),
+        wishes: getVal('Пожелания:', 'Пожелания/текст:'),
       };
     } catch {
       return null;
@@ -312,6 +327,30 @@ export const AdminOrderDetailPage: React.FC = () => {
       alert('Ошибка при обновлении статуса: ' + (err.response?.data?.message || err.message));
     } finally {
       setSavingStatus(false);
+    }
+  };
+
+  // Toggle print permission and payment status
+  const handleTogglePrintPermission = async (allow: boolean, newPaymentStatus?: string) => {
+    if (!order) return;
+    setUpdatingPrintPermission(true);
+    const statusToSet = newPaymentStatus !== undefined ? newPaymentStatus : (allow ? 'PAID' : 'UNPAID');
+    try {
+      const res = await apiClient.patch(`/orders/${order.id}/print-permission`, {
+        printAllowed: allow,
+        paymentStatus: statusToSet,
+      });
+      setOrder((prev) => (prev ? { ...prev, printAllowed: allow, paymentStatus: statusToSet } : prev));
+      setPrintPermissionMsg(
+        allow
+          ? 'Доступ к печати партии ОТКРЫТ (оплата подтверждена)'
+          : 'Доступ к печати партии ЗАБЛОКИРОВАН'
+      );
+      setTimeout(() => setPrintPermissionMsg(null), 4000);
+    } catch (err: any) {
+      alert('Ошибка при обновлении доступа к печати: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setUpdatingPrintPermission(false);
     }
   };
 
@@ -983,7 +1022,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                   </button>
 
                   <Link
-                    to={`/label-designer?orderId=${order.id}`}
+                    to={`/labels?orderId=${order.id}`}
                     className="inline-flex items-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -1120,40 +1159,50 @@ export const AdminOrderDetailPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200/60">
-                      <span className="text-[#64748B]">Наименование:</span>
-                      <span className="col-span-2 font-bold text-[#111827]">
-                        {labelRequirements?.productName || categoryLabel}
-                      </span>
-                    </div>
+                    {labelRequirements?.productName && (
+                      <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200/60">
+                        <span className="text-[#64748B]">Наименование:</span>
+                        <span className="col-span-2 font-bold text-[#111827]">
+                          {labelRequirements.productName}
+                        </span>
+                      </div>
+                    )}
 
-                    <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200/60">
-                      <span className="text-[#64748B]">Бренд / Торговая марка:</span>
-                      <span className="col-span-2 font-bold text-[#111827]">
-                        {labelRequirements?.brand || order.user?.companyName || '—'}
-                      </span>
-                    </div>
+                    {labelRequirements?.brand && (
+                      <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200/60">
+                        <span className="text-[#64748B]">Бренд / Торговая марка:</span>
+                        <span className="col-span-2 font-bold text-[#111827]">
+                          {labelRequirements.brand}
+                        </span>
+                      </div>
+                    )}
 
-                    <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200/60">
-                      <span className="text-[#64748B]">Артикул / Модель:</span>
-                      <span className="col-span-2 font-mono font-bold text-[#111827]">
-                        {labelRequirements?.article || order.orderNumber}
-                      </span>
-                    </div>
+                    {labelRequirements?.article && (
+                      <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200/60">
+                        <span className="text-[#64748B]">Артикул / Модель:</span>
+                        <span className="col-span-2 font-mono font-bold text-[#111827]">
+                          {labelRequirements.article}
+                        </span>
+                      </div>
+                    )}
 
-                    <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200/60">
-                      <span className="text-[#64748B]">Состав продукции:</span>
-                      <span className="col-span-2 text-[#111827] font-medium">
-                        {labelRequirements?.composition || '100% натуральные материалы'}
-                      </span>
-                    </div>
+                    {labelRequirements?.composition && (
+                      <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200/60">
+                        <span className="text-[#64748B]">Состав продукции:</span>
+                        <span className="col-span-2 text-[#111827] font-medium">
+                          {labelRequirements.composition}
+                        </span>
+                      </div>
+                    )}
 
-                    <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200/60">
-                      <span className="text-[#64748B]">Обязательные знаки:</span>
-                      <span className="col-span-2 text-[#0082FB] font-bold">
-                        {labelRequirements?.symbols || 'EAC, Data Matrix ИС Танба'}
-                      </span>
-                    </div>
+                    {labelRequirements?.symbols && (
+                      <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200/60">
+                        <span className="text-[#64748B]">Обязательные знаки:</span>
+                        <span className="col-span-2 text-[#0082FB] font-bold">
+                          {labelRequirements.symbols}
+                        </span>
+                      </div>
+                    )}
 
                     {labelRequirements?.wishes && (
                       <div className="pt-1">
@@ -1181,17 +1230,8 @@ export const AdminOrderDetailPage: React.FC = () => {
                     className="shadow-sm"
                   />
 
-                  <div className="text-[10px] font-semibold text-gray-500 text-center flex items-center gap-1.5">
+                  <div className="text-[10px] font-semibold text-gray-500 text-center">
                     <span>{layoutWidthMm} × {layoutHeightMm} мм</span>
-                    {layoutElements.length > 0 ? (
-                      <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-bold border border-emerald-200">
-                        ✓ {layoutElements.length} эл. в макете
-                      </span>
-                    ) : (
-                      <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-bold border border-amber-200">
-                        Холст пустой
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1278,6 +1318,12 @@ export const AdminOrderDetailPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3">
+                <Link
+                  to={`/orders/${order.id}/labels`}
+                  className="text-xs font-bold text-[#0082FB] hover:text-[#0070DA] hover:underline inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" /> Все этикетки ({order.itemsCount})
+                </Link>
                 <button
                   type="button"
                   onClick={() => setShowRollModal(true)}
@@ -1391,6 +1437,117 @@ export const AdminOrderDetailPage: React.FC = () => {
 
         {/* Right Column: Actions & Workflow Status */}
         <div className="space-y-6">
+
+          {/* Payment & Print Permission Card */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+              <h3 className="text-xs font-extrabold text-[#111827] uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-[#0082FB]" />
+                Оплата и доступ к печати
+              </h3>
+              {order.printAllowed ? (
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Unlock className="w-3 h-3 text-emerald-600" />
+                  Печать открыта
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-amber-600" />
+                  Печать закрыта
+                </span>
+              )}
+            </div>
+
+            {printPermissionMsg && (
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                {printPermissionMsg}
+              </div>
+            )}
+
+            {/* Status Checklist */}
+            <div className="space-y-2 text-xs">
+              {/* Check 1: Layout Approval */}
+              <div className="flex items-center justify-between p-2.5 bg-gray-50/80 rounded-xl border border-gray-200/70">
+                <div className="flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-gray-500" />
+                  <span className="font-semibold text-gray-700">1. Макет этикетки</span>
+                </div>
+                {order.stickerApprovalStatus === 'APPROVED' ? (
+                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    Согласован
+                  </span>
+                ) : order.stickerApprovalStatus === 'CHANGES_REQUESTED' ? (
+                  <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                    Правки клиента
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                    Не согласован
+                  </span>
+                )}
+              </div>
+
+              {/* Check 2: Payment Status */}
+              <div className="flex items-center justify-between p-2.5 bg-gray-50/80 rounded-xl border border-gray-200/70">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-gray-500" />
+                  <span className="font-semibold text-gray-700">2. Статус оплаты</span>
+                </div>
+                {order.paymentStatus === 'PAID' ? (
+                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    Оплачено
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                    {order.paymentStatus === 'PARTIAL' ? 'Частично' : 'Не оплачено'}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Explanation Note */}
+            <p className="text-[11px] text-[#64748B] leading-relaxed">
+              Клиент сможет скачать готовую партию ({order.itemsCount.toLocaleString()} шт.) или рулоны <strong>только при одновременном выполнении двух условий:</strong> макет согласован и вы дали разрешение (оплату) кнопкой ниже.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="space-y-2 pt-1">
+              {!order.printAllowed ? (
+                <button
+                  type="button"
+                  onClick={() => handleTogglePrintPermission(true, 'PAID')}
+                  disabled={updatingPrintPermission}
+                  className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  <Unlock className="w-4 h-4 text-white" />
+                  {updatingPrintPermission ? 'Обновление...' : 'Разрешить печать (Оплата получена)'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleTogglePrintPermission(false, 'UNPAID')}
+                  disabled={updatingPrintPermission}
+                  className="w-full inline-flex items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold py-2.5 px-4 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <Lock className="w-4 h-4 text-amber-700" />
+                  {updatingPrintPermission ? 'Обновление...' : 'Заблокировать печать / Отозвать'}
+                </button>
+              )}
+
+              {/* Warning if layout is not yet approved by client */}
+              {order.stickerApprovalStatus !== 'APPROVED' && (
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[10px] text-amber-900 font-medium flex items-start gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                  <span>
+                    Макет клиентом ещё не согласован. Даже если оплата подтверждена, печать всей партии откроется клиенту только после его утверждения макета.
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Quick Step Changer Card */}
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-4">

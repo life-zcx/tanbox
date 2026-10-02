@@ -81,7 +81,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({ onOrderQui
   const selectedTariff = tariffsList.find((t) => t.code === tariffType) || tariffsList[2];
 
   // Dynamic slider track fill percentage
-  const sliderMin = 500;
+  const sliderMin = 1;
   const sliderMax = 200000;
   const sliderProgress = Math.min(100, Math.max(0, ((itemsCount - sliderMin) / (sliderMax - sliderMin)) * 100));
 
@@ -180,8 +180,8 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({ onOrderQui
                     setItemsCount(Math.min(1000000, val));
                   }}
                   onBlur={() => {
-                    if (!itemsCount || itemsCount < 100) {
-                      setItemsCount(500);
+                    if (!itemsCount || itemsCount < 1) {
+                      setItemsCount(1);
                     }
                   }}
                   className="w-24 text-right text-sm font-black text-[#111827] bg-transparent focus:outline-none"

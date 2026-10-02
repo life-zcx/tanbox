@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { CreateOrderPage } from './pages/CreateOrderPage';
 import { OrderDetailPage } from './pages/OrderDetailPage';
+import { OrderLabelsPage } from './pages/OrderLabelsPage';
 import { ProfilePage } from './pages/ProfilePage';
 
 const LoadingScreen: React.FC = () => (
@@ -80,6 +81,15 @@ export const App: React.FC = () => {
             element={
               <ProtectedLayout>
                 <OrderDetailPage />
+              </ProtectedLayout>
+            }
+          />
+
+          <Route
+            path="/orders/:id/labels"
+            element={
+              <ProtectedLayout>
+                <OrderLabelsPage />
               </ProtectedLayout>
             }
           />

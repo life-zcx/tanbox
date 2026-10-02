@@ -79,9 +79,30 @@ model Order {
   stickerApprovalNotes  String?
   stickerSentAt         DateTime?
   templateId            String?
+  printAllowed          Boolean       @default(false)
+  paymentStatus         String        @default("UNPAID")
   notes                 String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
+
+  codeItems             OrderCodeItem[]
+}
+
+model OrderCodeItem {
+  id        String    @id @default(uuid())
+  orderId   String
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  index     Int       // 1-based sequential index within the order (1, 2, ... N)
+  code      String    // Complete GS1 DataMatrix marking code
+  gtin      String?
+  serial    String?
+  status    String    @default("NEW") // NEW, PRINTED, REPRINTED, DEFECTIVE
+  printedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([orderId, index])
+  @@index([orderId, index])
+  @@index([orderId, code])
 }
 
 model Tariff {
