@@ -40,28 +40,28 @@ interface StepConfig {
 
 const TARIFF_STEPS: Record<string, StepConfig[]> = {
   DIGITAL: [
-    { key: 'NEW', title: 'Создан', desc: 'Оформлен в системе' },
-    { key: 'PROCESSING', title: 'В обработке', desc: 'Заказ кодов в ИС Танба / ГС1' },
-    { key: 'PRINTING', title: 'Эмиссия кодов', desc: 'Генерация кодов Data Matrix' },
-    { key: 'STICKERING', title: 'Формирование файлов', desc: 'Подготовка PDF и CSV' },
+    { key: 'NEW', title: 'Создан', desc: 'Файл кодов проверен' },
+    { key: 'PROCESSING', title: 'В обработке', desc: 'Сверка кодов и реквизитов' },
+    { key: 'PRINTING', title: 'Генерация кодов', desc: 'Вёрстка макетов Data Matrix' },
+    { key: 'STICKERING', title: 'Формирование файлов', desc: 'Подготовка PDF рулонов / CSV' },
     { key: 'COMPLETED', title: 'Готов к выгрузке', desc: 'Файлы доступны для скачивания' },
   ],
   PRINT: [
-    { key: 'NEW', title: 'Создан', desc: 'Оформлен в системе' },
-    { key: 'PROCESSING', title: 'В обработке', desc: 'Проверка ИС Танба' },
+    { key: 'NEW', title: 'Создан', desc: 'Файл кодов проверен' },
+    { key: 'PROCESSING', title: 'В обработке', desc: 'Подготовка макета к печати' },
     { key: 'PRINTING', title: 'Печать рулонов', desc: 'Термотрансферная печать 58×40' },
     { key: 'STICKERING', title: 'Упаковка партии', desc: 'Контроль и упаковка рулонов' },
     { key: 'COMPLETED', title: 'Готов к выдаче', desc: 'Рулоны готовы к отгрузке' },
   ],
   STANDARD: [
-    { key: 'NEW', title: 'Создан', desc: 'Оформлен в системе' },
-    { key: 'PROCESSING', title: 'В обработке', desc: 'Проверка ИС Танба' },
+    { key: 'NEW', title: 'Создан', desc: 'Файл кодов проверен' },
+    { key: 'PROCESSING', title: 'В обработке', desc: 'Подготовка и планирование выезда' },
     { key: 'PRINTING', title: 'Печать кодов', desc: 'Печать этикеток партии' },
-    { key: 'STICKERING', title: 'Стикеровка', desc: 'Оклейка товаров на складе' },
+    { key: 'STICKERING', title: 'Стикеровка', desc: 'Оклейка товаров на складе в РК' },
     { key: 'COMPLETED', title: 'Выполнен', desc: 'Ввод в оборот и отчетность' },
   ],
   PRO: [
-    { key: 'NEW', title: 'Создан', desc: 'Оформлен в системе' },
+    { key: 'NEW', title: 'Создан', desc: 'Файл кодов проверен' },
     { key: 'PROCESSING', title: 'Сверка и приемка', desc: 'Сверка артикулов и брак-контроль' },
     { key: 'PRINTING', title: 'Печать и стикеровка', desc: 'Маркировка единиц товара' },
     { key: 'STICKERING', title: 'SSCC Агрегация', desc: 'Формирование коробов и паллет' },
@@ -442,6 +442,10 @@ export const OrderDetailPage: React.FC = () => {
 
   const processCodesFile = async (file: File) => {
     if (!file || !order) return;
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      alert('Поддерживаются только файлы выгрузки кодов в формате .CSV');
+      return;
+    }
     setUploadingCodes(true);
     const formData = new FormData();
     formData.append('file', file);
@@ -731,7 +735,7 @@ export const OrderDetailPage: React.FC = () => {
           <div className="space-y-1.5">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-black text-[#111827] tracking-tight">{order.orderNumber}</h1>
-              <StatusBadge status={order.status} />
+              <StatusBadge status={order.status} tariffType={order.tariffType} />
             </div>
             <p className="text-xs text-[#64748B] flex items-center gap-2">
               <span className="flex items-center gap-1">
@@ -940,16 +944,12 @@ export const OrderDetailPage: React.FC = () => {
                     Файл кодов маркировки партии
                   </h2>
                   <p className="text-xs text-[#64748B]">
-                    Data Matrix коды для печати и нанесения (CSV, TXT, PDF, ZIP)
+                    Data Matrix коды для печати и нанесения (CSV)
                   </p>
                 </div>
               </div>
 
-              {order.codesFileUrl ? (
-                <span className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Файл сохранён на сервере
-                </span>
-              ) : (
+              {!order.codesFileUrl && (
                 <span className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200/80 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" /> Ожидает прикрепления файлов кодов
                 </span>
@@ -1010,27 +1010,8 @@ export const OrderDetailPage: React.FC = () => {
             )}
 
             {order.codesFileUrl ? (
-              <div
-                onDragOver={handleCodesDragOver}
-                onDragEnter={handleCodesDragEnter}
-                onDragLeave={handleCodesDragLeave}
-                onDrop={handleCodesDrop}
-                className={`rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all relative border ${
-                  isCodesDragOver
-                    ? 'border-[#0082FB] bg-blue-50/90 ring-2 ring-[#0082FB]/20 scale-[1.005]'
-                    : 'bg-gray-50 border-gray-200/80'
-                }`}
-              >
-                {isCodesDragOver && (
-                  <div className="absolute inset-0 bg-blue-50/95 rounded-xl flex items-center justify-center border-2 border-dashed border-[#0082FB] z-10 pointer-events-none">
-                    <div className="flex items-center gap-2">
-                      <Upload className="w-5 h-5 text-[#0082FB] animate-bounce" />
-                      <span className="text-xs font-bold text-[#0082FB]">Отпустите файл для замены</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3 min-w-0 pointer-events-none">
+              <div className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50 border border-gray-200/80">
+                <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-[#0082FB] shrink-0 shadow-xs">
                     <FileText className="w-5 h-5" />
                   </div>
@@ -1054,18 +1035,6 @@ export const OrderDetailPage: React.FC = () => {
                     <Download className={`w-3.5 h-3.5 text-gray-600 ${downloadingCodes ? 'animate-bounce' : ''}`} />
                     {downloadingCodes ? 'Скачивание...' : 'Скачать файл'}
                   </button>
-
-                  <label className="inline-flex items-center gap-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer">
-                    <Upload className="w-3.5 h-3.5" />
-                    {uploadingCodes ? 'Загрузка...' : 'Заменить файл'}
-                    <input
-                      type="file"
-                      accept=".csv,.txt,.pdf,.zip,.xlsx"
-                      onChange={handleUploadCodesFile}
-                      disabled={uploadingCodes}
-                      className="hidden"
-                    />
-                  </label>
                 </div>
               </div>
             ) : (
@@ -1090,7 +1059,7 @@ export const OrderDetailPage: React.FC = () => {
                   <p className="text-[11px] text-[#64748B] mt-0.5">
                     {isCodesDragOver
                       ? 'Файл будет прикреплен к заказу'
-                      : 'Прикрепите выгрузку из ИС Танба / Asl Belgisi (CSV, TXT, PDF или ZIP). Специалисты нанесут их на партию.'}
+                      : 'Прикрепите выгрузку из ИС Танба / Asl Belgisi (CSV). Специалисты нанесут их на партию.'}
                   </p>
                 </div>
                 <label className="inline-flex items-center gap-2 bg-[#111827] hover:bg-black text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95">
@@ -1099,7 +1068,7 @@ export const OrderDetailPage: React.FC = () => {
                   <input
                     ref={codesFileInputRef}
                     type="file"
-                    accept=".csv,.txt,.pdf,.zip,.xlsx"
+                    accept=".csv"
                     onChange={handleUploadCodesFile}
                     disabled={uploadingCodes}
                     className="hidden"

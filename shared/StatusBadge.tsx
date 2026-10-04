@@ -2,9 +2,10 @@ import React from 'react';
 
 export interface StatusBadgeProps {
   status: string;
+  tariffType?: string;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, tariffType }) => {
   const getBadgeStyle = (st: string) => {
     switch (st) {
       case 'NEW':
@@ -24,7 +25,67 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     }
   };
 
-  const getBadgeLabel = (st: string) => {
+  const getBadgeLabel = (st: string, tariff?: string) => {
+    const t = tariff?.toUpperCase() || '';
+
+    if (t.includes('DIGITAL') || t.includes('ЦИФР')) {
+      switch (st) {
+        case 'NEW':
+          return 'Новый';
+        case 'PROCESSING':
+          return 'В обработке';
+        case 'PRINTING':
+          return 'Генерация макетов';
+        case 'STICKERING':
+          return 'Подготовка файлов';
+        case 'COMPLETED':
+          return 'Готов к выгрузке';
+        case 'CANCELLED':
+          return 'Отменен';
+        default:
+          return st;
+      }
+    }
+
+    if (t.includes('PRINT') || t.includes('ПЕЧАТ')) {
+      switch (st) {
+        case 'NEW':
+          return 'Новый';
+        case 'PROCESSING':
+          return 'Подготовка';
+        case 'PRINTING':
+          return 'Печать рулонов';
+        case 'STICKERING':
+          return 'Упаковка партии';
+        case 'COMPLETED':
+          return 'Готов к выдаче';
+        case 'CANCELLED':
+          return 'Отменен';
+        default:
+          return st;
+      }
+    }
+
+    if (t.includes('PRO') || t.includes('ПРО')) {
+      switch (st) {
+        case 'NEW':
+          return 'Новый';
+        case 'PROCESSING':
+          return 'Сверка и приемка';
+        case 'PRINTING':
+          return 'Печать и оклейка';
+        case 'STICKERING':
+          return 'SSCC Агрегация';
+        case 'COMPLETED':
+          return 'Выполнен';
+        case 'CANCELLED':
+          return 'Отменен';
+        default:
+          return st;
+      }
+    }
+
+    // Default / STANDARD
     switch (st) {
       case 'NEW':
         return 'Новый';
@@ -33,7 +94,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
       case 'PRINTING':
         return 'Печать кодов';
       case 'STICKERING':
-        return 'Стикеровка';
+        return 'Стикеровка на складе';
       case 'COMPLETED':
         return 'Выполнен';
       case 'CANCELLED':
@@ -45,7 +106,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 
   return (
     <span className={`inline-flex items-center text-[11px] font-extrabold px-2.5 py-1 rounded-lg border ${getBadgeStyle(status)}`}>
-      {getBadgeLabel(status)}
+      {getBadgeLabel(status, tariffType)}
     </span>
   );
 };

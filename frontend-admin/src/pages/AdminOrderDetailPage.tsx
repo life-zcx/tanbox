@@ -462,6 +462,10 @@ export const AdminOrderDetailPage: React.FC = () => {
 
   const processCodesFile = async (file: File) => {
     if (!file || !order) return;
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      alert('Поддерживаются только файлы выгрузки кодов в формате .CSV');
+      return;
+    }
     setUploadingCodes(true);
     const formData = new FormData();
     formData.append('file', file);
@@ -829,7 +833,7 @@ export const AdminOrderDetailPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <StatusBadge status={order.status} />
+            <StatusBadge status={order.status} tariffType={order.tariffType} />
           </div>
         </div>
 
@@ -998,16 +1002,12 @@ export const AdminOrderDetailPage: React.FC = () => {
                     Файл кодов маркировки партии
                   </h2>
                   <p className="text-xs text-[#64748B]">
-                    Исходные Data Matrix коды (CSV, TXT, PDF, ZIP) от ИС Танба / Asl Belgisi
+                    Исходные Data Matrix коды (CSV) от ИС Танба / Asl Belgisi / Честный Знак
                   </p>
                 </div>
               </div>
 
-              {order.codesFileUrl ? (
-                <span className="text-[11px] font-bold px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Файл сохранён на сервере
-                </span>
-              ) : (
+              {!order.codesFileUrl && (
                 <span className="text-[11px] font-bold px-3 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" /> Ожидает загрузки файлов кодов
                 </span>
@@ -1135,7 +1135,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                     {uploadingCodes ? 'Загрузка...' : 'Заменить'}
                     <input
                       type="file"
-                      accept=".csv,.txt,.pdf,.zip,.xlsx"
+                      accept=".csv"
                       onChange={handleUploadCodesFile}
                       disabled={uploadingCodes}
                       className="hidden"
@@ -1165,7 +1165,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                   <p className="text-[11px] text-[#64748B] mt-0.5">
                     {isCodesDragOver
                       ? 'Файл сохранится в заказе и подтянется в конструктор'
-                      : 'Поддерживаются CSV, TXT, PDF, ZIP (до 50 МБ). Файл сохранится в заказе и автоматически подтянется в конструктор этикеток.'}
+                      : 'Поддерживается формат CSV (до 50 МБ). Файл сохранится в заказе и автоматически подтянется в конструктор этикеток.'}
                   </p>
                 </div>
                 <label className="inline-flex items-center gap-2 bg-[#111827] hover:bg-black text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95">
@@ -1174,7 +1174,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                   <input
                     ref={codesFileInputRef}
                     type="file"
-                    accept=".csv,.txt,.pdf,.zip,.xlsx"
+                    accept=".csv"
                     onChange={handleUploadCodesFile}
                     disabled={uploadingCodes}
                     className="hidden"
@@ -1706,35 +1706,66 @@ export const AdminOrderDetailPage: React.FC = () => {
             </h3>
 
             <div className="space-y-2">
-              {[
-                { st: 'NEW' as OrderStatus, label: 'Новый заказ', desc: 'Принят в системе' },
-                { st: 'PROCESSING' as OrderStatus, label: 'В обработке', desc: 'Дизайн макета / проверка кодов' },
-                { st: 'PRINTING' as OrderStatus, label: 'Печать кодов', desc: 'Запущен в печать на производстве' },
-                { st: 'STICKERING' as OrderStatus, label: 'Стикеровка', desc: 'Оклейка товаров на складе' },
-                { st: 'COMPLETED' as OrderStatus, label: 'Выполнен', desc: 'Партия готова и передана клиенту' },
-              ].map((step) => {
-                const isCurrent = order.status === step.st;
-                return (
-                  <button
-                    key={step.st}
-                    type="button"
-                    onClick={() => handleSaveStatus(step.st)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                      isCurrent
-                        ? 'bg-[#111827] text-white border-[#111827] shadow-xs'
-                        : 'bg-gray-50/70 hover:bg-gray-100 text-gray-700 border-gray-200'
-                    }`}
-                  >
-                    <div>
-                      <span className="text-xs font-extrabold block">{step.label}</span>
-                      <span className={`text-[11px] block mt-0.5 ${isCurrent ? 'text-gray-300' : 'text-gray-500'}`}>
-                        {step.desc}
-                      </span>
-                    </div>
-                    {isCurrent && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
-                  </button>
-                );
-              })}
+              {(() => {
+                const norm = (order.tariffType as string)?.toUpperCase() || '';
+                let steps = [
+                  { st: 'NEW' as OrderStatus, label: 'Новый заказ', desc: 'Принят в системе, коды проверены' },
+                  { st: 'PROCESSING' as OrderStatus, label: 'В обработке', desc: isStickerDesign ? 'Согласование макета' : 'Подготовка и планирование выезда' },
+                  { st: 'PRINTING' as OrderStatus, label: 'Печать кодов', desc: 'Печать стикеров для партии' },
+                  { st: 'STICKERING' as OrderStatus, label: 'Оклейка на складе', desc: 'Выездная оклейка на складе РК' },
+                  { st: 'COMPLETED' as OrderStatus, label: 'Выполнен', desc: 'Ввод в оборот и отчетность в Танба' },
+                ];
+
+                if (norm.includes('DIGITAL') || norm.includes('ЦИФР')) {
+                  steps = [
+                    { st: 'NEW' as OrderStatus, label: 'Новый заказ', desc: 'Принят в системе, коды проверены' },
+                    { st: 'PROCESSING' as OrderStatus, label: 'В обработке', desc: isStickerDesign ? 'Согласование макета' : 'Сверка кодов и параметров' },
+                    { st: 'PRINTING' as OrderStatus, label: 'Генерация кодов', desc: 'Вёрстка макетов Data Matrix' },
+                    { st: 'STICKERING' as OrderStatus, label: 'Формирование файлов', desc: 'Подготовка PDF рулонов / CSV' },
+                    { st: 'COMPLETED' as OrderStatus, label: 'Готов к выгрузке', desc: 'Файлы готовы для скачивания клиентом' },
+                  ];
+                } else if (norm.includes('PRINT') || norm.includes('ПЕЧАТ')) {
+                  steps = [
+                    { st: 'NEW' as OrderStatus, label: 'Новый заказ', desc: 'Принят в системе, коды проверены' },
+                    { st: 'PROCESSING' as OrderStatus, label: 'В обработке', desc: isStickerDesign ? 'Согласование макета' : 'Подготовка макета к печати' },
+                    { st: 'PRINTING' as OrderStatus, label: 'Печать рулонов', desc: 'Термотрансферная печать на производстве' },
+                    { st: 'STICKERING' as OrderStatus, label: 'Упаковка партии', desc: 'Контроль качества и упаковка рулонов' },
+                    { st: 'COMPLETED' as OrderStatus, label: 'Готов к выдаче', desc: 'Готов к отгрузке / доставке' },
+                  ];
+                } else if (norm.includes('PRO') || norm.includes('ПРО')) {
+                  steps = [
+                    { st: 'NEW' as OrderStatus, label: 'Новый заказ', desc: 'Принят в системе, коды проверены' },
+                    { st: 'PROCESSING' as OrderStatus, label: 'Сверка и приемка', desc: 'Контроль артикулов и брак-контроль' },
+                    { st: 'PRINTING' as OrderStatus, label: 'Печать и стикеровка', desc: 'Печать и оклейка единиц товара' },
+                    { st: 'STICKERING' as OrderStatus, label: 'SSCC Агрегация', desc: 'Формирование коробов и паллет' },
+                    { st: 'COMPLETED' as OrderStatus, label: 'Выполнен', desc: 'Партия агрегирована и сдана в Танба' },
+                  ];
+                }
+
+                return steps.map((step) => {
+                  const isCurrent = order.status === step.st;
+                  return (
+                    <button
+                      key={step.st}
+                      type="button"
+                      onClick={() => handleSaveStatus(step.st)}
+                      className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                        isCurrent
+                          ? 'bg-[#111827] text-white border-[#111827] shadow-xs'
+                          : 'bg-gray-50/70 hover:bg-gray-100 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      <div>
+                        <span className="text-xs font-extrabold block">{step.label}</span>
+                        <span className={`text-[11px] block mt-0.5 ${isCurrent ? 'text-gray-300' : 'text-gray-500'}`}>
+                          {step.desc}
+                        </span>
+                      </div>
+                      {isCurrent && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+                    </button>
+                  );
+                });
+              })()}
 
               <div className="pt-2">
                 <button

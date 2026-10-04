@@ -6,6 +6,7 @@ import { apiClient } from '../api/client';
 import { CATEGORIES_LIST, CATEGORY_MAP, getCategoryLabel } from '../data/categories';
 import { PageHeader } from '@shared';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
+import { TariffHelpModal } from '../components/modals/TariffHelpModal';
 import {
   Check,
   ArrowRight,
@@ -25,6 +26,8 @@ import {
   CheckCircle2,
   Palette,
   Barcode,
+  Tag,
+  HelpCircle,
 } from 'lucide-react';
 
 export const CreateOrderPage: React.FC = () => {
@@ -35,6 +38,7 @@ export const CreateOrderPage: React.FC = () => {
   // Initial values: null by default as requested (user must select manually)
   const [category, setCategory] = useState<OrderCategory | null>(null);
   const [tariffType, setTariffType] = useState<TariffType | null>(null);
+  const [showTariffHelpModal, setShowTariffHelpModal] = useState<boolean>(false);
   const [itemsCount, setItemsCount] = useState<number>(0);
   const [ssccNeeded, setSsccNeeded] = useState<boolean>(false);
   const [extraServices, setExtraServices] = useState<string[]>([]);
@@ -193,6 +197,11 @@ export const CreateOrderPage: React.FC = () => {
   };
 
   const handleFileSelection = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setErrorMsg('Поддерживаются только файлы выгрузки кодов в формате .CSV');
+      return;
+    }
+    setErrorMsg('');
     setCodesFile(file);
     setCodeCheckResult(null);
     setParsingFile(true);
@@ -505,91 +514,32 @@ export const CreateOrderPage: React.FC = () => {
         {/* Step 1: Category Selection */}
         <div id="step-category-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-[#0082FB] text-white text-xs font-black flex items-center justify-center">
-                  1
-                </span>
-                <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
-                  Категория товара ИС Танба
-                </label>
-                <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200/80 px-2 py-0.5 rounded-full">
-                  * обязательно
-                </span>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+                <Layers className="w-5 h-5" />
               </div>
-              <p className="text-xs text-[#64748B] mt-1 pl-8">
-                Выберите официальную товарную группу обязательной маркировки в Республике Казахстан
-              </p>
+              <div>
+                <h3 className="text-sm font-extrabold text-[#111827]">
+                  Категория товара
+                </h3>
+                <p className="text-xs text-[#64748B]">
+                  Выберите товарную группу маркировки в Республике Казахстан
+                </p>
+              </div>
             </div>
 
-            <div className="text-xs sm:text-right shrink-0 pl-8 sm:pl-0">
-              {selectedCategoryInfo ? (
+            <div className="text-xs sm:text-right shrink-0">
+              {selectedCategoryInfo && (
                 <span className="text-[#64748B]">
                   Выбрана: <strong className="text-[#0082FB] font-extrabold">{selectedCategoryInfo.name}</strong>
-                </span>
-              ) : (
-                <span className="text-amber-700 font-bold bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-lg">
-                  Не выбрана
                 </span>
               )}
             </div>
           </div>
 
-          {/* Filters & Search */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
-            {/* Quick status tabs */}
-            <div className="flex items-center gap-1.5 bg-[#F4F6F9] p-1 rounded-xl self-start">
-              <button
-                type="button"
-                onClick={() => setCategoryFilter('ALL')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  categoryFilter === 'ALL'
-                    ? 'bg-white text-[#111827] shadow-sm'
-                    : 'text-[#64748B] hover:text-[#111827]'
-                }`}
-              >
-                Все категории ({CATEGORIES_LIST.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setCategoryFilter('ACTIVE')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  categoryFilter === 'ACTIVE'
-                    ? 'bg-white text-[#111827] shadow-sm'
-                    : 'text-[#64748B] hover:text-[#111827]'
-                }`}
-              >
-                Обязательные
-              </button>
-              <button
-                type="button"
-                onClick={() => setCategoryFilter('UPCOMING')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  categoryFilter === 'UPCOMING'
-                    ? 'bg-white text-[#111827] shadow-sm'
-                    : 'text-[#64748B] hover:text-[#111827]'
-                }`}
-              >
-                Внедряемые (2026–2027)
-              </button>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-[#64748B] absolute left-3 top-2.5 pointer-events-none" />
-              <input
-                type="text"
-                value={categorySearch}
-                onChange={(e) => setCategorySearch(e.target.value)}
-                placeholder="Поиск по названию или ТН ВЭД..."
-                className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
-              />
-            </div>
-          </div>
-
           {/* Category Cards Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
-            {filteredCategories.map((c) => {
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-1">
+            {CATEGORIES_LIST.map((c) => {
               const Icon = c.icon;
               const isSelected = category === c.type;
               return (
@@ -624,7 +574,7 @@ export const CreateOrderPage: React.FC = () => {
                     </div>
                   </div>
 
-                    {isSelected && (
+                  {isSelected && (
                     <div className="w-5 h-5 rounded-full bg-[#0082FB] text-white flex items-center justify-center shrink-0">
                       <Check className="w-3 h-3 stroke-[3]" />
                     </div>
@@ -633,55 +583,40 @@ export const CreateOrderPage: React.FC = () => {
               );
             })}
           </div>
-
-          {filteredCategories.length === 0 && (
-            <div className="p-8 text-center text-xs text-[#64748B] bg-[#F4F6F9] rounded-2xl">
-              По запросу «{categorySearch}» категорий не найдено.{' '}
-              <button
-                type="button"
-                onClick={() => {
-                  setCategorySearch('');
-                  setCategoryFilter('ALL');
-                }}
-                className="text-[#0082FB] font-bold underline ml-1 cursor-pointer"
-              >
-                Сбросить поиск
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Step 2: Tariff Selection */}
         <div id="step-tariff-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-[#0082FB] text-white text-xs font-black flex items-center justify-center">
-                  2
-                </span>
-                <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
-                  Тариф маркировки
-                </label>
-                <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200/80 px-2 py-0.5 rounded-full">
-                  * обязательно
-                </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+                <Tag className="w-5 h-5" />
               </div>
-              <p className="text-xs text-[#64748B] mt-1 pl-8">
-                Выберите формат работ: от генерации цифровых кодов до выездного оклеивания под ключ
-              </p>
+              <div>
+                <h3 className="text-sm font-extrabold text-[#111827]">
+                  Тариф маркировки
+                </h3>
+                <p className="text-xs text-[#64748B]">
+                  Выберите формат работ: от генерации цифровых кодов до выездного оклеивания под ключ
+                </p>
+              </div>
             </div>
 
-            <span className="text-xs sm:text-right shrink-0 pl-8 sm:pl-0">
-              {selectedTariffInfo ? (
-                <span className="text-[#64748B]">
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              {selectedTariffInfo && (
+                <span className="text-xs text-[#64748B]">
                   Выбран: <strong className="text-[#0082FB] font-extrabold">{selectedTariffInfo.name}</strong>
                 </span>
-              ) : (
-                <span className="text-amber-700 font-bold bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-lg">
-                  Не выбран
-                </span>
               )}
-            </span>
+              <button
+                type="button"
+                onClick={() => setShowTariffHelpModal(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0082FB] hover:text-[#0070DA] bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200/80 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>Справка по тарифам</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
@@ -734,17 +669,19 @@ export const CreateOrderPage: React.FC = () => {
         {/* Step 3: Extra Options */}
         <div id="step-services-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
           <div className="pb-3 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[#0082FB] text-white text-xs font-black flex items-center justify-center">
-                3
-              </span>
-              <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
-                Дополнительные опции
-              </label>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+                <SlidersHorizontal className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-[#111827]">
+                  Дополнительные опции
+                </h3>
+                <p className="text-xs text-[#64748B]">
+                  Выберите сопутствующие услуги складской обработки, дизайна стикеров и логистики
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-[#64748B] mt-1 pl-8">
-              Выберите сопутствующие услуги складской обработки, дизайна стикеров и логистики
-            </p>
           </div>
 
           {/* 1. Макет этикетки (стикера) */}
@@ -1428,20 +1365,19 @@ export const CreateOrderPage: React.FC = () => {
         {/* Step 4: Warehouse & Notes */}
         <div id="step-warehouse-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
           <div className="pb-3 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[#0082FB] text-white text-xs font-black flex items-center justify-center">
-                4
-              </span>
-              <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
-                Склад и примечания к оклейке
-              </label>
-              <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200/80 px-2 py-0.5 rounded-full">
-                * адрес обязателен
-              </span>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-[#111827]">
+                  Склад и примечания к оклейке
+                </h3>
+                <p className="text-xs text-[#64748B]">
+                  Укажите адрес складского комплекса для выезда специалистов или отгрузки стикеров
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-[#64748B] mt-1 pl-8">
-              Укажите адрес складского комплекса для выезда специалистов или отгрузки стикеров
-            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1 items-start">
@@ -1452,7 +1388,6 @@ export const CreateOrderPage: React.FC = () => {
                   <MapPin className="w-3.5 h-3.5 text-[#0082FB]" />
                   <span>Адрес склада в РК</span>
                   <span className="text-red-500 font-bold">*</span>
-                  <span className="text-[10px] text-red-500 font-extrabold uppercase tracking-wider">(обязательно)</span>
                 </label>
 
                 {savedWarehouses.length > 0 && (
@@ -1527,22 +1462,19 @@ export const CreateOrderPage: React.FC = () => {
 
         {/* Step 5: Codes File Attachment (MANDATORY) */}
         <div id="step-codes-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-[#0082FB] text-white text-xs font-black flex items-center justify-center">
-                  5
-                </span>
-                <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
-                  Файл с кодами маркировки
-                </label>
-                <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200/80 px-2 py-0.5 rounded-full">
-                  * обязательно для расчета объема и заказа
-                </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5" />
               </div>
-              <p className="text-xs text-[#64748B] mt-1 pl-8">
-                Объем партии товара ({itemsCount > 0 ? `${itemsCount.toLocaleString()} шт.` : 'тираж'}) рассчитывается автоматически из загруженного файла после проверки на дубликаты
-              </p>
+              <div>
+                <h3 className="text-sm font-extrabold text-[#111827]">
+                  Файл с кодами маркировки (.CSV)
+                </h3>
+                <p className="text-xs text-[#64748B]">
+                  Объем партии рассчитывается автоматически из загруженного файла кодов
+                </p>
+              </div>
             </div>
 
             {codesFile && (
@@ -1554,7 +1486,7 @@ export const CreateOrderPage: React.FC = () => {
                   setCodeCheckResult(null);
                   setItemsCount(0);
                 }}
-                className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer pl-8 sm:pl-0"
+                className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer"
               >
                 Удалить выбранный файл
               </button>
@@ -1593,7 +1525,7 @@ export const CreateOrderPage: React.FC = () => {
                         {codesFile.name}
                       </span>
                       <span className="text-[10px] text-gray-500">
-                        {(codesFile.size / 1024).toFixed(1)} КБ • Будет автоматически сохранён на сервере и подтянут в заказ
+                        {(codesFile.size / 1024).toFixed(1)} КБ
                       </span>
                     </div>
                   </div>
@@ -1601,7 +1533,7 @@ export const CreateOrderPage: React.FC = () => {
                     Заменить файл
                     <input
                       type="file"
-                      accept=".csv,.txt,.pdf,.zip,.xlsx"
+                      accept=".csv"
                       onChange={(e) => {
                         if (e.target.files?.[0]) handleFileSelection(e.target.files[0]);
                       }}
@@ -1707,7 +1639,7 @@ export const CreateOrderPage: React.FC = () => {
                             <span>Выбрать другой файл</span>
                             <input
                               type="file"
-                              accept=".csv,.txt,.pdf,.zip,.xlsx"
+                              accept=".csv"
                               onChange={(e) => {
                                 if (e.target.files?.[0]) handleFileSelection(e.target.files[0]);
                               }}
@@ -1759,12 +1691,12 @@ export const CreateOrderPage: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs text-gray-400 pointer-events-none max-w-md mx-auto">
-                  Поддерживаются форматы CSV, TXT, PDF, ZIP от ИС Танба / Asl Belgisi / Честный Знак. Количество кодов определит объем партии.
+                  Поддерживается формат CSV (выгрузка кодов из ИС Танба / Asl Belgisi / Честный Знак)
                 </p>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.txt,.pdf,.zip,.xlsx"
+                  accept=".csv"
                   onChange={(e) => {
                     if (e.target.files?.[0]) handleFileSelection(e.target.files[0]);
                   }}
@@ -1861,6 +1793,13 @@ export const CreateOrderPage: React.FC = () => {
         </div>
 
       </form>
+
+      <TariffHelpModal
+        isOpen={showTariffHelpModal}
+        onClose={() => setShowTariffHelpModal(false)}
+        onSelectTariff={(t) => setTariffType(t)}
+        currentTariff={tariffType}
+      />
     </div>
   );
 };
