@@ -21,6 +21,7 @@ import {
   Layers
 } from 'lucide-react';
 import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
+import { setPageSeo } from '../utils/seo';
 
 export interface CategoryDetailItem {
   id: string;
@@ -44,6 +45,10 @@ export const CategoriesPage: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
+    setPageSeo(
+      'Каталог категорий товаров для маркировки в Казахстане | TANBOX.KZ',
+      'Полный перечень товарных групп, подлежащих обязательной цифровой маркировке Data Matrix в ИС Танба по Республике Казахстан: обувь, табак, лекарства, вода, текстиль, масла.'
+    );
     if (location.hash) {
       const elementId = location.hash.replace('#', '');
       const el = document.getElementById(elementId);

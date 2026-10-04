@@ -139,15 +139,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    // 1. Save to local storage for instant availability across tabs
-    try {
-      const existing = JSON.parse(localStorage.getItem('tanbox_service_leads') || '[]');
-      localStorage.setItem('tanbox_service_leads', JSON.stringify([leadObject, ...existing]));
-    } catch (err) {
-      console.error('LocalStorage save error:', err);
-    }
-
-    // 2. Post to backend REST API
+    // Post to backend REST API
     try {
       await apiClient.post('/leads', {
         serviceTitle: selectedService,
@@ -158,7 +150,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
         notes: notes || undefined,
       });
     } catch (err) {
-      console.warn('Backend API submission warning (saved locally):', err);
+      console.warn('Backend API submission warning:', err);
     } finally {
       setSubmitted(true);
       setLoading(false);

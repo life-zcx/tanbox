@@ -19,6 +19,7 @@ import {
   Hash,
   ArrowRight,
   Copy,
+  RefreshCw,
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
@@ -145,7 +146,7 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
     try {
       const res = await apiClient.get(
         `/orders/${orderId}/pdf?roll=${rollNum}&offset=${start}&limit=${count}`,
-        { responseType: 'blob' }
+        { responseType: 'blob', timeout: 300000 }
       );
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
@@ -375,6 +376,18 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
           </div>
         )}
 
+        {downloadAllProgress && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between gap-3 text-xs font-bold text-blue-900 shrink-0">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-[#0082FB] animate-spin shrink-0" />
+              <span>{downloadAllProgress}</span>
+            </div>
+            <span className="text-[11px] text-blue-700 bg-white border border-blue-200 px-2 py-0.5 rounded-lg font-mono">
+              Очередь сервера активна
+            </span>
+          </div>
+        )}
+
         {/* TAB 1: ROLLS VIEW */}
         {activeTab === 'rolls' && (
           <>
@@ -503,9 +516,9 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
                           : 'bg-[#0082FB] hover:bg-[#0070DA] text-white'
                       }`}
                     >
-                      <Download className={`w-3.5 h-3.5 ${isCurrent ? 'animate-bounce' : ''}`} />
+                      <Download className={`w-3.5 h-3.5 ${isCurrent ? 'animate-bounce text-white' : ''}`} />
                       {isCurrent
-                        ? 'Генерация...'
+                        ? 'В очереди / генерация...'
                         : isDownloaded
                         ? 'Скачать повторно'
                         : 'Скачать PDF'}

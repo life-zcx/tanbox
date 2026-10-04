@@ -10,8 +10,12 @@ if (!fs.existsSync(uploadsBaseDir)) {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const orderId = req.params.id || 'temp';
-    const targetDir = path.join(uploadsBaseDir, orderId);
+    const rawId = req.params.id || 'temp';
+    const cleanOrderId = rawId.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const targetDir = path.resolve(uploadsBaseDir, cleanOrderId);
+    if (!targetDir.startsWith(uploadsBaseDir)) {
+      return cb(new Error('Недопустимый путь к заказу'), uploadsBaseDir);
+    }
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, { recursive: true });
     }

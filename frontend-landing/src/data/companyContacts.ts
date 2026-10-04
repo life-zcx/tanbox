@@ -56,10 +56,12 @@ export const COMPANY_CONTACTS = {
 
   // Юридические реквизиты компании
   legal: {
-    companyName: 'ИП "TORMAG.KZ""',
-    bin: '990601301525',
-    iik: 'KZ---------------',
-    bank: 'АО "Kaspi Bank"',
+    companyName: 'ИП "TORMAG.KZ"',
+    iin: '990601301525',
+    bin: '990601301525', // для обратной совместимости с кодом
+    iik: 'Счет Kaspi Pay (в процессе оформления)',
+    bank: 'АО "Kaspi Bank" (Kaspi Pay)',
+    taxStatus: 'Без НДС (ИП на СНР на основе упрощенной декларации)',
   },
 };
 

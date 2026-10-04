@@ -1,0 +1,50 @@
+User-agent: *
+
+# Разрешено для поисковых систем (публичные страницы)
+Allow: /
+Allow: /calculator
+Allow: /services
+Allow: /categories
+Allow: /categories/*
+Allow: /contacts
+Allow: /terms
+Allow: /privacy
+Allow: /cookie-policy
+
+# Закрыто от индексации: Панель администратора
+Disallow: /admin
+Disallow: /admin/
+Disallow: /admin/*
+
+# Закрыто от индексации: Личный кабинет клиента (ЛК)
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /dashboard/*
+Disallow: /orders
+Disallow: /orders/
+Disallow: /orders/*
+Disallow: /catalog
+Disallow: /catalog/
+Disallow: /catalog/*
+Disallow: /settings
+Disallow: /settings/
+Disallow: /settings/*
+Disallow: /balance
+Disallow: /balance/
+Disallow: /balance/*
+
+# Закрыто от индексации: Авторизация и регистрация
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Закрыто от индексации: Системные и динамические URL / API
+Disallow: /api/
+Disallow: /api/*
+Disallow: /*?*tariff=
+Disallow: /*?*token=
+
+# Карта сайта для поисковиков
+Sitemap: https://tanbox.kz/sitemap.xml
+Host: https://tanbox.kz

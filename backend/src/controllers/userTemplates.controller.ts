@@ -3,6 +3,18 @@ import { prisma } from '../config/db';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { OrderCategory } from '@prisma/client';
 
+function isSafeUrl(url?: string | null): boolean {
+  if (!url) return true;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export const getUserTemplates = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
@@ -70,10 +82,47 @@ export const createUserTemplate = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Название шаблона обязательно' });
     }
 
+    if (previewUrl && !isSafeUrl(previewUrl)) {
+      return res.status(400).json({ message: 'Недопустимый формат URL предпросмотра' });
+    }
+
+    // 1. Prevent duplicate template creation for the same source order
+    if (sourceOrderId) {
+      const existingByOrder = await prisma.userStickerTemplate.findFirst({
+        where: {
+          userId: assignedUserId,
+          sourceOrderId: String(sourceOrderId),
+        },
+      });
+      if (existingByOrder) {
+        return res.status(409).json({
+          message: `Шаблон для этого заказа уже сохранён в библиотеке клиента («${existingByOrder.name}»)`,
+          template: existingByOrder,
+          alreadyExists: true,
+        });
+      }
+    }
+
+    // 2. Prevent duplicate templates with identical names for the same client
+    const cleanName = name.trim().slice(0, 150);
+    const existingByName = await prisma.userStickerTemplate.findFirst({
+      where: {
+        userId: assignedUserId,
+        name: { equals: cleanName, mode: 'insensitive' },
+      },
+    });
+    if (existingByName) {
+      return res.status(409).json({
+        message: `Шаблон с названием «${cleanName}» уже существует в библиотеке клиента`,
+        template: existingByName,
+        alreadyExists: true,
+      });
+    }
+
     const template = await prisma.userStickerTemplate.create({
       data: {
         userId: assignedUserId,
-        name: name.trim().slice(0, 150),
+        name: cleanName,
         category: category && Object.values(OrderCategory).includes(category) ? category : null,
         widthMm: Number(widthMm) || 58,
         heightMm: Number(heightMm) || 40,
@@ -83,8 +132,16 @@ export const createUserTemplate = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // Link the created template to the order
+    if (sourceOrderId) {
+      await prisma.order.updateMany({
+        where: { id: String(sourceOrderId) },
+        data: { templateId: template.id },
+      });
+    }
+
     return res.status(201).json({
-      message: 'Шаблон успешно сохранён',
+      message: 'Шаблон успешно сохранён в библиотеку клиента',
       template,
     });
   } catch (error: any) {
@@ -98,6 +155,10 @@ export const updateUserTemplate = async (req: AuthRequest, res: Response) => {
     if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
     const { id } = req.params;
     const { name, category, widthMm, heightMm, elements, previewUrl } = req.body;
+
+    if (previewUrl !== undefined && previewUrl !== null && !isSafeUrl(previewUrl)) {
+      return res.status(400).json({ message: 'Недопустимый формат URL предпросмотра' });
+    }
 
     const existing = await prisma.userStickerTemplate.findUnique({
       where: { id },
@@ -152,6 +213,12 @@ export const deleteUserTemplate = async (req: AuthRequest, res: Response) => {
     if (req.user.role !== 'ADMIN' && existing.userId !== req.user.id) {
       return res.status(403).json({ message: 'Нет доступа к этому шаблону' });
     }
+
+    // Unlink orders referencing this template
+    await prisma.order.updateMany({
+      where: { templateId: id },
+      data: { templateId: null },
+    });
 
     await prisma.userStickerTemplate.delete({
       where: { id },

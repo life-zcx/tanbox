@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Save } from 'lucide-react';
 import { LabelElement } from '../types';
 
@@ -27,9 +28,15 @@ export const SaveTemplateModal: React.FC<SaveTemplateModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 max-w-md w-full space-y-4 animate-in fade-in zoom-in-95 duration-150">
+  return createPortal(
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 max-w-md w-full space-y-4 animate-in zoom-in-95 duration-150"
+      >
         <div className="flex items-center justify-between border-b border-gray-100 pb-3">
           <h3 className="text-base font-black text-[#111827] flex items-center gap-2">
             <Save className="w-5 h-5 text-emerald-600" />
@@ -92,6 +99,7 @@ export const SaveTemplateModal: React.FC<SaveTemplateModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

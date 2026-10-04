@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Sidebar } from './components/common/Sidebar';
 import { LoginPage } from './pages/LoginPage';
@@ -8,8 +8,13 @@ import { DashboardPage } from './pages/DashboardPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { CreateOrderPage } from './pages/CreateOrderPage';
 import { OrderDetailPage } from './pages/OrderDetailPage';
-import { OrderLabelsPage } from './pages/OrderLabelsPage';
+import { LabelsRegistryPage } from './pages/LabelsRegistryPage';
 import { ProfilePage } from './pages/ProfilePage';
+
+const OrderLabelsRedirect: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={id ? `/orders/${id}` : '/orders'} replace />;
+};
 
 const LoadingScreen: React.FC = () => (
   <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
@@ -89,7 +94,16 @@ export const App: React.FC = () => {
             path="/orders/:id/labels"
             element={
               <ProtectedLayout>
-                <OrderLabelsPage />
+                <OrderLabelsRedirect />
+              </ProtectedLayout>
+            }
+          />
+
+          <Route
+            path="/labels"
+            element={
+              <ProtectedLayout>
+                <LabelsRegistryPage />
               </ProtectedLayout>
             }
           />

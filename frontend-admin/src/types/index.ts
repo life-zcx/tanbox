@@ -11,7 +11,40 @@ export interface UserClient {
   createdAt: string;
   _count?: {
     orders: number;
+    stickerTemplates?: number;
   };
+}
+
+export interface UserOrderBrief {
+  id: string;
+  orderNumber: string;
+  category: string;
+  tariffType: string;
+  itemsCount: number;
+  totalPrice: number;
+  status: OrderStatus;
+  paymentStatus?: string;
+  printAllowed?: boolean;
+  createdAt: string;
+}
+
+export interface UserTemplateBrief {
+  id: string;
+  name: string;
+  widthMm: number;
+  heightMm: number;
+  category?: string;
+  elements?: any[];
+  previewUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserDetail extends UserClient {
+  updatedAt?: string;
+  orders: UserOrderBrief[];
+  stickerTemplates: UserTemplateBrief[];
+  totalSpent: number;
 }
 
 export type AdminUser = UserClient;
@@ -46,6 +79,88 @@ export interface OrderAdminItem {
     binIin: string;
     email: string;
     phone: string;
+  };
+}
+
+export interface DailyTimelinePoint {
+  date: string;
+  label: string;
+  revenue: number;
+  orders: number;
+  codes: number;
+}
+
+export interface TariffDistributionItem {
+  key: string;
+  name: string;
+  count: number;
+  revenue: number;
+  percentage: number;
+}
+
+export interface CategoryDistributionItem {
+  key: string;
+  name: string;
+  count: number;
+  codes: number;
+  revenue: number;
+  percentage: number;
+}
+
+export interface StatusFunnelItem {
+  key: string;
+  name: string;
+  count: number;
+  revenue: number;
+}
+
+export interface TopClientMetric {
+  userId: string;
+  companyName: string;
+  binIin: string;
+  email: string;
+  phone: string;
+  ordersCount: number;
+  totalRevenue: number;
+  totalCodes: number;
+}
+
+export interface AdminAnalyticsData {
+  period: string;
+  startDate: string;
+  endDate: string;
+  summary: {
+    totalRevenue: number;
+    estimatedProfitMargin: number;
+    paidRevenue: number;
+    unpaidRevenue: number;
+    averageOrderValue: number;
+    averageItemsPerOrder: number;
+    totalOrders: number;
+    activeOrders: number;
+    completedOrders: number;
+    cancelledOrders: number;
+    completionRate: number;
+    totalItemsCodes: number;
+    newClientsCount: number;
+    totalClientsAllTime: number;
+  };
+  growth: {
+    revenue: number;
+    orders: number;
+    codes: number;
+    clients: number;
+  };
+  dailyTimeline: DailyTimelinePoint[];
+  tariffDistribution: TariffDistributionItem[];
+  categoryDistribution: CategoryDistributionItem[];
+  statusFunnel: StatusFunnelItem[];
+  topClients: TopClientMetric[];
+  leads: {
+    total: number;
+    completed: number;
+    conversionRate: number;
+    growth: number;
   };
 }
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { X, Download, Calendar, Layers, FileText, CheckCircle2, Building2, MapPin } from 'lucide-react';
 import { OrderItem } from '../../types';
+import { apiClient } from '../../api/client';
 import { StatusBadge, parseOrderNotes } from '@shared';
 
 interface OrderDetailModalProps {
@@ -114,15 +115,23 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
           <div className="flex flex-col sm:flex-row gap-3 pt-1">
             <button
               type="button"
-              onClick={() => {
-                const token = localStorage.getItem('tanbox_token') || '';
-                const url = `/api/orders/${order.id}/pdf?token=${encodeURIComponent(token)}`;
-                const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', `Labels_${order.orderNumber}.pdf`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+              onClick={async () => {
+                try {
+                  const res = await apiClient.get(`/orders/${order.id}/pdf`, {
+                    responseType: 'blob',
+                    timeout: 300000,
+                  });
+                  const blobUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+                  const link = document.createElement('a');
+                  link.href = blobUrl;
+                  link.setAttribute('download', `Labels_${order.orderNumber}.pdf`);
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(blobUrl);
+                } catch (err: any) {
+                  alert(err.response?.data?.message || 'Ошибка при скачивании PDF макетов');
+                }
               }}
               className="inline-flex items-center justify-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer"
             >
@@ -131,10 +140,16 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
 
             <button
               type="button"
-              onClick={() => {
-                const token = localStorage.getItem('tanbox_token') || '';
-                const url = `/api/orders/${order.id}/act?token=${encodeURIComponent(token)}`;
-                window.open(url, '_blank');
+              onClick={async () => {
+                try {
+                  const res = await apiClient.get(`/orders/${order.id}/act`, {
+                    responseType: 'blob',
+                  });
+                  const blobUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'text/html;charset=utf-8' }));
+                  window.open(blobUrl, '_blank');
+                } catch (err: any) {
+                  alert(err.response?.data?.message || 'Ошибка при открытии акта');
+                }
               }}
               className="inline-flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-[#111827] font-bold text-xs px-5 py-2.5 rounded-xl border border-gray-200/80 transition-all cursor-pointer"
             >

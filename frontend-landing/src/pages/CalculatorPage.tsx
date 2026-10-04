@@ -1,12 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CalculatorSection } from '../components/landing/CalculatorSection';
 import { TariffCode } from '../types';
+import { setPageSeo } from '../utils/seo';
 
 interface CalculatorPageProps {
   onOrderQuick: (tariff: TariffCode, count: number, price: number) => void;
 }
 
 export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onOrderQuick }) => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    setPageSeo(
+      'Калькулятор стоимости маркировки товаров в Казахстане (₸) | TANBOX.KZ',
+      'Онлайн-калькулятор расчета стоимости обязательной маркировки товаров Data Matrix в Республике Казахстан. Тарифы на эмиссию кодов в ИС Танба, печать этикеток и выездную оклейку на складе.'
+    );
+  }, []);
+
   return (
     <div className="bg-[#F4F6F9] min-h-screen pb-16 space-y-8">
       {/* Header Banner */}

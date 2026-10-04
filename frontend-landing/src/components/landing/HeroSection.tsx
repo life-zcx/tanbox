@@ -17,7 +17,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onOp
           muted
           playsInline
           poster="/hero-bg-poster.jpg"
-          preload="auto"
+          preload="metadata"
           className="w-full h-full object-cover object-center"
         >
           <source src="/hero-bg.webm" type="video/webm" />

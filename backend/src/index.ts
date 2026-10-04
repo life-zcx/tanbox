@@ -31,10 +31,33 @@ app.use(
   })
 );
 
-// CORS configuration - dynamic origin reflection to support localhost, 127.0.0.1, LAN IPs, and domain names
+// Strict CORS whitelist: supports production tanbox.kz domains, localhost, LAN IPs, and .local
+const isAllowedOrigin = (origin?: string): boolean => {
+  if (!origin) return true;
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) return true;
+    if (/^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(host)) return true;
+    if (host === 'tanbox.kz' || host.endsWith('.tanbox.kz')) return true;
+    if (process.env.ALLOWED_ORIGINS) {
+      const allowed = process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
+      if (allowed.includes(origin) || allowed.includes(host)) return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+};
+
 app.use(
   cors({
-    origin: true,
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS access blocked by policy'));
+    },
     credentials: true,
   })
 );
@@ -42,8 +65,8 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static file serving for uploads
-app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+// Note: /uploads static directory is intentionally not served publicly to prevent unauthenticated data leaks.
+// All order files are accessible only via authenticated endpoints with ownership checks.
 
 // Apply general API rate limiting
 app.use('/api/', generalApiLimiter);

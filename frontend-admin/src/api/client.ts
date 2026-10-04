@@ -9,7 +9,7 @@ const getApiUrl = () => {
 
 export const apiClient = axios.create({
   baseURL: getApiUrl(),
-  timeout: 30000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,6 +31,13 @@ apiClient.interceptors.response.use(
     const url = error.config ? error.config.url : '';
 
     console.error(`[Admin API Error] [${status}] ${url}:`, error.response?.data || message);
+
+    if (error.response?.status === 401 && !url.includes('/auth/login')) {
+      localStorage.removeItem('tanbox_admin_token');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
 
     if (url && !url.includes('/logs/frontend')) {
       fetch(`${getApiUrl()}/logs/frontend`, {

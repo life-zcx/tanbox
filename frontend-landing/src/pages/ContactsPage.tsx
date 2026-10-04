@@ -4,8 +4,16 @@ import { MapPin, Phone, Mail, Clock, Send, CheckCircle2, Loader2, ArrowRight } f
 import { apiClient } from '../api/client';
 import { ContactsSection } from '../components/landing/ContactsSection';
 import { COMPANY_CONTACTS } from '../data/companyContacts';
+import { setPageSeo } from '../utils/seo';
 
 export const ContactsPage: React.FC = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    setPageSeo(
+      'Контакты и официальные реквизиты | ИП TORMAG.KZ — TANBOX.KZ',
+      'Контакты единого сервиса цифровой маркировки товаров TANBOX.KZ. Телефон горячей линии, офис в Алматы, WhatsApp-поддержка и официальные реквизиты ИП TORMAG.KZ.'
+    );
+  }, []);
   const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -156,15 +164,7 @@ export const ContactsPage: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    // 1. Save locally
-    try {
-      const existing = JSON.parse(localStorage.getItem('tanbox_service_leads') || '[]');
-      localStorage.setItem('tanbox_service_leads', JSON.stringify([leadObject, ...existing]));
-    } catch (err) {
-      console.error('LocalStorage save error:', err);
-    }
-
-    // 2. Post to backend REST API
+    // Post to backend REST API
     try {
       await apiClient.post('/leads', {
         serviceTitle: 'Запрос с формы контактов (Консультация)',
@@ -180,7 +180,7 @@ export const ContactsPage: React.FC = () => {
         setLoading(false);
         return;
       }
-      console.warn('Backend API submission warning (saved locally):', err);
+      console.warn('Backend API submission warning:', err);
     } finally {
       setSubmitted(true);
       setLoading(false);

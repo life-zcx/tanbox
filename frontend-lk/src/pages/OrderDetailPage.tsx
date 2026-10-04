@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { OrderItem } from '../types';
@@ -26,6 +27,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Lock,
+  Receipt,
 } from 'lucide-react';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
 import RollSplitModal from '../components/modals/RollSplitModal';
@@ -282,6 +284,7 @@ export const OrderDetailPage: React.FC = () => {
         article: getVal('Артикул:'),
         composition: getVal('Состав/Материал:', 'Состав:'),
         symbols: getVal('Обязательные знаки:', 'Знаки:'),
+        barcode: getVal('Штрихкод (EAN-13):', 'Штрихкод EAN-13:', 'Штрихкод:'),
         wishes: getVal('Пожелания:', 'Пожелания/текст:'),
       };
     } catch {
@@ -330,6 +333,8 @@ export const OrderDetailPage: React.FC = () => {
     serial: '5abcd12345',
   }), [labelRequirements, order]);
 
+  const parsedNotes = useMemo(() => parseOrderNotes(order?.notes), [order?.notes]);
+
   const hasLayoutReady = Boolean(
     approvalStatus === 'WAITING_APPROVAL' ||
     approvalStatus === 'APPROVED' ||
@@ -376,13 +381,9 @@ export const OrderDetailPage: React.FC = () => {
     );
   }
 
-  // Check if order contains custom sticker layout design or uses a saved template
+  // Check if order requested custom sticker layout design service
   const isStickerDesign = Boolean(
-    order.extraServices?.includes('STICKER_LAYOUT_DESIGN') ||
-    order.notes?.includes('ТРЕБОВАНИЯ К МАКЕТУ СТИКЕРА') ||
-    order.notes?.includes('МАКЕТ ЭТИКЕТКИ: ИСПОЛЬЗОВАН СОХРАНЁННЫЙ ШАБЛОН') ||
-    (order as any)?.templateId ||
-    ((order as any)?.stickerLayout?.elements?.length > 0)
+    Array.isArray(order.extraServices) && order.extraServices.includes('STICKER_LAYOUT_DESIGN')
   );
 
   const isReusedTemplate = Boolean(
@@ -449,8 +450,8 @@ export const OrderDetailPage: React.FC = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setOrder(res.data.order);
-      setCodesSuccessMsg('Файл с кодами маркировки успешно прикреплен к заказу!');
-      setTimeout(() => setCodesSuccessMsg(null), 4000);
+      setCodesSuccessMsg(res.data.message || 'Файл с кодами маркировки успешно прикреплен к заказу!');
+      setTimeout(() => setCodesSuccessMsg(null), 5000);
     } catch (err: any) {
       alert('Ошибка при загрузке файла кодов: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -515,8 +516,7 @@ export const OrderDetailPage: React.FC = () => {
       window.URL.revokeObjectURL(blobUrl);
     } catch (err: any) {
       console.error('Download codes error:', err);
-      const token = localStorage.getItem('tanbox_token') || localStorage.getItem('tanbox_admin_token') || '';
-      window.open(`/api/orders/${order.id}/codes-file?token=${encodeURIComponent(token)}`, '_blank');
+      alert('Ошибка при скачивании файла кодов: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingCodes(false);
     }
@@ -532,6 +532,7 @@ export const OrderDetailPage: React.FC = () => {
     try {
       const res = await apiClient.get(`/orders/${order.id}/pdf`, {
         responseType: 'blob',
+        timeout: 300000,
       });
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
@@ -564,19 +565,41 @@ export const OrderDetailPage: React.FC = () => {
     if (!order) return;
     try {
       const res = await apiClient.get(`/orders/${order.id}/act`);
-      const win = window.open('', '_blank');
-      if (win) {
-        win.document.open();
-        win.document.write(res.data);
-        win.document.close();
-      } else {
-        const token = localStorage.getItem('tanbox_token') || localStorage.getItem('tanbox_admin_token') || '';
-        window.open(`/api/orders/${order.id}/act?token=${encodeURIComponent(token)}`, '_blank');
+      const blob = new Blob([res.data], { type: 'text/html; charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const win = window.open(blobUrl, '_blank');
+      if (!win) {
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `Act_${order.orderNumber}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
     } catch (err: any) {
       console.error('Download act error:', err);
-      const token = localStorage.getItem('tanbox_token') || localStorage.getItem('tanbox_admin_token') || '';
-      window.open(`/api/orders/${order.id}/act?token=${encodeURIComponent(token)}`, '_blank');
+      alert('Ошибка при скачивании акта: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (!order) return;
+    try {
+      const res = await apiClient.get(`/orders/${order.id}/invoice`);
+      const blob = new Blob([res.data], { type: 'text/html; charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const win = window.open(blobUrl, '_blank');
+      if (!win) {
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `Invoice_${order.orderNumber}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      console.error('Download invoice error:', err);
+      alert('Ошибка при скачивании счета: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -611,26 +634,29 @@ export const OrderDetailPage: React.FC = () => {
   const labelWidth = order?.stickerWidth || (order?.stickerLayout as any)?.widthMm || 58;
   const labelHeight = order?.stickerHeight || (order?.stickerLayout as any)?.heightMm || 40;
 
+  const tariffKey = getTariffKey(order?.tariffType);
+  const baseSteps = TARIFF_STEPS[tariffKey] || TARIFF_STEPS.STANDARD;
+
   // Print Batch Permissions:
-  // Requires: 1) Layout approved by client AND 2) Admin granted permission (e.g. payment confirmed)
-  const isApprovedByClient = approvalStatus === 'APPROVED' || order?.stickerApprovalStatus === 'APPROVED';
+  // Requires: 1) Layout approved by client (ONLY if custom design was ordered) AND 2) Admin granted permission (e.g. payment confirmed)
+  const isApprovedByClient = !isStickerDesign || tariffKey === 'DIGITAL' || approvalStatus === 'APPROVED' || order?.stickerApprovalStatus === 'APPROVED';
   const isPrintAllowedByAdmin = order?.printAllowed === true || order?.paymentStatus === 'PAID';
   const canPrintBatch = isApprovedByClient && isPrintAllowedByAdmin;
 
   let printBlockReason = '';
   if (!isApprovedByClient) {
-    printBlockReason = 'Печать партии заблокирована: сначала согласуйте макет этикетки в блоке выше.';
+    printBlockReason = 'Печать партии заблокирована: сначала согласуйте индивидуальный макет этикетки в блоке выше.';
   } else if (!isPrintAllowedByAdmin) {
-    printBlockReason = 'Макет согласован! Ожидается подтверждение оплаты администратором для открытия доступа к печати партии.';
+    printBlockReason =
+      tariffKey === 'DIGITAL'
+        ? 'Ожидается подтверждение оплаты администратором для открытия доступа к выгрузке файлов.'
+        : 'Ожидается подтверждение оплаты администратором для открытия доступа к печати партии.';
   }
 
   const isLayoutApproved = isApprovedByClient;
   const isWaitingApproval = approvalStatus === 'WAITING_APPROVAL' || order?.stickerApprovalStatus === 'WAITING_APPROVAL';
   const isChangesRequested = approvalStatus === 'CHANGES_REQUESTED' || order?.stickerApprovalStatus === 'CHANGES_REQUESTED';
   const isOrderCompleted = order?.status === 'COMPLETED';
-
-  const tariffKey = getTariffKey(order.tariffType);
-  const baseSteps = TARIFF_STEPS[tariffKey] || TARIFF_STEPS.STANDARD;
 
   // If custom layout design is requested, adapt the stages to include design/approval step
   const STEPS = isStickerDesign
@@ -650,7 +676,7 @@ export const OrderDetailPage: React.FC = () => {
         },
         baseSteps[2] || { key: 'PRINTING', title: 'Печать кодов', desc: 'Печать этикеток партии' },
         baseSteps[3] || { key: 'STICKERING', title: 'Стикеровка', desc: 'Оклейка товаров на складе' },
-        { key: 'COMPLETED', title: 'Выполнен', desc: 'Партия готова и сдана в Танба' },
+        baseSteps[4] || { key: 'COMPLETED', title: 'Выполнен', desc: 'Партия готова и сдана в Танба' },
       ]
     : baseSteps;
 
@@ -1184,6 +1210,15 @@ export const OrderDetailPage: React.FC = () => {
                     </div>
                   )}
 
+                  {labelRequirements?.barcode && (
+                    <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
+                      <span className="text-[#64748B] font-medium">Штрихкод EAN-13:</span>
+                      <span className="col-span-2 text-[#111827] font-mono font-bold">
+                        {labelRequirements.barcode}
+                      </span>
+                    </div>
+                  )}
+
                   {labelRequirements?.wishes && (
                     <div className="p-3 bg-gray-50 rounded-xl border border-gray-200/70 text-[11px] text-[#64748B]">
                       <span className="font-bold text-[#111827] block mb-0.5">Пожелания к макету:</span>
@@ -1252,20 +1287,17 @@ export const OrderDetailPage: React.FC = () => {
                     </span>
                   </div>
                 ) : approvalStatus === 'APPROVED' ? (
-                  <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span className="text-xs font-bold text-emerald-950">
-                        Макет утвержден вами {approvalData.approvedAt || 'в системе'}. Запущен в тираж и печать.
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setApprovalStatus('WAITING_APPROVAL')}
-                      className="text-[11px] font-semibold text-emerald-700 hover:underline cursor-pointer self-start sm:self-auto"
-                    >
-                      Изменить решение
-                    </button>
+                  <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-xl p-3.5 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-xs font-bold text-emerald-950">
+                      {tariffKey === 'DIGITAL'
+                        ? `Макет утвержден вами ${approvalData.approvedAt || 'в системе'}. Файлы сформированы и готовы к выгрузке.`
+                        : tariffKey === 'PRINT'
+                        ? `Макет утвержден вами ${approvalData.approvedAt || 'в системе'}. Запущен в тираж и печать рулонов.`
+                        : tariffKey === 'PRO'
+                        ? `Макет утвержден вами ${approvalData.approvedAt || 'в системе'}. Передан в печать и подготовку к SSCC-стикеровке.`
+                        : `Макет утвержден вами ${approvalData.approvedAt || 'в системе'}. Передан в печать и стикеровку партии.`}
+                    </span>
                   </div>
                 ) : approvalStatus === 'CHANGES_REQUESTED' ? (
                   <div className="bg-amber-50/80 border border-amber-200/90 rounded-xl p-3.5 space-y-2">
@@ -1293,7 +1325,9 @@ export const OrderDetailPage: React.FC = () => {
                           Согласование макета стикера
                         </h4>
                         <p className="text-[11px] text-[#64748B] mt-0.5">
-                          Пожалуйста, проверьте реквизиты и утвердите макет перед печатью партии
+                          {tariffKey === 'DIGITAL'
+                            ? 'Пожалуйста, проверьте реквизиты и утвердите макет для формирования файлов этикеток'
+                            : 'Пожалуйста, проверьте реквизиты и утвердите макет перед запуском партии в производство'}
                         </p>
                       </div>
 
@@ -1371,32 +1405,14 @@ export const OrderDetailPage: React.FC = () => {
             <div className="space-y-3">
               {/* Data Matrix PDF Document Row */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50/60 rounded-xl border border-gray-200/80 gap-3">
-                <div className="flex items-center gap-3.5">
+                <div className="flex items-center gap-3.5 min-w-0">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-blue-50 text-[#0082FB]">
                     <FileText className="w-5 h-5" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-xs font-extrabold text-[#111827]">
-                        Макеты кодов Data Matrix (PDF)
-                      </h3>
-                      {canPrintBatch ? (
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          ✓ Печать разрешена
-                        </span>
-                      ) : !isApprovedByClient ? (
-                        <span className="text-[10px] font-bold text-[#0082FB] bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                          <Lock className="w-3 h-3 text-[#0082FB]" />
-                          Требуется согласование макета
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-[#0082FB] bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                          <Lock className="w-3 h-3 text-[#0082FB]" />
-                          Ожидает подтверждения оплаты
-                        </span>
-                      )}
-                    </div>
+                  <div className="min-w-0">
+                    <h3 className="text-xs font-extrabold text-[#111827]">
+                      Макеты кодов Data Matrix (PDF)
+                    </h3>
                     <p className="text-[11px] text-[#64748B] mt-0.5">
                       Формат {labelWidth}×{labelHeight} мм для термотрансферной печати • {order.itemsCount.toLocaleString()} кодов
                     </p>
@@ -1408,33 +1424,24 @@ export const OrderDetailPage: React.FC = () => {
                     type="button"
                     onClick={handlePrintSample}
                     disabled={printingSample}
-                    className="inline-flex items-center justify-center gap-1.5 bg-white hover:bg-slate-50 text-[#111827] border border-slate-200 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1.5 h-9 bg-white hover:bg-slate-50 text-[#111827] border border-slate-200 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
                     title="Напечатать 1 тестовый образец для калибровки принтера и проверки сканером"
                   >
                     <Printer className="w-3.5 h-3.5 text-[#0082FB]" />
                     {printingSample ? 'Печать...' : 'Тест (1 шт.)'}
                   </button>
 
-                  <Link
-                    to={`/orders/${order.id}/labels`}
-                    className="inline-flex items-center justify-center gap-2 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-xs shrink-0 bg-white hover:bg-gray-100 text-[#111827] border border-gray-200 cursor-pointer"
-                    title="Открыть отдельную страницу со всеми этикетками партии, номерами и поштучной печатью"
-                  >
-                    <Eye className="w-4 h-4 text-[#0082FB]" />
-                    Все этикетки ({order.itemsCount})
-                  </Link>
-
                   <button
                     type="button"
                     onClick={() => setShowRollModal(true)}
-                    className={`inline-flex items-center justify-center gap-2 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-xs shrink-0 ${
+                    className={`inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 ${
                       canPrintBatch
                         ? 'bg-white hover:bg-gray-100 text-[#111827] border border-gray-200 cursor-pointer'
                         : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-pointer'
                     }`}
                     title={canPrintBatch ? 'Разбить тираж на рулоны (по 500, 1000 или 2000 этикеток) для термопринтера' : printBlockReason}
                   >
-                    <Layers className={`w-4 h-4 ${canPrintBatch ? 'text-[#0082FB]' : 'text-slate-400'}`} />
+                    <Layers className={`w-3.5 h-3.5 ${canPrintBatch ? 'text-[#0082FB]' : 'text-slate-400'}`} />
                     Скачать по рулонам
                   </button>
 
@@ -1442,7 +1449,7 @@ export const OrderDetailPage: React.FC = () => {
                     type="button"
                     onClick={handleDownloadPdf}
                     disabled={downloadingPdf || !canPrintBatch}
-                    className={`inline-flex items-center justify-center gap-2 font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs shrink-0 ${
+                    className={`inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 ${
                       canPrintBatch
                         ? 'bg-[#0082FB] hover:bg-[#0070DA] text-white cursor-pointer active:scale-95'
                         : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
@@ -1450,7 +1457,7 @@ export const OrderDetailPage: React.FC = () => {
                     title={canPrintBatch ? 'Скачать итоговый PDF для принтера' : printBlockReason}
                   >
                     {canPrintBatch ? (
-                      <Download className={`w-4 h-4 ${downloadingPdf ? 'animate-bounce' : ''}`} />
+                      <Download className={`w-3.5 h-3.5 ${downloadingPdf ? 'animate-bounce' : ''}`} />
                     ) : (
                       <Lock className="w-3.5 h-3.5 text-slate-400" />
                     )}
@@ -1465,11 +1472,11 @@ export const OrderDetailPage: React.FC = () => {
 
               {/* Print Access Informational Alert */}
               {!canPrintBatch ? (
-                <div className="p-4 rounded-2xl border border-blue-200/90 bg-gradient-to-r from-blue-50/90 via-sky-50/40 to-white flex items-start gap-3.5 shadow-xs">
-                  <div className="w-8 h-8 rounded-xl bg-[#0082FB] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                <div className="p-3.5 rounded-2xl border border-blue-200/90 bg-gradient-to-r from-blue-50/90 via-sky-50/40 to-white flex items-center gap-3.5 shadow-xs">
+                  <div className="w-8 h-8 rounded-xl bg-[#0082FB] text-white flex items-center justify-center shrink-0 shadow-xs">
                     <Lock className="w-4 h-4 text-white" />
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <span className="font-extrabold text-[#0B3A78] text-xs block">
                       {!isApprovedByClient
                         ? 'Печать тиража заблокирована: макет ещё не утверждён'
@@ -1480,18 +1487,6 @@ export const OrderDetailPage: React.FC = () => {
                         ? 'Чтобы скачать полную партию этикеток или рулоны, сначала согласуйте дизайн макета в блоке выше. Для калибровки принтера доступна кнопка «Тест (1 шт.)».'
                         : 'Администратор подтверждает условную оплату за макет и тираж. После одобрения доступ к скачиванию рулонов и всей партии откроется автоматически.'}
                     </span>
-                    {!isApprovedByClient && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const el = document.getElementById('sticker-approval-section');
-                          if (el) el.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                        className="inline-flex items-center gap-1 text-[11px] font-extrabold text-[#0082FB] hover:text-[#006bd1] hover:underline mt-1.5 cursor-pointer"
-                      >
-                        Перейти к согласованию макета &rarr;
-                      </button>
-                    )}
                   </div>
                 </div>
               ) : (
@@ -1538,24 +1533,34 @@ export const OrderDetailPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleDownloadInvoice}
+                    className="inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl border border-gray-200/90 bg-white hover:bg-gray-50 text-[#111827] shadow-xs transition-all shrink-0 cursor-pointer"
+                    title="Открыть официальный Счёт на оплату для бухгалтерии"
+                  >
+                    <Receipt className="w-3.5 h-3.5 text-[#0082FB]" />
+                    <span>Счёт на оплату</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={handleDownloadAct}
-                    className={`inline-flex items-center justify-center gap-2 font-bold text-xs px-4 py-2.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
+                    className={`inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
                       isOrderCompleted
                         ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-xs'
-                        : 'bg-white hover:bg-gray-100 text-[#111827] border-gray-200/90'
+                        : 'bg-white hover:bg-gray-100 text-[#111827] border-gray-200/90 shadow-xs'
                     }`}
                     title={isOrderCompleted ? 'Открыть официальный Акт для печати и подписи' : 'Открыть предварительный Акт'}
                   >
                     {isOrderCompleted ? (
                       <>
-                        <CheckCircle2 className="w-4 h-4 text-white" /> Скачать / Печать Акта
+                        <CheckCircle2 className="w-3.5 h-3.5 text-white" /> Скачать / Печать Акта
                       </>
                     ) : (
                       <>
-                        <FileText className="w-4 h-4 text-gray-500" /> Предпросмотр Акта
+                        <FileText className="w-3.5 h-3.5 text-gray-500" /> Предпросмотр Акта
                       </>
                     )}
                   </button>
@@ -1618,16 +1623,16 @@ export const OrderDetailPage: React.FC = () => {
                   <Building2 className="w-3.5 h-3.5 text-gray-400" /> Склад / Адрес доставки:
                 </span>
                 <p className="text-[#111827] font-semibold bg-gray-50/80 p-2.5 rounded-xl border border-gray-200/70">
-                  {defaultWarehouse || 'Основной склад (г. Алматы)'}
+                  {parsedNotes.address || defaultWarehouse || 'Основной склад (г. Алматы)'}
                 </p>
               </div>
 
               <div>
                 <span className="text-[11px] font-bold text-[#64748B] block mb-1 flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-gray-400" /> Примечание:
+                  <Tag className="w-3.5 h-3.5 text-gray-400" /> Примечание к заказу:
                 </span>
                 <p className="text-[#111827] font-medium bg-gray-50/80 p-2.5 rounded-xl border border-gray-200/70 leading-relaxed">
-                  {order.notes || 'Без примечаний к заказу'}
+                  {parsedNotes.clientNote || 'Без примечаний к заказу'}
                 </p>
               </div>
             </div>
@@ -1638,82 +1643,90 @@ export const OrderDetailPage: React.FC = () => {
       </div>
 
       {/* Full-Size Sticker Modal Preview */}
-      {showStickerModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-lg w-full p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Palette className="w-5 h-5 text-[#0082FB]" />
-                <h3 className="text-base font-extrabold text-[#111827]">
-                  Макет стикера для заказа {order.orderNumber}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowStickerModal(false)}
-                className="text-gray-400 hover:text-black p-1 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="text-xs text-[#64748B] flex items-center justify-between">
-              <span>
-                Формат: <strong className="text-[#111827]">{layoutWidthMm} × {layoutHeightMm} мм</strong>
-              </span>
-            </div>
-
-            {/* High-res rendered sticker canvas/card */}
-            <div className="bg-gray-100 p-6 rounded-2xl flex items-center justify-center overflow-auto max-h-[60vh]">
-              <div id="sticker-sample-printable-card">
-                <StickerCanvasPreview
-                  widthMm={layoutWidthMm}
-                  heightMm={layoutHeightMm}
-                  elements={layoutElements}
-                  scale={6.2}
-                  previewData={stickerPreviewData}
-                  className="shadow-2xl"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handlePrintSample}
-                disabled={printingSample}
-                className="inline-flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-[#111827] text-xs font-bold px-4 py-2.5 rounded-xl border border-gray-200 transition-all cursor-pointer disabled:opacity-60"
-              >
-                <Printer className={`w-4 h-4 ${printingSample ? 'animate-bounce' : ''}`} />
-                {printingSample ? 'Формирование...' : 'Распечатать образец (PDF)'}
-              </button>
-
-              <div className="flex items-center justify-end gap-2">
-                {approvalStatus !== 'APPROVED' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleApproveSticker();
-                      setShowStickerModal(false);
-                    }}
-                    className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
-                  >
-                    <Check className="w-4 h-4" /> Утвердить макет
-                  </button>
-                )}
-
+      {showStickerModal &&
+        createPortal(
+          <div
+            onClick={() => setShowStickerModal(false)}
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-lg w-full p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-150"
+            >
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Palette className="w-5 h-5 text-[#0082FB]" />
+                  <h3 className="text-base font-extrabold text-[#111827]">
+                    Макет стикера для заказа {order.orderNumber}
+                  </h3>
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowStickerModal(false)}
-                  className="inline-flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-[#111827] text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer"
+                  className="text-gray-400 hover:text-black p-1 transition-colors cursor-pointer"
                 >
-                  Закрыть
+                  <X className="w-5 h-5" />
                 </button>
               </div>
+
+              <div className="text-xs text-[#64748B] flex items-center justify-between">
+                <span>
+                  Формат: <strong className="text-[#111827]">{layoutWidthMm} × {layoutHeightMm} мм</strong>
+                </span>
+              </div>
+
+              {/* High-res rendered sticker canvas/card */}
+              <div className="bg-gray-100 p-6 rounded-2xl flex items-center justify-center overflow-auto max-h-[60vh]">
+                <div id="sticker-sample-printable-card">
+                  <StickerCanvasPreview
+                    widthMm={layoutWidthMm}
+                    heightMm={layoutHeightMm}
+                    elements={layoutElements}
+                    scale={6.2}
+                    previewData={stickerPreviewData}
+                    className="shadow-2xl"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handlePrintSample}
+                  disabled={printingSample}
+                  className="inline-flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-[#111827] text-xs font-bold px-4 py-2.5 rounded-xl border border-gray-200 transition-all cursor-pointer disabled:opacity-60"
+                >
+                  <Printer className={`w-4 h-4 ${printingSample ? 'animate-bounce' : ''}`} />
+                  {printingSample ? 'Формирование...' : 'Распечатать образец (PDF)'}
+                </button>
+
+                <div className="flex items-center justify-end gap-2">
+                  {approvalStatus !== 'APPROVED' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleApproveSticker();
+                        setShowStickerModal(false);
+                      }}
+                      className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
+                    >
+                      <Check className="w-4 h-4" /> Утвердить макет
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowStickerModal(false)}
+                    className="inline-flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-[#111827] text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer"
+                  >
+                    Закрыть
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Roll Splitting Modal for batches */}
       {order && (

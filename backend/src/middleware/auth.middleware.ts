@@ -19,8 +19,6 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
-  } else if (req.query && typeof req.query.token === 'string') {
-    token = req.query.token;
   }
 
   if (!token) {
@@ -28,7 +26,7 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
   }
 
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as any;
+    const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as any;
     req.user = decoded;
     next();
   } catch (error) {

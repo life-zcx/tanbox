@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CATEGORIES_DATA } from '../data/categoriesData';
+import { setPageSeo } from '../utils/seo';
 import { 
   Cigarette, 
   Footprints, 
@@ -42,12 +43,17 @@ interface CategoryDetailPageProps {
 
 export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
+  const category = CATEGORIES_DATA.find((c) => c.id === categoryId);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [categoryId]);
-
-  const category = CATEGORIES_DATA.find((c) => c.id === categoryId);
+    if (category) {
+      setPageSeo(
+        `Маркировка: ${category.title} в Казахстане | TANBOX.KZ`,
+        `${category.shortDesc}. Заказ кодов Data Matrix в ИС Танба, заведение в НКТ, термопечать этикеток и складская оклейка по Республике Казахстан.`
+      );
+    }
+  }, [categoryId, category]);
 
   if (!category) {
     return (

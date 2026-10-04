@@ -16,6 +16,7 @@ router.use(authenticateJWT);
 router.get('/', getUserTemplates);
 router.get('/:id', getUserTemplateById);
 router.post('/', createUserTemplate);
+router.put('/:id', updateUserTemplate);
 router.patch('/:id', updateUserTemplate);
 router.delete('/:id', deleteUserTemplate);
 

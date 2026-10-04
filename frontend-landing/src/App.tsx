@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Header } from './components/common/Header';
 import { Footer } from './components/common/Footer';
 import { CookieBanner } from './components/common/CookieBanner';
+import { ScrollToTopButton } from './components/common/ScrollToTopButton';
 import { HomePage } from './pages/HomePage';
 import { CalculatorPage } from './pages/CalculatorPage';
 import { ServicesPage } from './pages/ServicesPage';
@@ -78,6 +79,7 @@ export const App: React.FC = () => {
 
         <Footer />
         <CookieBanner />
+        <ScrollToTopButton duration={1000} />
       </div>
     </BrowserRouter>
   );

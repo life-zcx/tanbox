@@ -33,6 +33,7 @@ import {
   Unlock,
   ShieldCheck,
   ShieldAlert,
+  Tag,
 } from 'lucide-react';
 import axios from 'axios';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
@@ -141,6 +142,14 @@ export const AdminOrderDetailPage: React.FC = () => {
         sentAt: res.data.stickerSentAt ? new Date(res.data.stickerSentAt).toLocaleString('ru-RU') : '',
         comment: res.data.stickerApprovalNotes || '',
       });
+
+      // Check if template is already saved in client's template library
+      if (res.data.isTemplateSaved || res.data.savedTemplate || res.data.templateId) {
+        setTemplateSaved(true);
+        if (res.data.savedTemplate) {
+          setSavedTemplateInfo(res.data.savedTemplate);
+        }
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Не удалось загрузить данные заказа');
     } finally {
@@ -231,6 +240,7 @@ export const AdminOrderDetailPage: React.FC = () => {
         article: getVal('Артикул:'),
         composition: getVal('Состав/Материал:', 'Состав:'),
         symbols: getVal('Обязательные знаки:', 'Знаки:'),
+        barcode: getVal('Штрихкод (EAN-13):', 'Штрихкод EAN-13:', 'Штрихкод:'),
         wishes: getVal('Пожелания:', 'Пожелания/текст:'),
       };
     } catch {
@@ -252,7 +262,17 @@ export const AdminOrderDetailPage: React.FC = () => {
   );
 
   const [savingTemplate, setSavingTemplate] = useState<boolean>(false);
+  const [templateSaved, setTemplateSaved] = useState<boolean>(false);
+  const [savedTemplateInfo, setSavedTemplateInfo] = useState<{ id?: string; name?: string } | null>(null);
   const [templateSavedMsg, setTemplateSavedMsg] = useState<string | null>(null);
+
+  const isTemplateAlreadySaved = Boolean(
+    templateSaved ||
+    (order as any)?.isTemplateSaved ||
+    (order as any)?.templateId ||
+    savedTemplateInfo ||
+    isReusedTemplate
+  );
 
   const activeLayout = (order as any)?.stickerLayout;
   const layoutElements = useMemo(() => {
@@ -270,7 +290,12 @@ export const AdminOrderDetailPage: React.FC = () => {
 
   const handleSaveToUserTemplates = async () => {
     if (!order || !layoutElements.length) return;
-    const defaultName = `${order.category || 'Этикетка'} ${layoutWidthMm}×${layoutHeightMm} мм`;
+    if (isTemplateAlreadySaved) {
+      alert(`Шаблон для этого заказа уже сохранён в библиотеке клиента ${savedTemplateInfo?.name ? `(«${savedTemplateInfo.name}»)` : ''}. Повторное сохранение заблокировано во избежание дубликатов.`);
+      return;
+    }
+
+    const defaultName = `${labelRequirements?.productName || order.category || 'Этикетка'} ${layoutWidthMm}×${layoutHeightMm} мм`;
     const templateName = window.prompt(
       'Введите название шаблона для сохранения в библиотеку клиента:',
       defaultName
@@ -279,7 +304,7 @@ export const AdminOrderDetailPage: React.FC = () => {
 
     setSavingTemplate(true);
     try {
-      await apiClient.post('/user-templates', {
+      const res = await apiClient.post('/user-templates', {
         targetUserId: order.userId,
         name: templateName.trim(),
         category: order.category,
@@ -288,10 +313,65 @@ export const AdminOrderDetailPage: React.FC = () => {
         elements: layoutElements,
         sourceOrderId: order.id,
       });
-      setTemplateSavedMsg('Макет успешно сохранён в библиотеку шаблонов клиента!');
-      setTimeout(() => setTemplateSavedMsg(null), 4000);
+      setTemplateSaved(true);
+      const createdTpl = res.data.template;
+      setSavedTemplateInfo({ id: createdTpl?.id, name: createdTpl?.name || templateName.trim() });
+      setTemplateSavedMsg(`Шаблон «${templateName.trim()}» успешно сохранён в библиотеку клиента!`);
+      setTimeout(() => setTemplateSavedMsg(null), 5000);
     } catch (err: any) {
-      alert('Ошибка при сохранении в библиотеку: ' + (err.response?.data?.message || err.message));
+      if (err.response?.data?.alreadyExists) {
+        setTemplateSaved(true);
+        if (err.response?.data?.template) {
+          setSavedTemplateInfo(err.response.data.template);
+        }
+      }
+      alert(err.response?.data?.message || err.message || 'Ошибка при сохранении в библиотеку');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const handleUpdateUserTemplate = async () => {
+    let targetId = savedTemplateInfo?.id || (order as any)?.templateId;
+    if (!order || !layoutElements.length) return;
+
+    if (!targetId) {
+      try {
+        const tplRes = await apiClient.get(`/user-templates?userId=${order.userId}`);
+        const found = tplRes.data?.templates?.find((t: any) => t.sourceOrderId === order.id);
+        if (found) {
+          targetId = found.id;
+          setSavedTemplateInfo(found);
+        }
+      } catch (e) {
+        console.warn('Could not auto-resolve template ID:', e);
+      }
+    }
+
+    if (!targetId) {
+      alert('Не удалось определить идентификатор шаблона для обновления');
+      return;
+    }
+
+    const tplName = savedTemplateInfo?.name || 'текущий шаблон';
+    if (!window.confirm(`Обновить существующий шаблон «${tplName}» в библиотеке клиента текущей версией макета?`)) {
+      return;
+    }
+    setSavingTemplate(true);
+    try {
+      const res = await apiClient.put(`/user-templates/${targetId}`, {
+        widthMm: layoutWidthMm,
+        heightMm: layoutHeightMm,
+        elements: layoutElements,
+        category: order.category,
+      });
+      if (res.data?.template) {
+        setSavedTemplateInfo(res.data.template);
+      }
+      setTemplateSavedMsg(`Шаблон «${res.data?.template?.name || tplName}» успешно обновлен!`);
+      setTimeout(() => setTemplateSavedMsg(null), 5000);
+    } catch (err: any) {
+      alert('Ошибка при обновлении шаблона: ' + (err.response?.data?.message || err.message));
     } finally {
       setSavingTemplate(false);
     }
@@ -457,10 +537,23 @@ export const AdminOrderDetailPage: React.FC = () => {
       window.URL.revokeObjectURL(blobUrl);
     } catch (err: any) {
       console.error('Download codes error:', err);
-      const token = localStorage.getItem('tanbox_admin_token') || localStorage.getItem('tanbox_token') || '';
-      window.open(`/api/orders/${order.id}/codes-file?token=${encodeURIComponent(token)}`, '_blank');
+      alert('Ошибка при скачивании файла кодов: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingCodes(false);
+    }
+  };
+
+  const handleApproveLayoutDirectly = async () => {
+    if (!order) return;
+    try {
+      const res = await apiClient.patch(`/orders/${order.id}/sticker-approval`, {
+        approvalStatus: 'APPROVED',
+      });
+      setOrder(res.data.order);
+      setCodesSuccessMsg('Макет этикетки успешно утверждён!');
+      setTimeout(() => setCodesSuccessMsg(null), 4000);
+    } catch (err: any) {
+      alert('Ошибка при согласовании макета: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -585,7 +678,7 @@ export const AdminOrderDetailPage: React.FC = () => {
       // Generate dummy code rows for the batch if no external CSV
       const rows = Array.from({ length: Math.min(order.itemsCount, 20) }, (_, i) => ({
         code: `010460000000000021${String(order.orderNumber).replace(/\D/g, '')}${String(i + 1).padStart(4, '0')}\u001d91FFD0\u001d92dGVzdA==`,
-        barcode: `20000000${String(i + 1).padStart(5, '0')}`,
+        barcode: labelRequirements?.barcode || `20000000${String(i + 1).padStart(5, '0')}`,
         productName: labelRequirements?.productName || categoryLabel,
         brand: labelRequirements?.brand || order.user?.companyName || 'Бренд',
         article: labelRequirements?.article || order.orderNumber,
@@ -604,7 +697,7 @@ export const AdminOrderDetailPage: React.FC = () => {
           template,
           csvData: rows,
         },
-        { responseType: 'blob' }
+        { responseType: 'blob', timeout: 300000 }
       );
 
       const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -659,8 +752,7 @@ export const AdminOrderDetailPage: React.FC = () => {
       window.URL.revokeObjectURL(blobUrl);
     } catch (err: any) {
       console.error('Download PDF error:', err);
-      const token = localStorage.getItem('tanbox_admin_token') || localStorage.getItem('tanbox_token') || '';
-      window.open(`/api/orders/${order.id}/pdf?token=${encodeURIComponent(token)}`, '_blank');
+      alert('Ошибка при скачивании PDF: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingPdf(false);
     }
@@ -1022,11 +1114,20 @@ export const AdminOrderDetailPage: React.FC = () => {
                   </button>
 
                   <Link
-                    to={`/labels?orderId=${order.id}`}
+                    to={`/label-designer?orderId=${order.id}`}
                     className="inline-flex items-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     Открыть в конструкторе
+                  </Link>
+
+                  <Link
+                    to={`/labels?orderId=${order.id}`}
+                    className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 text-xs font-bold px-3 py-2 rounded-xl transition-all shadow-xs"
+                    title="Посмотреть все коды этого заказа в общем реестре"
+                  >
+                    <Tag className="w-3.5 h-3.5 text-blue-500" />
+                    В реестр кодов
                   </Link>
 
                   <label className="inline-flex items-center gap-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold px-3 py-2 rounded-xl transition-all cursor-pointer">
@@ -1204,6 +1305,15 @@ export const AdminOrderDetailPage: React.FC = () => {
                       </div>
                     )}
 
+                    {labelRequirements?.barcode && (
+                      <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200/60">
+                        <span className="text-[#64748B]">Штрихкод EAN-13:</span>
+                        <span className="col-span-2 font-mono font-bold text-[#111827]">
+                          {labelRequirements.barcode}
+                        </span>
+                      </div>
+                    )}
+
                     {labelRequirements?.wishes && (
                       <div className="pt-1">
                         <span className="text-[#64748B] block mb-1">Пожелания и реквизиты:</span>
@@ -1236,69 +1346,92 @@ export const AdminOrderDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Action Buttons for Sticker */}
-              <div className="pt-2 flex flex-wrap items-center gap-3">
-                <Link
-                  to={`/labels?orderId=${order.id}`}
-                  className="inline-flex items-center gap-2 bg-[#111827] hover:bg-black text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
-                >
-                  <Palette className="w-4 h-4 text-blue-400" />
-                  Открыть в конструкторе макетов
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
-                </Link>
-
-                {approvalStatus === 'WAITING_APPROVAL' ? (
-                  <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 text-xs font-bold px-3.5 py-2 rounded-xl">
-                    <Clock className="w-4 h-4 text-amber-600" />
-                    Макет передан клиенту, ожидает согласования
-                  </span>
-                ) : approvalStatus === 'CHANGES_REQUESTED' ? (
-                  <button
-                    type="button"
-                    onClick={handleSendToClientApproval}
-                    className="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
+              {/* Action Toolbar for Sticker Layout & Library */}
+              <div className="pt-4 border-t border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                {/* Left group: Designer CTA + Approval Status */}
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <Link
+                    to={`/label-designer?orderId=${order.id}`}
+                    className="inline-flex items-center gap-2 bg-[#111827] hover:bg-black text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 group shrink-0 whitespace-nowrap"
                   >
-                    <Check className="w-4 h-4" />
-                    Отправить обновленный макет клиенту
-                  </button>
-                ) : approvalStatus === 'APPROVED' ? (
-                  <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-bold px-3.5 py-2 rounded-xl">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    Макет утвержден клиентом
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleSendToClientApproval}
-                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
-                  >
-                    <Check className="w-4 h-4" />
-                    Отправить клиенту на согласование
-                  </button>
-                )}
+                    <Palette className="w-4 h-4 text-blue-400 group-hover:rotate-12 transition-transform" />
+                    <span>Открыть в конструкторе макетов</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
 
+                  {approvalStatus === 'WAITING_APPROVAL' ? (
+                    <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-2xs whitespace-nowrap shrink-0">
+                      <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
+                      Ожидает согласования клиентом
+                    </span>
+                  ) : approvalStatus === 'CHANGES_REQUESTED' ? (
+                    <button
+                      type="button"
+                      onClick={handleSendToClientApproval}
+                      className="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap shrink-0"
+                    >
+                      <Check className="w-4 h-4" />
+                      Отправить обновленный макет клиенту
+                    </button>
+                  ) : approvalStatus === 'APPROVED' ? (
+                    <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-2xs whitespace-nowrap shrink-0">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      Макет утвержден клиентом
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSendToClientApproval}
+                      className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap shrink-0"
+                    >
+                      <Check className="w-4 h-4" />
+                      Отправить клиенту на согласование
+                    </button>
+                  )}
+
+                  {/* Show draft pill only if not approved and not saved to template library */}
+                  {hasSavedLabel && approvalStatus !== 'APPROVED' && !isTemplateAlreadySaved && (
+                    <span className="text-xs text-slate-600 font-medium flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/70 whitespace-nowrap shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Черновик сохранён
+                    </span>
+                  )}
+                </div>
+
+                {/* Right group: Client library template controls */}
                 {layoutElements.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleSaveToUserTemplates}
-                    disabled={savingTemplate}
-                    className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                  >
-                    <BookmarkCheck className="w-4 h-4 text-emerald-600" />
-                    {savingTemplate ? 'Сохранение...' : 'Сохранить в шаблоны клиента'}
-                  </button>
-                )}
-
-                {hasSavedLabel && (
-                  <span className="text-xs text-emerald-700 font-semibold flex items-center gap-1 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Черновик макета сохранен
-                  </span>
-                )}
-
-                {templateSavedMsg && (
-                  <div className="w-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    {templateSavedMsg}
+                  <div className="flex items-center shrink-0">
+                    {isTemplateAlreadySaved ? (
+                      <div className="inline-flex items-center gap-2 bg-emerald-50/80 border border-emerald-200/80 rounded-xl px-3 py-1.5 shadow-2xs">
+                        <BookmarkCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="text-xs text-gray-500 font-medium whitespace-nowrap">В библиотеке:</span>
+                        <span className="text-xs font-bold text-[#111827] max-w-[200px] truncate whitespace-nowrap" title={savedTemplateInfo?.name || 'Шаблон клиента'}>
+                          «{savedTemplateInfo?.name || 'Шаблон клиента'}»
+                        </span>
+                        {(savedTemplateInfo?.id || (order as any)?.templateId) && (
+                          <button
+                            type="button"
+                            onClick={handleUpdateUserTemplate}
+                            disabled={savingTemplate}
+                            title="Обновить существующий шаблон в библиотеке клиента текущей версией макета"
+                            className="ml-1 inline-flex items-center gap-1.5 bg-white hover:bg-emerald-600 hover:text-white border border-emerald-300 text-emerald-800 text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95 disabled:opacity-50 whitespace-nowrap shrink-0"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${savingTemplate ? 'animate-spin' : 'text-emerald-600'}`} />
+                            <span>{savingTemplate ? 'Обновление...' : 'Обновить'}</span>
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSaveToUserTemplates}
+                        disabled={savingTemplate}
+                        className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer active:scale-95 disabled:opacity-50 shadow-2xs whitespace-nowrap"
+                      >
+                        <BookmarkCheck className="w-4 h-4 text-emerald-600" />
+                        <span>{savingTemplate ? 'Сохранение...' : 'Сохранить в шаблоны клиента'}</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1318,12 +1451,6 @@ export const AdminOrderDetailPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <Link
-                  to={`/orders/${order.id}/labels`}
-                  className="text-xs font-bold text-[#0082FB] hover:text-[#0070DA] hover:underline inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5" /> Все этикетки ({order.itemsCount})
-                </Link>
                 <button
                   type="button"
                   onClick={() => setShowRollModal(true)}
@@ -1422,7 +1549,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                   </button>
 
                   <Link
-                    to={`/labels?orderId=${order.id}`}
+                    to={`/label-designer?orderId=${order.id}`}
                     className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer"
                   >
                     <Palette className="w-3.5 h-3.5 text-blue-500" />
@@ -1473,7 +1600,16 @@ export const AdminOrderDetailPage: React.FC = () => {
                   <Palette className="w-4 h-4 text-gray-500" />
                   <span className="font-semibold text-gray-700">1. Макет этикетки</span>
                 </div>
-                {order.stickerApprovalStatus === 'APPROVED' ? (
+                {((order.tariffType as string) === 'DIGITAL' || (order as any).tariff === 'DIGITAL') ? (
+                  <span className="text-[11px] font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">
+                    Не требуется (DIGITAL)
+                  </span>
+                ) : !order.extraServices?.includes('STICKER_LAYOUT_DESIGN') ? (
+                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    Стандартный (авто)
+                  </span>
+                ) : order.stickerApprovalStatus === 'APPROVED' ? (
                   <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     Согласован
@@ -1484,7 +1620,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                   </span>
                 ) : (
                   <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                    Не согласован
+                    Ожидает согласования
                   </span>
                 )}
               </div>
@@ -1510,7 +1646,11 @@ export const AdminOrderDetailPage: React.FC = () => {
 
             {/* Explanation Note */}
             <p className="text-[11px] text-[#64748B] leading-relaxed">
-              Клиент сможет скачать готовую партию ({order.itemsCount.toLocaleString()} шт.) или рулоны <strong>только при одновременном выполнении двух условий:</strong> макет согласован и вы дали разрешение (оплату) кнопкой ниже.
+              {order.extraServices?.includes('STICKER_LAYOUT_DESIGN') ? (
+                <>Клиент сможет скачать готовую партию ({order.itemsCount.toLocaleString()} шт.) или рулоны <strong>после согласования дизайна макета</strong> и подтверждения оплаты администратором.</>
+              ) : (
+                <>Для стандартного заказа макет применяется автоматически. Клиент может скачать партию ({order.itemsCount.toLocaleString()} шт.) сразу после <strong>подтверждения оплаты</strong>.</>
+              )}
             </p>
 
             {/* Action Buttons */}
@@ -1537,13 +1677,23 @@ export const AdminOrderDetailPage: React.FC = () => {
                 </button>
               )}
 
-              {/* Warning if layout is not yet approved by client */}
-              {order.stickerApprovalStatus !== 'APPROVED' && (
-                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[10px] text-amber-900 font-medium flex items-start gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                  <span>
-                    Макет клиентом ещё не согласован. Даже если оплата подтверждена, печать всей партии откроется клиенту только после его утверждения макета.
-                  </span>
+              {/* Warning only if custom design is ordered and not yet approved */}
+              {order.extraServices?.includes('STICKER_LAYOUT_DESIGN') && order.stickerApprovalStatus !== 'APPROVED' && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-[11px] text-amber-900 font-medium">
+                  <div className="flex items-start gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <span>
+                      Заказана разработка индивидуального макета. Макет ещё не утверждён клиентом.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleApproveLayoutDirectly}
+                    className="w-full inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Утвердить макет как администратор
+                  </button>
                 </div>
               )}
             </div>
@@ -1619,6 +1769,41 @@ export const AdminOrderDetailPage: React.FC = () => {
           hasLayout={Boolean(layoutElements.length > 0 || (order.stickerLayout as any)?.elements?.length > 0)}
         />
       )}
+
+      {/* Floating Top-Right Toast Notifications */}
+      <div className="fixed top-6 right-6 z-50 flex flex-col gap-2.5 pointer-events-none max-w-sm w-full">
+        {templateSavedMsg && (
+          <div className="pointer-events-auto bg-[#0F172A] text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center justify-between gap-3 animate-fade-in">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="leading-snug">{templateSavedMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTemplateSavedMsg(null)}
+              className="text-gray-400 hover:text-white font-bold p-1 rounded-lg cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {adjustSuccessMsg && (
+          <div className="pointer-events-auto bg-[#0F172A] text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center justify-between gap-3 animate-fade-in">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="leading-snug">{adjustSuccessMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAdjustSuccessMsg(null)}
+              className="text-gray-400 hover:text-white font-bold p-1 rounded-lg cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
 
     </div>
   );

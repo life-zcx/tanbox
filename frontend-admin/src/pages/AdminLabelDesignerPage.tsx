@@ -178,8 +178,33 @@ export const AdminLabelDesignerPage: React.FC = () => {
         try {
           const codesRes = await apiClient.get(`/orders/${orderId}/codes-content`);
           if (codesRes.data?.hasCodes && codesRes.data?.isCsv) {
-            setCsvHeaders(codesRes.data.headers);
-            setCsvRows(codesRes.data.previewRows);
+            const bcMatch = ord.notes?.match(/Штрихкод(?:\s*\(EAN-13\))?:?\s*(\d+)/i);
+            const orderBarcode = bcMatch ? bcMatch[1].trim() : undefined;
+
+            const enrichedRows = (codesRes.data.previewRows || []).map((r: any, idx: number) => {
+              const codeVal = r.code || Object.values(r)[0] || '';
+              const m = String(codeVal).match(/^01(\d{14})21([^\u001d\s]+)/);
+              const gtin14 = m ? m[1] : '';
+              const gtin13 = gtin14.startsWith('0') ? gtin14.slice(1) : gtin14;
+              const serial = m ? m[2] : '';
+              return {
+                ...r,
+                code: codeVal,
+                gtin: gtin14,
+                serial: serial,
+                barcode: orderBarcode || gtin13 || gtin14 || '2000000001234',
+                index: String(idx + 1),
+                number: String(idx + 1),
+                orderNumber: ord.orderNumber,
+              };
+            });
+
+            const enrichedHeaders = Array.from(
+              new Set(['code', 'barcode', 'gtin', 'serial', ...codesRes.data.headers])
+            );
+
+            setCsvHeaders(enrichedHeaders);
+            setCsvRows(enrichedRows);
             setTotalRowsCount(codesRes.data.totalRows);
             setFileName(codesRes.data.fileName || 'Коды маркировки из заказа');
           }
@@ -656,8 +681,7 @@ export const AdminLabelDesignerPage: React.FC = () => {
           h.toLowerCase().includes(k)
         )
       ) ||
-      csvHeaders[0] ||
-      'barcode';
+      (csvHeaders.includes('gtin') ? 'gtin' : 'barcode');
 
     const width = Math.min(widthMm - 4, 38);
     const height = Math.min(heightMm - 4, 12);

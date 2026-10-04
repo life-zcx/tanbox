@@ -24,7 +24,7 @@ services:
     container_name: tanbox_backend
     restart: always
     ports:
-      - "5050:5050"
+      - "127.0.0.1:5050:5050"
     environment:
       PORT: ${PORT:-5050}
       DATABASE_URL: ${DATABASE_URL:-postgresql://tanbox_user:tanbox_pass_2026@postgres:5432/tanbox_db?schema=public}
@@ -44,7 +44,7 @@ services:
     container_name: tanbox_frontend_landing
     restart: always
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       - VITE_API_URL=/api
     volumes:
@@ -58,7 +58,7 @@ services:
     container_name: tanbox_frontend_lk
     restart: always
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     environment:
       - VITE_API_URL=/api
     volumes:
@@ -73,7 +73,7 @@ services:
     container_name: tanbox_frontend_admin
     restart: always
     ports:
-      - "3002:3002"
+      - "127.0.0.1:3002:3002"
     environment:
       - VITE_API_URL=/api
       - VITE_BACKEND_URL=http://backend:5050

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Truck, 
@@ -13,6 +13,7 @@ import {
   PhoneCall 
 } from 'lucide-react';
 import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
+import { setPageSeo } from '../utils/seo';
 
 export interface ServiceItem {
   id: string;
@@ -24,6 +25,14 @@ export interface ServiceItem {
 }
 
 export const ServicesPage: React.FC = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    setPageSeo(
+      'Услуги маркировки товаров «под ключ» в Казахстане (ВЭД, НКТ, Оклейка) | TANBOX.KZ',
+      'Комплексные услуги цифровой маркировки в РК: таможенное оформление, регистрация номенклатуры в Национальном каталоге товаров (НКТ), генерация кодов Data Matrix, печать стикеров и интеграция с 1С.'
+    );
+  }, []);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedServiceTitle, setSelectedServiceTitle] = useState('');
 

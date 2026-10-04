@@ -1,85 +1,76 @@
-import React from 'react';
-import { Calendar, ArrowLeft } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { COMPANY_CONTACTS } from '../data/companyContacts';
+import { setPageSeo } from '../utils/seo';
 
 export const CookiePolicyPage: React.FC = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    setPageSeo(
+      'Политика использования файлов cookie | TANBOX.KZ',
+      'Политика и правила использования файлов cookie и веб-аналитики на веб-сайте сервиса цифровой маркировки TANBOX.KZ.'
+    );
+  }, []);
   return (
-    <div className="bg-[#F4F6F9] min-h-screen py-10 sm:py-16">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="bg-[#f8fafc] min-h-screen py-8 sm:py-12 text-[#1e293b]">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
         
-        {/* Back Link */}
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-[#64748B] hover:text-[#0082FB] transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> На главную
-        </Link>
-
-        {/* Header */}
-        <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-sm border border-gray-100 space-y-3">
-          <h1 className="text-2xl sm:text-4xl font-extrabold text-[#111827] tracking-tight leading-tight">
-            Политика использования файлов cookie (Cookies)
-          </h1>
-
-          <div className="flex items-center gap-2 text-xs text-[#64748B]">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Действует с: 1 января 2026 г. • Республика Казахстан</span>
-          </div>
+        {/* Navigation Bar */}
+        <div className="pb-6 mb-6 border-b border-gray-200">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-black transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Вернуться на главную</span>
+          </Link>
         </div>
 
-        {/* Content Body */}
-        <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-sm border border-gray-100 prose prose-slate max-w-none space-y-8 text-sm text-[#334155] leading-relaxed">
+        {/* Document Sheet */}
+        <div className="bg-white border border-gray-300 p-8 sm:p-14 shadow-xs text-justify leading-relaxed font-sans text-xs sm:text-[13px] text-gray-800 space-y-6">
           
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-[#111827]">1. Что такое файлы cookie?</h2>
-            <p>
-              Файлы cookie (куки) — это небольшие текстовые фрагменты данных, отправляемые веб-сервером и сохраняемые на вашем компьютере, смартфоне или ином устройстве при посещении сайта tanbox.kz.
+          {/* Header */}
+          <div className="text-center space-y-2 pb-6 border-b border-gray-200">
+            <h1 className="text-base sm:text-lg font-bold uppercase tracking-wide text-black">
+              Политика использования файлов cookie
+            </h1>
+            <p className="text-xs sm:text-sm font-semibold text-gray-700">
+              в веб-сервисе TANBOX (tanbox.kz)
             </p>
-            <p>
-              Они помогают сайту запоминать ваши предпочтения (например, выбранный тариф в калькуляторе или статус авторизации), обеспечивая корректную и быструю работу всех функций веб-ресурса.
-            </p>
-          </section>
-
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-[#111827]">2. Какие типы cookie мы используем</h2>
-            <div className="space-y-3">
-              <div className="p-4 bg-[#F4F6F9] rounded-2xl border border-gray-200/80">
-                <h4 className="font-bold text-[#111827] text-sm">Обязательные (технические) cookie</h4>
-                <p className="text-xs text-[#64748B] mt-1">
-                  Необходимы для функционирования сайта, авторизации в Личном кабинете, защиты от спама и сохранения состояния калькулятора. Без них работа сервиса невозможна.
-                </p>
-              </div>
-
-              <div className="p-4 bg-[#F4F6F9] rounded-2xl border border-gray-200/80">
-                <h4 className="font-bold text-[#111827] text-sm">Функциональные cookie</h4>
-                <p className="text-xs text-[#64748B] mt-1">
-                  Позволяют запоминать ваш выбор (язык интерфейса, согласие с правилами, статус сессии) для более удобного повторного использования.
-                </p>
-              </div>
-
-              <div className="p-4 bg-[#F4F6F9] rounded-2xl border border-gray-200/80">
-                <h4 className="font-bold text-[#111827] text-sm">Аналитические cookie</h4>
-                <p className="text-xs text-[#64748B] mt-1">
-                  Помогают нам понимать, как пользователи взаимодействуют со страницами сайта, оптимизировать скорость загрузки и устранять ошибки в соответствии с Законом РК «Об информатизации».
-                </p>
-              </div>
+            <div className="flex justify-between items-center text-xs text-gray-500 pt-3">
+              <span>г. Алматы</span>
+              <span>Редакция от 01 января 2026 года</span>
             </div>
-          </section>
+          </div>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-[#111827]">3. Управление файлами cookie</h2>
-            <p>
-              Вы можете в любой момент изменить настройки cookie в настройках вашего браузера (отключить сохранение cookie или удалить уже сохраненные файлы). Обратите внимание: отключение обязательных файлов cookie может привести к ограничению доступа к Личному кабинету и оформлению заказов.
-            </p>
-          </section>
+          {/* Section 1 */}
+          <div className="space-y-2">
+            <h2 className="text-xs sm:text-sm font-bold uppercase text-black">1. Общие положения</h2>
+            <p>1.1. Настоящая Политика использования файлов cookie (далее — «Политика») разъясняет, каким образом Индивидуальный предприниматель «TORMAG.KZ» (ИИН 990601301525, далее — «Оператор») использует файлы cookie и аналогичные технологии отслеживания при посещении сайта <code>tanbox.kz</code> и Личного кабинета <code>lk.tanbox.kz</code>.</p>
+            <p>1.2. Файлы cookie представляют собой небольшие текстовые файлы, сохраняемые браузером на устройстве пользователя для обеспечения технической функциональности и безопасности сервиса.</p>
+          </div>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold text-[#111827]">4. Контакты Оператора</h2>
-            <p>
-              По вопросам использования файлов cookie и защиты информации вы можете обратиться по адресу: <a href={`mailto:${COMPANY_CONTACTS.emails.info}`} className="text-[#0082FB] font-bold hover:underline">{COMPANY_CONTACTS.emails.info}</a> или по телефону <span className="font-bold text-[#111827]">{COMPANY_CONTACTS.phones.hotline}</span>.
-            </p>
-          </section>
+          {/* Section 2 */}
+          <div className="space-y-2">
+            <h2 className="text-xs sm:text-sm font-bold uppercase text-black">2. Классификация используемых файлов cookie</h2>
+            <p>2.1. <strong>Технические (строго обязательные) cookie:</strong> необходимы для обеспечения базового функционирования платформы, авторизации пользователя, поддержки защищенного соединения HTTPS и предотвращения несанкционированного доступа (CSRF-атак). Отключение данных файлов технически невозможно для продолжения работы с Личным кабинетом.</p>
+            <p>2.2. <strong>Сессионные cookie:</strong> обеспечивают сохранение состояния оформления заказа, выбранных параметров тарифа и макета стикера в пределах одной сессии работы браузера.</p>
+            <p>2.3. <strong>Аналитические cookie:</strong> применяются в обобщенном деперсонализированном виде для оценки производительности сайта, выявления ошибок и оптимизации скорости взаимодействия.</p>
+          </div>
+
+          {/* Section 3 */}
+          <div className="space-y-2">
+            <h2 className="text-xs sm:text-sm font-bold uppercase text-black">3. Порядок управления файлами cookie</h2>
+            <p>3.1. Пользователь вправе в любой момент ограничить или полностью отключить сохранение файлов cookie в настройках используемого веб-браузера, а также удалить ранее сохраненные файлы.</p>
+            <p>3.2. Оператор обращает внимание, что полный запрет файлов cookie может привести к некорректной работе авторизации в Личном кабинете и невозможности оформления заказов.</p>
+          </div>
+
+          {/* Section 4 */}
+          <div className="space-y-2">
+            <h2 className="text-xs sm:text-sm font-bold uppercase text-black">4. Контактная информация</h2>
+            <p>4.1. По вопросам применения настоящей Политики и защиты информации пользователи могут обращаться по электронной почте: <code>{COMPANY_CONTACTS.emails.info}</code> либо по адресу местонахождения Оператора: {COMPANY_CONTACTS.address.full}.</p>
+          </div>
 
         </div>
 
@@ -87,3 +78,5 @@ export const CookiePolicyPage: React.FC = () => {
     </div>
   );
 };
+
+export default CookiePolicyPage;

@@ -9,7 +9,7 @@ const getApiUrl = () => {
 
 export const apiClient = axios.create({
   baseURL: getApiUrl(),
-  timeout: 10000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,6 +31,13 @@ apiClient.interceptors.response.use(
     const url = error.config ? error.config.url : '';
 
     console.error(`[API Error] [${status}] ${url}:`, error.response?.data || message);
+
+    if (error.response?.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/register')) {
+      localStorage.removeItem('tanbox_token');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
 
     // Forward critical errors to backend logger (avoiding infinite loops if logging endpoint itself fails)
     if (url && !url.includes('/logs/frontend')) {

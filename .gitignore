@@ -18,3 +18,9 @@ build/
 Thumbs.db
 .idea/
 .vscode/
+
+# Logs & Uploads (sensitive client data)
+logs/
+*.log
+uploads/
+

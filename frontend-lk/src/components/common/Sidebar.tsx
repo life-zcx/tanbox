@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PackagePlus, FileText, User, LogOut, ExternalLink, Phone, Mail, Send } from 'lucide-react';
+import { LayoutDashboard, PackagePlus, FileText, User, LogOut, ExternalLink, Phone, Mail, Send, Tag } from 'lucide-react';
 import { UserProfile } from '../../types';
 
 interface SidebarProps {
@@ -15,6 +15,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
     { to: '/dashboard', label: 'Обзор и Статистика', icon: LayoutDashboard },
     { to: '/orders/new', label: 'Создать заказ', icon: PackagePlus },
     { to: '/orders', label: 'Мои заказы', icon: FileText },
+    { to: '/labels', label: 'Реестр этикеток', icon: Tag },
     { to: '/profile', label: 'Профиль компании', icon: User },
   ];
 

@@ -502,7 +502,11 @@ export const RegisterPage: React.FC = () => {
             >
               Я подтверждаю достоверность данных и даю согласие на сбор и обработку ПД согласно{' '}
               <a
-                href="http://127.0.0.1:3000/privacy"
+                href={
+                  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? `${window.location.protocol}//${window.location.hostname}:3000/privacy`
+                    : `${window.location.protocol}//${window.location.hostname.replace(/^(lk|admin)\./, '')}/privacy`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`font-semibold underline underline-offset-2 ${
@@ -513,14 +517,18 @@ export const RegisterPage: React.FC = () => {
               </a>{' '}
               и{' '}
               <a
-                href="http://127.0.0.1:3000/terms"
+                href={
+                  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? `${window.location.protocol}//${window.location.hostname}:3000/terms`
+                    : `${window.location.protocol}//${window.location.hostname.replace(/^(lk|admin)\./, '')}/terms`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`font-semibold underline underline-offset-2 ${
                   errors.consent ? 'text-red-800' : 'text-[#0082FB]'
                 }`}
               >
-                Оферте
+                Публичной оферте
               </a>.
             </label>
           </div>

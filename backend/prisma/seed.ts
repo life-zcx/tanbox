@@ -135,7 +135,7 @@ async function main() {
       await prisma.order.createMany({
         data: [
           {
-            orderNumber: 'TB-2026-001',
+            orderNumber: 'TB-0001',
             userId: clientId,
             category: OrderCategory.SHOES,
             tariffType: TariffType.PRO,
@@ -149,7 +149,7 @@ async function main() {
             pdfUrl: '/samples/data_matrix_shoes_sample.pdf',
           },
           {
-            orderNumber: 'TB-2026-002',
+            orderNumber: 'TB-0002',
             userId: clientId,
             category: OrderCategory.WATER,
             tariffType: TariffType.STANDARD,

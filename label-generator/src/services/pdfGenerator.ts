@@ -224,10 +224,13 @@ export class LabelPdfGenerator {
 
         case 'barcode': {
           let val = this.resolveVariable(el.columnName, row) || el.columnName || '2000000001234';
-          // Sanitize: Code-128 requires ASCII printable characters
-          if (/[^\x20-\x7E]/.test(val)) {
+          const dmMatch = String(val).match(/^01(\d{14})21/);
+          if (dmMatch) {
+            val = dmMatch[1].startsWith('0') ? dmMatch[1].slice(1) : dmMatch[1];
+          }
+          if (/[^\x20-\x7E]/.test(val) || val.length > 30) {
             const digits = val.replace(/\D/g, '');
-            val = digits.length >= 8 ? digits : '2000000001234';
+            val = digits.length >= 8 ? digits.slice(0, 14) : '2000000001234';
           }
           try {
             const barcodePng = await generateCode128Buffer(val);

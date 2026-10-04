@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 import { AdminSidebar } from './components/common/AdminSidebar';
 import { AdminLoginPage } from './pages/AdminLoginPage';
@@ -9,8 +9,14 @@ import { AdminLeadsPage } from './pages/AdminLeadsPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AdminTariffsPage } from './pages/AdminTariffsPage';
 import { AdminLabelDesignerPage } from './pages/AdminLabelDesignerPage';
+import { AdminLabelsRegistryPage } from './pages/AdminLabelsRegistryPage';
 import { AdminOrderDetailPage } from './pages/AdminOrderDetailPage';
-import { AdminOrderLabelsPage } from './pages/AdminOrderLabelsPage';
+import { AdminUserDetailPage } from './pages/AdminUserDetailPage';
+
+const AdminOrderLabelsRedirect: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={id ? `/orders/${id}` : '/orders'} replace />;
+};
 
 const LoadingScreen: React.FC = () => (
   <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
@@ -62,7 +68,7 @@ export const App: React.FC = () => {
             path="/labels"
             element={
               <ProtectedAdminLayout>
-                <AdminLabelDesignerPage />
+                <AdminLabelsRegistryPage />
               </ProtectedAdminLayout>
             }
           />
@@ -107,7 +113,7 @@ export const App: React.FC = () => {
             path="/orders/:id/labels"
             element={
               <ProtectedAdminLayout>
-                <AdminOrderLabelsPage />
+                <AdminOrderLabelsRedirect />
               </ProtectedAdminLayout>
             }
           />
@@ -117,6 +123,15 @@ export const App: React.FC = () => {
             element={
               <ProtectedAdminLayout>
                 <AdminUsersPage />
+              </ProtectedAdminLayout>
+            }
+          />
+
+          <Route
+            path="/users/:id"
+            element={
+              <ProtectedAdminLayout>
+                <AdminUserDetailPage />
               </ProtectedAdminLayout>
             }
           />

@@ -221,30 +221,37 @@ export const LabelCanvas: React.FC<LabelCanvasProps> = ({
                   </div>
                 )}
 
-                {el.type === 'barcode' && (
-                  <div
-                    style={{
-                      width: `${el.width * effectiveScale}px`,
-                      height: `${el.height * effectiveScale}px`,
-                    }}
-                    className="bg-white border border-gray-300 p-0.5 flex flex-col items-center justify-between shadow-xs select-none overflow-hidden"
-                  >
-                    <div className="w-full flex-1 flex items-stretch gap-[1.5px] px-0.5 justify-between">
-                      {[3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2, 4, 1, 3, 2, 1, 4, 2, 3, 1, 2, 4, 1, 3, 2, 4, 1, 2, 3, 1].map((_, idx) => (
-                        <div
-                          key={idx}
-                          className={idx % 2 === 0 ? 'bg-black flex-1' : 'bg-transparent flex-1'}
-                        />
-                      ))}
-                    </div>
-                    <span
-                      style={{ fontSize: `${Math.max(5.5, Math.min(9, el.height * effectiveScale * 0.28))}px` }}
-                      className="font-mono text-black font-bold tracking-wider leading-none truncate max-w-full"
+                {el.type === 'barcode' && (() => {
+                  let rawVal = activeRow[el.columnName] || el.columnName || '2000000001234';
+                  const m = String(rawVal).match(/^01(\d{14})21/);
+                  if (m) {
+                    rawVal = m[1].startsWith('0') ? m[1].slice(1) : m[1];
+                  }
+                  return (
+                    <div
+                      style={{
+                        width: `${el.width * effectiveScale}px`,
+                        height: `${el.height * effectiveScale}px`,
+                      }}
+                      className="bg-white border border-gray-300 p-0.5 flex flex-col items-center justify-between shadow-xs select-none overflow-hidden"
                     >
-                      {activeRow[el.columnName] || el.columnName || '2000000001234'}
-                    </span>
-                  </div>
-                )}
+                      <div className="w-full flex-1 flex items-stretch gap-[1.5px] px-0.5 justify-between">
+                        {[3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 2, 4, 1, 3, 2, 1, 4, 2, 3, 1, 2, 4, 1, 3, 2, 4, 1, 2, 3, 1].map((_, idx) => (
+                          <div
+                            key={idx}
+                            className={idx % 2 === 0 ? 'bg-black flex-1' : 'bg-transparent flex-1'}
+                          />
+                        ))}
+                      </div>
+                      <span
+                        style={{ fontSize: `${Math.max(5.5, Math.min(9, el.height * effectiveScale * 0.28))}px` }}
+                        className="font-mono text-black font-bold tracking-wider leading-none truncate max-w-full"
+                      >
+                        {rawVal}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {el.type === 'qrcode' && (
                   <div

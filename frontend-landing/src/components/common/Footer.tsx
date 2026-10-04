@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Barcode, Phone, Mail, MapPin } from 'lucide-react';
 import { COMPANY_CONTACTS } from '../../data/companyContacts';
+import { CATEGORIES_DATA } from '../../data/categoriesData';
 
 export const Footer: React.FC = () => {
   return (
@@ -29,15 +30,20 @@ export const Footer: React.FC = () => {
           </ul>
         </div>
 
-        {/* Col 3 */}
+        {/* Col 3: Все категории товаров */}
         <div>
-          <h4 className="text-sm font-bold uppercase tracking-wider text-gray-300 mb-4">Категории товаров РК</h4>
-          <ul className="space-y-2.5 text-sm text-gray-400">
-            <li><Link to="/categories" className="hover:text-white transition-colors">Обувь и легкая промышленность</Link></li>
-            <li><Link to="/categories" className="hover:text-white transition-colors">Текстиль и одежда</Link></li>
-            <li><Link to="/categories" className="hover:text-white transition-colors">Лекарства и фармпрепараты</Link></li>
-            <li><Link to="/categories" className="hover:text-white transition-colors">Упакованная вода и напитки</Link></li>
-            <li><Link to="/categories" className="hover:text-white transition-colors">Табачные изделия</Link></li>
+          <h4 className="text-sm font-bold uppercase tracking-wider text-gray-300 mb-4">Маркировка товаров</h4>
+          <ul className="space-y-2 text-sm text-gray-400">
+            {CATEGORIES_DATA.map((cat) => (
+              <li key={cat.id}>
+                <Link
+                  to={`/categories/${cat.id}`}
+                  className="hover:text-white transition-colors block py-0.5"
+                >
+                  {cat.shortTitle}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -68,8 +74,8 @@ export const Footer: React.FC = () => {
       <div className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16 mt-12 pt-8 border-t border-gray-900 flex flex-col md:flex-row items-center justify-between text-xs text-gray-500 gap-4">
         <p>© 2026 TANBOX.KZ — Все права защищены. Оператор маркировки в Казахстане.</p>
         <div className="flex flex-wrap gap-6">
+          <Link to="/terms" className="hover:text-white transition-colors">Публичная оферта</Link>
           <Link to="/privacy" className="hover:text-white transition-colors">Политика конфиденциальности</Link>
-          <Link to="/terms" className="hover:text-white transition-colors">Пользовательское соглашение</Link>
           <Link to="/cookies" className="hover:text-white transition-colors">Политика cookie</Link>
         </div>
       </div>

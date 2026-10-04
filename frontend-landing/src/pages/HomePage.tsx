@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { HeroSection } from '../components/landing/HeroSection';
 import { CategoriesSection } from '../components/landing/CategoriesSection';
 import { DataMatrixInfoSection } from '../components/landing/DataMatrixInfoSection';
 import { CalculatorSection } from '../components/landing/CalculatorSection';
 import { HowItWorksSection } from '../components/landing/HowItWorksSection';
+import { SeoContentSection } from '../components/landing/SeoContentSection';
 import { FaqSection } from '../components/landing/FaqSection';
 import { ContactsSection } from '../components/landing/ContactsSection';
 import { TariffCode } from '../types';
+import { setPageSeo } from '../utils/seo';
 
 interface HomePageProps {
   onOpenAuth: () => void;
@@ -14,6 +16,12 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) => {
+  useEffect(() => {
+    setPageSeo(
+      'Маркировка товаров в Казахстане под ключ | Эмиссия кодов Data Matrix в ИС Танба — TANBOX.KZ',
+      'Профессиональная маркировка товаров Data Matrix под ключ в Республике Казахстан. Эмиссия кодов в ИС Танба, заведение номенклатуры в НКТ (ГС1 Казахстан), термопечать стикеров, выездная оклейка на складе и агрегация SSCC по РК.'
+    );
+  }, []);
   const scrollToCalculator = () => {
     const el = document.getElementById('calculator');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -26,6 +34,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) 
       <DataMatrixInfoSection />
       <CalculatorSection onOrderQuick={onOrderQuick} />
       <HowItWorksSection />
+      <SeoContentSection />
       <FaqSection />
       <ContactsSection />
     </main>

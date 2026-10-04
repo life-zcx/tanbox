@@ -18,8 +18,14 @@ export function parseOrderNotes(notes?: string | null): ParsedOrderNotes {
   let address: string | null = null;
   let clientNote: string | null = null;
 
-  // 1. Extract sticker layout design block if present
-  const stickerMatch = remaining.match(/=== ТРЕБОВАНИЯ К МАКЕТУ СТИКЕРА ===[\s\S]*?(?:===================================|$)/);
+  // 1. Strip technical template usage blocks if present
+  const templateMatch = remaining.match(/=== МАКЕТ ЭТИКЕТКИ: ИСПОЛЬЗОВАН СОХРАНЁННЫЙ ШАБЛОН ===[\s\S]*?(?:={20,}|$)/);
+  if (templateMatch) {
+    remaining = remaining.replace(templateMatch[0], '').trim();
+  }
+
+  // 2. Extract sticker layout design block if present
+  const stickerMatch = remaining.match(/=== ТРЕБОВАНИЯ К МАКЕТУ СТИКЕРА ===[\s\S]*?(?:={20,}|$)/);
   if (stickerMatch) {
     stickerDesign = stickerMatch[0].trim();
     remaining = remaining.replace(stickerMatch[0], '').trim();

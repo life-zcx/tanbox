@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useOrders } from '../hooks/useOrders';
 import { OrderCategory, TariffType, UserStickerTemplate } from '../types';
@@ -22,11 +21,10 @@ import {
   Zap,
   Upload,
   AlertTriangle,
-  FileSpreadsheet,
-  X,
   BookmarkCheck,
   CheckCircle2,
   Palette,
+  Barcode,
 } from 'lucide-react';
 
 export const CreateOrderPage: React.FC = () => {
@@ -34,22 +32,14 @@ export const CreateOrderPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Initial values from pending order or query params
-  const [category, setCategory] = useState<OrderCategory>('SHOES');
-  const [tariffType, setTariffType] = useState<TariffType>('STANDARD');
-  const [itemsCount, setItemsCount] = useState<number>(5000);
-  const [itemsCountInput, setItemsCountInput] = useState<string>('5 000');
+  // Initial values: null by default as requested (user must select manually)
+  const [category, setCategory] = useState<OrderCategory | null>(null);
+  const [tariffType, setTariffType] = useState<TariffType | null>(null);
+  const [itemsCount, setItemsCount] = useState<number>(0);
   const [ssccNeeded, setSsccNeeded] = useState<boolean>(false);
   const [extraServices, setExtraServices] = useState<string[]>([]);
   const [warehouseAddress, setWarehouseAddress] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
-
-  // Keep itemsCountInput in sync when itemsCount changes externally (presets, slider, pending order)
-  useEffect(() => {
-    if (itemsCount > 0) {
-      setItemsCountInput(itemsCount.toLocaleString('ru-RU'));
-    }
-  }, [itemsCount]);
 
   // Custom sticker design states
   const [labelWidth, setLabelWidth] = useState<number | string>(58);
@@ -61,6 +51,7 @@ export const CreateOrderPage: React.FC = () => {
   const [labelExtraDetails, setLabelExtraDetails] = useState<string>('');
   const [labelHasEac, setLabelHasEac] = useState<boolean>(true);
   const [labelHasBarcode, setLabelHasBarcode] = useState<boolean>(true);
+  const [labelBarcode, setLabelBarcode] = useState<string>('');
 
   // Saved sticker templates
   const [savedTemplates, setSavedTemplates] = useState<UserStickerTemplate[]>([]);
@@ -157,8 +148,16 @@ export const CreateOrderPage: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [codesFile, setCodesFile] = useState<File | null>(null);
   const [fileCodesCount, setFileCodesCount] = useState<number | null>(null);
+  const [codeCheckResult, setCodeCheckResult] = useState<{
+    totalInFile: number;
+    uniqueInFile: number;
+    internalDuplicatesCount: number;
+    alreadyInDbCount: number;
+    validNewCodesCount: number;
+    sampleExistingCodes?: string[];
+    message?: string;
+  } | null>(null);
   const [parsingFile, setParsingFile] = useState<boolean>(false);
-  const [showMismatchModal, setShowMismatchModal] = useState<boolean>(false);
   const [isCodesDragOver, setIsCodesDragOver] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -193,27 +192,34 @@ export const CreateOrderPage: React.FC = () => {
     }
   };
 
-  // Lock body scroll when modal is active
-  useEffect(() => {
-    if (showMismatchModal) {
-      const original = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = original;
-      };
-    }
-  }, [showMismatchModal]);
-
   const handleFileSelection = async (file: File) => {
     setCodesFile(file);
-    const fileName = file.name.toLowerCase();
-    if (fileName.endsWith('.csv') || fileName.endsWith('.txt') || fileName.endsWith('.tsv')) {
-      setParsingFile(true);
+    setCodeCheckResult(null);
+    setParsingFile(true);
+
+    try {
+      // 1. Check file against backend database for duplicates
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await apiClient.post('/orders/check-codes', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (res.data) {
+        setCodeCheckResult(res.data);
+        const validCount = Number(res.data.validNewCodesCount) || 0;
+        setFileCodesCount(validCount);
+        setItemsCount(validCount);
+      }
+    } catch (apiErr: any) {
+      console.warn('Backend check-codes failed, falling back to local line parse:', apiErr);
+      // Fallback to local line parse if network/server error
       try {
         const text = await file.text();
         const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
         if (lines.length === 0) {
           setFileCodesCount(0);
+          setItemsCount(0);
         } else {
           const firstLine = lines[0];
           let delimiter = ',';
@@ -225,59 +231,27 @@ export const CreateOrderPage: React.FC = () => {
           );
           const count = hasHeader ? Math.max(0, lines.length - 1) : lines.length;
           setFileCodesCount(count);
+          setItemsCount(count);
         }
       } catch (err) {
-        console.warn('Could not parse codes count from file in browser:', err);
         setFileCodesCount(null);
-      } finally {
-        setParsingFile(false);
+        setItemsCount(0);
       }
-    } else {
-      setFileCodesCount(null);
+    } finally {
+      setParsingFile(false);
     }
   };
 
-  // Load pending order data on mount (from localStorage or URL params)
+  // Check URL query parameters on mount (if user came with preselected category or tariff)
   useEffect(() => {
-    // 1. Query params
     const qTariff = searchParams.get('tariff');
-    const qCount = searchParams.get('count');
     const qCategory = searchParams.get('category');
 
     if (qTariff && ['DIGITAL', 'PRINT', 'STANDARD', 'PRO'].includes(qTariff)) {
       setTariffType(qTariff as TariffType);
     }
-    if (qCount) {
-      const parsedCount = parseInt(qCount, 10);
-      if (parsedCount > 0) setItemsCount(Math.min(1000000, parsedCount));
-    }
     if (qCategory && CATEGORY_MAP[qCategory as OrderCategory]) {
       setCategory(qCategory as OrderCategory);
-    }
-
-    // 2. LocalStorage pending order
-    try {
-      const saved = localStorage.getItem('tanbox_pending_order');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.tariffType && ['DIGITAL', 'PRINT', 'STANDARD', 'PRO'].includes(parsed.tariffType)) {
-          setTariffType(parsed.tariffType);
-        }
-        if (parsed.itemsCount && parsed.itemsCount > 0) {
-          setItemsCount(Math.min(1000000, parsed.itemsCount));
-        }
-        if (parsed.category && CATEGORY_MAP[parsed.category as OrderCategory]) {
-          setCategory(parsed.category);
-        }
-        if (parsed.ssccNeeded !== undefined) {
-          setSsccNeeded(Boolean(parsed.ssccNeeded));
-        }
-        if (Array.isArray(parsed.extraServices)) {
-          setExtraServices(parsed.extraServices);
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse pending order from localStorage:', e);
     }
   }, [searchParams]);
 
@@ -362,108 +336,50 @@ export const CreateOrderPage: React.FC = () => {
     },
   ];
 
-  const presets = [100, 500, 1000, 5000, 10000, 25000, 50000];
-
-  // Breakpoints mapping batch size to non-linear slider percentage (0 to 100)
-  // Supports any batch size from 1 to 200 000+
-  const SLIDER_POINTS = useMemo(
-    () => [
-      { count: 1, p: 0 },
-      { count: 100, p: 8 },
-      { count: 500, p: 20 },
-      { count: 1000, p: 32 },
-      { count: 5000, p: 48 },
-      { count: 10000, p: 62 },
-      { count: 25000, p: 74 },
-      { count: 50000, p: 84 },
-      { count: 100000, p: 92 },
-      { count: 200000, p: 100 },
-    ],
-    []
-  );
-
-  const countToSliderPercent = (count: number): number => {
-    if (count <= 1) return 0;
-    if (count >= 200000) return 100;
-    for (let i = 0; i < SLIDER_POINTS.length - 1; i++) {
-      const p1 = SLIDER_POINTS[i];
-      const p2 = SLIDER_POINTS[i + 1];
-      if (count >= p1.count && count <= p2.count) {
-        const ratio = (count - p1.count) / (p2.count - p1.count);
-        return p1.p + ratio * (p2.p - p1.p);
-      }
-    }
-    return 100;
-  };
-
-  const sliderPercentToCount = (percent: number): number => {
-    if (percent <= 0) return 1;
-    if (percent >= 100) return 200000;
-    for (let i = 0; i < SLIDER_POINTS.length - 1; i++) {
-      const p1 = SLIDER_POINTS[i];
-      const p2 = SLIDER_POINTS[i + 1];
-      if (percent >= p1.p && percent <= p2.p) {
-        const ratio = (percent - p1.p) / (p2.p - p1.p);
-        const rawCount = p1.count + ratio * (p2.count - p1.count);
-        if (rawCount <= 20) return Math.max(1, Math.round(rawCount));
-        if (rawCount <= 100) return Math.round(rawCount / 5) * 5;
-        if (rawCount < 1000) return Math.round(rawCount / 50) * 50;
-        if (rawCount < 10000) return Math.round(rawCount / 500) * 500;
-        if (rawCount < 50000) return Math.round(rawCount / 1000) * 1000;
-        return Math.round(rawCount / 5000) * 5000;
-      }
-    }
-    return 200000;
-  };
-
-  const sliderProgress = countToSliderPercent(itemsCount);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '');
-    if (!raw) {
-      setItemsCountInput('');
-      setItemsCount(0);
-      return;
-    }
-    const val = Math.min(1000000, parseInt(raw, 10) || 0);
-    setItemsCountInput(val.toLocaleString('ru-RU'));
-    setItemsCount(val);
-  };
-
-  const handleInputBlur = () => {
-    if (!itemsCount || itemsCount < 1) {
-      const fallback = 1;
-      setItemsCount(fallback);
-      setItemsCountInput('1');
-    } else {
-      setItemsCountInput(itemsCount.toLocaleString('ru-RU'));
-    }
-  };
-
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      (e.target as HTMLElement).blur();
-    }
-  };
-
   const toggleService = (code: string) => {
     setExtraServices((prev) =>
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
     );
   };
 
-  const selectedCategoryInfo = CATEGORY_MAP[category] || CATEGORIES_LIST[0];
-  const selectedTariffInfo = tariffs.find((t) => t.type === tariffType) || tariffs[2];
+  const selectedCategoryInfo = category ? CATEGORY_MAP[category] : null;
+  const selectedTariffInfo = tariffType ? tariffs.find((t) => t.type === tariffType) : null;
 
   // Triggered on clicking "Подтвердить и отправить заказ"
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!calculated) return;
 
-    // If file code count does not match the entered batch size, prompt user with choices
-    if (fileCodesCount !== null && fileCodesCount > 0 && fileCodesCount !== itemsCount) {
-      setShowMismatchModal(true);
+    if (!category) {
+      setErrorMsg('Пожалуйста, выберите категорию товара (Шаг 1). Без категории создание заявки невозможно.');
+      document.getElementById('step-category-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (!tariffType) {
+      setErrorMsg('Пожалуйста, выберите тариф маркировки (Шаг 2). Без тарифа создание заявки невозможно.');
+      document.getElementById('step-tariff-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (!warehouseAddress.trim()) {
+      setErrorMsg('Пожалуйста, укажите адрес склада в РК (Шаг 4). Создание заказа без адреса невозможно.');
+      const warehouseEl = document.getElementById('warehouse-address-input');
+      if (warehouseEl) {
+        warehouseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        warehouseEl.focus();
+      }
+      return;
+    }
+
+    if (!codesFile) {
+      setErrorMsg('Пожалуйста, прикрепите файл с кодами маркировки (Шаг 5). Создание заказа без файла кодов невозможно.');
+      document.getElementById('step-codes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (itemsCount < 1) {
+      setErrorMsg('В прикреплённом файле не найдено новых кодов для заказа. Загрузите файл со свежими кодами маркировки.');
+      document.getElementById('step-codes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
@@ -472,16 +388,17 @@ export const CreateOrderPage: React.FC = () => {
 
   // Final submission execution
   const executeSubmit = async (finalCount: number) => {
-    setShowMismatchModal(false);
+    if (!category || !tariffType || !warehouseAddress.trim() || !codesFile || finalCount < 1) {
+      return;
+    }
+
     setSubmitting(true);
     setErrorMsg(null);
 
     let unitPrice = calculated?.unitPrice || 0;
     let totalPrice = calculated?.totalPrice || 0;
 
-    // If batch size adjusted to match file count, recalculate price first
-    if (finalCount !== itemsCount) {
-      setItemsCount(finalCount);
+    if (!calculated || calculated.totalPrice === 0) {
       try {
         const calcRes = await apiClient.post('/calculator/calculate', {
           tariffType,
@@ -502,15 +419,7 @@ export const CreateOrderPage: React.FC = () => {
     const isStickerDesign = extraServices.includes('STICKER_LAYOUT_DESIGN');
     const usedTemplate = templateChoice === 'SAVED' ? selectedTemplate : null;
 
-    const labelDesignPayload = usedTemplate
-      ? [
-          '=== МАКЕТ ЭТИКЕТКИ: ИСПОЛЬЗОВАН СОХРАНЁННЫЙ ШАБЛОН ===',
-          `Название макета: ${usedTemplate.name}`,
-          `Размер: ${usedTemplate.widthMm} × ${usedTemplate.heightMm} мм`,
-          `Статус: Утверждён ранее (0 ₸, без повторной оплаты разработки)`,
-          '=====================================================',
-        ].join('\n')
-      : isStickerDesign
+    const labelDesignPayload = (!usedTemplate && isStickerDesign)
       ? [
           '=== ТРЕБОВАНИЯ К МАКЕТУ СТИКЕРА ===',
           `Размер этикетки: ${labelWidth}×${labelHeight} мм`,
@@ -519,6 +428,7 @@ export const CreateOrderPage: React.FC = () => {
           labelArticle ? `Артикул: ${labelArticle}` : '',
           labelComposition ? `Состав/Материал: ${labelComposition}` : '',
           `Обязательные знаки: ${[labelHasEac ? 'EAC' : '', labelHasBarcode ? 'Штрихкод EAN-13' : ''].filter(Boolean).join(', ') || 'Стандартные'}`,
+          labelHasBarcode ? (labelBarcode ? `Штрихкод (EAN-13): ${labelBarcode}` : 'Штрихкод (EAN-13): Сгенерировать дизайнером') : '',
           labelExtraDetails ? `Пожелания: ${labelExtraDetails}` : '',
           '===================================',
         ]
@@ -593,7 +503,7 @@ export const CreateOrderPage: React.FC = () => {
       <form onSubmit={handleFormSubmit} className="w-full space-y-8">
         
         {/* Step 1: Category Selection */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
+        <div id="step-category-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
             <div>
               <div className="flex items-center gap-2">
@@ -603,14 +513,25 @@ export const CreateOrderPage: React.FC = () => {
                 <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
                   Категория товара ИС Танба
                 </label>
+                <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200/80 px-2 py-0.5 rounded-full">
+                  * обязательно
+                </span>
               </div>
               <p className="text-xs text-[#64748B] mt-1 pl-8">
                 Выберите официальную товарную группу обязательной маркировки в Республике Казахстан
               </p>
             </div>
 
-            <div className="text-xs text-[#64748B] sm:text-right shrink-0 pl-8 sm:pl-0">
-              Выбрана: <strong className="text-[#0082FB] font-extrabold">{selectedCategoryInfo.name}</strong>
+            <div className="text-xs sm:text-right shrink-0 pl-8 sm:pl-0">
+              {selectedCategoryInfo ? (
+                <span className="text-[#64748B]">
+                  Выбрана: <strong className="text-[#0082FB] font-extrabold">{selectedCategoryInfo.name}</strong>
+                </span>
+              ) : (
+                <span className="text-amber-700 font-bold bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-lg">
+                  Не выбрана
+                </span>
+              )}
             </div>
           </div>
 
@@ -703,7 +624,7 @@ export const CreateOrderPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {isSelected && (
+                    {isSelected && (
                     <div className="w-5 h-5 rounded-full bg-[#0082FB] text-white flex items-center justify-center shrink-0">
                       <Check className="w-3 h-3 stroke-[3]" />
                     </div>
@@ -731,7 +652,7 @@ export const CreateOrderPage: React.FC = () => {
         </div>
 
         {/* Step 2: Tariff Selection */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
+        <div id="step-tariff-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
             <div>
               <div className="flex items-center gap-2">
@@ -741,14 +662,25 @@ export const CreateOrderPage: React.FC = () => {
                 <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
                   Тариф маркировки
                 </label>
+                <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200/80 px-2 py-0.5 rounded-full">
+                  * обязательно
+                </span>
               </div>
               <p className="text-xs text-[#64748B] mt-1 pl-8">
                 Выберите формат работ: от генерации цифровых кодов до выездного оклеивания под ключ
               </p>
             </div>
 
-            <span className="text-xs text-[#64748B] pl-8 sm:pl-0">
-              Выбран: <strong className="text-[#0082FB] font-extrabold">{selectedTariffInfo.name}</strong>
+            <span className="text-xs sm:text-right shrink-0 pl-8 sm:pl-0">
+              {selectedTariffInfo ? (
+                <span className="text-[#64748B]">
+                  Выбран: <strong className="text-[#0082FB] font-extrabold">{selectedTariffInfo.name}</strong>
+                </span>
+              ) : (
+                <span className="text-amber-700 font-bold bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-lg">
+                  Не выбран
+                </span>
+              )}
             </span>
           </div>
 
@@ -799,170 +731,12 @@ export const CreateOrderPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Step 3: Volume & Presets */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-[#0082FB] text-white text-xs font-black flex items-center justify-center">
-                  3
-                </span>
-                <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
-                  Объем партии товара
-                </label>
-              </div>
-              <p className="text-xs text-[#64748B] mt-1 pl-8">
-                Укажите точное количество единиц товара для эмиссии и нанесения кодов
-              </p>
-            </div>
-
-            {/* Formatted Number Input & Live Price Preview */}
-            <div className="flex items-center gap-3">
-              {calculated && (
-                <div className="hidden sm:flex flex-col items-end text-right pr-1">
-                  <span className="text-xs font-black text-[#0082FB] tracking-tight">
-                    ≈ {calculated.totalPrice.toLocaleString('ru-RU')} ₸
-                  </span>
-                  <span className="text-[10px] text-gray-500 font-semibold">
-                    {calculated.unitPrice} ₸ / шт.
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 bg-[#F4F6F9] hover:bg-white focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0082FB]/20 border border-gray-200 focus-within:border-[#0082FB] rounded-xl px-3 py-1.5 transition-all shadow-2xs">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={10}
-                  value={itemsCountInput}
-                  onChange={handleInputChange}
-                  onBlur={handleInputBlur}
-                  onKeyDown={handleInputKeyDown}
-                  placeholder="500"
-                  className="w-28 text-right text-sm font-black text-[#111827] bg-transparent focus:outline-none"
-                />
-                <span className="text-xs font-bold text-[#64748B]">шт.</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive Responsive Slider */}
-          <div className="space-y-2">
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={0.5}
-              value={sliderProgress}
-              onChange={(e) => {
-                const nextCount = sliderPercentToCount(parseFloat(e.target.value));
-                setItemsCount(nextCount);
-              }}
-              style={{
-                background: `linear-gradient(to right, #0082FB 0%, #0082FB ${sliderProgress}%, #E2E8F0 ${sliderProgress}%, #E2E8F0 100%)`,
-              }}
-              className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#0082FB]"
-            />
-
-            <div className="flex items-center justify-between text-[10px] font-bold text-[#64748B] select-none pt-0.5">
-              <button
-                type="button"
-                onClick={() => setItemsCount(1)}
-                className="hover:text-[#0082FB] transition-colors cursor-pointer"
-              >
-                1 шт.
-              </button>
-              <button
-                type="button"
-                onClick={() => setItemsCount(100)}
-                className="hover:text-[#0082FB] transition-colors cursor-pointer hidden sm:inline"
-              >
-                100 шт.
-              </button>
-              <button
-                type="button"
-                onClick={() => setItemsCount(500)}
-                className="hover:text-[#0082FB] transition-colors cursor-pointer"
-              >
-                500 шт.
-              </button>
-              <button
-                type="button"
-                onClick={() => setItemsCount(5000)}
-                className="hover:text-[#0082FB] transition-colors cursor-pointer"
-              >
-                5 000 шт.
-              </button>
-              <button
-                type="button"
-                onClick={() => setItemsCount(25000)}
-                className="hover:text-[#0082FB] transition-colors cursor-pointer"
-              >
-                25 000 шт.
-              </button>
-              <button
-                type="button"
-                onClick={() => setItemsCount(50000)}
-                className="hover:text-[#0082FB] transition-colors cursor-pointer"
-              >
-                50 000 шт.
-              </button>
-              <button
-                type="button"
-                onClick={() => setItemsCount(100000)}
-                className="hover:text-[#0082FB] transition-colors cursor-pointer hidden sm:inline"
-              >
-                100 000 шт.
-              </button>
-              <button
-                type="button"
-                onClick={() => setItemsCount(200000)}
-                className="hover:text-[#0082FB] transition-colors cursor-pointer"
-              >
-                200 000+ шт.
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Presets & Volume Tier Banner */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-semibold text-[#64748B]">Быстрый выбор:</span>
-              {presets.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setItemsCount(preset)}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                    itemsCount === preset
-                      ? 'bg-[#0082FB] text-white shadow-sm'
-                      : 'bg-[#F0F4F8] hover:bg-[#E2E8F0] text-[#111827]'
-                  }`}
-                >
-                  {preset.toLocaleString('ru-RU')} шт.
-                </button>
-              ))}
-            </div>
-
-            {/* Discount note & Volume summary */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200/60 self-start sm:self-auto">
-                {itemsCount > 100000
-                  ? '★ Применен максимальный оптовый тариф (партия > 100k)'
-                  : itemsCount > 20000
-                  ? '✓ Применен оптовый тариф (партия > 20k)'
-                  : '• Базовый тариф партии'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Step 4: Extra Options */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
+        {/* Step 3: Extra Options */}
+        <div id="step-services-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
           <div className="pb-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-[#0082FB] text-white text-xs font-black flex items-center justify-center">
-                4
+                3
               </span>
               <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
                 Дополнительные опции
@@ -973,59 +747,32 @@ export const CreateOrderPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            {/* Option 1: SSCC */}
-            <label
-              className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer border transition-all ${
-                ssccNeeded || tariffType === 'PRO'
-                  ? 'border-[#0082FB] bg-blue-50/40 shadow-sm'
-                  : 'border-gray-200/90 bg-white hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={ssccNeeded || tariffType === 'PRO'}
-                  disabled={tariffType === 'PRO'}
-                  onChange={(e) => setSsccNeeded(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB] cursor-pointer"
-                />
-                <div>
-                  <span className="text-xs font-bold text-[#111827] block">
-                    Агрегация в короба/паллеты (SSCC)
-                  </span>
-                  <span className="text-[11px] text-[#64748B]">
-                    {tariffType === 'PRO' ? 'Включено в тариф PRO Склад' : 'Присвоение кодов групповой таре'}
-                  </span>
-                </div>
-              </div>
-              <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-3">
-                {tariffType === 'PRO' ? 'Включено' : '+5 ₸ / шт.'}
-              </span>
-            </label>
-
-            {/* Option 2: Layout / Template Selection */}
-            {savedTemplates.length > 0 ? (
-              <div className="col-span-1 sm:col-span-2 bg-white border border-gray-200/90 rounded-2xl p-5 space-y-4 shadow-2xs">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-100 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
-                      <Palette className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-xs font-black text-[#111827] uppercase tracking-wider">
-                          Макет этикетки (стикера)
-                        </h3>
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
-                          {savedTemplates.length} сохранённых макета в библиотеке
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-[#64748B]">
-                        Используйте ранее утверждённый макет бесплатно или закажите новый дизайн
-                      </p>
-                    </div>
+          {/* 1. Макет этикетки (стикера) */}
+          {savedTemplates.length > 0 ? (
+            <div className="w-full bg-[#F8FAFC] border border-gray-200/90 rounded-2xl p-5 sm:p-6 space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-200/80 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+                    <Palette className="w-4 h-4" />
                   </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-xs font-black text-[#111827] uppercase tracking-wider">
+                        Макет этикетки (стикера)
+                      </h3>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80">
+                        {savedTemplates.length === 1
+                          ? '1 сохранённый макет в библиотеке'
+                          : savedTemplates.length >= 2 && savedTemplates.length <= 4
+                          ? `${savedTemplates.length} сохранённых макета в библиотеке`
+                          : `${savedTemplates.length} сохранённых макетов в библиотеке`}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#64748B]">
+                      Используйте ранее утверждённый макет бесплатно или закажите новый дизайн
+                    </p>
+                  </div>
+                </div>
 
                   {/* Choice Tabs */}
                   <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl self-start md:self-auto">
@@ -1275,39 +1022,74 @@ export const CreateOrderPage: React.FC = () => {
                       />
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-5 pt-1">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
-                        <input
-                          type="checkbox"
-                          checked={labelHasEac}
-                          onChange={(e) => setLabelHasEac(e.target.checked)}
-                          className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
-                        />
-                        <span>Знак обращения EAC</span>
-                      </label>
+                    <div className="space-y-3 pt-1">
+                      <div className="flex flex-wrap items-center gap-5">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
+                          <input
+                            type="checkbox"
+                            checked={labelHasEac}
+                            onChange={(e) => setLabelHasEac(e.target.checked)}
+                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
+                          />
+                          <span>Знак обращения EAC</span>
+                        </label>
 
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
-                        <input
-                          type="checkbox"
-                          checked={labelHasBarcode}
-                          onChange={(e) => setLabelHasBarcode(e.target.checked)}
-                          className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
-                        />
-                        <span>Штрихкод EAN-13</span>
-                      </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
+                          <input
+                            type="checkbox"
+                            checked={labelHasBarcode}
+                            onChange={(e) => setLabelHasBarcode(e.target.checked)}
+                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
+                          />
+                          <span>Штрихкод EAN-13</span>
+                        </label>
+                      </div>
+
+                      {labelHasBarcode && (
+                        <div className="w-full bg-blue-50/50 border border-blue-200/80 rounded-xl p-3 space-y-1.5 animate-in fade-in duration-150">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-bold text-[#111827] flex items-center gap-1.5">
+                              <Barcode className="w-4 h-4 text-[#0082FB]" />
+                              <span>Номер штрихкода (EAN-13)</span>
+                            </label>
+                            <span className="text-[10px] text-[#64748B] font-mono">
+                              {labelBarcode ? `${labelBarcode.length}/13 цифр` : '13 цифр'}
+                            </span>
+                          </div>
+                          <input
+                            type="text"
+                            value={labelBarcode}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '').slice(0, 13);
+                              setLabelBarcode(val);
+                            }}
+                            placeholder="Например: 4601234567890 (или оставьте пустым для автогенерации)"
+                            maxLength={13}
+                            className="w-full text-xs font-mono font-bold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] placeholder:text-[#94A3B8] placeholder:font-sans placeholder:font-normal focus:outline-none focus:border-[#0082FB]"
+                          />
+                          <p className="text-[10px] text-[#64748B]">
+                            Укажите 13-значный EAN-13 штрихкод товара для касс и складов маркетплейсов. Если кода нет — дизайнер сгенерирует штрихкод автоматически.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {/* Tab 3: NONE */}
                 {templateChoice === 'NONE' && (
-                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500">
-                    Макет стикера не будет прикреплен к заказу. Вы можете предоставить макет позже или заказать печать только Data Matrix кодов.
+                  <div className="p-3.5 bg-blue-50/50 border border-blue-200/70 rounded-xl flex items-center gap-3 text-xs text-[#475569]">
+                    <div className="w-7 h-7 rounded-lg bg-blue-100 text-[#0082FB] flex items-center justify-center shrink-0">
+                      <Barcode className="w-4 h-4" />
+                    </div>
+                    <span>
+                      Макет стикера не будет прикреплен к заказу. Вы можете предоставить макет позже или заказать печать только Data Matrix кодов.
+                    </span>
                   </div>
                 )}
               </div>
             ) : (
-              <>
+              <div className="w-full bg-[#F8FAFC] border border-gray-200/90 rounded-2xl p-5 space-y-4">
                 <label
                   className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer border transition-all ${
                     extraServices.includes('STICKER_LAYOUT_DESIGN')
@@ -1451,102 +1233,211 @@ export const CreateOrderPage: React.FC = () => {
                       />
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-5 pt-1">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
-                        <input
-                          type="checkbox"
-                          checked={labelHasEac}
-                          onChange={(e) => setLabelHasEac(e.target.checked)}
-                          className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
-                        />
-                        <span>Знак обращения EAC</span>
-                      </label>
+                    <div className="space-y-3 pt-1">
+                      <div className="flex flex-wrap items-center gap-5">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
+                          <input
+                            type="checkbox"
+                            checked={labelHasEac}
+                            onChange={(e) => setLabelHasEac(e.target.checked)}
+                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
+                          />
+                          <span>Знак обращения EAC</span>
+                        </label>
 
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
-                        <input
-                          type="checkbox"
-                          checked={labelHasBarcode}
-                          onChange={(e) => setLabelHasBarcode(e.target.checked)}
-                          className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
-                        />
-                        <span>Штрихкод EAN-13</span>
-                      </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
+                          <input
+                            type="checkbox"
+                            checked={labelHasBarcode}
+                            onChange={(e) => setLabelHasBarcode(e.target.checked)}
+                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
+                          />
+                          <span>Штрихкод EAN-13</span>
+                        </label>
+                      </div>
+
+                      {labelHasBarcode && (
+                        <div className="w-full bg-blue-50/50 border border-blue-200/80 rounded-xl p-3 space-y-1.5 animate-in fade-in duration-150">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-bold text-[#111827] flex items-center gap-1.5">
+                              <Barcode className="w-4 h-4 text-[#0082FB]" />
+                              <span>Номер штрихкода (EAN-13)</span>
+                            </label>
+                            <span className="text-[10px] text-[#64748B] font-mono">
+                              {labelBarcode ? `${labelBarcode.length}/13 цифр` : '13 цифр'}
+                            </span>
+                          </div>
+                          <input
+                            type="text"
+                            value={labelBarcode}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '').slice(0, 13);
+                              setLabelBarcode(val);
+                            }}
+                            placeholder="Например: 4601234567890 (или оставьте пустым для автогенерации)"
+                            maxLength={13}
+                            className="w-full text-xs font-mono font-bold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] placeholder:text-[#94A3B8] placeholder:font-sans placeholder:font-normal focus:outline-none focus:border-[#0082FB]"
+                          />
+                          <p className="text-[10px] text-[#64748B]">
+                            Укажите 13-значный EAN-13 штрихкод товара для касс и складов маркетплейсов. Если кода нет — дизайнер сгенерирует штрихкод автоматически.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
-            {/* Option 3: Urgent */}
-            <label
-              className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer border transition-all ${
-                extraServices.includes('URGENT_PROCESSING')
-                  ? 'border-[#0082FB] bg-blue-50/40 shadow-sm'
-                  : 'border-gray-200/90 bg-white hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={extraServices.includes('URGENT_PROCESSING')}
-                  onChange={() => toggleService('URGENT_PROCESSING')}
-                  className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB] cursor-pointer"
-                />
+          {/* 2. Сопутствующие складские и логистические услуги */}
+          <div className="space-y-3 pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#111827] uppercase tracking-wider flex items-center gap-2">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#0082FB]" />
+                Складские и логистические услуги
+              </span>
+              <span className="text-[11px] text-[#64748B]">
+                Опционально для партии
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {/* Option 1: SSCC */}
+              <label
+                className={`flex flex-col justify-between p-4 rounded-2xl cursor-pointer border transition-all ${
+                  ssccNeeded || tariffType === 'PRO'
+                    ? 'border-[#0082FB] bg-blue-50/40 shadow-xs ring-1 ring-[#0082FB]/20'
+                    : 'border-gray-200/90 bg-white hover:border-gray-300'
+                }`}
+              >
                 <div>
+                  <div className="flex items-start justify-between gap-2 mb-2.5">
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        ssccNeeded || tariffType === 'PRO'
+                          ? 'bg-[#0082FB] text-white shadow-xs'
+                          : 'bg-gray-100 text-[#64748B]'
+                      }`}
+                    >
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={ssccNeeded || tariffType === 'PRO'}
+                      disabled={tariffType === 'PRO'}
+                      onChange={(e) => setSsccNeeded(e.target.checked)}
+                      className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB] cursor-pointer mt-0.5"
+                    />
+                  </div>
                   <span className="text-xs font-bold text-[#111827] block">
-                    Срочное исполнение заказа (24 часа)
+                    Агрегация в короба (SSCC)
                   </span>
-                  <span className="text-[11px] text-[#64748B]">
+                  <span className="text-[11px] text-[#64748B] block mt-0.5 leading-snug">
+                    {tariffType === 'PRO' ? 'Включено в тариф PRO Склад' : 'Присвоение кодов групповой таре'}
+                  </span>
+                </div>
+                <div className="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase">Тариф</span>
+                  <span className="text-xs font-extrabold text-[#0082FB]">
+                    {tariffType === 'PRO' ? 'Включено' : '+5 ₸ / шт.'}
+                  </span>
+                </div>
+              </label>
+
+              {/* Option 2: Urgent */}
+              <label
+                className={`flex flex-col justify-between p-4 rounded-2xl cursor-pointer border transition-all ${
+                  extraServices.includes('URGENT_PROCESSING')
+                    ? 'border-[#0082FB] bg-blue-50/40 shadow-xs ring-1 ring-[#0082FB]/20'
+                    : 'border-gray-200/90 bg-white hover:border-gray-300'
+                }`}
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-2.5">
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        extraServices.includes('URGENT_PROCESSING')
+                          ? 'bg-[#0082FB] text-white shadow-xs'
+                          : 'bg-gray-100 text-[#64748B]'
+                      }`}
+                    >
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={extraServices.includes('URGENT_PROCESSING')}
+                      onChange={() => toggleService('URGENT_PROCESSING')}
+                      className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB] cursor-pointer mt-0.5"
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-[#111827] block">
+                    Срочное исполнение (24 ч.)
+                  </span>
+                  <span className="text-[11px] text-[#64748B] block mt-0.5 leading-snug">
                     Приоритетный выезд и печать в течение одних суток
                   </span>
                 </div>
-              </div>
-              <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-3">
-                +20%
-              </span>
-            </label>
+                <div className="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase">Наценка</span>
+                  <span className="text-xs font-extrabold text-[#0082FB]">+20%</span>
+                </div>
+              </label>
 
-            {/* Option 4: Delivery */}
-            <label
-              className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer border transition-all ${
-                extraServices.includes('EXPRESS_DELIVERY')
-                  ? 'border-[#0082FB] bg-blue-50/40 shadow-sm'
-                  : 'border-gray-200/90 bg-white hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={extraServices.includes('EXPRESS_DELIVERY')}
-                  onChange={() => toggleService('EXPRESS_DELIVERY')}
-                  className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB] cursor-pointer"
-                />
+              {/* Option 3: Delivery */}
+              <label
+                className={`flex flex-col justify-between p-4 rounded-2xl cursor-pointer border transition-all ${
+                  extraServices.includes('EXPRESS_DELIVERY')
+                    ? 'border-[#0082FB] bg-blue-50/40 shadow-xs ring-1 ring-[#0082FB]/20'
+                    : 'border-gray-200/90 bg-white hover:border-gray-300'
+                }`}
+              >
                 <div>
+                  <div className="flex items-start justify-between gap-2 mb-2.5">
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        extraServices.includes('EXPRESS_DELIVERY')
+                          ? 'bg-[#0082FB] text-white shadow-xs'
+                          : 'bg-gray-100 text-[#64748B]'
+                      }`}
+                    >
+                      <Truck className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={extraServices.includes('EXPRESS_DELIVERY')}
+                      onChange={() => toggleService('EXPRESS_DELIVERY')}
+                      className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB] cursor-pointer mt-0.5"
+                    />
+                  </div>
                   <span className="text-xs font-bold text-[#111827] block">
-                    Доставка готовых стикеров по РК
+                    Доставка готовых стикеров
                   </span>
-                  <span className="text-[11px] text-[#64748B]">
-                    Курьерская доставка рулонов прямо на ваш склад
+                  <span className="text-[11px] text-[#64748B] block mt-0.5 leading-snug">
+                    Курьерская доставка рулонов прямо на ваш склад по РК
                   </span>
                 </div>
-              </div>
-              <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-3">
-                +15 000 ₸
-              </span>
-            </label>
+                <div className="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase">Фиксировано</span>
+                  <span className="text-xs font-extrabold text-[#0082FB]">+15 000 ₸</span>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
 
-        {/* Step 5: Warehouse & Details */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
+        {/* Step 4: Warehouse & Notes */}
+        <div id="step-warehouse-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
           <div className="pb-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-[#0082FB] text-white text-xs font-black flex items-center justify-center">
-                5
+                4
               </span>
               <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
                 Склад и примечания к оклейке
               </label>
+              <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200/80 px-2 py-0.5 rounded-full">
+                * адрес обязателен
+              </span>
             </div>
             <p className="text-xs text-[#64748B] mt-1 pl-8">
               Укажите адрес складского комплекса для выезда специалистов или отгрузки стикеров
@@ -1557,9 +1448,11 @@ export const CreateOrderPage: React.FC = () => {
             {/* Warehouse Address */}
             <div className="space-y-2 flex flex-col justify-between">
               <div className="flex flex-wrap items-center justify-between gap-2 min-h-[28px]">
-                <label className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
+                <label htmlFor="warehouse-address-input" className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-[#0082FB]" />
-                  Адрес склада в РК
+                  <span>Адрес склада в РК</span>
+                  <span className="text-red-500 font-bold">*</span>
+                  <span className="text-[10px] text-red-500 font-extrabold uppercase tracking-wider">(обязательно)</span>
                 </label>
 
                 {savedWarehouses.length > 0 && (
@@ -1571,7 +1464,10 @@ export const CreateOrderPage: React.FC = () => {
                         <button
                           key={w.id}
                           type="button"
-                          onClick={() => setWarehouseAddress(fullAddr)}
+                          onClick={() => {
+                            setWarehouseAddress(fullAddr);
+                            if (errorMsg) setErrorMsg(null);
+                          }}
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
                             isSelected
                               ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-xs'
@@ -1587,12 +1483,26 @@ export const CreateOrderPage: React.FC = () => {
               </div>
 
               <input
+                id="warehouse-address-input"
                 type="text"
+                required
                 value={warehouseAddress}
-                onChange={(e) => setWarehouseAddress(e.target.value)}
+                onChange={(e) => {
+                  setWarehouseAddress(e.target.value);
+                  if (errorMsg && e.target.value.trim()) setErrorMsg(null);
+                }}
                 placeholder="г. Алматы, ул. Райымбека 212, склад №4 (или любой другой город РК)"
-                className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                className={`w-full bg-[#F4F6F9] border rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB] transition-all ${
+                  !warehouseAddress.trim() && errorMsg
+                    ? 'border-red-400 ring-2 ring-red-100 bg-red-50/20'
+                    : 'border-gray-200/80'
+                }`}
               />
+              {!warehouseAddress.trim() && errorMsg && (
+                <p className="text-[11px] text-red-600 font-bold animate-in fade-in duration-150">
+                  Пожалуйста, введите адрес склада или выберите один из ваших адресов выше.
+                </p>
+              )}
             </div>
 
             {/* Notes */}
@@ -1612,156 +1522,84 @@ export const CreateOrderPage: React.FC = () => {
                 className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
               />
             </div>
+          </div>
+        </div>
 
-            {/* Codes File Attachment */}
-            <div className="md:col-span-2 pt-4 border-t border-gray-100 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
-                  <Upload className="w-3.5 h-3.5 text-[#0082FB]" />
-                  Файл с кодами маркировки (необязательно, можно прикрепить позже)
+        {/* Step 5: Codes File Attachment (MANDATORY) */}
+        <div id="step-codes-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-[#0082FB] text-white text-xs font-black flex items-center justify-center">
+                  5
+                </span>
+                <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
+                  Файл с кодами маркировки
                 </label>
-                {codesFile && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCodesFile(null);
-                      setFileCodesCount(null);
-                    }}
-                    className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer"
-                  >
-                    Удалить выбранный файл
-                  </button>
-                )}
+                <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200/80 px-2 py-0.5 rounded-full">
+                  * обязательно для расчета объема и заказа
+                </span>
               </div>
+              <p className="text-xs text-[#64748B] mt-1 pl-8">
+                Объем партии товара ({itemsCount > 0 ? `${itemsCount.toLocaleString()} шт.` : 'тираж'}) рассчитывается автоматически из загруженного файла после проверки на дубликаты
+              </p>
+            </div>
 
-              <div
-                onDragOver={handleCodesDragOver}
-                onDragEnter={handleCodesDragEnter}
-                onDragLeave={handleCodesDragLeave}
-                onDrop={handleCodesDrop}
-                className={`border-2 border-dashed rounded-2xl p-5 transition-all text-center relative ${
-                  isCodesDragOver
-                    ? 'border-[#0082FB] bg-blue-50/80 ring-2 ring-[#0082FB]/20 scale-[1.005]'
-                    : 'border-gray-200 bg-gray-50/50 hover:bg-gray-50'
-                }`}
+            {codesFile && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCodesFile(null);
+                  setFileCodesCount(null);
+                  setCodeCheckResult(null);
+                  setItemsCount(0);
+                }}
+                className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer pl-8 sm:pl-0"
               >
-                {isCodesDragOver && codesFile && (
-                  <div className="absolute inset-0 bg-blue-50/95 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-[#0082FB] z-10 pointer-events-none">
-                    <Upload className="w-8 h-8 text-[#0082FB] animate-bounce mb-2" />
-                    <span className="text-xs font-bold text-[#0082FB]">Отпустите файл для замены</span>
-                  </div>
-                )}
+                Удалить выбранный файл
+              </button>
+            )}
+          </div>
 
-                {codesFile ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-xl">
-                      <div className="flex items-center gap-3 text-left">
-                        <FileText className="w-6 h-6 text-[#0082FB] shrink-0" />
-                        <div>
-                          <span className="text-xs font-bold text-[#111827] block truncate">
-                            {codesFile.name}
-                          </span>
-                          <span className="text-[10px] text-gray-500">
-                            {(codesFile.size / 1024).toFixed(1)} КБ • Будет автоматически сохранён на сервере и подтянут в макет
-                          </span>
-                        </div>
-                      </div>
-                      <label className="text-xs font-bold text-[#0082FB] hover:underline cursor-pointer px-3 py-1.5 bg-blue-50 rounded-lg">
-                        Заменить
-                        <input
-                          type="file"
-                          accept=".csv,.txt,.pdf,.zip,.xlsx"
-                          onChange={(e) => {
-                            if (e.target.files?.[0]) handleFileSelection(e.target.files[0]);
-                          }}
-                          className="hidden"
-                        />
-                      </label>
+          <div
+            onDragOver={handleCodesDragOver}
+            onDragEnter={handleCodesDragEnter}
+            onDragLeave={handleCodesDragLeave}
+            onDrop={handleCodesDrop}
+            className={`border-2 border-dashed rounded-2xl p-6 transition-all text-center relative ${
+              isCodesDragOver
+                ? 'border-[#0082FB] bg-blue-50/80 ring-2 ring-[#0082FB]/20 scale-[1.005]'
+                : !codesFile && errorMsg
+                ? 'border-red-300 bg-red-50/20'
+                : 'border-gray-200 bg-gray-50/50 hover:bg-gray-50'
+            }`}
+          >
+            {isCodesDragOver && codesFile && (
+              <div className="absolute inset-0 bg-blue-50/95 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-[#0082FB] z-10 pointer-events-none">
+                <Upload className="w-8 h-8 text-[#0082FB] animate-bounce mb-2" />
+                <span className="text-xs font-bold text-[#0082FB]">Отпустите файл для замены</span>
+              </div>
+            )}
+
+            {codesFile ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl shadow-2xs">
+                  <div className="flex items-center gap-3 text-left min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0 border border-blue-100">
+                      <FileText className="w-5 h-5" />
                     </div>
-
-                    {/* Parsing status */}
-                    {parsingFile && (
-                      <div className="p-3 bg-white border border-gray-200 rounded-xl text-xs text-gray-600 flex items-center justify-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin text-[#0082FB]" />
-                        <span>Подсчет кодов маркировки в файле...</span>
-                      </div>
-                    )}
-
-                    {/* Discrepancy notification banner */}
-                    {!parsingFile && fileCodesCount !== null && (
-                      fileCodesCount !== itemsCount ? (
-                        <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-left animate-in fade-in duration-150 shadow-xs">
-                          <div className="flex items-start gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0 mt-0.5 border border-blue-100">
-                              <FileSpreadsheet className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-xs font-black text-[#111827]">
-                                  В файле обнаружено {fileCodesCount.toLocaleString()} кодов
-                                </span>
-                                <span className="text-[11px] font-bold text-slate-700 bg-white px-2.5 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
-                                  В заказе: {itemsCount.toLocaleString()} шт.
-                                </span>
-                                <span className="text-[11px] font-bold text-[#0082FB] bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-                                  {fileCodesCount < itemsCount
-                                    ? `на ${(itemsCount - fileCodesCount).toLocaleString()} шт. меньше`
-                                    : `на ${(fileCodesCount - itemsCount).toLocaleString()} шт. больше`}
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-[#64748B] mt-1 leading-relaxed">
-                                {fileCodesCount < itemsCount
-                                  ? `Количество кодов в файле меньше указанного тиража партии. Нажмите кнопку справа, чтобы синхронизировать объем и пересчитать стоимость заказа:`
-                                  : `В файле больше кодов, чем указано в тираже партии. Нажмите кнопку, чтобы расширить заказ до фактического объема файла:`}
-                              </p>
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setItemsCount(fileCodesCount)}
-                            className="inline-flex items-center justify-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] active:scale-95 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm shadow-blue-500/15 cursor-pointer shrink-0"
-                          >
-                            <Check className="w-3.5 h-3.5 stroke-[3]" />
-                            <span>Установить {fileCodesCount.toLocaleString()} шт.</span>
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="p-3.5 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl flex items-center gap-3 text-left animate-in fade-in duration-150">
-                          <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                            <Check className="w-4 h-4 stroke-[3]" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-emerald-950 block">
-                              Файл проверен: в нем ровно {fileCodesCount.toLocaleString()} кодов Data Matrix
-                            </span>
-                            <span className="text-[11px] text-emerald-700">
-                              Количество полностью совпадает с тиражом партии заказа.
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="cursor-pointer block space-y-2 select-none"
-                  >
-                    <Upload className={`w-6 h-6 mx-auto pointer-events-none transition-colors ${isCodesDragOver ? 'text-[#0082FB] animate-bounce' : 'text-gray-400'}`} />
-                    <div className="pointer-events-none">
-                      <span className="text-xs font-bold text-[#0082FB] hover:underline">
-                        {isCodesDragOver ? 'Отпустите файл для загрузки' : 'Выберите файл с кодами'}
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold text-[#111827] block truncate">
+                        {codesFile.name}
                       </span>
-                      <span className="text-xs text-gray-500">
-                        {isCodesDragOver ? '' : ' или перетащите его сюда'}
+                      <span className="text-[10px] text-gray-500">
+                        {(codesFile.size / 1024).toFixed(1)} КБ • Будет автоматически сохранён на сервере и подтянут в заказ
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-400 pointer-events-none">
-                      Поддерживаются CSV, TXT, PDF, ZIP от ИС Танба / Asl Belgisi / Честный Знак (до 50 МБ)
-                    </p>
+                  </div>
+                  <label className="text-xs font-bold text-[#0082FB] hover:underline cursor-pointer px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-lg shrink-0 transition-colors">
+                    Заменить файл
                     <input
-                      ref={fileInputRef}
                       type="file"
                       accept=".csv,.txt,.pdf,.zip,.xlsx"
                       onChange={(e) => {
@@ -1769,10 +1607,171 @@ export const CreateOrderPage: React.FC = () => {
                       }}
                       className="hidden"
                     />
+                  </label>
+                </div>
+
+                {/* Verification / parsing status */}
+                {parsingFile && (
+                  <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-xl text-xs text-[#0082FB] flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#0082FB]" />
+                    <span className="font-bold">Проверка кодов маркировки по базе данных TANBOX...</span>
+                  </div>
+                )}
+
+                {/* Backend DB Check Result */}
+                {!parsingFile && codeCheckResult && (
+                  <div className="space-y-3">
+                    <div className="p-4 bg-white border border-gray-200/90 rounded-2xl text-left space-y-3.5 shadow-xs">
+                      {/* Header section */}
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 border ${
+                            codeCheckResult.validNewCodesCount === 0
+                              ? 'bg-red-50 text-red-600 border-red-200'
+                              : codeCheckResult.alreadyInDbCount > 0 || codeCheckResult.internalDuplicatesCount > 0
+                              ? 'bg-amber-50 text-amber-600 border-amber-200'
+                              : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                          }`}
+                        >
+                          {codeCheckResult.validNewCodesCount === 0 ? (
+                            <AlertCircle className="w-4 h-4 stroke-[2.5]" />
+                          ) : codeCheckResult.alreadyInDbCount > 0 || codeCheckResult.internalDuplicatesCount > 0 ? (
+                            <AlertTriangle className="w-4 h-4 stroke-[2.5]" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-black text-[#111827]">
+                              {codeCheckResult.validNewCodesCount === 0
+                                ? 'Все коды из файла уже использованы в системе'
+                                : codeCheckResult.alreadyInDbCount > 0 || codeCheckResult.internalDuplicatesCount > 0
+                                ? 'Результат верификации кодов по базе данных'
+                                : 'Коды успешно проверены по базе данных TANBOX'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#64748B] mt-0.5 leading-relaxed">
+                            {codeCheckResult.validNewCodesCount === 0
+                              ? 'В данном файле нет новых кодов. Загрузите файл со свежими кодами маркировки из ИС Танба.'
+                              : codeCheckResult.alreadyInDbCount > 0 || codeCheckResult.internalDuplicatesCount > 0
+                              ? 'Система автоматически исключила коды, которые уже были нанесены или загружены в других заказах, чтобы избежать брака.'
+                              : `Все ${codeCheckResult.validNewCodesCount.toLocaleString()} кодов уникальны и готовы к эмиссии и печати.`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Stats Pills - Clean TANBOX neutral design */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div className="bg-[#F8FAFC] p-3 rounded-xl border border-gray-200/80 text-center">
+                          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block">
+                            Всего в файле
+                          </span>
+                          <span className="text-sm font-black text-[#111827] font-mono mt-0.5 block">
+                            {codeCheckResult.totalInFile.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="bg-[#F8FAFC] p-3 rounded-xl border border-gray-200/80 text-center">
+                          <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block">
+                            Уже в базе
+                          </span>
+                          <span className="text-sm font-black text-red-600 font-mono mt-0.5 block">
+                            −{codeCheckResult.alreadyInDbCount.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="bg-[#F8FAFC] p-3 rounded-xl border border-gray-200/80 text-center">
+                          <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">
+                            Дубли в файле
+                          </span>
+                          <span className="text-sm font-black text-amber-600 font-mono mt-0.5 block">
+                            −{codeCheckResult.internalDuplicatesCount.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-200/80 text-center">
+                          <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">
+                            Чистых новых
+                          </span>
+                          <span className="text-sm font-black text-emerald-700 font-mono mt-0.5 block">
+                            +{codeCheckResult.validNewCodesCount.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {codeCheckResult.validNewCodesCount === 0 ? (
+                        <div className="p-3 bg-red-50/60 border border-red-200/70 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
+                          <span className="text-xs font-medium text-red-900">
+                            Заказ не может быть создан с нулевым тиражом. Выберите другой файл со свежими кодами.
+                          </span>
+                          <label className="inline-flex items-center justify-center gap-1.5 bg-[#111827] hover:bg-black active:scale-95 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer shrink-0">
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Выбрать другой файл</span>
+                            <input
+                              type="file"
+                              accept=".csv,.txt,.pdf,.zip,.xlsx"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) handleFileSelection(e.target.files[0]);
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 bg-emerald-50/60 border border-emerald-200/60 rounded-xl flex items-center gap-2 text-xs font-semibold text-emerald-800">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Объем партии товара автоматически определен: <strong>{itemsCount.toLocaleString()} шт.</strong></span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fallback if local parse only */}
+                {!parsingFile && !codeCheckResult && fileCodesCount !== null && (
+                  <div className="p-3.5 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl flex items-center gap-3 text-left animate-in fade-in duration-150">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                      <Check className="w-4 h-4 stroke-[3]" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-emerald-950 block">
+                        Файл проверен: в нем {fileCodesCount.toLocaleString()} кодов Data Matrix
+                      </span>
+                      <span className="text-[11px] text-emerald-700">
+                        Объем партии автоматически установлен: {fileCodesCount.toLocaleString()} шт.
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="cursor-pointer block space-y-2.5 py-6 select-none"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0082FB] flex items-center justify-center mx-auto border border-blue-100">
+                  <Upload className={`w-6 h-6 pointer-events-none transition-colors ${isCodesDragOver ? 'text-[#0082FB] animate-bounce' : 'text-[#0082FB]'}`} />
+                </div>
+                <div className="pointer-events-none">
+                  <span className="text-sm font-bold text-[#0082FB] hover:underline">
+                    {isCodesDragOver ? 'Отпустите файл для загрузки' : 'Нажмите для выбора файла с кодами'}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {isCodesDragOver ? '' : ' или перетащите его сюда'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 pointer-events-none max-w-md mx-auto">
+                  Поддерживаются форматы CSV, TXT, PDF, ZIP от ИС Танба / Asl Belgisi / Честный Знак. Количество кодов определит объем партии.
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.txt,.pdf,.zip,.xlsx"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) handleFileSelection(e.target.files[0]);
+                  }}
+                  className="hidden"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -1787,13 +1786,33 @@ export const CreateOrderPage: React.FC = () => {
         {/* Calculation Summary Bar */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1.5">
-            <div className="text-xs text-[#64748B]">
-              Категория: <strong className="text-[#111827]">{selectedCategoryInfo.shortName}</strong> •{' '}
-              Тариф: <strong className="text-[#111827]">{selectedTariffInfo.name}</strong> •{' '}
-              Объем: <strong className="text-[#111827]">{itemsCount.toLocaleString()} шт.</strong>
-              {calculated && (
+            <div className="text-xs text-[#64748B] flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span>
+                Категория:{' '}
+                <strong className={selectedCategoryInfo ? 'text-[#111827]' : 'text-amber-600'}>
+                  {selectedCategoryInfo ? selectedCategoryInfo.shortName : 'Не выбрана'}
+                </strong>
+              </span>
+              <span>•</span>
+              <span>
+                Тариф:{' '}
+                <strong className={selectedTariffInfo ? 'text-[#111827]' : 'text-amber-600'}>
+                  {selectedTariffInfo ? selectedTariffInfo.name : 'Не выбран'}
+                </strong>
+              </span>
+              <span>•</span>
+              <span>
+                Объем:{' '}
+                <strong className={codesFile && itemsCount > 0 ? 'text-[#0082FB]' : 'text-amber-600'}>
+                  {codesFile && itemsCount > 0 ? `${itemsCount.toLocaleString()} шт.` : 'Требуется файл кодов'}
+                </strong>
+              </span>
+              {calculated && itemsCount > 0 && (
                 <>
-                  {' '}• Цена: <strong className="text-[#111827]">{calculated.unitPrice} ₸ / шт.</strong>
+                  <span>•</span>
+                  <span>
+                    Цена: <strong className="text-[#111827]">{calculated.unitPrice} ₸ / шт.</strong>
+                  </span>
                 </>
               )}
             </div>
@@ -1803,28 +1822,38 @@ export const CreateOrderPage: React.FC = () => {
                 Предварительная стоимость:
               </span>
               <span className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight">
-                {calculated ? `${calculated.totalPrice.toLocaleString()} ₸` : 'Расчет...'}
+                {calculated && itemsCount > 0 ? `${calculated.totalPrice.toLocaleString()} ₸` : '— ₸'}
               </span>
             </div>
 
             <p className="text-[11px] text-[#64748B]">
-              * Расчет является предварительным. Окончательная стоимость формируется при согласовании партии.
+              * Стоимость рассчитывается автоматически на основании чистых кодов из загруженного файла.
             </p>
           </div>
 
           <button
             type="submit"
-            disabled={submitting || loading || !calculated}
-            className="bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-4 px-8 rounded-xl transition-all active:scale-95 shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 self-start md:self-auto"
+            disabled={submitting || loading || !category || !tariffType || !warehouseAddress.trim() || !codesFile || itemsCount < 1}
+            className="bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-4 px-8 rounded-xl transition-all active:scale-95 shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed self-start md:self-auto"
           >
             {submitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Отправка заказа...</span>
               </>
+            ) : !category ? (
+              <span>Выберите категорию (Шаг 1)</span>
+            ) : !tariffType ? (
+              <span>Выберите тариф (Шаг 2)</span>
+            ) : !warehouseAddress.trim() ? (
+              <span>Укажите адрес склада (Шаг 4)</span>
+            ) : !codesFile ? (
+              <span>Загрузите файл с кодами (Шаг 5)</span>
+            ) : itemsCount < 1 ? (
+              <span>В файле нет кодов для заказа</span>
             ) : (
               <>
-                <span>Подтвердить и отправить заказ в работу</span>
+                <span>Подтвердить и отправить заказ ({itemsCount.toLocaleString()} шт.)</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -1832,96 +1861,6 @@ export const CreateOrderPage: React.FC = () => {
         </div>
 
       </form>
-
-      {/* Discrepancy Confirmation Modal on Submit */}
-      {showMismatchModal && fileCodesCount !== null && createPortal(
-        <div
-          className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowMismatchModal(false);
-          }}
-        >
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-gray-100 space-y-6 animate-in zoom-in-95 duration-150 relative">
-            <button
-              type="button"
-              onClick={() => setShowMismatchModal(false)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-gray-600 transition-colors p-1 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {/* Header */}
-            <div className="text-center space-y-2 pt-2">
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0082FB] flex items-center justify-center mx-auto border border-blue-100">
-                <FileSpreadsheet className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-black text-[#111827]">
-                Несоответствие количества кодов
-              </h3>
-              <p className="text-xs text-[#64748B] max-w-sm mx-auto leading-relaxed">
-                В прикрепленном файле обнаружено иное количество кодов маркировки, чем указано в объеме партии заказа.
-              </p>
-            </div>
-
-            {/* Comparison Cards */}
-            <div className="grid grid-cols-2 gap-3 bg-[#F8FAFC] p-4 rounded-2xl border border-slate-200/80">
-              <div className="text-center p-3.5 bg-white rounded-xl border border-blue-100 shadow-2xs">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  В файле
-                </div>
-                <div className="text-xl font-black text-[#0082FB]">
-                  {fileCodesCount.toLocaleString()} <span className="text-xs font-bold text-slate-500">шт.</span>
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Фактический объем кодов</div>
-              </div>
-
-              <div className="text-center p-3.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  В заказе
-                </div>
-                <div className="text-xl font-black text-[#111827]">
-                  {itemsCount.toLocaleString()} <span className="text-xs font-bold text-slate-500">шт.</span>
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Заявленный тираж</div>
-              </div>
-
-              <div className="col-span-2 text-center text-xs font-medium text-slate-600 pt-1">
-                Разница: <strong className="text-[#111827]">{Math.abs(itemsCount - fileCodesCount).toLocaleString()} шт.</strong>{' '}
-                ({fileCodesCount < itemsCount ? 'в файле меньше, чем в заказе' : 'в файле больше, чем в заказе'})
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="space-y-2.5">
-              <button
-                type="button"
-                onClick={() => executeSubmit(fileCodesCount)}
-                className="w-full py-3.5 px-4 bg-[#0082FB] hover:bg-[#0070DA] active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>Скорректировать тираж до {fileCodesCount.toLocaleString()} шт. и отправить</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => executeSubmit(itemsCount)}
-                className="w-full py-3 px-4 bg-white hover:bg-slate-50 active:scale-[0.99] text-[#111827] font-bold text-xs rounded-xl border border-gray-200 transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Оставить заявленный объем ({itemsCount.toLocaleString()} шт.) и отправить</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowMismatchModal(false)}
-                className="w-full py-2 text-center text-xs font-bold text-[#64748B] hover:text-[#111827] transition-colors cursor-pointer"
-              >
-                Вернуться к редактированию
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
     </div>
   );
 };
