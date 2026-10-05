@@ -14,6 +14,7 @@ import {
   downloadOrderAct,
   downloadOrderInvoice,
   adjustOrderItemsCount,
+  updateOrderStickeringEstimate,
   getOrderCodeItems,
   getCodesRegistry,
   downloadSingleItemPdf,
@@ -39,6 +40,7 @@ router.patch('/:id/print-permission', requireAdmin, updateOrderPrintPermission);
 router.patch('/:id/sticker-layout', requireAdmin, updateStickerLayout);
 router.patch('/:id/sticker-approval', updateStickerApproval);
 router.patch('/:id/adjust-count', adjustOrderItemsCount);
+router.patch('/:id/stickering-estimate', requireAdmin, updateOrderStickeringEstimate);
 router.post('/:id/upload-codes', orderCodesUpload.single('file'), uploadOrderCodesFile);
 router.get('/:id/codes-file', downloadOrderCodesFile);
 router.get('/:id/codes-content', getOrderCodesContent);

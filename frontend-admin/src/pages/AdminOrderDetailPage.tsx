@@ -34,6 +34,8 @@ import {
   ShieldCheck,
   ShieldAlert,
   Tag,
+  Boxes,
+  Calculator,
 } from 'lucide-react';
 import axios from 'axios';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
@@ -114,6 +116,7 @@ export const AdminOrderDetailPage: React.FC = () => {
   // Print permission and payment state
   const [updatingPrintPermission, setUpdatingPrintPermission] = useState<boolean>(false);
   const [printPermissionMsg, setPrintPermissionMsg] = useState<string | null>(null);
+  const [downloadingDoc, setDownloadingDoc] = useState<'invoice' | 'act' | null>(null);
 
   const fetchOrder = async () => {
     if (!id) return;
@@ -679,45 +682,38 @@ export const AdminOrderDetailPage: React.FC = () => {
         ];
       }
 
-      // Generate dummy code rows for the batch if no external CSV
-      const rows = Array.from({ length: Math.min(order.itemsCount, 20) }, (_, i) => ({
-        code: `010460000000000021${String(order.orderNumber).replace(/\D/g, '')}${String(i + 1).padStart(4, '0')}\u001d91FFD0\u001d92dGVzdA==`,
-        barcode: labelRequirements?.barcode || `20000000${String(i + 1).padStart(5, '0')}`,
-        productName: labelRequirements?.productName || categoryLabel,
-        brand: labelRequirements?.brand || order.user?.companyName || 'Бренд',
-        article: labelRequirements?.article || order.orderNumber,
-      }));
-
-      const template = {
-        name: `Стикер ${w}×${h} мм - Заказ ${order.orderNumber}`,
-        widthMm: w,
-        heightMm: h,
-        elements: templateElements,
-      };
-
-      const response = await axios.post(
-        '/api/labels/generate-pdf',
-        {
-          template,
-          csvData: rows,
+      // 1. Persist current designer layout to order
+      await apiClient.patch(`/orders/${order.id}/sticker-layout`, {
+        stickerLayout: {
+          widthMm: w,
+          heightMm: h,
+          elements: templateElements,
         },
-        { responseType: 'blob', timeout: 300000 }
-      );
+      });
+
+      // 2. Request PDF generation on the backend with force=true (processes all codes from uploaded file/DB)
+      const response = await apiClient.get(`/orders/${order.id}/pdf?force=true`, {
+        responseType: 'blob',
+        timeout: 600000,
+      });
 
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const generatedPath = `/api/orders/${order.id}/pdf`;
 
-      // Update order on backend
-      await apiClient.patch(`/orders/${order.id}/status`, {
-        pdfUrl: generatedPath,
-      });
-
       // Save generated blob to memory / local reference so user can download directly
       (window as any)[`tanbox_pdf_blob_${order.id}`] = blob;
       setPdfUrl(generatedPath);
-      setOrder((prev) => (prev ? { ...prev, pdfUrl: generatedPath } : prev));
-      setPdfSuccessMsg('PDF этикеток партии успешно сформирован на основе макета!');
-      setTimeout(() => setPdfSuccessMsg(null), 4000);
+      setOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              pdfUrl: generatedPath,
+              stickerLayout: { widthMm: w, heightMm: h, elements: templateElements },
+            }
+          : prev
+      );
+      setPdfSuccessMsg(`PDF этикеток партии (${order.itemsCount.toLocaleString()} шт.) успешно сформирован на основе макета!`);
+      setTimeout(() => setPdfSuccessMsg(null), 5000);
     } catch (err: any) {
       alert('Ошибка при генерации PDF: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -732,7 +728,7 @@ export const AdminOrderDetailPage: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `tanbox-batch-${order.orderNumber}.pdf`;
+      link.download = `Labels_${order.orderNumber}_(${order.itemsCount}pcs).pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -744,12 +740,14 @@ export const AdminOrderDetailPage: React.FC = () => {
     try {
       const res = await apiClient.get(`/orders/${order.id}/pdf`, {
         responseType: 'blob',
+        timeout: 600000,
       });
       const resBlob = new Blob([res.data], { type: 'application/pdf' });
+      (window as any)[`tanbox_pdf_blob_${order.id}`] = resBlob;
       const blobUrl = window.URL.createObjectURL(resBlob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.setAttribute('download', `Labels_${order.orderNumber}.pdf`);
+      link.setAttribute('download', `Labels_${order.orderNumber}_(${order.itemsCount}pcs).pdf`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -759,6 +757,70 @@ export const AdminOrderDetailPage: React.FC = () => {
       alert('Ошибка при скачивании PDF: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingPdf(false);
+    }
+  };
+
+  const handleDownloadAct = async () => {
+    if (!order) return;
+    setDownloadingDoc('act');
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write('<!DOCTYPE html><html><head><title>Подготовка PDF...</title></head><body style="font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc;color:#334155;"><div style="text-align:center;"><div style="font-size:18px;font-weight:700;margin-bottom:8px;">Загрузка PDF АВР...</div><div style="font-size:13px;color:#64748b;">Пожалуйста, подождите пару секунд</div></div></body></html>');
+    }
+    try {
+      const res = await apiClient.get(`/orders/${order.id}/act`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
+      if (win && !win.closed) {
+        win.location.href = blobUrl;
+      } else {
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `Act_${order.orderNumber}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      if (win && !win.closed) win.close();
+      console.error('Download act error:', err);
+      alert('Ошибка при формировании PDF акта: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setDownloadingDoc(null);
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (!order) return;
+    setDownloadingDoc('invoice');
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write('<!DOCTYPE html><html><head><title>Подготовка PDF...</title></head><body style="font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc;color:#334155;"><div style="text-align:center;"><div style="font-size:18px;font-weight:700;margin-bottom:8px;">Загрузка PDF счёта на оплату...</div><div style="font-size:13px;color:#64748b;">Пожалуйста, подождите пару секунд</div></div></body></html>');
+    }
+    try {
+      const res = await apiClient.get(`/orders/${order.id}/invoice`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
+      if (win && !win.closed) {
+        win.location.href = blobUrl;
+      } else {
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `Invoice_${order.orderNumber}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      if (win && !win.closed) win.close();
+      console.error('Download invoice error:', err);
+      alert('Ошибка при формировании PDF счета: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setDownloadingDoc(null);
     }
   };
 
@@ -955,13 +1017,16 @@ export const AdminOrderDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Separated Address and Client Notes */}
-            {order.notes && (() => {
+            {/* Separated Address, Warehouse Conditions, and Client Notes */}
+            {(() => {
               const parsed = parseOrderNotes(order.notes);
-              if (!parsed.address && !parsed.clientNote) return null;
+              const isOnSite = order.tariffType === 'STANDARD' || order.tariffType === 'PRO' || order.extraServices?.includes('ON_SITE_STICKERING') || Boolean(parsed.warehouseConditions);
+
+              if (!parsed.address && !parsed.clientNote && !isOnSite) return null;
 
               return (
-                <div className="pt-3 border-t border-gray-100 text-xs space-y-3">
+                <div className="pt-3 border-t border-gray-100 text-xs space-y-4">
+                  {/* Warehouse address */}
                   {parsed.address && (
                     <div>
                       <span className="text-[#64748B] font-bold flex items-center gap-1.5 mb-1 uppercase tracking-wider text-[11px]">
@@ -974,6 +1039,160 @@ export const AdminOrderDetailPage: React.FC = () => {
                     </div>
                   )}
 
+                  {/* On-Site Stickering Estimate & Details */}
+                  {isOnSite && (
+                    parsed.confirmedEstimate ? (
+                      <div className="bg-white border border-gray-200/90 rounded-2xl p-5 shadow-xs space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0">
+                              <CheckCircle2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-xs font-bold text-[#111827]">
+                                  Смета выездной оклейки утверждена
+                                </h3>
+                                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                                  {parsed.confirmedEstimate.date || 'Рассчитано'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-[#64748B] mt-0.5">
+                                Данные применены к заказу и отображаются в счёте и акте
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={handleDownloadInvoice}
+                              disabled={downloadingDoc === 'invoice'}
+                              className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-xs font-semibold px-3 py-1.5 rounded-xl shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+                              title="Открыть официальный счёт на оплату в формате PDF"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-gray-400" />
+                              {downloadingDoc === 'invoice' ? 'Создание PDF...' : 'Счёт на оплату'}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={handleDownloadAct}
+                              disabled={downloadingDoc === 'act'}
+                              className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-xs font-semibold px-3 py-1.5 rounded-xl shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+                              title="Открыть официальный АВР в формате PDF"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-gray-400" />
+                              {downloadingDoc === 'act' ? 'Создание PDF...' : 'АВР'}
+                            </button>
+
+                            <Link
+                              to={`/stickering-calc?orderId=${order.id}&orderNumber=${order.orderNumber}&category=${order.category}&count=${order.itemsCount}&climate=${parsed.warehouseConditions?.climateCode || 'WARM_HEATED'}&storage=${parsed.warehouseConditions?.storageTypeCode || 'PALLETS'}&company=${encodeURIComponent(order.user?.companyName || '')}`}
+                              className="inline-flex items-center gap-1.5 bg-[#111827] hover:bg-black text-white text-xs font-semibold px-3.5 py-1.5 rounded-xl shadow-2xs transition-all cursor-pointer active:scale-95"
+                            >
+                              <Calculator className="w-3.5 h-3.5" />
+                              Пересчитать
+                            </Link>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="bg-gray-50/70 border border-gray-200/80 p-3.5 rounded-xl">
+                            <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Бригада</span>
+                            <span className="font-extrabold text-[#111827] mt-1 block text-sm">
+                              {parsed.confirmedEstimate.workersCount || 1} чел.
+                            </span>
+                          </div>
+
+                          <div className="bg-gray-50/70 border border-gray-200/80 p-3.5 rounded-xl">
+                            <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Срок работ</span>
+                            <span className="font-extrabold text-[#111827] mt-1 block text-sm">
+                              {parsed.confirmedEstimate.daysNeeded || 1} дн. <span className="text-xs font-medium text-gray-500">(~{parsed.confirmedEstimate.manHours || 0} ч.)</span>
+                            </span>
+                          </div>
+
+                          <div className="bg-gray-50/70 border border-gray-200/80 p-3.5 rounded-xl">
+                            <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Тариф за шт.</span>
+                            <span className="font-extrabold text-emerald-700 mt-1 block text-sm">
+                              {parsed.confirmedEstimate.clientPricePerUnit || order.pricePerItem} ₸
+                            </span>
+                          </div>
+
+                          <div className="bg-gray-50/70 border border-gray-200/80 p-3.5 rounded-xl">
+                            <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Сумма партии</span>
+                            <span className="font-extrabold text-[#111827] mt-1 block text-sm">
+                              {(parsed.confirmedEstimate.totalPrice || order.totalPrice).toLocaleString()} ₸
+                            </span>
+                          </div>
+                        </div>
+
+                        {parsed.confirmedEstimate.materials && (
+                          <div className="flex items-center gap-2.5 text-xs text-gray-600 bg-gray-50/70 px-3.5 py-2.5 rounded-xl border border-gray-200/80">
+                            <Package className="w-4 h-4 text-gray-400 shrink-0" />
+                            <span>Расходные материалы: <strong className="text-[#111827] font-semibold">{parsed.confirmedEstimate.materials}</strong></span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-blue-50/50 border border-blue-200/90 rounded-2xl space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-blue-100/80 pb-2.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-blue-100 text-[#0082FB] flex items-center justify-center shrink-0">
+                              <Boxes className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <span className="text-xs font-extrabold text-[#111827] block">
+                                Выездная оклейка на складе
+                              </span>
+                              <span className="text-[10px] text-gray-500 font-medium">
+                                Условия складирования и параметры объекта клиента
+                              </span>
+                            </div>
+                          </div>
+
+                          <Link
+                            to={`/stickering-calc?orderId=${order.id}&orderNumber=${order.orderNumber}&category=${order.category}&count=${order.itemsCount}&climate=${parsed.warehouseConditions?.climateCode || 'WARM_HEATED'}&storage=${parsed.warehouseConditions?.storageTypeCode || 'PALLETS'}&company=${encodeURIComponent(order.user?.companyName || '')}`}
+                            className="inline-flex items-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs transition-all cursor-pointer shrink-0 active:scale-95"
+                          >
+                            <Calculator className="w-3.5 h-3.5" />
+                            Рассчитать смету и наряд на выезд
+                          </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="bg-white/80 border border-blue-200/60 p-2.5 rounded-xl">
+                            <span className="text-[10px] uppercase font-bold text-gray-400 block">Размещение</span>
+                            <span className="font-bold text-[#111827] mt-0.5 block text-xs">
+                              {parsed.warehouseConditions?.storageType || 'На паллетах в коробах'}
+                            </span>
+                          </div>
+
+                          <div className="bg-white/80 border border-blue-200/60 p-2.5 rounded-xl">
+                            <span className="text-[10px] uppercase font-bold text-gray-400 block">Температурный режим</span>
+                            <span className="font-bold text-[#111827] mt-0.5 block text-xs">
+                              {parsed.warehouseConditions?.climate || 'Тёплый склад (Класс А/В)'}
+                            </span>
+                          </div>
+
+                          <div className="bg-white/80 border border-blue-200/60 p-2.5 rounded-xl">
+                            <span className="text-[10px] uppercase font-bold text-gray-400 block">Складская техника</span>
+                            <span className="font-bold text-[#111827] mt-0.5 block text-xs">
+                              {parsed.warehouseConditions?.equipment || 'Есть рохля / погрузчик'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[11px] text-[#334155] bg-white/70 p-2.5 rounded-xl border border-blue-100">
+                          <Clock className="w-3.5 h-3.5 text-[#0082FB] shrink-0" />
+                          <span className="font-medium">
+                            <strong>SLA заявки:</strong> расчет сметы и согласование выезда в течение 2 часов.
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  {/* Client Note */}
                   {parsed.clientNote && (
                     <div>
                       <span className="text-[#64748B] font-bold flex items-center gap-1.5 mb-1 uppercase tracking-wider text-[11px]">

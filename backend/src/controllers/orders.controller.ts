@@ -7,6 +7,7 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import { OrderCategory, TariffType, OrderStatus } from '@prisma/client';
 import { computeOrderPricing } from '../utils/pricing';
 import { pdfQueue } from '../services/pdfQueue.service';
+import { renderHtmlToPdf } from '../services/pdfRenderer.service';
 
 function isSafeUrl(url?: string | null): boolean {
   if (!url) return true;
@@ -191,12 +192,10 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     let initialApprovalStatus = 'APPROVED';
     let resolvedTemplateId: string | null = null;
 
-    if (isDigital) {
-      initialLayout = { widthMm: stickerWidth || 58, heightMm: stickerHeight || 40, elements: [] };
-      initialApprovalStatus = 'APPROVED';
-    } else if (templateId) {
+    // 1. If client chose a saved template from their library, ALWAYS prioritize it for ANY tariff
+    if (templateId) {
       const template = await prisma.userStickerTemplate.findFirst({
-        where: { id: templateId, userId: req.user.id },
+        where: { id: String(templateId), userId: req.user.id },
       });
       if (template) {
         initialLayout = {
@@ -206,16 +205,27 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         };
         initialApprovalStatus = 'APPROVED';
         resolvedTemplateId = template.id;
+        stickerWidth = template.widthMm;
+        stickerHeight = template.heightMm;
       }
-    } else if (customStickerLayout && Array.isArray(customStickerLayout.elements) && customStickerLayout.elements.length > 0) {
+    }
+
+    // 2. If client passed explicit layout elements from frontend
+    if (!initialLayout && customStickerLayout && Array.isArray(customStickerLayout.elements) && customStickerLayout.elements.length > 0) {
       initialLayout = customStickerLayout;
       initialApprovalStatus = 'APPROVED';
-    } else if (hasRequestedDesignService) {
-      // ONLY when client ordered paid custom design service, require manual designer step
+      stickerWidth = customStickerLayout.widthMm || stickerWidth;
+      stickerHeight = customStickerLayout.heightMm || stickerHeight;
+    }
+
+    // 3. If client ordered paid custom design service (+5 000 ₸)
+    if (!initialLayout && hasRequestedDesignService) {
       initialLayout = { widthMm: stickerWidth || 58, heightMm: stickerHeight || 40, elements: [] };
       initialApprovalStatus = 'IN_DESIGN';
-    } else {
-      // Standard order: automatically generate default layout and auto-approve!
+    }
+
+    // 4. Default standard auto-generated layout
+    if (!initialLayout) {
       initialLayout = getDefaultStickerLayout(stickerWidth || 58, stickerHeight || 40, req.user.companyName);
       initialApprovalStatus = 'APPROVED';
     }
@@ -416,6 +426,20 @@ export const updateStickerLayout = async (req: AuthRequest, res: Response) => {
     const updateData: any = {};
     if (stickerLayout !== undefined) {
       updateData.stickerLayout = stickerLayout;
+      // Invalidate cached PDFs so any new PDF uses the updated layout
+      const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', existing.id);
+      if (fs.existsSync(orderDir)) {
+        try {
+          const files = fs.readdirSync(orderDir);
+          for (const f of files) {
+            if (f.endsWith('.pdf')) {
+              try { fs.unlinkSync(path.join(orderDir, f)); } catch {}
+            }
+          }
+        } catch (e) {
+          console.warn('Could not clear cached PDFs on stickerLayout update:', e);
+        }
+      }
     }
     if (pdfUrl !== undefined) {
       updateData.pdfUrl = pdfUrl;
@@ -1214,7 +1238,19 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
     let w = stickerLayout?.widthMm || 58;
     let h = stickerLayout?.heightMm || 40;
 
-    // If templateElements is empty, auto-fallback to default standard layout
+    // If templateElements is empty, check if order has saved template in library
+    if (templateElements.length === 0 && existing.templateId) {
+      const savedTpl = await prisma.userStickerTemplate.findUnique({
+        where: { id: existing.templateId },
+      });
+      if (savedTpl && Array.isArray(savedTpl.elements) && savedTpl.elements.length > 0) {
+        templateElements = savedTpl.elements as any[];
+        w = savedTpl.widthMm;
+        h = savedTpl.heightMm;
+      }
+    }
+
+    // If still empty, auto-fallback to default standard layout
     if (templateElements.length === 0) {
       const defaultLayout = getDefaultStickerLayout(w, h, existing.user?.companyName);
       templateElements = defaultLayout.elements;
@@ -1281,6 +1317,18 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
             article: existing.orderNumber,
           },
         ];
+      } else if (req.user.role === 'ADMIN') {
+        // If admin generates batch for order where codes file not attached yet, generate full order count
+        rows = Array.from({ length: existing.itemsCount }, (_, i) => ({
+          code: `010460000000000021${String(existing.orderNumber).replace(/\D/g, '')}${String(i + 1).padStart(5, '0')}\u001d91FFD0\u001d92dGVzdA==`,
+          barcode: orderBarcode || `20000000${String(i + 1).padStart(5, '0')}`,
+          brand: existing.user?.companyName || 'Бренд',
+          article: existing.orderNumber,
+          index: String(i + 1),
+          number: String(i + 1),
+          total: String(existing.itemsCount),
+          orderNumber: existing.orderNumber,
+        }));
       } else {
         return res.status(400).json({
           message: 'Невозможно сформировать рулоны или файл печати: к данному заказу ещё не прикреплен файл с кодами маркировки Data Matrix.',
@@ -1462,10 +1510,33 @@ const numberToWordsTenge = (num: number): string => {
   }
 
   const trimmed = words.trim();
-  if (!trimmed) return 'ноль тенге 00 тиын';
+  if (!trimmed) return 'ноль теңге 00 тиын';
   const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-  return `${capitalized} тенге 00 тиын`;
+  return `${capitalized} теңге 00 тиын`;
 };
+
+function parseStickeringEstimateFromNotes(notes?: string | null) {
+  if (!notes) return null;
+  const match = notes.match(/=== УТВЕРЖДЕННАЯ СМЕТА ВЫЕЗДНОЙ ОКЛЕЙКИ ===([\s\S]*?)(?:={20,}|$)/i);
+  if (!match) return null;
+
+  const content = match[1];
+  const dateMatch = content.match(/Дата расчета:\s*([^\n\r]+)/i);
+  const workersMatch = content.match(/Бригада:\s*(\d+)\s*чел/i);
+  const daysMatch = content.match(/Срок выполнения:\s*([\d.]+)\s*раб/i);
+  const priceMatch = content.match(/Тариф оклейки:\s*([\d.]+)/i);
+  const totalMatch = content.match(/Итоговая стоимость:\s*([^\n\r]+)/i);
+  const condMatch = content.match(/Условия склада:\s*([^\n\r]+)/i);
+
+  return {
+    date: dateMatch ? dateMatch[1].trim() : '',
+    workersCount: workersMatch ? parseInt(workersMatch[1], 10) : 1,
+    daysNeeded: daysMatch ? parseFloat(daysMatch[1]) : 1,
+    pricePerUnit: priceMatch ? parseFloat(priceMatch[1]) : 0,
+    totalPrice: totalMatch ? parseFloat(totalMatch[1].replace(/[^\d.]/g, '')) : 0,
+    warehouseCondition: condMatch ? condMatch[1].trim() : '',
+  };
+}
 
 export const downloadOrderAct = async (req: AuthRequest, res: Response) => {
   try {
@@ -1482,19 +1553,52 @@ export const downloadOrderAct = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'Нет доступа к данному заказу' });
     }
 
-    const orderDate = new Date(existing.createdAt).toLocaleDateString('ru-RU');
-    const actDate = new Date().toLocaleDateString('ru-RU');
-    const actNumber = `АКТ-${existing.orderNumber}`;
+    const monthsGenitive = [
+      'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+    ];
+    const createdDateObj = new Date(existing.createdAt);
+    const orderDateFull = `${createdDateObj.getDate()} ${monthsGenitive[createdDateObj.getMonth()]} ${createdDateObj.getFullYear()}`;
+    const nowDateObj = new Date();
+    const actDateFull = `${nowDateObj.getDate()} ${monthsGenitive[nowDateObj.getMonth()]} ${nowDateObj.getFullYear()}`;
+    const actNumber = existing.orderNumber.replace(/^[^\d]*-?/, '') || existing.orderNumber;
 
-    // Category naming
+    const formatMoney = (n: number) => {
+      const parts = n.toFixed(2).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return `${parts[0]},${parts[1]}`;
+    };
+    const formatQty = (n: number) => {
+      const parts = n.toFixed(3).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return `${parts[0]},${parts[1]}`;
+    };
+
+    // Category naming for all 11 KZ goods categories
     const catMap: Record<string, string> = {
-      SHOES: 'Обувь',
-      CLOTHES: 'Легкая промышленность (одежда, текстиль)',
-      MEDICINES: 'Лекарственные средства',
+      SHOES: 'Обувные товары',
+      TEXTILE: 'Товары легкой промышленности (текстиль)',
+      MEDICINE: 'Лекарственные препараты',
+      WATER: 'Упакованная вода и напитки',
       TOBACCO: 'Табачные изделия',
+      BEER: 'Пиво и пивные напитки',
+      OILS: 'Моторные масла',
+      DIETARY_SUPPLEMENTS: 'Биологически активные добавки (БАД)',
+      JEWELRY: 'Ювелирные изделия',
+      SAIGA: 'Дериваты рогов сайгака',
       OTHER: 'Потребительские товары',
     };
     const categoryName = catMap[existing.category] || existing.category;
+
+    const stickeringEst = parseStickeringEstimateFromNotes(existing.notes);
+    const isOnSite = existing.tariffType === 'STANDARD' || existing.tariffType === 'PRO' || existing.extraServices?.includes('ON_SITE_STICKERING') || Boolean(stickeringEst);
+
+    let baseServiceName = `Услуги по цифровой маркировке и подготовке партии кодов Data Matrix (ИС Танба РК) [Категория: ${categoryName}, Тариф: ${existing.tariffType}]`;
+    if (stickeringEst) {
+      baseServiceName = `Услуги по выездной оклейке и маркировке партии товаров на складе Заказчика под ключ [Категория: ${categoryName}, бригада: ${stickeringEst.workersCount} чел., срок: ${stickeringEst.daysNeeded} дн., расходные материалы включены]`;
+    } else if (isOnSite) {
+      baseServiceName = `Услуги по выездной оклейке и маркировке партии товаров на складе Заказчика под ключ [Категория: ${categoryName}, Тариф: ${existing.tariffType}]`;
+    }
 
     // Build line items
     interface ActLineItem {
@@ -1507,10 +1611,10 @@ export const downloadOrderAct = async (req: AuthRequest, res: Response) => {
 
     const lines: ActLineItem[] = [];
 
-    // 1. Base Service: Data Matrix Codes Preparation
+    // 1. Base Service
     const baseSum = existing.itemsCount * existing.pricePerItem;
     lines.push({
-      name: `Услуги по цифровой маркировке и подготовке партии кодов Data Matrix (ИС Танба РК) [Категория: ${categoryName}, Тариф: ${existing.tariffType}]`,
+      name: baseServiceName,
       unit: 'шт.',
       qty: existing.itemsCount,
       price: existing.pricePerItem,
@@ -1566,6 +1670,11 @@ export const downloadOrderAct = async (req: AuthRequest, res: Response) => {
     // Calculate sum of lines vs recorded totalPrice
     const calculatedSum = lines.reduce((acc, it) => acc + it.sum, 0);
     const finalTotal = existing.totalPrice || calculatedSum;
+    if (lines.length > 0 && calculatedSum !== finalTotal) {
+      const otherSums = lines.slice(1).reduce((acc, it) => acc + it.sum, 0);
+      lines[0].sum = Math.max(0, finalTotal - otherSums);
+      lines[0].price = lines[0].qty > 0 ? Math.round((lines[0].sum / lines[0].qty) * 100) / 100 : lines[0].price;
+    }
     const amountInWords = numberToWordsTenge(finalTotal);
 
     // Extract warehouse address from notes if available
@@ -1577,217 +1686,207 @@ export const downloadOrderAct = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const totalQty = lines.reduce((acc, it) => acc + it.qty, 0);
+    const orderDateShort = new Date(existing.createdAt).toLocaleDateString('ru-RU');
+    const actDateShort = new Date().toLocaleDateString('ru-RU');
+
     const html = `<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Акт выполненных работ ${actNumber} (Форма Р-1)</title>
+<title>Акт выполненных работ № ${escapeHtml(actNumber)} (Форма Р-1)</title>
 <style>
   @page {
-    size: A4 portrait;
-    margin: 12mm 10mm 12mm 10mm;
+    size: A4 landscape;
+    margin: 8mm 12mm 8mm 12mm;
   }
   body {
-    font-family: 'Times New Roman', Times, serif;
-    margin: 25px 35px;
+    font-family: Arial, "Times New Roman", serif;
+    margin: 8px 15px;
     color: #000;
-    font-size: 11pt;
-    line-height: 1.35;
+    font-size: 8.5pt;
+    line-height: 1.25;
     background-color: #fff;
   }
   .app-header {
     text-align: right;
-    font-size: 8.5pt;
-    line-height: 1.25;
-    margin-bottom: 12px;
-    color: #222;
+    font-size: 7.5pt;
+    line-height: 1.2;
+    margin-bottom: 8px;
+    color: #000;
+    font-style: italic;
   }
-  .title-block {
-    text-align: center;
-    margin-bottom: 14px;
-  }
-  .title-block h1 {
-    font-size: 13pt;
-    font-weight: bold;
-    text-transform: uppercase;
-    margin: 0 0 4px 0;
-    letter-spacing: 0.5px;
-  }
-  .title-block .doc-number {
-    font-size: 11pt;
-    font-weight: bold;
+  .app-header strong {
+    font-style: normal;
+    font-size: 8pt;
   }
   .meta-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 12px;
-    font-size: 10pt;
+    margin-bottom: 4px;
+    font-size: 8pt;
   }
   .meta-table td {
-    padding: 3px 0;
     vertical-align: top;
+    padding: 1px 0;
   }
-  .meta-label {
-    width: 170px;
+  .underline-val {
+    border-bottom: 1px solid #000;
     font-weight: bold;
+    padding-bottom: 1px;
+    line-height: 1.2;
+  }
+  .sub-note {
+    font-size: 6.5pt;
+    text-align: center;
+    color: #444;
+    font-style: italic;
+    line-height: 1.1;
+  }
+  .bin-box {
+    border: 1px solid #000;
+    padding: 2px 6px;
+    font-weight: bold;
+    font-size: 8.5pt;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+  .title-block {
+    text-align: center;
+    font-weight: bold;
+    font-size: 10pt;
+    margin: 8px 0 6px 0;
+    letter-spacing: 0.3px;
   }
   .items-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
-    margin-bottom: 12px;
-    font-size: 9.5pt;
+    border: 2px solid #000;
+    margin-bottom: 4px;
+    font-size: 7.5pt;
   }
   .items-table th, .items-table td {
     border: 1px solid #000;
-    padding: 5px 6px;
+    padding: 3px 4px;
   }
   .items-table th {
-    background-color: #f7f7f7;
+    background-color: #fff;
     font-weight: bold;
     text-align: center;
-    font-size: 8.5pt;
-    line-height: 1.2;
+    line-height: 1.15;
   }
   .text-center { text-align: center; }
   .text-right { text-align: right; }
   .text-left { text-align: left; }
   .font-bold { font-weight: bold; }
   .notes-block {
-    font-size: 10pt;
-    margin-top: 8px;
-    margin-bottom: 16px;
-    line-height: 1.4;
+    font-size: 8pt;
+    margin-top: 6px;
+    line-height: 1.3;
   }
-  .notes-block p {
-    margin: 4px 0;
-  }
-  .signatures-grid {
+  .signatures-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 24px;
-    font-size: 10pt;
+    margin-top: 10px;
+    font-size: 8pt;
   }
-  .signatures-grid td {
-    width: 50%;
-    vertical-align: top;
-    padding-right: 20px;
-  }
-  .sign-line {
-    border-bottom: 1px solid #000;
-    margin-top: 28px;
-    margin-bottom: 4px;
-    display: flex;
-    justify-content: space-between;
-    font-size: 8.5pt;
-    color: #444;
-  }
-  .stamp-box {
-    margin-top: 12px;
-    font-size: 9pt;
+  .mp-box {
+    width: 36px;
+    height: 22px;
+    border: 1px solid #000;
+    text-align: center;
+    line-height: 22px;
     font-weight: bold;
-    color: #555;
-  }
-  .footer-footnote {
-    margin-top: 24px;
-    padding-top: 6px;
-    border-top: 0.5px solid #888;
     font-size: 7.5pt;
-    color: #555;
-    line-height: 1.2;
-  }
-  .no-print {
-    margin-bottom: 20px;
-    padding: 12px 18px;
-    background: #e0f2fe;
-    border: 1px solid #bae6fd;
-    border-radius: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 13px;
-  }
-  .print-btn {
-    background: #0082FB;
-    color: white;
-    border: none;
-    padding: 9px 18px;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 13px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-  .print-btn:hover {
-    background: #0070da;
-  }
-  @media print {
-    .no-print { display: none !important; }
-    body { margin: 0; }
+    margin-top: 6px;
   }
 </style>
 </head>
 <body>
 
-<div class="no-print">
-  <div>
-    <strong>Официальный бланк Акта выполненных работ (Форма Р-1, Республика Казахстан)</strong><br>
-    <span style="color: #475569; font-size: 11px;">Сформирован для ИП &laquo;TORMAG.KZ&raquo; (ИИН: 990601301525). Документ готов к печати и бухгалтерскому учету.</span>
-  </div>
-  <button class="print-btn" onclick="window.print()">Распечатать / Сохранить в PDF</button>
-</div>
-
 <div class="app-header">
   Приложение 50<br>
-  к приказу Министра финансов Республики Казахстан<br>
-  от 20 декабря 2012 года № 562<br>
+  к приказу Министра финансов<br>
+  Республики Казахстан<br>
+  от 20 декабря 2012 года № 562<br><br>
   <strong>Форма Р-1</strong>
 </div>
 
 <table class="meta-table">
   <tr>
-    <td class="meta-label">Исполнитель:</td>
-    <td>
-      <strong>ИП &laquo;TORMAG.KZ&raquo;</strong><br>
-      ИИН: <strong>990601301525</strong>, Республика Казахстан<br>
-      Банк: АО &laquo;Kaspi Bank&raquo; (Kaspi Pay) • Без НДС (ИП на СНР на основе упрощенной декларации)
+    <td style="width: 85px; padding-top: 2px;">Заказчик</td>
+    <td style="padding-right: 20px;">
+      <div class="underline-val">
+        ${escapeHtml(existing.user?.companyName) || 'Заказчик'},${escapeHtml(customerAddress)}${existing.user?.phone ? `, тел.: ${escapeHtml(existing.user.phone)}` : ''}
+      </div>
+      <div class="sub-note">полное наименование, адрес, данные о средствах связи</div>
+    </td>
+    <td style="width: 140px; text-align: center; vertical-align: top;">
+      <div style="font-size: 7pt; margin-bottom: 1px;">ИИН/БИН</div>
+      <div class="bin-box">
+        ${escapeHtml(existing.user?.binIin) || '&nbsp;'}
+      </div>
     </td>
   </tr>
   <tr>
-    <td class="meta-label">Заказчик:</td>
-    <td>
-      <strong>${escapeHtml(existing.user?.companyName) || 'Индивидуальный предприниматель / Юридическое лицо'}</strong><br>
-      БИН / ИИН: <strong>${escapeHtml(existing.user?.binIin) || '—'}</strong><br>
-      Адрес: ${escapeHtml(customerAddress)} • Тел.: ${escapeHtml(existing.user?.phone) || '—'} • Email: ${escapeHtml(existing.user?.email) || '—'}
+    <td style="padding-top: 4px;">Исполнитель</td>
+    <td style="padding-right: 20px; padding-top: 4px;">
+      <div class="underline-val">
+        Индивидуальный предприниматель "TORMAG.KZ",Республика Казахстан, индекс 050013, г. Алматы, пр. Нурсултана Назарбаева, д. 187Б, корпус этаж 6, БЦ "STAR", тел.: +7 (707) 711-16-53
+      </div>
+      <div class="sub-note">полное наименование, адрес, данные о средствах связи</div>
+    </td>
+    <td style="vertical-align: bottom; padding-bottom: 10px; text-align: center;">
+      <div class="bin-box">
+        990601301525
+      </div>
     </td>
   </tr>
+</table>
+
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 8pt;">
   <tr>
-    <td class="meta-label">Договор (контракт):</td>
-    <td>
-      <strong>Публичный договор-оферта на оказание услуг маркировки № ${escapeHtml(existing.orderNumber)} от ${escapeHtml(orderDate)} года</strong>
+    <td style="width: 115px; vertical-align: middle;">Договор (контракт)</td>
+    <td style="vertical-align: middle; padding-right: 20px;">
+      <span style="font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 1px; display: inline-block;">
+        Публичный договор-оферта № ${escapeHtml(existing.orderNumber)} от ${escapeHtml(orderDateFull)} г.
+      </span>
+    </td>
+    <td style="width: 160px; vertical-align: middle;">
+      <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; text-align: center; font-size: 7pt;">
+        <tr>
+          <td style="border: 1px solid #000; padding: 2px 6px;">Номер документа</td>
+          <td style="border: 1px solid #000; padding: 2px 6px;">Дата составления</td>
+        </tr>
+        <tr style="font-weight: bold; font-size: 7.5pt;">
+          <td style="border: 1px solid #000; padding: 2px 6px;">${escapeHtml(actNumber)}</td>
+          <td style="border: 1px solid #000; padding: 2px 6px;">${escapeHtml(actDateShort)}</td>
+        </tr>
+      </table>
     </td>
   </tr>
 </table>
 
 <div class="title-block">
-  <h1>АКТ ВЫПОЛНЕННЫХ РАБОТ (ОКАЗАННЫХ УСЛУГ)*</h1>
-  <div class="doc-number">№ ${escapeHtml(actNumber)} от ${escapeHtml(actDate)} года</div>
+  АКТ ВЫПОЛНЕННЫХ РАБОТ (ОКАЗАННЫХ УСЛУГ)
 </div>
 
 <table class="items-table">
   <thead>
     <tr>
-      <th style="width: 25px;">№ п/п</th>
-      <th>Наименование работ (услуг) (в разрезе их подвидов в соответствии с технической спецификацией, заданием, графиком выполнения работ (услуг) при их наличии)</th>
-      <th style="width: 75px;">Дата выполнения работ (оказания услуг)</th>
-      <th style="width: 70px;">Сведения о наличии отчета**</th>
-      <th style="width: 40px;">Ед. изм.</th>
-      <th style="width: 50px;">Кол-во</th>
-      <th style="width: 70px;">Цена за ед., тенге</th>
-      <th style="width: 85px;">Стоимость, тенге</th>
+      <th rowspan="2" style="width: 25px;">Номер по порядку</th>
+      <th rowspan="2">Наименование работ (услуг) (в разрезе их подвидов в соответствии с технической спецификацией, заданием, графиком выполнения работ (услуг) при их наличии)</th>
+      <th rowspan="2" style="width: 75px;">Дата выполнения работ (оказания услуг)</th>
+      <th rowspan="2" style="width: 120px;">Сведения об отчете о научных исследованиях, маркетинговых, консультационных и прочих услугах (дата, номер, количество страниц) (при их наличии)</th>
+      <th rowspan="2" style="width: 40px;">Единица измерения</th>
+      <th colspan="3">Выполнено работ (оказано услуг)</th>
     </tr>
-    <tr style="font-size: 7.5pt; background-color: #fafafa;">
+    <tr>
+      <th style="width: 55px;">количество</th>
+      <th style="width: 75px;">цена за единицу</th>
+      <th style="width: 85px;">стоимость</th>
+    </tr>
+    <tr style="font-size: 6pt; background-color: #fff;">
       <th>1</th>
       <th>2</th>
       <th>3</th>
@@ -1805,83 +1904,96 @@ export const downloadOrderAct = async (req: AuthRequest, res: Response) => {
     <tr>
       <td class="text-center">${idx + 1}</td>
       <td class="text-left">${escapeHtml(it.name)}</td>
-      <td class="text-center">${escapeHtml(orderDate)} г.</td>
+      <td class="text-center">${escapeHtml(orderDateShort)}</td>
       <td class="text-center">—</td>
       <td class="text-center">${escapeHtml(it.unit)}</td>
-      <td class="text-center font-bold">${it.qty.toLocaleString('ru-RU')}</td>
-      <td class="text-right">${it.price.toLocaleString('ru-RU')}</td>
-      <td class="text-right font-bold">${it.sum.toLocaleString('ru-RU')}</td>
+      <td class="text-right">${formatQty(it.qty)}</td>
+      <td class="text-right">${formatMoney(it.price)}</td>
+      <td class="text-right font-bold">${formatMoney(it.sum)}</td>
     </tr>`
       )
       .join('')}
 
     <tr>
-      <td colspan="7" class="text-right font-bold">Итого:</td>
-      <td class="text-right font-bold">${finalTotal.toLocaleString('ru-RU')}</td>
-    </tr>
-    <tr>
-      <td colspan="7" class="text-right font-bold">В том числе НДС:</td>
-      <td class="text-right font-bold">Без НДС</td>
-    </tr>
-    <tr style="background-color: #f7f7f7;">
-      <td colspan="7" class="text-right font-bold" style="font-size: 10pt;">Всего к оплате:</td>
-      <td class="text-right font-bold" style="font-size: 10pt;">${finalTotal.toLocaleString('ru-RU')}</td>
+      <td colspan="5" style="border: none; text-align: right; font-weight: bold; padding: 2px 6px;">Итого</td>
+      <td class="text-right font-bold" style="border: 1px solid #000;">${formatQty(totalQty)}</td>
+      <td class="text-center" style="border: 1px solid #000;">x</td>
+      <td class="text-right font-bold" style="border: 1px solid #000;">${formatMoney(finalTotal)}</td>
     </tr>
   </tbody>
 </table>
 
 <div class="notes-block">
-  <p>Сведения об использовании запасов, полученных от заказчика: <strong>не использовались</strong></p>
-  <p>Приложение: <strong>Перечень кодов маркировки Data Matrix (в электронном формате ИС Танба РК)</strong></p>
-  <p>
-    Всего оказано услуг на сумму: <strong>${finalTotal.toLocaleString('ru-RU')} тенге (${escapeHtml(amountInWords)})</strong>, без НДС (в соответствии с пп. 1 п. 1 ст. 367 Налогового кодекса РК — ИП на СНР на основе упрощенной декларации).
-  </p>
-  <p>
-    Вышеперечисленные работы (услуги) выполнены полностью и в срок. Заказчик претензий по объему, качеству и срокам оказания услуг не имеет.
-  </p>
+  <div style="margin-bottom: 3px;">
+    Сведения об использовании запасов, полученных от заказчика:
+    <span style="border-bottom: 1px solid #000; min-width: 250px; display: inline-block; font-weight: bold;">не использовались</span>
+    <div style="font-size: 5.5pt; text-align: center; width: 430px; color: #444; font-style: italic;">наименование, количество, стоимость</div>
+  </div>
+  <div style="margin-bottom: 3px;">
+    Приложение: Перечень документации, в том числе отчет(ы) о маркетинговых, научных исследованиях, консультационных и прочих услугах (обязательны при его (их) наличии) на <span style="border-bottom: 1px solid #000; min-width: 35px; display: inline-block; text-align: center; font-weight: bold;">1</span> страниц
+  </div>
+  <div style="margin-bottom: 8px;">
+    Вышеперечисленные услуги выполнены полностью и в срок. Заказчик претензий по объему, качеству и сроку не имеет.
+  </div>
 </div>
 
-<table class="signatures-grid">
+<table class="signatures-table">
   <tr>
-    <td>
-      <strong>Сдал (Исполнитель):</strong><br>
-      Индивидуальный предприниматель<br>
-      <strong>ИП &laquo;TORMAG.KZ&raquo;</strong><br>
-      ИИН: 990601301525<br>
-      Банк: АО &laquo;Kaspi Bank&raquo; (Kaspi Pay)<br><br>
-      Подпись: ______________________<br>
-      <div class="stamp-box">М.П. (при наличии печати)</div>
+    <td style="width: 48%; vertical-align: top;">
+      <div style="margin-bottom: 2px; font-weight: bold;">Сдал (Исполнитель)</div>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="width: 45%; border-bottom: 1px solid #000; height: 20px;"></td>
+          <td style="width: 10%; text-align: center; vertical-align: bottom;">/</td>
+          <td style="width: 45%; border-bottom: 1px solid #000; text-align: center; font-weight: bold; vertical-align: bottom; font-size: 7.5pt;">ИП «TORMAG.KZ»</td>
+        </tr>
+        <tr style="font-size: 5.5pt; color: #555; text-align: center; font-style: italic;">
+          <td>подпись</td>
+          <td></td>
+          <td>расшифровка подписи</td>
+        </tr>
+      </table>
+      <div class="mp-box">МП</div>
     </td>
-    <td>
-      <strong>Принял (Заказчик):</strong><br>
-      <strong>${escapeHtml(existing.user?.companyName) || 'Заказчик'}</strong><br>
-      БИН / ИИН: ${escapeHtml(existing.user?.binIin) || '—'}<br>
-      Должность: Руководитель / Представитель<br>
-      Ф.И.О.: ______________________<br><br>
-      Подпись: ______________________<br>
-      <div class="stamp-box">М.П.</div>
-    </td>
-  </tr>
-  <tr>
-    <td colspan="2" style="padding-top: 18px; font-size: 9.5pt;">
-      Дата подписания (принятия) работ (услуг) Заказчиком: &laquo;____&raquo; _____________________ 2026 года
+    <td style="width: 4%;"></td>
+    <td style="width: 48%; vertical-align: top;">
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 2px;">
+        <span style="font-size: 6.5pt; font-weight: bold;">Руководитель / Представитель</span>
+      </div>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="width: 25%; font-weight: bold; vertical-align: bottom;">Принял (Заказчик)</td>
+          <td style="width: 28%; border-bottom: 1px solid #000; height: 20px;"></td>
+          <td style="width: 6%; text-align: center; vertical-align: bottom;">/</td>
+          <td style="width: 41%; border-bottom: 1px solid #000; height: 20px;"></td>
+        </tr>
+        <tr style="font-size: 5.5pt; color: #555; text-align: center; font-style: italic;">
+          <td></td>
+          <td>подпись</td>
+          <td></td>
+          <td>расшифровка подписи</td>
+        </tr>
+      </table>
+      <div class="mp-box">МП</div>
     </td>
   </tr>
 </table>
 
-<div class="footer-footnote">
-  * Применяется для приемки-передачи выполненных работ (оказанных услуг), за исключением строительно-монтажных работ.<br>
-  ** Заполняется в случае наличия отчета о маркетинговых, научных исследованиях, консультационных и прочих услугах.
-</div>
-
 </body>
 </html>`;
 
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.send(html);
+    if (req.query.format === 'html') {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(html);
+    }
+
+    const pdfBuffer = await renderHtmlToPdf(html, { landscape: true });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="Act_${existing.orderNumber}.pdf"`);
+    return res.send(pdfBuffer);
   } catch (error: any) {
     console.error('Download order act error:', error);
-    return res.status(500).json({ message: 'Ошибка формирования Акта выполненных работ' });
+    return res.status(500).json({ message: 'Ошибка формирования Акта выполненных работ: ' + (error.message || error) });
   }
 };
 
@@ -1900,17 +2012,32 @@ export const downloadOrderInvoice = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'Нет доступа к данному заказу' });
     }
 
-    const orderDate = new Date(existing.createdAt).toLocaleDateString('ru-RU');
-    const invoiceNumber = `СЧ-${existing.orderNumber}`;
 
+    // Category naming for all 11 KZ goods categories
     const catMap: Record<string, string> = {
-      SHOES: 'Обувь',
-      CLOTHES: 'Легкая промышленность (одежда, текстиль)',
-      MEDICINES: 'Лекарственные средства',
+      SHOES: 'Обувные товары',
+      TEXTILE: 'Товары легкой промышленности (текстиль)',
+      MEDICINE: 'Лекарственные препараты',
+      WATER: 'Упакованная вода и напитки',
       TOBACCO: 'Табачные изделия',
+      BEER: 'Пиво и пивные напитки',
+      OILS: 'Моторные масла',
+      DIETARY_SUPPLEMENTS: 'Биологически активные добавки (БАД)',
+      JEWELRY: 'Ювелирные изделия',
+      SAIGA: 'Дериваты рогов сайгака',
       OTHER: 'Потребительские товары',
     };
     const categoryName = catMap[existing.category] || existing.category;
+
+    const stickeringEst = parseStickeringEstimateFromNotes(existing.notes);
+    const isOnSite = existing.tariffType === 'STANDARD' || existing.tariffType === 'PRO' || existing.extraServices?.includes('ON_SITE_STICKERING') || Boolean(stickeringEst);
+
+    let baseServiceName = `Услуги по цифровой маркировке и подготовке партии кодов Data Matrix (ИС Танба РК) [Категория: ${categoryName}, Тариф: ${existing.tariffType}]`;
+    if (stickeringEst) {
+      baseServiceName = `Услуги по выездной оклейке и маркировке партии товаров на складе Заказчика под ключ [Категория: ${categoryName}, бригада: ${stickeringEst.workersCount} чел., срок: ${stickeringEst.daysNeeded} дн., расходные материалы включены]`;
+    } else if (isOnSite) {
+      baseServiceName = `Услуги по выездной оклейке и маркировке партии товаров на складе Заказчика под ключ [Категория: ${categoryName}, Тариф: ${existing.tariffType}]`;
+    }
 
     interface InvoiceLineItem {
       name: string;
@@ -1923,7 +2050,7 @@ export const downloadOrderInvoice = async (req: AuthRequest, res: Response) => {
     const lines: InvoiceLineItem[] = [];
     const baseSum = existing.itemsCount * existing.pricePerItem;
     lines.push({
-      name: `Услуги по цифровой маркировке и подготовке партии кодов Data Matrix (ИС Танба РК) [Категория: ${categoryName}, Тариф: ${existing.tariffType}]`,
+      name: baseServiceName,
       unit: 'шт.',
       qty: existing.itemsCount,
       price: existing.pricePerItem,
@@ -1974,6 +2101,11 @@ export const downloadOrderInvoice = async (req: AuthRequest, res: Response) => {
 
     const calculatedSum = lines.reduce((acc, it) => acc + it.sum, 0);
     const finalTotal = existing.totalPrice || calculatedSum;
+    if (lines.length > 0 && calculatedSum !== finalTotal) {
+      const otherSums = lines.slice(1).reduce((acc, it) => acc + it.sum, 0);
+      lines[0].sum = Math.max(0, finalTotal - otherSums);
+      lines[0].price = lines[0].qty > 0 ? Math.round((lines[0].sum / lines[0].qty) * 100) / 100 : lines[0].price;
+    }
     const amountInWords = numberToWordsTenge(finalTotal);
 
     let customerAddress = 'Республика Казахстан';
@@ -1984,205 +2116,193 @@ export const downloadOrderInvoice = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const monthsGenitive = [
+      'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+    ];
+    const createdDateObj = new Date(existing.createdAt);
+    const orderDateFull = `${createdDateObj.getDate()} ${monthsGenitive[createdDateObj.getMonth()]} ${createdDateObj.getFullYear()}`;
+    const invoiceNumber = existing.orderNumber.replace(/^[^\d]*-?/, '') || existing.orderNumber;
+
+    const formatMoney = (n: number) => {
+      const parts = n.toFixed(2).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return `${parts[0]},${parts[1]}`;
+    };
+    const formatQty = (n: number) => {
+      const parts = n.toFixed(3).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return `${parts[0]},${parts[1]}`;
+    };
+
     const html = `<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Счёт на оплату ${invoiceNumber}</title>
+<title>Счет на оплату № ${escapeHtml(invoiceNumber)} от ${escapeHtml(orderDateFull)} г.</title>
 <style>
   @page {
     size: A4 portrait;
-    margin: 12mm 12mm 12mm 12mm;
+    margin: 8mm 12mm 8mm 12mm;
   }
   body {
     font-family: Arial, sans-serif;
-    margin: 25px 35px;
-    color: #111;
-    font-size: 10.5pt;
-    line-height: 1.4;
+    margin: 15px 25px;
+    color: #000;
+    font-size: 8pt;
+    line-height: 1.3;
     background-color: #fff;
   }
-  .notice-box {
-    border: 1px solid #ccc;
-    background-color: #fbfbfb;
-    padding: 8px 12px;
-    font-size: 8.5pt;
-    color: #444;
-    margin-bottom: 15px;
+  .top-notice {
+    font-size: 7.5pt;
     line-height: 1.35;
+    text-align: center;
+    margin-bottom: 16px;
+    color: #000;
+  }
+  .sample-title {
+    font-size: 8.5pt;
+    font-weight: bold;
+    margin-bottom: 2px;
   }
   .bank-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
-    font-size: 9.5pt;
+    border: 2px solid #000;
+    margin-bottom: 18px;
+    font-size: 8pt;
   }
   .bank-table td {
-    border: 1px solid #333;
-    padding: 5px 8px;
+    border: 1px solid #000;
+    padding: 3px 6px;
     vertical-align: top;
   }
   .header-title {
-    font-size: 15pt;
+    font-size: 13pt;
     font-weight: bold;
     border-bottom: 2px solid #000;
-    padding-bottom: 6px;
-    margin-bottom: 16px;
+    padding-bottom: 4px;
+    margin-bottom: 12px;
   }
   .parties-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 16px;
-    font-size: 10pt;
+    margin-bottom: 12px;
+    font-size: 8pt;
   }
   .parties-table td {
-    padding: 3px 0;
+    padding: 2px 0;
     vertical-align: top;
   }
   .label-col {
-    width: 120px;
-    color: #666;
+    width: 85px;
+    color: #000;
   }
   .items-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 16px;
-    font-size: 9.5pt;
+    border: 2px solid #000;
+    margin-bottom: 4px;
+    font-size: 7.5pt;
   }
   .items-table th, .items-table td {
-    border: 1px solid #333;
-    padding: 6px 8px;
+    border: 1px solid #000;
+    padding: 2px 4px;
   }
   .items-table th {
-    background-color: #f2f2f2;
     font-weight: bold;
     text-align: center;
+    background-color: #fff;
   }
   .text-center { text-align: center; }
   .text-right { text-align: right; }
-  .font-bold { font-weight: bold; }
-  .total-block {
-    margin-top: 10px;
-    margin-bottom: 20px;
-  }
-  .total-line {
-    font-size: 10.5pt;
-    margin-bottom: 4px;
-  }
-  .purpose-box {
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
-    border-radius: 6px;
-    padding: 8px 12px;
-    margin-top: 10px;
-    font-size: 9pt;
-    color: #1e293b;
-  }
-  .signatures-table {
+  .totals-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 40px;
-    font-size: 10pt;
+    margin-top: 2px;
+    font-size: 8pt;
   }
-  .signatures-table td {
-    width: 50%;
-    vertical-align: top;
+  .totals-table td {
+    padding: 2px 4px;
   }
-  .sign-line {
-    display: inline-block;
-    width: 180px;
-    border-bottom: 1px solid #000;
+  .summary-text {
+    font-size: 8pt;
+    margin-top: 12px;
+    line-height: 1.4;
   }
-  .no-print {
-    margin-bottom: 20px;
-    padding: 12px 18px;
-    background: #e0f2fe;
-    border: 1px solid #bae6fd;
-    border-radius: 8px;
+  .divider-line {
+    border-bottom: 2px solid #000;
+    margin: 10px 0 20px 0;
+  }
+  .signatures-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-  }
-  .print-btn {
-    background: #0082FB;
-    color: white;
-    border: none;
-    padding: 9px 18px;
-    border-radius: 6px;
+    align-items: flex-end;
+    font-size: 8.5pt;
     font-weight: bold;
-    cursor: pointer;
-    font-size: 13px;
-  }
-  @media print {
-    .no-print { display: none !important; }
-    body { margin: 0; }
   }
 </style>
 </head>
 <body>
 
-<div class="no-print">
-  <div>
-    <strong>Счёт на оплату для юридических лиц и ИП (Республика Казахстан)</strong><br>
-    <span style="color: #475569; font-size: 11px;">Сформирован в автоматизированной системе TANBOX для ИП &laquo;TORMAG.KZ&raquo;. Готов к оплате через онлайн-банкинг.</span>
-  </div>
-  <button class="print-btn" onclick="window.print()">Распечатать / Сохранить в PDF</button>
+<div class="top-notice">
+  Внимание! Оплата данного счёта означает согласие с условиями Публичного договора-оферты на оказание услуг маркировки товаров (tanbox.kz). Уведомление об оплате обязательно. Услуги оказываются по факту поступления денежных средств на расчетный счет Исполнителя. По факту оказания услуг оформляется первичный Акт выполненных работ (форма Р-1).
 </div>
 
-<div class="notice-box">
-  Внимание! Оплата данного счета означает согласие с условиями публичного договора-оферты на сайте tanbox.kz. Уведомление об оплате обязательно, в противном случае не гарантируется сохранение сроков исполнения заказа.
-</div>
-
+<div class="sample-title">Образец платежного поручения</div>
 <table class="bank-table">
   <tr>
-    <td colspan="2" style="width: 65%;">
-      <small style="color: #666;">Банк получателя</small><br>
-      <strong>АО &laquo;Kaspi Bank&raquo; (Kaspi Pay)</strong>
+    <td style="width: 58%;">
+      <div style="font-size: 7.5pt;">Бенефициар:</div>
+      <div style="font-weight: bold; font-size: 8.5pt;">Индивидуальный предприниматель "TORMAG.KZ"</div>
+      <div style="font-size: 7.5pt;">БИН / ИИН: 990601301525</div>
     </td>
-    <td style="width: 15%;">
-      <small style="color: #666;">БИК</small><br>
-      <strong>CASPKZKZ</strong>
+    <td style="width: 27%; text-align: center; vertical-align: middle;">
+      <div style="font-size: 7.5pt;">ИИК</div>
+      <div style="font-weight: bold; font-size: 8pt;">(счет Kaspi Pay)</div>
     </td>
-    <td style="width: 20%;">
-      <small style="color: #666;">КБе</small><br>
-      <strong>19</strong>
+    <td style="width: 15%; text-align: center; vertical-align: middle;">
+      <div style="font-size: 7.5pt;">Кбе</div>
+      <div style="font-weight: bold; font-size: 8pt;">19</div>
     </td>
   </tr>
   <tr>
-    <td colspan="2">
-      <small style="color: #666;">Получатель</small><br>
-      <strong>ИП &laquo;TORMAG.KZ&raquo;</strong> (ИИН: 990601301525)
+    <td>
+      <div style="font-size: 7.5pt;">Банк бенефициара:</div>
+      <div style="font-weight: bold; font-size: 8.5pt;">АО "Kaspi Bank" (Kaspi Pay)</div>
     </td>
-    <td colspan="2">
-      <small style="color: #666;">Счет получателя (ИИК)</small><br>
-      <strong>(счет Kaspi Pay)</strong>
+    <td style="text-align: center; vertical-align: middle;">
+      <div style="font-size: 7.5pt;">БИК</div>
+      <div style="font-weight: bold; font-size: 8pt;">CASPKZKZ</div>
+    </td>
+    <td style="text-align: center; vertical-align: middle;">
+      <div style="font-size: 7.5pt;">Код назначения платежа</div>
+      <div style="font-weight: bold; font-size: 8pt;">859</div>
     </td>
   </tr>
 </table>
 
 <div class="header-title">
-  Счет на оплату № ${escapeHtml(invoiceNumber)} от ${escapeHtml(orderDate)} г.
+  Счет на оплату № ${escapeHtml(invoiceNumber)} от ${escapeHtml(orderDateFull)} г.
 </div>
 
 <table class="parties-table">
   <tr>
     <td class="label-col">Поставщик:</td>
-    <td>
-      <strong>ИП &laquo;TORMAG.KZ&raquo;</strong>, ИИН: <strong>990601301525</strong>, г. Алматы<br>
-      <small style="color: #666;">Без НДС (в соответствии с пп. 1 п. 1 ст. 367 НК РК — ИП на СНР)</small>
+    <td style="font-weight: bold;">
+      БИН / ИИН 990601301525,Индивидуальный предприниматель "TORMAG.KZ",Республика Казахстан, индекс 050013, г. Алматы, пр. Нурсултана Назарбаева, д. 187Б, корпус этаж 6, БЦ "STAR"
     </td>
   </tr>
   <tr>
     <td class="label-col">Покупатель:</td>
-    <td>
-      <strong>${escapeHtml(existing.user?.companyName) || 'Заказчик'}</strong>, БИН / ИИН: <strong>${escapeHtml(existing.user?.binIin) || '—'}</strong>, Адрес: ${escapeHtml(customerAddress)}, Тел.: ${escapeHtml(existing.user?.phone) || '—'}
+    <td style="font-weight: bold;">
+      БИН / ИИН ${escapeHtml(existing.user?.binIin) || '—'},${escapeHtml(existing.user?.companyName) || 'Заказчик'},${escapeHtml(customerAddress)}
     </td>
   </tr>
   <tr>
     <td class="label-col">Договор:</td>
-    <td>
-      <strong>Публичный договор-оферта на оказание услуг маркировки № ${escapeHtml(existing.orderNumber)} от ${escapeHtml(orderDate)} г.</strong>
+    <td style="font-weight: bold;">
+      Публичный договор-оферта на оказание услуг маркировки № ${escapeHtml(existing.orderNumber)} от ${escapeHtml(orderDateFull)} г.
     </td>
   </tr>
 </table>
@@ -2190,12 +2310,13 @@ export const downloadOrderInvoice = async (req: AuthRequest, res: Response) => {
 <table class="items-table">
   <thead>
     <tr>
-      <th style="width: 30px;">№</th>
-      <th>Товары (работы, услуги)</th>
+      <th style="width: 25px;">№</th>
+      <th style="width: 85px;">Код</th>
+      <th>Наименование</th>
       <th style="width: 60px;">Кол-во</th>
-      <th style="width: 40px;">Ед.</th>
-      <th style="width: 80px;">Цена, ₸</th>
-      <th style="width: 90px;">Сумма, ₸</th>
+      <th style="width: 35px;">Ед.</th>
+      <th style="width: 75px;">Цена</th>
+      <th style="width: 85px;">Сумма</th>
     </tr>
   </thead>
   <tbody>
@@ -2204,66 +2325,59 @@ export const downloadOrderInvoice = async (req: AuthRequest, res: Response) => {
         (it, idx) => `
     <tr>
       <td class="text-center">${idx + 1}</td>
+      <td class="text-center">${String(idx + 1).padStart(11, '0')}</td>
       <td>${escapeHtml(it.name)}</td>
-      <td class="text-center font-bold">${it.qty.toLocaleString('ru-RU')}</td>
+      <td class="text-right">${formatQty(it.qty)}</td>
       <td class="text-center">${escapeHtml(it.unit)}</td>
-      <td class="text-right">${it.price.toLocaleString('ru-RU')}</td>
-      <td class="text-right font-bold">${it.sum.toLocaleString('ru-RU')}</td>
+      <td class="text-right">${formatMoney(it.price)}</td>
+      <td class="text-right">${formatMoney(it.sum)}</td>
     </tr>`
       )
       .join('')}
-
-    <tr>
-      <td colspan="5" class="text-right font-bold">Итого:</td>
-      <td class="text-right font-bold">${finalTotal.toLocaleString('ru-RU')} ₸</td>
-    </tr>
-    <tr>
-      <td colspan="5" class="text-right font-bold">Без НДС:</td>
-      <td class="text-right font-bold">0 ₸</td>
-    </tr>
-    <tr style="background-color: #f2f2f2;">
-      <td colspan="5" class="text-right font-bold" style="font-size: 11pt;">Всего к оплате:</td>
-      <td class="text-right font-bold" style="font-size: 11pt; color: #0082FB;">${finalTotal.toLocaleString('ru-RU')} ₸</td>
-    </tr>
   </tbody>
 </table>
 
-<div class="total-block">
-  <div class="total-line">
-    Всего наименований <strong>${lines.length}</strong>, на сумму <strong>${finalTotal.toLocaleString('ru-RU')} KZT</strong>
-  </div>
-  <div class="total-line" style="font-weight: bold; font-size: 11pt;">
-    Сумма прописью: ${escapeHtml(amountInWords)}, без НДС.
-  </div>
-  
-  <div class="purpose-box">
-    <strong>Назначение платежа:</strong> Оплата за услуги цифровой маркировки товаров по заказу ${escapeHtml(existing.orderNumber)} согласно публичному договору-оферте (без НДС).
-  </div>
-</div>
-
-<table class="signatures-table">
+<table class="totals-table">
   <tr>
-    <td>
-      Руководитель / Индивидуальный предприниматель:<br><br>
-      <span class="sign-line"></span> / <strong>ИП &laquo;TORMAG.KZ&raquo;</strong><br>
-      <small style="color: #666;">(подпись, М.П. при наличии)</small>
-    </td>
-    <td>
-      Бухгалтер:<br><br>
-      <span class="sign-line"></span> / ____________________<br>
-      <small style="color: #666;">(подпись)</small>
-    </td>
+    <td style="text-align: right; font-weight: bold; width: 85%;">Итого:</td>
+    <td style="text-align: right; font-weight: bold; width: 15%;">${formatMoney(finalTotal)}</td>
+  </tr>
+  <tr>
+    <td style="text-align: right; font-weight: bold;">В том числе НДС:</td>
+    <td style="text-align: right; font-weight: bold;">Без НДС</td>
   </tr>
 </table>
+
+<div class="summary-text">
+  <div>Всего наименований ${lines.length}, на сумму ${formatMoney(finalTotal)} теңге</div>
+  <div><strong>Всего к оплате: ${escapeHtml(amountInWords)}</strong></div>
+</div>
+
+<div class="divider-line"></div>
+
+<div class="signatures-row">
+  <div>Исполнитель</div>
+  <div style="display: flex; align-items: flex-end; gap: 20px;">
+    <div style="width: 180px; border-bottom: 1px solid #000;"></div>
+    <div>/ИП «TORMAG.KZ»/</div>
+  </div>
+</div>
 
 </body>
 </html>`;
 
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.send(html);
+    if (req.query.format === 'html') {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(html);
+    }
+
+    const pdfBuffer = await renderHtmlToPdf(html, { landscape: false });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="Invoice_${existing.orderNumber}.pdf"`);
+    return res.send(pdfBuffer);
   } catch (error: any) {
     console.error('Download order invoice error:', error);
-    return res.status(500).json({ message: 'Ошибка формирования Счёта на оплату' });
+    return res.status(500).json({ message: 'Ошибка формирования Счёта на оплату: ' + (error.message || error) });
   }
 };
 
@@ -2617,6 +2731,17 @@ export const downloadSingleItemPdf = async (req: AuthRequest, res: Response) => 
     let w = stickerLayout?.widthMm || 58;
     let h = stickerLayout?.heightMm || 40;
 
+    if (templateElements.length === 0 && existing.templateId) {
+      const savedTpl = await prisma.userStickerTemplate.findUnique({
+        where: { id: existing.templateId },
+      });
+      if (savedTpl && Array.isArray(savedTpl.elements) && savedTpl.elements.length > 0) {
+        templateElements = savedTpl.elements as any[];
+        w = savedTpl.widthMm;
+        h = savedTpl.heightMm;
+      }
+    }
+
     if (templateElements.length === 0) {
       templateElements = [
         {
@@ -2780,6 +2905,17 @@ export const downloadRangeItemsPdf = async (req: AuthRequest, res: Response) => 
     let w = stickerLayout?.widthMm || 58;
     let h = stickerLayout?.heightMm || 40;
 
+    if (templateElements.length === 0 && existing.templateId) {
+      const savedTpl = await prisma.userStickerTemplate.findUnique({
+        where: { id: existing.templateId },
+      });
+      if (savedTpl && Array.isArray(savedTpl.elements) && savedTpl.elements.length > 0) {
+        templateElements = savedTpl.elements as any[];
+        w = savedTpl.widthMm;
+        h = savedTpl.heightMm;
+      }
+    }
+
     if (templateElements.length === 0) {
       templateElements = [
         {
@@ -2903,5 +3039,84 @@ export const downloadRangeItemsPdf = async (req: AuthRequest, res: Response) => 
 export const getPdfQueueStatus = async (req: AuthRequest, res: Response) => {
   return res.json(pdfQueue.getStats());
 };
+
+export const updateOrderStickeringEstimate = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Доступ разрешен только администратору' });
+    }
+
+    const { id } = req.params;
+    const {
+      clientPricePerUnit,
+      totalPrice,
+      workersCount,
+      daysNeeded,
+      manHours,
+      warehouseConditionTitle,
+      tapeRollsNeeded,
+      stretchRollsNeeded,
+    } = req.body;
+
+    const price = parseFloat(String(clientPricePerUnit));
+    const total = parseFloat(String(totalPrice));
+
+    if (isNaN(price) || price <= 0 || isNaN(total) || total <= 0) {
+      return res.status(400).json({ message: 'Некорректная стоимость или тариф сметы' });
+    }
+
+    const existing = await findOrderByIdOrNumber(id);
+    if (!existing) {
+      return res.status(404).json({ message: 'Заказ не найден' });
+    }
+
+    // Format confirmed estimate block
+    const dateStr = new Date().toLocaleDateString('ru-RU');
+    const newBlock = [
+      '=== УТВЕРЖДЕННАЯ СМЕТА ВЫЕЗДНОЙ ОКЛЕЙКИ ===',
+      `Дата расчета: ${dateStr}`,
+      `Бригада: ${workersCount || 1} чел.`,
+      `Срок выполнения: ${daysNeeded || 1} раб. дн. (~${(manHours || 0).toFixed(1)} чел.-ч.)`,
+      warehouseConditionTitle ? `Условия склада: ${warehouseConditionTitle}` : '',
+      `Тариф оклейки: ${price} ₸/шт.`,
+      `Расходные материалы: скотч ${tapeRollsNeeded || 0} рул., стрейч-пленка ${stretchRollsNeeded || 0} рул.`,
+      `Итоговая стоимость: ${total.toLocaleString('ru-RU')} ₸`,
+      '===========================================',
+    ].filter(Boolean).join('\n');
+
+    let updatedNotes = existing.notes || '';
+    if (/=== УТВЕРЖДЕННАЯ СМЕТА ВЫЕЗДНОЙ ОКЛЕЙКИ ===[\s\S]*?(?:={20,}|$)/i.test(updatedNotes)) {
+      updatedNotes = updatedNotes.replace(/=== УТВЕРЖДЕННАЯ СМЕТА ВЫЕЗДНОЙ ОКЛЕЙКИ ===[\s\S]*?(?:={20,}|$)/i, newBlock);
+    } else {
+      updatedNotes = updatedNotes ? `${updatedNotes}\n\n${newBlock}` : newBlock;
+    }
+
+    const updatedServices = Array.from(new Set([...(existing.extraServices || []), 'ON_SITE_STICKERING']));
+
+    const updated = await prisma.order.update({
+      where: { id: existing.id },
+      data: {
+        pricePerItem: price,
+        totalPrice: total,
+        extraServices: updatedServices,
+        notes: updatedNotes,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Смета выезда успешно отправлена в заказ и обновлена',
+      order: updated,
+    });
+  } catch (err: any) {
+    console.error('Update stickering estimate error:', err);
+    return res.status(500).json({ message: 'Ошибка при сохранении сметы: ' + err.message });
+  }
+};
+
 
 

@@ -16,7 +16,7 @@ import {
   Copy,
   Loader2
 } from 'lucide-react';
-import axios from 'axios';
+
 
 import { 
   LabelElement, 
@@ -102,7 +102,7 @@ export const AdminLabelDesignerPage: React.FC = () => {
   // Fetch saved templates from PostgreSQL database
   const fetchSavedTemplates = async () => {
     try {
-      const res = await axios.get('/api/label-templates');
+      const res = await apiClient.get('/label-templates');
       if (Array.isArray(res.data)) {
         setSavedTemplates(res.data);
       }
@@ -304,7 +304,7 @@ export const AdminLabelDesignerPage: React.FC = () => {
       setSavingTemplate(true);
       try {
         const nameToSave = (templateName || saveTemplateName || 'Шаблон этикетки').trim();
-        await axios.put(`/api/label-templates/${selectedTemplateId}`, {
+        await apiClient.put(`/label-templates/${selectedTemplateId}`, {
           name: nameToSave,
           widthMm,
           heightMm,
@@ -337,7 +337,7 @@ export const AdminLabelDesignerPage: React.FC = () => {
     try {
       const name = saveTemplateName.trim();
       if (selectedTemplateId && !isSaveAsNew) {
-        await axios.put(`/api/label-templates/${selectedTemplateId}`, {
+        await apiClient.put(`/label-templates/${selectedTemplateId}`, {
           name,
           widthMm,
           heightMm,
@@ -345,7 +345,7 @@ export const AdminLabelDesignerPage: React.FC = () => {
         });
         setTemplateName(name);
       } else {
-        const res = await axios.post('/api/label-templates', {
+        const res = await apiClient.post('/label-templates', {
           name,
           widthMm,
           heightMm,
@@ -374,7 +374,7 @@ export const AdminLabelDesignerPage: React.FC = () => {
       return;
     }
     try {
-      await axios.delete(`/api/label-templates/${id}`);
+      await apiClient.delete(`/label-templates/${id}`);
       setSelectedTemplateId('');
       await fetchSavedTemplates();
       setSaveSuccessMsg('Шаблон удален из базы данных');
@@ -417,7 +417,7 @@ export const AdminLabelDesignerPage: React.FC = () => {
     formData.append('file', file);
 
     try {
-      const res = await axios.post('/api/labels/parse-csv', formData, {
+      const res = await apiClient.post('/labels/parse-csv', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setCsvHeaders(res.data.headers);
@@ -791,14 +791,14 @@ export const AdminLabelDesignerPage: React.FC = () => {
           formData.append('limit', '5');
         }
 
-        response = await axios.post('/api/labels/generate-pdf', formData, {
+        response = await apiClient.post('/labels/generate-pdf', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
           responseType: 'blob',
         });
       } else {
         const limitParam = pdfLimit === 'sample' ? '?limit=5' : '';
-        response = await axios.post(
-          `/api/labels/generate-pdf${limitParam}`,
+        response = await apiClient.post(
+          `/labels/generate-pdf${limitParam}`,
           {
             template,
             csvData: csvRows.length > 0 ? csvRows : [activeRow],
@@ -808,8 +808,7 @@ export const AdminLabelDesignerPage: React.FC = () => {
       }
 
       const blob = new Blob([response.data], { type: 'application/pdf' });
-      if (orderId) {
-        (window as any)[`tanbox_pdf_blob_${orderId}`] = blob;
+      if (orderId && pdfLimit !== 'sample') {
         try {
           await apiClient.patch(`/orders/${orderId}/status`, {
             pdfUrl: `/api/orders/${orderId}/pdf`,

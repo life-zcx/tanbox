@@ -158,13 +158,39 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
           </div>
         </div>
 
-        {/* Separated Address and Notes */}
+        {/* Separated Address, Confirmed Estimate and Notes */}
         {order.notes && (() => {
           const parsed = parseOrderNotes(order.notes);
-          if (!parsed.address && !parsed.clientNote && !parsed.stickerDesign) return null;
+          if (!parsed.address && !parsed.clientNote && !parsed.stickerDesign && !parsed.confirmedEstimate) return null;
 
           return (
             <div className="border-t border-gray-100 pt-4 space-y-3">
+              {parsed.confirmedEstimate && (
+                <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-emerald-900 text-xs uppercase tracking-wider">
+                      Утверждённый расчёт выездной оклейки
+                    </span>
+                    <span className="text-xs font-black text-emerald-800 bg-white/80 px-2 py-0.5 rounded border border-emerald-200">
+                      {(parsed.confirmedEstimate.totalPrice ?? order.totalPrice).toLocaleString()} ₸
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-white/80 p-2 rounded border border-emerald-100">
+                      <span className="text-gray-500 block text-[10px]">Бригада</span>
+                      <span className="font-bold text-gray-900">{parsed.confirmedEstimate.workersCount} чел.</span>
+                    </div>
+                    <div className="bg-white/80 p-2 rounded border border-emerald-100">
+                      <span className="text-gray-500 block text-[10px]">Срок</span>
+                      <span className="font-bold text-gray-900">{parsed.confirmedEstimate.daysNeeded} дн.</span>
+                    </div>
+                    <div className="bg-white/80 p-2 rounded border border-emerald-100">
+                      <span className="text-gray-500 block text-[10px]">За единицу</span>
+                      <span className="font-bold text-emerald-700">{parsed.confirmedEstimate.clientPricePerUnit} ₸</span>
+                    </div>
+                  </div>
+                </div>
+              )}
               {parsed.address && (
                 <div className="space-y-1">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-[#111827] uppercase tracking-wider">

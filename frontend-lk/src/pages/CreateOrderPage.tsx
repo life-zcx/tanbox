@@ -28,7 +28,194 @@ import {
   Barcode,
   Tag,
   HelpCircle,
+  Clock,
+  Boxes,
 } from 'lucide-react';
+
+interface CategoryStickerSpecs {
+  lawTitle: string;
+  lawNote: string;
+  tags: string[];
+  productNameLabel: string;
+  productNamePlaceholder: string;
+  brandLabel: string;
+  brandPlaceholder: string;
+  articleLabel: string;
+  articlePlaceholder: string;
+  compositionLabel: string;
+  compositionPlaceholder: string;
+  extraDetailsPlaceholder: string;
+}
+
+const getCategoryStickerSpecs = (category: OrderCategory | null): CategoryStickerSpecs => {
+  switch (category) {
+    case 'SHOES':
+      return {
+        lawTitle: 'ТР ТС 017/2011 и Закон РК «О защите прав потребителей» (Обувь)',
+        lawNote: 'По законам РК на этикетке обуви обязательно: модель/артикул, размер, материал верха, подкладки и подошвы раздельно, изготовитель, организация по претензиям / импортер в РК, знак EAC. Информация на казахском и русском языках.',
+        tags: ['Материал верха/низа/подкладки', 'Размер обуви', 'Импортер в РК', 'Знак EAC', 'Каз / Рус'],
+        productNameLabel: 'Наименование товара (каз. / рус.)',
+        productNamePlaceholder: 'Например: Ботинки мужские зимние / Ерлер қысқы бәтеңкесі',
+        brandLabel: 'Бренд / Производитель',
+        brandPlaceholder: 'Например: NORTH STEP / ТОО «Обувная фабрика»',
+        articleLabel: 'Модель / Артикул',
+        articlePlaceholder: 'Например: NS-8821 / Цвет: Чёрный',
+        compositionLabel: 'Материалы (верх, подкладка, подошва)',
+        compositionPlaceholder: 'Например: Верх: нат. кожа, подкладка: шерсть, подошва: ТЭП',
+        extraDetailsPlaceholder: 'Укажите размер обуви, цвет, страну происхождения, адрес изготовителя и реквизиты импортера в РК (ТОО ...)...',
+      };
+    case 'TEXTILE':
+      return {
+        lawTitle: 'ТР ТС 017/2011 и Закон РК «О защите прав потребителей» (Легпром)',
+        lawNote: 'По законам РК обязательно: процентный состав сырья (натуральное/синтетика), размер изделия, символы по уходу (стирка, глажка), изготовитель, импортер в РК, знак EAC на двух языках.',
+        tags: ['Процентный состав ткани (%)', 'Размер (рост/обхват)', 'Символы по уходу', 'Импортер в РК', 'Знак EAC'],
+        productNameLabel: 'Наименование товара (каз. / рус.)',
+        productNamePlaceholder: 'Например: Футболка мужская оверсайз / Ерлер футболкасы',
+        brandLabel: 'Бренд / Производитель',
+        brandPlaceholder: 'Например: URBAN WEAR / ТОО «Текстиль КЗ»',
+        articleLabel: 'Артикул / Модель',
+        articlePlaceholder: 'Например: TS-204 / Белый',
+        compositionLabel: 'Процентный состав сырья (%)',
+        compositionPlaceholder: 'Например: 95% мақта (хлопок), 5% эластан (или: верх — 100% полиэстер)',
+        extraDetailsPlaceholder: 'Укажите размер (рост, обхват груди/талии), символы по уходу (стирка, температура, отбеливание), импортера в РК...',
+      };
+    case 'WATER':
+      return {
+        lawTitle: 'ТР ЕАЭС 044/2017, ТР ТС 021/2011 и 022/2011 (Вода и напитки)',
+        lawNote: 'В РК обязательно: номинальный объем, источник/скважина, химический состав (минерализация), дата розлива, срок годности, условия хранения, изготовитель/импортер в РК, знак EAC.',
+        tags: ['Объем (л/мл)', 'Номер скважины / источник', 'Срок годности и условия', 'Импортер в РК', 'Знак EAC'],
+        productNameLabel: 'Наименование (природная, питьевая, минеральная)',
+        productNamePlaceholder: 'Например: Вода питьевая природная негазированная / Табиғи ауыз суы',
+        brandLabel: 'Торговая марка / Производитель',
+        brandPlaceholder: 'Например: TAZA SU / ТОО «Аква Казахстан»',
+        articleLabel: 'Номинальный объем и тара',
+        articlePlaceholder: 'Например: 0.5 л (ПЭТ) или 18.9 л (бутыль)',
+        compositionLabel: 'Условия хранения и срок годности',
+        compositionPlaceholder: 'Например: Срок 12 мес. Хранить при +2°C до +25°C в защищенном от света месте',
+        extraDetailsPlaceholder: 'Укажите номер скважины / месторождение, группу минерализации, дату розлива, контакты импортера в РК...',
+      };
+    case 'BEER':
+      return {
+        lawTitle: 'ТР ЕАЭС 047/2018 и Закон РК «О регулировании оборота алкогольной продукции»',
+        lawNote: 'В РК обязательно: объемная доля спирта (% об.), состав, предупреждение о вреде алкоголя на каз/рус языках, срок годности, дата розлива, EAC, производитель/импортер в РК.',
+        tags: ['Крепость (% об.)', 'Объем (л)', 'Предупреждение о вреде', 'Срок годности', 'Импортер в РК', 'Знак EAC'],
+        productNameLabel: 'Наименование напитка (каз. / рус.)',
+        productNamePlaceholder: 'Например: Пиво светлое фильтрованное пастеризованное / Ашық сыра',
+        brandLabel: 'Бренд / Производитель',
+        brandPlaceholder: 'Например: CRAFT BREW / ТОО «Пивоварня КЗ»',
+        articleLabel: 'Объемная доля спирта (% об.) и тара',
+        articlePlaceholder: 'Например: Алк. 4.7% об., экстрактивность нач. сусла 11%, ж/б 0.45 л',
+        compositionLabel: 'Состав сырья и срок годности',
+        compositionPlaceholder: 'Например: Вода, солод ячменный, хмель. Срок 9 мес. при +2...+20°C',
+        extraDetailsPlaceholder: 'Укажите дату розлива, предупреждение о вреде чрезмерного употребления (на каз/рус), реквизиты импортера в РК...',
+      };
+    case 'OILS':
+      return {
+        lawTitle: 'ТР ТС 030/2012 «О требованиях к смазочным материалам и маслам»',
+        lawNote: 'В РК обязательно: марка масла, класс вязкости SAE, спецификации API/ACEA, объем/масса, дата изготовления, срок хранения, меры безопасности при обращении/утилизации, EAC.',
+        tags: ['Класс вязкости SAE', 'Классификация API/ACEA', 'Объем тары', 'Меры безопасности', 'Знак EAC'],
+        productNameLabel: 'Наименование масла / техжидкости',
+        productNamePlaceholder: 'Например: Масло моторное синтетическое / Синтетикалық мотор майы',
+        brandLabel: 'Бренд / Производитель',
+        brandPlaceholder: 'Например: LUBRICANT PRO / ТОО «Ойл Трейд»',
+        articleLabel: 'Вязкость и допуски (SAE, API, ACEA)',
+        articlePlaceholder: 'Например: SAE 5W-40, API SN/CF, ACEA A3/B4',
+        compositionLabel: 'Объем тары и срок хранения',
+        compositionPlaceholder: 'Например: 4 л канистра. Срок хранения 5 лет с даты изготовления',
+        extraDetailsPlaceholder: 'Укажите допуски автопроизводителей (VW, MB, BMW), номер партии, дату производства, меры экологии/утилизации...',
+      };
+    case 'MEDICINE':
+      return {
+        lawTitle: 'Кодекс РК «О здоровье народа» и Правила маркировки лекарств в РК',
+        lawNote: 'В РК обязательно: торговое название, МНН, дозировка, форма выпуска, № рег. удостоверения в РК (РК-ЛС-...), номер серии, срок годности, условия хранения и отпуска, изготовитель.',
+        tags: ['№ Регистрации РК', 'Серия и срок годности', 'Дозировка и форма', 'Условия отпуска (рецепт)', 'Каз / Рус'],
+        productNameLabel: 'Торговое название и МНН (каз. / рус.)',
+        productNamePlaceholder: 'Например: Парацетамол 500 мг / Парацетамол 500 мг',
+        brandLabel: 'Производитель / Владелец РУ',
+        brandPlaceholder: 'Например: Фармацевтический завод / ТОО «Фарма КЗ»',
+        articleLabel: '№ Рег. удостоверения в РК и Серия',
+        articlePlaceholder: 'Например: РК-ЛС-5№012345, Серия 0524',
+        compositionLabel: 'Форма выпуска, дозировка и фасовка',
+        compositionPlaceholder: 'Например: Таблетки 500 мг, 10 табл. в блистере, №20 в упаковке',
+        extraDetailsPlaceholder: 'Укажите срок годности (Годен до: ММ.ГГГГ), температуру хранения (+15...+25°C), условия отпуска (по рецепту/без)...',
+      };
+    case 'DIETARY_SUPPLEMENTS':
+      return {
+        lawTitle: 'ТР ТС 021/2011, 022/2011 и Закон РК «О защите прав потребителей» (БАД)',
+        lawNote: 'В РК обязательно: № СГР (свидетельство о госрегистрации), фраза «Дәрілік зат болып табылмайды / Не является лекарственным средством», форма выпуска, состав, противопоказания, EAC.',
+        tags: ['№ Свидетельства СГР', '«Не является лекарством»', 'Состав и дозировка', 'Срок годности', 'Знак EAC'],
+        productNameLabel: 'Наименование БАД (каз. / рус.)',
+        productNamePlaceholder: 'Например: Биологически активная добавка «Омега-3 1000 мг»',
+        brandLabel: 'Бренд / Производитель',
+        brandPlaceholder: 'Например: BIO HEALTH / ТОО «Нутришн КЗ»',
+        articleLabel: '№ СГР и Форма выпуска',
+        articlePlaceholder: 'Например: СГР № KZ.16.01..., Капсулы по 1000 мг, №60',
+        compositionLabel: 'Активные компоненты и дозировка',
+        compositionPlaceholder: 'Например: Рыбий жир 1000 мг (EPA 180 мг, DHA 120 мг), желатин',
+        extraDetailsPlaceholder: 'Укажите фразу «Не является лекарством», способ применения, противопоказания, срок годности, импортера в РК...',
+      };
+    case 'TOBACCO':
+      return {
+        lawTitle: 'ТР ТС 035/2014 и Кодекс РК «О здоровье народа» (Табачная продукция)',
+        lawNote: 'В РК обязательно: наименование, вид изделия, кол-во штук, МРЦ (макс. розничная цена в ₸), дата производства (ММ.ГГ), предупреждение о вреде курения (на каз/рус), EAC.',
+        tags: ['МРЦ (в тенге ₸)', 'Количество штук', 'Дата производства', 'Предупреждение о вреде', 'Знак EAC'],
+        productNameLabel: 'Наименование табачного изделия',
+        productNamePlaceholder: 'Например: Сигареты с фильтром / Сигариллы',
+        brandLabel: 'Торговая марка / Производитель',
+        brandPlaceholder: 'Например: BRAND TOBACCO / ТОО «Табак КЗ»',
+        articleLabel: 'Количество штук и МРЦ (₸)',
+        articlePlaceholder: 'Например: 20 штук, МРЦ: 850 ₸',
+        compositionLabel: 'Вид изделия и формат',
+        compositionPlaceholder: 'Например: С фильтром, формат King Size',
+        extraDetailsPlaceholder: 'Укажите месяц и год производства (напр. 04.2026), предупреждение о вреде здоровья, импортера в РК...',
+      };
+    case 'JEWELRY':
+      return {
+        lawTitle: 'Закон РК «О драгоценных металлах и драгоценных камнях» (Ювелирные изделия)',
+        lawNote: 'В РК обязательно: наименование изделия, металл и проба, масса в граммах, характеристики вставок (камней), клеймо пробирной палаты РК / изготовитель.',
+        tags: ['Проба металла', 'Масса (в граммах)', 'Характеристики вставок', 'Пробирное клеймо РК'],
+        productNameLabel: 'Наименование изделия (каз. / рус.)',
+        productNamePlaceholder: 'Например: Кольцо женское из золота / Әйелдер алтын сақинасы',
+        brandLabel: 'Бренд / Ювелирный завод',
+        brandPlaceholder: 'Например: GOLD JEWELRY / ТОО «Алтын КЗ»',
+        articleLabel: 'Артикул и Проба',
+        articlePlaceholder: 'Например: Арт. 1024-К, Золото 585°',
+        compositionLabel: 'Масса (г) и Вставки',
+        compositionPlaceholder: 'Например: Масса 2.85 г. Вставка: Фианит 1 шт., 0.05 ct',
+        extraDetailsPlaceholder: 'Укажите размер кольца/браслета, номер партии, адрес изготовителя в РК, отметку об опробовании...',
+      };
+    case 'SAIGA':
+      return {
+        lawTitle: 'Законодательство РК по учету и обороту дериватов сайгака',
+        lawNote: 'Обязательно в РК: учетная серия, индивидуальный номер маркировки, разрешение уполномоченного органа (Минэкологии РК / Охотзоопром), масса (кг/г).',
+        tags: ['Индивидуальный номер', 'Разрешение уполн. органа', 'Учетная масса', 'QR / DataMatrix'],
+        productNameLabel: 'Наименование деривата',
+        productNamePlaceholder: 'Например: Рога сайгака (учетная партия)',
+        brandLabel: 'Организация / Заготовитель',
+        brandPlaceholder: 'Например: РГКП «ПО «Охотзоопром»',
+        articleLabel: 'Учетная серия и № разрешения',
+        articlePlaceholder: 'Например: Серия SG-2026, Разрешение № 45/ЭКО',
+        compositionLabel: 'Характеристики и масса',
+        compositionPlaceholder: 'Например: Масса нетто: 0.450 кг, 1 категория',
+        extraDetailsPlaceholder: 'Укажите дату регистрации, номер акта взвешивания, реквизиты уполномоченной организации...',
+      };
+    default:
+      return {
+        lawTitle: 'Закон РК «О защите прав потребителей» и ТР ТС (Маркировка в Республике Казахстан)',
+        lawNote: 'По законодательству РК на этикетке обязательно: наименование, страна происхождения, изготовитель, организация по претензиям / импортер в РК, знак EAC (при наличии ТР ТС), информация на казахском и русском языках.',
+        tags: ['Наименование каз/рус', 'Изготовитель и страна', 'Импортер в РК', 'Знак EAC'],
+        productNameLabel: 'Наименование товара (на каз. и рус.)',
+        productNamePlaceholder: 'Например: Наименование товара / Тауардың атауы',
+        brandLabel: 'Бренд / Производитель',
+        brandPlaceholder: 'Например: Торговая марка / ТОО Компания',
+        articleLabel: 'Артикул / Модель',
+        articlePlaceholder: 'Например: ART-12345',
+        compositionLabel: 'Состав / Материалы / Свойства',
+        compositionPlaceholder: 'Например: Материал изделия или состав',
+        extraDetailsPlaceholder: 'Укажите нужные знаки (СТ РК, переработка, уход), цвет, страну, адрес изготовителя и импортера в РК...',
+      };
+  }
+};
 
 export const CreateOrderPage: React.FC = () => {
   const { createOrder } = useOrders();
@@ -37,6 +224,7 @@ export const CreateOrderPage: React.FC = () => {
 
   // Initial values: null by default as requested (user must select manually)
   const [category, setCategory] = useState<OrderCategory | null>(null);
+  const categorySpecs = useMemo(() => getCategoryStickerSpecs(category), [category]);
   const [tariffType, setTariffType] = useState<TariffType | null>(null);
   const [showTariffHelpModal, setShowTariffHelpModal] = useState<boolean>(false);
   const [itemsCount, setItemsCount] = useState<number>(0);
@@ -44,6 +232,11 @@ export const CreateOrderPage: React.FC = () => {
   const [extraServices, setExtraServices] = useState<string[]>([]);
   const [warehouseAddress, setWarehouseAddress] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+
+  // Warehouse on-site stickering condition states (null by default - user chooses manually)
+  const [warehouseStorageType, setWarehouseStorageType] = useState<'PALLETS' | 'BOXES' | 'LOOSE' | null>(null);
+  const [warehouseClimate, setWarehouseClimate] = useState<'WARM_HEATED' | 'COLD_WINTER' | 'RAMP_CUSTOMS' | null>(null);
+  const [warehouseEquipment, setWarehouseEquipment] = useState<'HAS_EQUIPMENT' | 'MANUAL' | null>(null);
 
   // Custom sticker design states
   const [labelWidth, setLabelWidth] = useState<number | string>(58);
@@ -428,26 +621,60 @@ export const CreateOrderPage: React.FC = () => {
     const isStickerDesign = extraServices.includes('STICKER_LAYOUT_DESIGN');
     const usedTemplate = templateChoice === 'SAVED' ? selectedTemplate : null;
 
+    const signsList = [
+      labelHasBarcode && 'Штрихкод EAN-13 (из CSV)',
+      labelHasEac && 'Знак EAC',
+    ].filter(Boolean);
+
     const labelDesignPayload = (!usedTemplate && isStickerDesign)
       ? [
-          '=== ТРЕБОВАНИЯ К МАКЕТУ СТИКЕРА ===',
+          '=== ТРЕБОВАНИЯ К МАКЕТУ СТИКЕРА (РК) ===',
+          `Категория: ${getCategoryLabel(category || 'OTHER')}`,
+          `Регламент: ${categorySpecs.lawTitle}`,
           `Размер этикетки: ${labelWidth}×${labelHeight} мм`,
-          labelProductName ? `Наименование товара: ${labelProductName}` : '',
-          labelBrand ? `Бренд: ${labelBrand}` : '',
-          labelArticle ? `Артикул: ${labelArticle}` : '',
-          labelComposition ? `Состав/Материал: ${labelComposition}` : '',
-          `Обязательные знаки: ${[labelHasEac ? 'EAC' : '', labelHasBarcode ? 'Штрихкод EAN-13' : ''].filter(Boolean).join(', ') || 'Стандартные'}`,
-          labelHasBarcode ? (labelBarcode ? `Штрихкод (EAN-13): ${labelBarcode}` : 'Штрихкод (EAN-13): Сгенерировать дизайнером') : '',
+          labelProductName ? `${categorySpecs.productNameLabel}: ${labelProductName}` : '',
+          labelBrand ? `${categorySpecs.brandLabel}: ${labelBrand}` : '',
+          labelArticle ? `${categorySpecs.articleLabel}: ${labelArticle}` : '',
+          labelComposition ? `${categorySpecs.compositionLabel}: ${labelComposition}` : '',
+          signsList.length > 0 ? `Знаки на макете: ${signsList.join(', ')}` : '',
           labelExtraDetails ? `Пожелания: ${labelExtraDetails}` : '',
-          '===================================',
+          '========================================',
         ]
           .filter(Boolean)
           .join('\n')
       : '';
 
+    const storageLabels: Record<string, string> = {
+      PALLETS: 'На паллетах в коробах',
+      BOXES: 'В коробках на стеллажах / полу',
+      LOOSE: 'Россыпью / в мешках',
+    };
+    const climateLabels: Record<string, string> = {
+      WARM_HEATED: 'Тёплый склад (Класс А/В)',
+      COLD_WINTER: 'Холодный ангар / зима',
+      RAMP_CUSTOMS: 'Открытый пандус / СВХ',
+    };
+    const equipmentLabels: Record<string, string> = {
+      HAS_EQUIPMENT: 'Есть рохля / погрузчик',
+      MANUAL: 'Техники нет (вручную)',
+    };
+
+    const hasAnyWarehouseOption = Boolean(warehouseStorageType || warehouseClimate || warehouseEquipment);
+    const warehouseConditionsPayload = ((tariffType === 'STANDARD' || tariffType === 'PRO' || extraServices.includes('ON_SITE_STICKERING')) && hasAnyWarehouseOption)
+      ? [
+          '=== СКЛАДСКИЕ УСЛОВИЯ (ВЫЕЗДНАЯ ОКЛЕЙКА) ===',
+          warehouseStorageType ? `Размещение: ${storageLabels[warehouseStorageType]}` : '',
+          warehouseClimate ? `Температурный режим: ${climateLabels[warehouseClimate]}` : '',
+          warehouseEquipment ? `Складская техника: ${equipmentLabels[warehouseEquipment]}` : '',
+          '==========================================',
+        ].filter(Boolean).join('\n')
+      : '';
+
     const fullNotes = [
       warehouseAddress ? `Адрес склада в РК: ${warehouseAddress}` : '',
+      warehouseConditionsPayload,
       labelDesignPayload,
+      usedTemplate ? `Макет этикетки: Шаблон «${usedTemplate.name}» (${usedTemplate.widthMm}×${usedTemplate.heightMm} мм)` : '',
       notes ? `Примечания: ${notes}` : '',
     ]
       .filter(Boolean)
@@ -464,6 +691,13 @@ export const CreateOrderPage: React.FC = () => {
         ssccNeeded: tariffType === 'PRO' ? true : ssccNeeded,
         notes: fullNotes,
         templateId: usedTemplate ? usedTemplate.id : undefined,
+        stickerLayout: usedTemplate
+          ? {
+              widthMm: usedTemplate.widthMm,
+              heightMm: usedTemplate.heightMm,
+              elements: usedTemplate.elements,
+            }
+          : undefined,
         stickerWidth: usedTemplate ? usedTemplate.widthMm : parseInt(String(labelWidth), 10) || 58,
         stickerHeight: usedTemplate ? usedTemplate.heightMm : parseInt(String(labelHeight), 10) || 40,
       });
@@ -488,7 +722,13 @@ export const CreateOrderPage: React.FC = () => {
         localStorage.removeItem('tanbox_pending_order');
       } catch {}
 
-      navigate('/orders');
+      const isOnSite = Boolean(hasAnyWarehouseOption || tariffType === 'STANDARD' || tariffType === 'PRO' || extraServices.includes('ON_SITE_STICKERING'));
+      navigate(newOrderId ? `/orders/${newOrderId}` : '/orders', {
+        state: {
+          fromCreate: true,
+          isOnSite,
+        },
+      });
     } catch (err: any) {
       console.error('Submit order error:', err);
       setErrorMsg(
@@ -686,281 +926,292 @@ export const CreateOrderPage: React.FC = () => {
 
           {/* 1. Макет этикетки (стикера) */}
           {savedTemplates.length > 0 ? (
-            <div className="w-full bg-[#F8FAFC] border border-gray-200/90 rounded-2xl p-5 sm:p-6 space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-200/80 pb-3">
+            <div className="w-full bg-[#F8FAFC] border border-gray-200/90 rounded-2xl p-5 space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-gray-200/80">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
                     <Palette className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-xs font-black text-[#111827] uppercase tracking-wider">
-                        Макет этикетки (стикера)
-                      </h3>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80">
-                        {savedTemplates.length === 1
-                          ? '1 сохранённый макет в библиотеке'
-                          : savedTemplates.length >= 2 && savedTemplates.length <= 4
-                          ? `${savedTemplates.length} сохранённых макета в библиотеке`
-                          : `${savedTemplates.length} сохранённых макетов в библиотеке`}
+                    <span className="text-xs font-bold text-[#111827] uppercase tracking-wider block">
+                      Макет этикетки (стикера)
+                    </span>
+                    <span className="text-[11px] text-[#64748B]">
+                      Печать по готовому шаблону или разработка нового макета
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 Clean Native Radio Options */}
+              <div className="space-y-2">
+                {/* Option 1: Saved Template */}
+                <label
+                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
+                    templateChoice === 'SAVED'
+                      ? 'border-[#0082FB] bg-blue-50/40 shadow-2xs'
+                      : 'border-gray-200/90 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <input
+                      type="radio"
+                      name="templateChoice"
+                      checked={templateChoice === 'SAVED'}
+                      onChange={() => handleTemplateChoiceChange('SAVED')}
+                      className="w-4 h-4 text-[#0082FB] focus:ring-[#0082FB] cursor-pointer shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-[#111827]">
+                          {selectedTemplate ? selectedTemplate.name : 'Использовать готовый макет'}
+                        </span>
+                        {selectedTemplate && (
+                          <span className="text-[10px] font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
+                            {selectedTemplate.widthMm} × {selectedTemplate.heightMm} мм
+                          </span>
+                        )}
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded">
+                          Утверждён
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-[#64748B] block mt-0.5">
+                        Сохранённый шаблон из вашей библиотеки
                       </span>
                     </div>
-                    <p className="text-[11px] text-[#64748B]">
-                      Используйте ранее утверждённый макет бесплатно или закажите новый дизайн
-                    </p>
                   </div>
-                </div>
 
-                  {/* Choice Tabs */}
-                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl self-start md:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => handleTemplateChoiceChange('SAVED')}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                        templateChoice === 'SAVED'
-                          ? 'bg-white text-[#0082FB] shadow-xs'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
+                  <span className="text-xs font-extrabold text-emerald-600 shrink-0 ml-3">
+                    0 ₸
+                  </span>
+                </label>
+
+                {/* If more than 1 saved template, allow choosing which one */}
+                {templateChoice === 'SAVED' && savedTemplates.length > 1 && (
+                  <div className="pl-7 pr-2 py-1">
+                    <select
+                      value={selectedTemplateId || ''}
+                      onChange={(e) => handleSelectTemplate(e.target.value)}
+                      className="w-full text-xs font-medium bg-white border border-gray-200 rounded-lg px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
                     >
-                      <BookmarkCheck className="w-3.5 h-3.5" />
-                      <span>Мой макет (0 ₸)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleTemplateChoiceChange('NEW')}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                        templateChoice === 'NEW'
-                          ? 'bg-white text-[#0082FB] shadow-xs'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Новый дизайн (+5 000 ₸)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleTemplateChoiceChange('NONE')}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                        templateChoice === 'NONE'
-                          ? 'bg-white text-gray-900 shadow-xs'
-                          : 'text-gray-500 hover:text-gray-800'
-                      }`}
-                    >
-                      Без макета
-                    </button>
-                  </div>
-                </div>
-
-                {/* Tab 1: SAVED TEMPLATES */}
-                {templateChoice === 'SAVED' && (
-                  <div className="space-y-4 pt-1 animate-in fade-in duration-150">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                      {/* Templates List */}
-                      <div className="lg:col-span-7 space-y-2.5">
-                        <label className="text-[11px] font-bold text-[#64748B] block">
-                          Выберите макет из ваших утверждённых:
-                        </label>
-                        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                          {savedTemplates.map((tpl) => {
-                            const isSelected = selectedTemplateId === tpl.id;
-                            return (
-                              <div
-                                key={tpl.id}
-                                onClick={() => handleSelectTemplate(tpl.id)}
-                                className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all flex items-center justify-between gap-3 ${
-                                  isSelected
-                                    ? 'border-[#0082FB] bg-blue-50/60 ring-2 ring-[#0082FB]/20'
-                                    : 'border-gray-200 bg-white hover:border-gray-300'
-                                }`}
-                              >
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-extrabold text-[#111827] truncate block">
-                                      {tpl.name}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-                                      {tpl.widthMm} × {tpl.heightMm} мм
-                                    </span>
-                                    {tpl.category && (
-                                      <span className="text-[10px] text-gray-500">
-                                        {getCategoryLabel(tpl.category)}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="shrink-0 flex items-center gap-2.5">
-                                  <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-lg">
-                                    Бесплатно (0 ₸)
-                                  </span>
-                                  <div
-                                    className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                                      isSelected
-                                        ? 'border-[#0082FB] bg-[#0082FB] text-white'
-                                        : 'border-gray-300'
-                                    }`}
-                                  >
-                                    {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        <div className="p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-xl flex items-center gap-2.5 text-xs text-emerald-950 font-bold">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>Макет уже утверждён. Повторная разработка не оплачивается (0 ₸)!</span>
-                        </div>
-                      </div>
-
-                      {/* Live Canvas Preview */}
-                      <div className="lg:col-span-5 bg-gray-50 border border-gray-200/80 rounded-2xl p-4 flex flex-col items-center justify-center text-center space-y-2.5">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                          Интерактивное превью макета
-                        </span>
-                        {selectedTemplate ? (
-                          <>
-                            <div className="p-2 bg-white rounded-xl shadow-xs border border-gray-200/80 flex items-center justify-center max-w-full overflow-hidden">
-                              <StickerCanvasPreview
-                                widthMm={selectedTemplate.widthMm}
-                                heightMm={selectedTemplate.heightMm}
-                                elements={(selectedTemplate.elements as any) || []}
-                                scale={2.0}
-                              />
-                            </div>
-                            <span className="text-[11px] font-bold text-gray-700">
-                              {selectedTemplate.widthMm} × {selectedTemplate.heightMm} мм
-                            </span>
-                          </>
-                        ) : (
-                          <div className="py-8 text-xs text-gray-400">
-                            Выберите макет из списка слева
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                      {savedTemplates.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({t.widthMm} × {t.heightMm} мм)
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
-                {/* Tab 2: NEW DESIGN FORM */}
-                {templateChoice === 'NEW' && (
-                  <div className="space-y-4 pt-1 animate-in fade-in duration-150">
-                    <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl flex items-center gap-2.5 text-xs text-blue-950 font-medium">
-                      <Sparkles className="w-4 h-4 text-[#0082FB] shrink-0" />
-                      <span>
-                        Дизайнер подготовит новый макет под ваши требования (+5 000 ₸). После согласования он сохранится в библиотеку для повторных заказов.
+                {/* Option 2: New Design */}
+                <label
+                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
+                    templateChoice === 'NEW'
+                      ? 'border-[#0082FB] bg-blue-50/40 shadow-2xs'
+                      : 'border-gray-200/90 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="templateChoice"
+                      checked={templateChoice === 'NEW'}
+                      onChange={() => handleTemplateChoiceChange('NEW')}
+                      className="w-4 h-4 text-[#0082FB] focus:ring-[#0082FB] cursor-pointer shrink-0"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-[#111827] block">
+                        Заказать разработку нового макета
+                      </span>
+                      <span className="text-[11px] text-[#64748B] block mt-0.5">
+                        Дизайнер подготовит макет под требования маркетплейса
                       </span>
                     </div>
+                  </div>
+                  <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-3">
+                    +5 000 ₸
+                  </span>
+                </label>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
-                      <div>
-                        <label className="text-[11px] font-bold text-[#64748B] block mb-1">
-                          Размер стикера (Ш × В, мм)
-                        </label>
-                        <div className="flex items-center gap-1.5">
-                          <div className="relative flex-1">
-                            <input
-                              type="number"
-                              min="10"
-                              max="300"
-                              value={labelWidth}
-                              onChange={(e) => setLabelWidth(e.target.value)}
-                              placeholder="58"
-                              className="w-full text-xs font-bold bg-white border border-gray-200/90 rounded-xl px-2.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB] text-center"
-                            />
-                            <span className="absolute right-2 top-2 text-[10px] text-gray-400 font-bold pointer-events-none">мм</span>
-                          </div>
-                          <span className="text-xs font-bold text-gray-400">×</span>
-                          <div className="relative flex-1">
-                            <input
-                              type="number"
-                              min="10"
-                              max="300"
-                              value={labelHeight}
-                              onChange={(e) => setLabelHeight(e.target.value)}
-                              placeholder="40"
-                              className="w-full text-xs font-bold bg-white border border-gray-200/90 rounded-xl px-2.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB] text-center"
-                            />
-                            <span className="absolute right-2 top-2 text-[10px] text-gray-400 font-bold pointer-events-none">мм</span>
-                          </div>
+                {/* Option 3: None */}
+                <label
+                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
+                    templateChoice === 'NONE'
+                      ? 'border-[#0082FB] bg-blue-50/40 shadow-2xs'
+                      : 'border-gray-200/90 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="templateChoice"
+                      checked={templateChoice === 'NONE'}
+                      onChange={() => handleTemplateChoiceChange('NONE')}
+                      className="w-4 h-4 text-[#0082FB] focus:ring-[#0082FB] cursor-pointer shrink-0"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-[#111827] block">
+                        Без макета стикера
+                      </span>
+                      <span className="text-[11px] text-[#64748B] block mt-0.5">
+                        Печать только кодов Data Matrix без товарной этикетки
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-medium text-gray-400 shrink-0 ml-3">
+                    0 ₸
+                  </span>
+                </label>
+              </div>
+
+                {/* Tab 2: NEW DESIGN FORM */}
+                {templateChoice === 'NEW' && (
+                  <div className="pt-3 border-t border-gray-200/80 space-y-3.5 animate-in fade-in duration-150">
+                    {/* Size selection */}
+                    <div>
+                      <label className="text-[11px] font-bold text-[#475569] block mb-1.5">
+                        Размер стикера (мм)
+                      </label>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {[
+                          { w: '58', h: '40', label: '58 × 40' },
+                          { w: '60', h: '60', label: '60 × 60' },
+                          { w: '40', h: '30', label: '40 × 30' },
+                          { w: '75', h: '120', label: '75 × 120' },
+                        ].map((preset) => {
+                          const isPreset = String(labelWidth) === preset.w && String(labelHeight) === preset.h;
+                          return (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => {
+                                setLabelWidth(preset.w);
+                                setLabelHeight(preset.h);
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer border ${
+                                isPreset
+                                  ? 'border-[#0082FB] bg-blue-50 text-[#0082FB] font-bold shadow-2xs'
+                                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                              }`}
+                            >
+                              {preset.label} мм
+                            </button>
+                          );
+                        })}
+
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 pl-1">
+                          <span className="text-[11px] text-[#64748B] font-medium whitespace-nowrap">или вручную:</span>
+                          <input
+                            type="number"
+                            min="10"
+                            max="300"
+                            value={labelWidth}
+                            onChange={(e) => setLabelWidth(e.target.value)}
+                            placeholder="Ш"
+                            className="w-12 text-center py-1 px-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0082FB]"
+                          />
+                          <span>×</span>
+                          <input
+                            type="number"
+                            min="10"
+                            max="300"
+                            value={labelHeight}
+                            onChange={(e) => setLabelHeight(e.target.value)}
+                            placeholder="В"
+                            className="w-12 text-center py-1 px-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0082FB]"
+                          />
+                          <span className="text-gray-400">мм</span>
                         </div>
                       </div>
+                    </div>
 
-                      <div className="sm:col-span-3">
-                        <label className="text-[11px] font-bold text-[#64748B] block mb-1">
-                          Наименование товара
+
+                    {/* Product Name & Brand */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-[#475569] block mb-1">
+                          {categorySpecs.productNameLabel}
                         </label>
                         <input
                           type="text"
                           value={labelProductName}
                           onChange={(e) => setLabelProductName(e.target.value)}
-                          placeholder="Например: Ботинки мужские зимние"
-                          className="w-full text-xs font-semibold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          placeholder={categorySpecs.productNamePlaceholder}
+                          className="w-full text-xs bg-white border border-gray-200/90 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
                         />
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                       <div>
-                        <label className="text-[11px] font-bold text-[#64748B] block mb-1">
-                          Бренд / Производитель
+                        <label className="text-[11px] font-bold text-[#475569] block mb-1">
+                          {categorySpecs.brandLabel}
                         </label>
                         <input
                           type="text"
                           value={labelBrand}
                           onChange={(e) => setLabelBrand(e.target.value)}
-                          placeholder="Например: NORTH STEP"
-                          className="w-full text-xs font-semibold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          placeholder={categorySpecs.brandPlaceholder}
+                          className="w-full text-xs bg-white border border-gray-200/90 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
                         />
                       </div>
+                    </div>
 
+                    {/* Article & Composition */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[11px] font-bold text-[#64748B] block mb-1">
-                          Артикул / Модель
+                        <label className="text-[11px] font-bold text-[#475569] block mb-1">
+                          {categorySpecs.articleLabel}
                         </label>
                         <input
                           type="text"
                           value={labelArticle}
                           onChange={(e) => setLabelArticle(e.target.value)}
-                          placeholder="Например: NS-8821"
-                          className="w-full text-xs font-semibold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          placeholder={categorySpecs.articlePlaceholder}
+                          className="w-full text-xs bg-white border border-gray-200/90 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-[#64748B] block mb-1">
-                          Состав / Материалы
+                        <label className="text-[11px] font-bold text-[#475569] block mb-1">
+                          {categorySpecs.compositionLabel}
                         </label>
                         <input
                           type="text"
                           value={labelComposition}
                           onChange={(e) => setLabelComposition(e.target.value)}
-                          placeholder="Например: 100% натуральная кожа"
-                          className="w-full text-xs font-semibold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          placeholder={categorySpecs.compositionPlaceholder}
+                          className="w-full text-xs bg-white border border-gray-200/90 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
                         />
                       </div>
                     </div>
 
+                    {/* Extra details */}
                     <div>
-                      <label className="text-[11px] font-bold text-[#64748B] block mb-1">
+                      <label className="text-[11px] font-bold text-[#475569] block mb-1">
                         Дополнительный текст и пожелания к макету
                       </label>
                       <textarea
                         rows={2}
                         value={labelExtraDetails}
                         onChange={(e) => setLabelExtraDetails(e.target.value)}
-                        placeholder="Укажите размер, цвет, страну производства, адрес изготовителя или особые требования..."
-                        className="w-full text-xs font-medium bg-white border border-gray-200/90 rounded-xl p-3 text-[#111827] focus:outline-none focus:border-[#0082FB] resize-none"
+                        placeholder={categorySpecs.extraDetailsPlaceholder}
+                        className="w-full text-xs bg-white border border-gray-200/90 rounded-xl p-2.5 text-[#111827] focus:outline-none focus:border-[#0082FB] resize-none"
                       />
                     </div>
 
-                    <div className="space-y-3 pt-1">
-                      <div className="flex flex-wrap items-center gap-5">
+                    {/* Signs & Barcode */}
+                    <div className="pt-1">
+                      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
+                          <input
+                            type="checkbox"
+                            checked={labelHasBarcode}
+                            onChange={(e) => setLabelHasBarcode(e.target.checked)}
+                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
+                          />
+                          <span>Штрихкод EAN-13 (из CSV)</span>
+                        </label>
+
                         <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
                           <input
                             type="checkbox"
@@ -970,58 +1221,8 @@ export const CreateOrderPage: React.FC = () => {
                           />
                           <span>Знак обращения EAC</span>
                         </label>
-
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
-                          <input
-                            type="checkbox"
-                            checked={labelHasBarcode}
-                            onChange={(e) => setLabelHasBarcode(e.target.checked)}
-                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
-                          />
-                          <span>Штрихкод EAN-13</span>
-                        </label>
                       </div>
-
-                      {labelHasBarcode && (
-                        <div className="w-full bg-blue-50/50 border border-blue-200/80 rounded-xl p-3 space-y-1.5 animate-in fade-in duration-150">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[11px] font-bold text-[#111827] flex items-center gap-1.5">
-                              <Barcode className="w-4 h-4 text-[#0082FB]" />
-                              <span>Номер штрихкода (EAN-13)</span>
-                            </label>
-                            <span className="text-[10px] text-[#64748B] font-mono">
-                              {labelBarcode ? `${labelBarcode.length}/13 цифр` : '13 цифр'}
-                            </span>
-                          </div>
-                          <input
-                            type="text"
-                            value={labelBarcode}
-                            onChange={(e) => {
-                              const val = e.target.value.replace(/\D/g, '').slice(0, 13);
-                              setLabelBarcode(val);
-                            }}
-                            placeholder="Например: 4601234567890 (или оставьте пустым для автогенерации)"
-                            maxLength={13}
-                            className="w-full text-xs font-mono font-bold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] placeholder:text-[#94A3B8] placeholder:font-sans placeholder:font-normal focus:outline-none focus:border-[#0082FB]"
-                          />
-                          <p className="text-[10px] text-[#64748B]">
-                            Укажите 13-значный EAN-13 штрихкод товара для касс и складов маркетплейсов. Если кода нет — дизайнер сгенерирует штрихкод автоматически.
-                          </p>
-                        </div>
-                      )}
                     </div>
-                  </div>
-                )}
-
-                {/* Tab 3: NONE */}
-                {templateChoice === 'NONE' && (
-                  <div className="p-3.5 bg-blue-50/50 border border-blue-200/70 rounded-xl flex items-center gap-3 text-xs text-[#475569]">
-                    <div className="w-7 h-7 rounded-lg bg-blue-100 text-[#0082FB] flex items-center justify-center shrink-0">
-                      <Barcode className="w-4 h-4" />
-                    </div>
-                    <span>
-                      Макет стикера не будет прикреплен к заказу. Вы можете предоставить макет позже или заказать печать только Data Matrix кодов.
-                    </span>
                   </div>
                 )}
               </div>
@@ -1057,121 +1258,151 @@ export const CreateOrderPage: React.FC = () => {
 
                 {/* Custom Sticker Layout Input Form */}
                 {extraServices.includes('STICKER_LAYOUT_DESIGN') && (
-                  <div className="col-span-1 sm:col-span-2 bg-[#F8FAFC] border border-gray-200/90 rounded-2xl p-5 space-y-4">
-                    <div className="border-b border-gray-200/80 pb-2.5">
-                      <h4 className="text-xs font-bold text-[#111827] uppercase tracking-wider">
-                        Параметры и текст макета стикера
-                      </h4>
-                      <p className="text-xs text-[#64748B] mt-0.5">
-                        Укажите точный размер этикетки и данные для нанесения на стикер
-                      </p>
-                    </div>
+                  <div className="pt-3 border-t border-gray-200/80 space-y-3.5 animate-in fade-in duration-150">
+                    {/* Size selection */}
+                    <div>
+                      <label className="text-[11px] font-bold text-[#475569] block mb-1.5">
+                        Размер стикера (мм)
+                      </label>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {[
+                          { w: '58', h: '40', label: '58 × 40' },
+                          { w: '60', h: '60', label: '60 × 60' },
+                          { w: '40', h: '30', label: '40 × 30' },
+                          { w: '75', h: '120', label: '75 × 120' },
+                        ].map((preset) => {
+                          const isPreset = String(labelWidth) === preset.w && String(labelHeight) === preset.h;
+                          return (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => {
+                                setLabelWidth(preset.w);
+                                setLabelHeight(preset.h);
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer border ${
+                                isPreset
+                                  ? 'border-[#0082FB] bg-blue-50 text-[#0082FB] font-bold shadow-2xs'
+                                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                              }`}
+                            >
+                              {preset.label} мм
+                            </button>
+                          );
+                        })}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
-                      {/* Manual Size Inputs */}
-                      <div>
-                        <label className="text-[11px] font-bold text-[#64748B] block mb-1">
-                          Размер стикера (Ш × В, мм)
-                        </label>
-                        <div className="flex items-center gap-1.5">
-                          <div className="relative flex-1">
-                            <input
-                              type="number"
-                              min="10"
-                              max="300"
-                              value={labelWidth}
-                              onChange={(e) => setLabelWidth(e.target.value)}
-                              placeholder="58"
-                              className="w-full text-xs font-bold bg-white border border-gray-200/90 rounded-xl px-2.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB] text-center"
-                            />
-                            <span className="absolute right-2 top-2 text-[10px] text-gray-400 font-bold pointer-events-none">мм</span>
-                          </div>
-                          <span className="text-xs font-bold text-gray-400">×</span>
-                          <div className="relative flex-1">
-                            <input
-                              type="number"
-                              min="10"
-                              max="300"
-                              value={labelHeight}
-                              onChange={(e) => setLabelHeight(e.target.value)}
-                              placeholder="40"
-                              className="w-full text-xs font-bold bg-white border border-gray-200/90 rounded-xl px-2.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB] text-center"
-                            />
-                            <span className="absolute right-2 top-2 text-[10px] text-gray-400 font-bold pointer-events-none">мм</span>
-                          </div>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 pl-1">
+                          <span className="text-[11px] text-[#64748B] font-medium whitespace-nowrap">или вручную:</span>
+                          <input
+                            type="number"
+                            min="10"
+                            max="300"
+                            value={labelWidth}
+                            onChange={(e) => setLabelWidth(e.target.value)}
+                            placeholder="Ш"
+                            className="w-12 text-center py-1 px-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0082FB]"
+                          />
+                          <span>×</span>
+                          <input
+                            type="number"
+                            min="10"
+                            max="300"
+                            value={labelHeight}
+                            onChange={(e) => setLabelHeight(e.target.value)}
+                            placeholder="В"
+                            className="w-12 text-center py-1 px-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0082FB]"
+                          />
+                          <span className="text-gray-400">мм</span>
                         </div>
                       </div>
+                    </div>
 
-                      <div className="sm:col-span-3">
-                        <label className="text-[11px] font-bold text-[#64748B] block mb-1">
-                          Наименование товара
+
+                    {/* Product Name & Brand */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-[#475569] block mb-1">
+                          {categorySpecs.productNameLabel}
                         </label>
                         <input
                           type="text"
                           value={labelProductName}
                           onChange={(e) => setLabelProductName(e.target.value)}
-                          placeholder="Например: Ботинки мужские зимние"
-                          className="w-full text-xs font-semibold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          placeholder={categorySpecs.productNamePlaceholder}
+                          className="w-full text-xs bg-white border border-gray-200/90 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
                         />
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                       <div>
-                        <label className="text-[11px] font-bold text-[#64748B] block mb-1">
-                          Бренд / Производитель
+                        <label className="text-[11px] font-bold text-[#475569] block mb-1">
+                          {categorySpecs.brandLabel}
                         </label>
                         <input
                           type="text"
                           value={labelBrand}
                           onChange={(e) => setLabelBrand(e.target.value)}
-                          placeholder="Например: NORTH STEP"
-                          className="w-full text-xs font-semibold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          placeholder={categorySpecs.brandPlaceholder}
+                          className="w-full text-xs bg-white border border-gray-200/90 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
                         />
                       </div>
+                    </div>
 
+                    {/* Article & Composition */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[11px] font-bold text-[#64748B] block mb-1">
-                          Артикул / Модель
+                        <label className="text-[11px] font-bold text-[#475569] block mb-1">
+                          {categorySpecs.articleLabel}
                         </label>
                         <input
                           type="text"
                           value={labelArticle}
                           onChange={(e) => setLabelArticle(e.target.value)}
-                          placeholder="Например: NS-8821"
-                          className="w-full text-xs font-semibold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          placeholder={categorySpecs.articlePlaceholder}
+                          className="w-full text-xs bg-white border border-gray-200/90 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-[#64748B] block mb-1">
-                          Состав / Материалы
+                        <label className="text-[11px] font-bold text-[#475569] block mb-1">
+                          {categorySpecs.compositionLabel}
                         </label>
                         <input
                           type="text"
                           value={labelComposition}
                           onChange={(e) => setLabelComposition(e.target.value)}
-                          placeholder="Например: 100% натуральная кожа"
-                          className="w-full text-xs font-semibold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          placeholder={categorySpecs.compositionPlaceholder}
+                          className="w-full text-xs bg-white border border-gray-200/90 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
                         />
                       </div>
                     </div>
 
+                    {/* Extra details */}
                     <div>
-                      <label className="text-[11px] font-bold text-[#64748B] block mb-1">
+                      <label className="text-[11px] font-bold text-[#475569] block mb-1">
                         Дополнительный текст и пожелания к макету
                       </label>
                       <textarea
                         rows={2}
                         value={labelExtraDetails}
                         onChange={(e) => setLabelExtraDetails(e.target.value)}
-                        placeholder="Укажите размер, цвет, страну производства, адрес изготовителя или особые требования..."
-                        className="w-full text-xs font-medium bg-white border border-gray-200/90 rounded-xl p-3 text-[#111827] focus:outline-none focus:border-[#0082FB] resize-none"
+                        placeholder={categorySpecs.extraDetailsPlaceholder}
+                        className="w-full text-xs bg-white border border-gray-200/90 rounded-xl p-2.5 text-[#111827] focus:outline-none focus:border-[#0082FB] resize-none"
                       />
                     </div>
 
-                    <div className="space-y-3 pt-1">
-                      <div className="flex flex-wrap items-center gap-5">
+                    {/* Signs & Barcode */}
+                    <div className="pt-1">
+                      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
+                          <input
+                            type="checkbox"
+                            checked={labelHasBarcode}
+                            onChange={(e) => setLabelHasBarcode(e.target.checked)}
+                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
+                          />
+                          <span>Штрихкод EAN-13 (из CSV)</span>
+                        </label>
+
                         <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
                           <input
                             type="checkbox"
@@ -1181,45 +1412,7 @@ export const CreateOrderPage: React.FC = () => {
                           />
                           <span>Знак обращения EAC</span>
                         </label>
-
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
-                          <input
-                            type="checkbox"
-                            checked={labelHasBarcode}
-                            onChange={(e) => setLabelHasBarcode(e.target.checked)}
-                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
-                          />
-                          <span>Штрихкод EAN-13</span>
-                        </label>
                       </div>
-
-                      {labelHasBarcode && (
-                        <div className="w-full bg-blue-50/50 border border-blue-200/80 rounded-xl p-3 space-y-1.5 animate-in fade-in duration-150">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[11px] font-bold text-[#111827] flex items-center gap-1.5">
-                              <Barcode className="w-4 h-4 text-[#0082FB]" />
-                              <span>Номер штрихкода (EAN-13)</span>
-                            </label>
-                            <span className="text-[10px] text-[#64748B] font-mono">
-                              {labelBarcode ? `${labelBarcode.length}/13 цифр` : '13 цифр'}
-                            </span>
-                          </div>
-                          <input
-                            type="text"
-                            value={labelBarcode}
-                            onChange={(e) => {
-                              const val = e.target.value.replace(/\D/g, '').slice(0, 13);
-                              setLabelBarcode(val);
-                            }}
-                            placeholder="Например: 4601234567890 (или оставьте пустым для автогенерации)"
-                            maxLength={13}
-                            className="w-full text-xs font-mono font-bold bg-white border border-gray-200/90 rounded-xl px-3.5 py-2 text-[#111827] placeholder:text-[#94A3B8] placeholder:font-sans placeholder:font-normal focus:outline-none focus:border-[#0082FB]"
-                          />
-                          <p className="text-[10px] text-[#64748B]">
-                            Укажите 13-значный EAN-13 штрихкод товара для касс и складов маркетплейсов. Если кода нет — дизайнер сгенерирует штрихкод автоматически.
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
@@ -1453,11 +1646,124 @@ export const CreateOrderPage: React.FC = () => {
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Специфика упаковки, температурный режим, контакты кладовщика..."
+                placeholder="Специфика упаковки, контакты кладовщика..."
                 className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
               />
             </div>
           </div>
+
+          {/* Warehouse on-site stickering specifications (active for STANDARD / PRO or on-site services) */}
+          {(tariffType === 'STANDARD' || tariffType === 'PRO' || extraServices.includes('ON_SITE_STICKERING')) && (
+            <div className="pt-4 mt-2 border-t border-gray-100 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <span className="text-xs font-bold text-[#111827] uppercase tracking-wider flex items-center gap-2">
+                  <Boxes className="w-3.5 h-3.5 text-[#0082FB]" />
+                  Условия на складе для выездной бригады
+                </span>
+                <span className="text-[11px] text-[#64748B]">
+                  Помогает точно рассчитать время и расходные материалы
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                {/* 1. Storage placement */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-700 block">
+                    1. Размещение товара:
+                  </label>
+                  <div className="space-y-1.5">
+                    {[
+                      { id: 'PALLETS', label: 'На паллетах в коробах', desc: 'Сформированные паллеты' },
+                      { id: 'BOXES', label: 'В коробках на стеллажах / полу', desc: 'Индивидуальные короба' },
+                      { id: 'LOOSE', label: 'Россыпью / в мешках', desc: 'Требуется переборка товара' },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setWarehouseStorageType((prev) => (prev === item.id ? null : (item.id as any)))}
+                        className={`w-full text-left p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          warehouseStorageType === item.id
+                            ? 'border-[#0082FB] bg-blue-50/70 text-[#0082FB] ring-1 ring-[#0082FB]/30'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="font-bold">{item.label}</div>
+                        <div className="text-[10px] text-gray-500 font-normal mt-0.5">{item.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Temperature & Climate */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-700 block">
+                    2. Температурный режим:
+                  </label>
+                  <div className="space-y-1.5">
+                    {[
+                      { id: 'WARM_HEATED', label: 'Тёплый склад (+15...+22°C)', desc: 'Отапливаемый класс А/В' },
+                      { id: 'COLD_WINTER', label: 'Холодный ангар / зима', desc: 'Без отопления, утепление бригады' },
+                      { id: 'RAMP_CUSTOMS', label: 'Пандус / зона СВХ', desc: 'Разгрузочная рампа, таможня' },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setWarehouseClimate((prev) => (prev === item.id ? null : (item.id as any)))}
+                        className={`w-full text-left p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          warehouseClimate === item.id
+                            ? 'border-[#0082FB] bg-blue-50/70 text-[#0082FB] ring-1 ring-[#0082FB]/30'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="font-bold">{item.label}</div>
+                        <div className="text-[10px] text-gray-500 font-normal mt-0.5">{item.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Warehouse Equipment */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-700 block">
+                    3. Складская техника:
+                  </label>
+                  <div className="space-y-1.5">
+                    {[
+                      { id: 'HAS_EQUIPMENT', label: 'Есть рохля / погрузчик', desc: 'Предоставим на складе' },
+                      { id: 'MANUAL', label: 'Техники нет (вручную)', desc: 'Ручное перемещение коробов' },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setWarehouseEquipment((prev) => (prev === item.id ? null : (item.id as any)))}
+                        className={`w-full text-left p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          warehouseEquipment === item.id
+                            ? 'border-[#0082FB] bg-blue-50/70 text-[#0082FB] ring-1 ring-[#0082FB]/30'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="font-bold">{item.label}</div>
+                        <div className="text-[10px] text-gray-500 font-normal mt-0.5">{item.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2-Hour SLA Reassurance notification */}
+              <div className="p-3.5 bg-blue-50/70 border border-blue-200/90 rounded-2xl flex items-start gap-3">
+                <Clock className="w-4 h-4 text-[#0082FB] shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <span className="font-extrabold text-[#111827] block">
+                    Расчет сметы и сроков выезда — в течение 2 часов
+                  </span>
+                  <span className="text-[#475569] mt-0.5 block leading-relaxed">
+                    После оформления заявки менеджер свяжется с вами для согласования удобной даты выезда и финальной сметы.
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Step 5: Codes File Attachment (MANDATORY) */}

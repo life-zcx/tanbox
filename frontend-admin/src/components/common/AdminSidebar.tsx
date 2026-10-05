@@ -1,6 +1,17 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Settings, Users, LogOut, ExternalLink, ClipboardList, QrCode, Tag } from 'lucide-react';
+import {
+  LayoutDashboard,
+  FileText,
+  Settings,
+  Users,
+  LogOut,
+  ExternalLink,
+  ClipboardList,
+  QrCode,
+  Tag,
+  Calculator,
+} from 'lucide-react';
 import { AdminUser } from '../../types';
 
 interface AdminSidebarProps {
@@ -14,6 +25,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, onLogout }) =>
   const links = [
     { to: '/dashboard', label: 'Обзор систем', icon: LayoutDashboard },
     { to: '/orders', label: 'Заказы', icon: FileText },
+    { to: '/stickering-calc', label: 'Калькулятор выезда', icon: Calculator },
     { to: '/leads', label: 'Заявки на услуги', icon: ClipboardList },
     { to: '/label-designer', label: 'Конструктор макетов', icon: QrCode },
     { to: '/labels', label: 'Реестр этикеток', icon: Tag },

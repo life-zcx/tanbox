@@ -12,6 +12,7 @@ import { AdminLabelDesignerPage } from './pages/AdminLabelDesignerPage';
 import { AdminLabelsRegistryPage } from './pages/AdminLabelsRegistryPage';
 import { AdminOrderDetailPage } from './pages/AdminOrderDetailPage';
 import { AdminUserDetailPage } from './pages/AdminUserDetailPage';
+import { AdminStickeringCalcPage } from './pages/AdminStickeringCalcPage';
 
 const AdminOrderLabelsRedirect: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -96,6 +97,15 @@ export const App: React.FC = () => {
             element={
               <ProtectedAdminLayout>
                 <AdminOrdersPage />
+              </ProtectedAdminLayout>
+            }
+          />
+
+          <Route
+            path="/stickering-calc"
+            element={
+              <ProtectedAdminLayout>
+                <AdminStickeringCalcPage />
               </ProtectedAdminLayout>
             }
           />
