@@ -282,6 +282,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
                 <input
                   type="text"
                   required
+                  maxLength={150}
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder='Например: ТОО "Казахстан Трейд" или Иван Иванов'
@@ -324,6 +325,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
                   </label>
                   <input
                     type="email"
+                    maxLength={100}
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -368,6 +370,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
                 </label>
                 <textarea
                   rows={2}
+                  maxLength={1000}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Объем партии, сроки, адрес склада..."
