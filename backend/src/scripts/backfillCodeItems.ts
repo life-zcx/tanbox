@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, CodeItemStatus } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
@@ -70,7 +70,7 @@ async function backfill() {
         code,
         gtin,
         serial,
-        status: 'NEW',
+        status: CodeItemStatus.NEW,
       };
     });
 

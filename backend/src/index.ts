@@ -13,6 +13,7 @@ import leadsRoutes from './routes/leads.routes';
 import tariffsRoutes from './routes/tariffs.routes';
 import labelTemplatesRoutes from './routes/labelTemplates.routes';
 import userTemplatesRoutes from './routes/userTemplates.routes';
+import labelsRoutes from './routes/labels.routes';
 import { logger } from './utils/logger';
 import { generalApiLimiter } from './middleware/rateLimiter';
 
@@ -100,6 +101,7 @@ app.use('/api/logs', logsRoutes);
 app.use('/api/tariffs', tariffsRoutes);
 app.use('/api/label-templates', labelTemplatesRoutes);
 app.use('/api/user-templates', userTemplatesRoutes);
+app.use('/api/labels', labelsRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

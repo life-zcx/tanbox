@@ -28,20 +28,55 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'БИН/ИИН должен содержать ровно 12 цифр' });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Пользователь с таким email уже зарегистрирован' });
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10 || phoneDigits.length > 12) {
+      return res.status(400).json({ message: 'Укажите корректный номер телефона (10–11 цифр)' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const phoneLast10 = phoneDigits.slice(-10);
+
+    // Безопасная проверка на существование учетной записи по email, БИН/ИИН или телефону
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: { equals: cleanEmail, mode: 'insensitive' } },
+          { binIin: binDigits },
+          { binIin: binIin.trim() },
+          { phone: phone.trim() },
+          { phone: { contains: phoneLast10 } },
+        ],
+      },
+    });
+
+    if (existing) {
+      if (existing.email.toLowerCase() === cleanEmail) {
+        return res.status(409).json({
+          code: 'EMAIL_EXISTS',
+          message: 'Пользователь с таким e-mail уже зарегистрирован. Пожалуйста, выполните вход.',
+        });
+      }
+      if (existing.binIin === binDigits || existing.binIin === binIin.trim()) {
+        return res.status(409).json({
+          code: 'BIN_EXISTS',
+          message: 'Организация с таким БИН/ИИН уже зарегистрирована. Если это ваша компания, выполните вход в аккаунт.',
+        });
+      }
+      return res.status(409).json({
+        code: 'PHONE_EXISTS',
+        message: 'Пользователь с таким номером телефона уже зарегистрирован. Пожалуйста, выполните вход.',
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await prisma.user.create({
       data: {
-        email,
+        email: cleanEmail,
         password: hashedPassword,
-        companyName,
-        binIin,
-        phone,
+        companyName: companyName.trim(),
+        binIin: binDigits,
+        phone: phone.trim(),
         role: 'CLIENT',
       },
     });

@@ -8,13 +8,13 @@ export const env = {
   DATABASE_URL: process.env.DATABASE_URL,
   get JWT_SECRET(): string {
     const secret = process.env.JWT_SECRET;
-    if (!secret) {
+    if (!secret || (secret === 'tanbox_kz_jwt_secret_key_super_secure_2026' && process.env.NODE_ENV === 'production')) {
       if (process.env.NODE_ENV === 'production') {
-        throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET environment variable is not defined!');
+        throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET environment variable is not defined or uses default insecure value!');
       }
       // Fallback only for strict local emergency, logged with warning
       console.warn('⚠️ WARNING: JWT_SECRET is not set in process.env! Please specify JWT_SECRET in .env file.');
-      return 'dev_only_local_secret_please_change_in_env_file';
+      return secret || 'dev_only_local_secret_please_change_in_env_file';
     }
     return secret;
   },

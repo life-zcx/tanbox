@@ -42,7 +42,7 @@ router.post('/parse-csv', upload.single('file'), (req: Request, res: Response) =
     });
   } catch (err: any) {
     console.error('CSV Parse Error:', err);
-    return res.status(500).json({ message: 'Ошибка парсинга CSV: ' + err.message });
+    return res.status(500).json({ message: 'Ошибка при обработке и чтении CSV файла' });
   }
 });
 
@@ -93,7 +93,7 @@ router.post('/generate-pdf', upload.single('file'), async (req: Request, res: Re
   } catch (err: any) {
     console.error('PDF Generation Error:', err);
     if (!res.headersSent) {
-      return res.status(500).json({ message: 'Ошибка генерации PDF: ' + err.message });
+      return res.status(500).json({ message: 'Ошибка при генерации PDF файла этикеток' });
     }
   }
 });
@@ -116,7 +116,7 @@ router.post('/preview', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('Preview Error:', err);
     if (!res.headersSent) {
-      return res.status(500).json({ message: 'Ошибка генерации превью: ' + err.message });
+      return res.status(500).json({ message: 'Ошибка при формировании образца этикетки' });
     }
   }
 });

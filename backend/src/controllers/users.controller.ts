@@ -91,7 +91,7 @@ export const getUserById = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
-    const totalSpent = user.orders.reduce((acc, curr) => acc + (curr.totalPrice || 0), 0);
+    const totalSpent = user.orders.reduce((acc, curr) => acc + (Number(curr.totalPrice) || 0), 0);
 
     return res.json({
       ...user,

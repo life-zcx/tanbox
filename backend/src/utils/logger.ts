@@ -7,13 +7,79 @@ if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
-const accessLogPath = path.join(logsDir, 'access.log');
-const errorLogPath = path.join(logsDir, 'error.log');
-const frontendLogPath = path.join(logsDir, 'frontend.log');
+class RotatingLogStream {
+  private filePath: string;
+  private maxBytes: number;
+  private maxBackups: number;
+  private currentSize: number = 0;
+  private stream: fs.WriteStream | null = null;
 
-const accessStream = fs.createWriteStream(accessLogPath, { flags: 'a' });
-const errorStream = fs.createWriteStream(errorLogPath, { flags: 'a' });
-const frontendStream = fs.createWriteStream(frontendLogPath, { flags: 'a' });
+  constructor(filePath: string, maxBytes: number = 10 * 1024 * 1024, maxBackups: number = 5) {
+    this.filePath = filePath;
+    this.maxBytes = maxBytes;
+    this.maxBackups = maxBackups;
+    this.initStream();
+  }
+
+  private initStream() {
+    try {
+      if (fs.existsSync(this.filePath)) {
+        const stats = fs.statSync(this.filePath);
+        this.currentSize = stats.size;
+      } else {
+        this.currentSize = 0;
+      }
+    } catch {
+      this.currentSize = 0;
+    }
+    this.stream = fs.createWriteStream(this.filePath, { flags: 'a' });
+  }
+
+  public write(line: string) {
+    const bytes = Buffer.byteLength(line, 'utf-8');
+    if (this.currentSize + bytes > this.maxBytes) {
+      this.rotate();
+    }
+    if (this.stream) {
+      this.stream.write(line);
+      this.currentSize += bytes;
+    }
+  }
+
+  private rotate() {
+    try {
+      if (this.stream) {
+        this.stream.end();
+        this.stream = null;
+      }
+
+      for (let i = this.maxBackups - 1; i >= 1; i--) {
+        const src = `${this.filePath}.${i}`;
+        const dest = `${this.filePath}.${i + 1}`;
+        if (fs.existsSync(src)) {
+          try {
+            if (fs.existsSync(dest)) fs.unlinkSync(dest);
+            fs.renameSync(src, dest);
+          } catch {}
+        }
+      }
+
+      const firstBackup = `${this.filePath}.1`;
+      if (fs.existsSync(this.filePath)) {
+        if (fs.existsSync(firstBackup)) fs.unlinkSync(firstBackup);
+        fs.renameSync(this.filePath, firstBackup);
+      }
+    } catch (err) {
+      console.error('Log rotation error:', err);
+    } finally {
+      this.initStream();
+    }
+  }
+}
+
+const accessStream = new RotatingLogStream(path.join(logsDir, 'access.log'));
+const errorStream = new RotatingLogStream(path.join(logsDir, 'error.log'));
+const frontendStream = new RotatingLogStream(path.join(logsDir, 'frontend.log'));
 
 function sanitizeLog(text: string): string {
   return String(text).replace(/[\r\n]+/g, ' ').slice(0, 1000);

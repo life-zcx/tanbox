@@ -34,12 +34,12 @@ export const orderCodesUpload = multer({
     fileSize: 50 * 1024 * 1024, // up to 50MB
   },
   fileFilter: (req, file, cb) => {
-    const allowedExts = ['.csv', '.txt', '.pdf', '.zip', '.xlsx'];
+    const allowedExts = ['.csv', '.txt'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowedExts.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('Разрешены только файлы .csv, .txt, .pdf, .zip, .xlsx'));
+      cb(new Error('Разрешены только текстовые файлы кодов маркировки в формате .csv или .txt'));
     }
   },
 });

@@ -60,48 +60,61 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
   try {
     const { tariffs, pricingSettings } = req.body;
 
-    // Update each tariff's exact pricing
+    // Update each tariff's exact pricing with bounds validation
     if (Array.isArray(tariffs)) {
       for (const t of tariffs) {
         if (!t.code) continue;
+
+        const pRetail = Math.max(0.1, Number(t.priceRetail) || 0);
+        const pWholesale = Math.max(0.1, Number(t.priceWholesale) || pRetail);
+        const pLarge = Math.max(0.1, Number(t.priceLargeWholesale) || pWholesale);
+        const cEstimate = Math.max(0, Number(t.costEstimate || 0));
+
         await prisma.tariff.update({
           where: { code: t.code },
           data: {
             name: typeof t.name === 'string' ? t.name : undefined,
             description: typeof t.description === 'string' ? t.description : undefined,
             fitFor: typeof t.fitFor === 'string' ? t.fitFor : undefined,
-            priceRetail: Number(t.priceRetail),
-            priceWholesale: Number(t.priceWholesale),
-            priceLargeWholesale: Number(t.priceLargeWholesale),
-            costEstimate: Number(t.costEstimate || 0),
-            priceMin: Number(t.priceLargeWholesale || t.priceRetail),
-            priceMax: Number(t.priceRetail),
+            priceRetail: pRetail,
+            priceWholesale: pWholesale,
+            priceLargeWholesale: pLarge,
+            costEstimate: cEstimate,
+            priceMin: Math.min(pLarge, pWholesale, pRetail),
+            priceMax: Math.max(pLarge, pWholesale, pRetail),
             marginEst: typeof t.marginEst === 'string' ? t.marginEst : '',
           },
         });
       }
     }
 
-    // Update global pricing settings
+    // Update global pricing settings with bounds validation
     if (pricingSettings) {
+      const safeSscc = Math.max(0, Number(pricingSettings.ssccPrice) || 5);
+      const safeLayout = Math.max(0, Number(pricingSettings.stickerLayoutPrice) || 5000);
+      const safeUrgent = Math.min(200, Math.max(0, Number(pricingSettings.urgentPercent) || 20));
+      const safeExpress = Math.max(0, Number(pricingSettings.expressDeliveryPrice) || 15000);
+      const safeTier1 = Math.max(100, Math.floor(Number(pricingSettings.volumeTier1) || 20000));
+      const safeTier2 = Math.max(safeTier1 + 100, Math.floor(Number(pricingSettings.volumeTier2) || 100000));
+
       await prisma.pricingSettings.upsert({
         where: { key: 'GLOBAL' },
         update: {
-          ssccPrice: Number(pricingSettings.ssccPrice),
-          stickerLayoutPrice: Number(pricingSettings.stickerLayoutPrice),
-          urgentPercent: Number(pricingSettings.urgentPercent),
-          expressDeliveryPrice: Number(pricingSettings.expressDeliveryPrice),
-          volumeTier1: Number(pricingSettings.volumeTier1 || 20000),
-          volumeTier2: Number(pricingSettings.volumeTier2 || 100000),
+          ssccPrice: safeSscc,
+          stickerLayoutPrice: safeLayout,
+          urgentPercent: safeUrgent,
+          expressDeliveryPrice: safeExpress,
+          volumeTier1: safeTier1,
+          volumeTier2: safeTier2,
         },
         create: {
           key: 'GLOBAL',
-          ssccPrice: Number(pricingSettings.ssccPrice || 5),
-          stickerLayoutPrice: Number(pricingSettings.stickerLayoutPrice || 5000),
-          urgentPercent: Number(pricingSettings.urgentPercent || 20),
-          expressDeliveryPrice: Number(pricingSettings.expressDeliveryPrice || 15000),
-          volumeTier1: Number(pricingSettings.volumeTier1 || 20000),
-          volumeTier2: Number(pricingSettings.volumeTier2 || 100000),
+          ssccPrice: safeSscc,
+          stickerLayoutPrice: safeLayout,
+          urgentPercent: safeUrgent,
+          expressDeliveryPrice: safeExpress,
+          volumeTier1: safeTier1,
+          volumeTier2: safeTier2,
         },
       });
     }

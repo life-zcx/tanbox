@@ -19,8 +19,6 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
-  } else if (typeof req.query.token === 'string' && req.query.token) {
-    token = req.query.token;
   }
 
   if (!token) {

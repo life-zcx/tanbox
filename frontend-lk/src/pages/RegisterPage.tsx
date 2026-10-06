@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Building2, Phone, Hash, AlertCircle, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
+import { Mail, Lock, Building2, Phone, Hash, AlertCircle, Eye, EyeOff, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export const RegisterPage: React.FC = () => {
@@ -219,7 +219,17 @@ export const RegisterPage: React.FC = () => {
       });
       navigate('/dashboard');
     } catch (err: any) {
-      setGeneralError(err.response?.data?.message || 'Ошибка регистрации организации');
+      const respData = err.response?.data;
+      const msg = respData?.message || 'Ошибка регистрации организации';
+      setGeneralError(msg);
+
+      if (respData?.code === 'BIN_EXISTS') {
+        setErrors((prev) => ({ ...prev, binIin: 'Этот БИН/ИИН уже зарегистрирован' }));
+      } else if (respData?.code === 'EMAIL_EXISTS') {
+        setErrors((prev) => ({ ...prev, email: 'Этот e-mail уже зарегистрирован' }));
+      } else if (respData?.code === 'PHONE_EXISTS') {
+        setErrors((prev) => ({ ...prev, phone: 'Этот номер уже зарегистрирован' }));
+      }
     } finally {
       setLoading(false);
     }
@@ -238,9 +248,24 @@ export const RegisterPage: React.FC = () => {
 
         {/* General Error Alert */}
         {generalError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-semibold p-2.5 rounded-xl flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-            <span>{generalError}</span>
+          <div className="bg-[#F4F6F9] border border-gray-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-150">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-white border border-gray-200/80 text-[#0082FB] flex items-center justify-center shrink-0 shadow-2xs">
+                <AlertCircle className="w-4 h-4 text-[#0082FB]" />
+              </div>
+              <p className="text-xs font-bold text-[#111827] leading-snug">
+                {generalError}
+              </p>
+            </div>
+            {(generalError.includes('зарегистрирован') || generalError.includes('вход')) && (
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all active:scale-95 shrink-0 shadow-xs cursor-pointer"
+              >
+                <span>Войти в аккаунт</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            )}
           </div>
         )}
 

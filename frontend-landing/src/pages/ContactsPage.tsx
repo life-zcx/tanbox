@@ -10,8 +10,8 @@ export const ContactsPage: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     setPageSeo(
-      'Контакты и официальные реквизиты | ИП TORMAG.KZ — TANBOX.KZ',
-      'Контакты единого сервиса цифровой маркировки товаров TANBOX.KZ. Телефон горячей линии, офис в Алматы, WhatsApp-поддержка и официальные реквизиты ИП TORMAG.KZ.'
+      'Контакты единого сервиса цифровой маркировки | TANBOX.KZ',
+      'Контакты TANBOX.KZ. Телефон горячей линии, онлайн-обслуживание и выездные бригады маркировки по Алматы и Казахстану.'
     );
   }, []);
   const [companyName, setCompanyName] = useState('');
@@ -238,7 +238,7 @@ export const ContactsPage: React.FC = () => {
                   <MapPin className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">Адрес головного офиса</p>
+                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">Формат работы и локация</p>
                   <p className="text-[#64748B] mt-1">{COMPANY_CONTACTS.address.full}</p>
                 </div>
               </div>
@@ -287,14 +287,6 @@ export const ContactsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-6">
-              <h4 className="text-xs font-bold uppercase text-[#111827] mb-2">Юридические реквизиты:</h4>
-              <p className="text-xs text-[#64748B] leading-relaxed">
-                {COMPANY_CONTACTS.legal.companyName}<br />
-                БИН: {COMPANY_CONTACTS.legal.bin}<br />
-                ИИК: {COMPANY_CONTACTS.legal.iik} в {COMPANY_CONTACTS.legal.bank}
-              </p>
-            </div>
 
           </div>
 

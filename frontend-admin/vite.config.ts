@@ -13,14 +13,15 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3002,
     allowedHosts: true,
+    hmr: {
+      overlay: false,
+    },
     watch: {
       usePolling: true,
+      interval: 1000,
+      ignored: ['**/node_modules/**', '**/.git/**', '**/dist/**'],
     },
     proxy: {
-      '/api/labels': {
-        target: process.env.VITE_LABEL_SERVICE_URL || 'http://label-generator:5060',
-        changeOrigin: true,
-      },
       '/api': {
         target: process.env.VITE_BACKEND_URL || 'http://backend:5050',
         changeOrigin: true,

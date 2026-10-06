@@ -43,6 +43,27 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  UNPAID
+  PAID
+  PARTIAL
+  REFUNDED
+}
+
+enum StickerApprovalStatus {
+  IN_DESIGN
+  WAITING_APPROVAL
+  APPROVED
+  CHANGES_REQUESTED
+}
+
+enum CodeItemStatus {
+  NEW
+  PRINTED
+  REPRINTED
+  DEFECTIVE
+}
+
 model User {
   id          String   @id @default(uuid())
   email       String   @unique
@@ -59,76 +80,85 @@ model User {
 }
 
 model Order {
-  id             String        @id @default(uuid())
-  orderNumber    String        @unique
-  userId         String
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category       OrderCategory
-  tariffType     TariffType
-  itemsCount     Int
-  pricePerItem   Float
-  totalPrice     Float
-  status         OrderStatus   @default(NEW)
-  extraServices         String[]      @default([])
-  ssccNeeded            Boolean       @default(false)
+  id                    String                @id @default(uuid())
+  orderNumber           String                @unique
+  userId                String
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category              OrderCategory
+  tariffType            TariffType
+  tariff                Tariff                @relation(fields: [tariffType], references: [code])
+  itemsCount            Int
+  pricePerItem          Decimal               @db.Decimal(12, 2)
+  totalPrice            Decimal               @db.Decimal(12, 2)
+  status                OrderStatus           @default(NEW)
+  extraServices         String[]              @default([])
+  ssccNeeded            Boolean               @default(false)
   pdfUrl                String?
   codesFileUrl          String?
   codesFileName         String?
   stickerLayout         Json?
-  stickerApprovalStatus String?       @default("IN_DESIGN")
+  stickerApprovalStatus StickerApprovalStatus @default(IN_DESIGN)
   stickerApprovalNotes  String?
   stickerSentAt         DateTime?
   templateId            String?
-  printAllowed          Boolean       @default(false)
-  paymentStatus         String        @default("UNPAID")
+  template              UserStickerTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  printAllowed          Boolean               @default(false)
+  paymentStatus         PaymentStatus         @default(UNPAID)
   notes                 String?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  warehouseAddress      String?
+  warehouseConditions   Json?
+  stickeringEstimate    Json?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
 
   codeItems             OrderCodeItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model OrderCodeItem {
-  id        String    @id @default(uuid())
   orderId   String
-  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  index     Int       // 1-based sequential index within the order (1, 2, ... N)
-  code      String    // Complete GS1 DataMatrix marking code
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  index     Int            // 1-based sequential index within the order (1, 2, ... N)
+  code      String         // Complete GS1 DataMatrix marking code
   gtin      String?
   serial    String?
-  status    String    @default("NEW") // NEW, PRINTED, REPRINTED, DEFECTIVE
+  status    CodeItemStatus @default(NEW)
   printedAt DateTime?
-  createdAt DateTime  @default(now())
+  createdAt DateTime       @default(now())
 
-  @@unique([orderId, index])
-  @@index([orderId, index])
+  @@id([orderId, index])
   @@index([orderId, code])
 }
 
 model Tariff {
-  id                  String   @id @default(uuid())
-  code                String   @unique
+  id                  String     @id @default(uuid())
+  code                TariffType @unique
   name                String
   description         String
   fitFor              String
-  priceRetail         Float    @default(15.0)
-  priceWholesale      Float    @default(12.0)
-  priceLargeWholesale Float    @default(10.0)
-  costEstimate        Float    @default(3.0)
-  priceMin            Float
-  priceMax            Float
+  priceRetail         Decimal    @default(15.0) @db.Decimal(12, 2)
+  priceWholesale      Decimal    @default(12.0) @db.Decimal(12, 2)
+  priceLargeWholesale Decimal    @default(10.0) @db.Decimal(12, 2)
+  costEstimate        Decimal    @default(3.0)  @db.Decimal(12, 2)
+  priceMin            Decimal    @db.Decimal(12, 2)
+  priceMax            Decimal    @db.Decimal(12, 2)
   marginEst           String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  orders              Order[]
 }
 
 model PricingSettings {
   id                   String   @id @default(uuid())
   key                  String   @unique @default("GLOBAL")
-  ssccPrice            Float    @default(5.0)
-  stickerLayoutPrice   Float    @default(5000.0)
-  urgentPercent        Float    @default(20.0)
-  expressDeliveryPrice Float    @default(15000.0)
+  ssccPrice            Decimal  @default(5.0)     @db.Decimal(12, 2)
+  stickerLayoutPrice   Decimal  @default(5000.0)  @db.Decimal(12, 2)
+  urgentPercent        Decimal  @default(20.0)    @db.Decimal(12, 2)
+  expressDeliveryPrice Decimal  @default(15000.0) @db.Decimal(12, 2)
   volumeTier1          Int      @default(20000)
   volumeTier2          Int      @default(100000)
   createdAt            DateTime @default(now())
@@ -179,6 +209,8 @@ model UserStickerTemplate {
   sourceOrderId String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+
+  orders        Order[]
+
+  @@index([userId])
 }
-
-

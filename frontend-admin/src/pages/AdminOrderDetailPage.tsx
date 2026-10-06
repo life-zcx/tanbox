@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { OrderAdminItem, OrderStatus } from '../types';
 import { StatusBadge, parseOrderNotes } from '@shared';
+import { downloadHtmlAsPdf } from '../utils/clientPdf';
 import {
   ArrowLeft,
   MapPin,
@@ -763,30 +764,22 @@ export const AdminOrderDetailPage: React.FC = () => {
   const handleDownloadAct = async () => {
     if (!order) return;
     setDownloadingDoc('act');
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write('<!DOCTYPE html><html><head><title>Подготовка PDF...</title></head><body style="font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc;color:#334155;"><div style="text-align:center;"><div style="font-size:18px;font-weight:700;margin-bottom:8px;">Загрузка PDF АВР...</div><div style="font-size:13px;color:#64748b;">Пожалуйста, подождите пару секунд</div></div></body></html>');
-    }
     try {
       const res = await apiClient.get(`/orders/${order.id}/act`, {
         responseType: 'blob',
       });
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const blobUrl = URL.createObjectURL(blob);
-      if (win && !win.closed) {
-        win.location.href = blobUrl;
-      } else {
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = `Act_${order.orderNumber}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `Act_${order.orderNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     } catch (err: any) {
-      if (win && !win.closed) win.close();
       console.error('Download act error:', err);
-      alert('Ошибка при формировании PDF акта: ' + (err.response?.data?.message || err.message));
+      alert('Ошибка при формировании Акта выполненных работ: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingDoc(null);
     }
@@ -795,30 +788,22 @@ export const AdminOrderDetailPage: React.FC = () => {
   const handleDownloadInvoice = async () => {
     if (!order) return;
     setDownloadingDoc('invoice');
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write('<!DOCTYPE html><html><head><title>Подготовка PDF...</title></head><body style="font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc;color:#334155;"><div style="text-align:center;"><div style="font-size:18px;font-weight:700;margin-bottom:8px;">Загрузка PDF счёта на оплату...</div><div style="font-size:13px;color:#64748b;">Пожалуйста, подождите пару секунд</div></div></body></html>');
-    }
     try {
       const res = await apiClient.get(`/orders/${order.id}/invoice`, {
         responseType: 'blob',
       });
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const blobUrl = URL.createObjectURL(blob);
-      if (win && !win.closed) {
-        win.location.href = blobUrl;
-      } else {
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = `Invoice_${order.orderNumber}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `Invoice_${order.orderNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     } catch (err: any) {
-      if (win && !win.closed) win.close();
       console.error('Download invoice error:', err);
-      alert('Ошибка при формировании PDF счета: ' + (err.response?.data?.message || err.message));
+      alert('Ошибка при формировании Счёта на оплату: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingDoc(null);
     }
@@ -1823,10 +1808,10 @@ export const AdminOrderDetailPage: React.FC = () => {
                   <span className="text-[11px] font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">
                     Не требуется (DIGITAL)
                   </span>
-                ) : !order.extraServices?.includes('STICKER_LAYOUT_DESIGN') ? (
+                ) : ((order as any)?.templateId || !order.extraServices?.includes('STICKER_LAYOUT_DESIGN')) ? (
                   <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    Стандартный (авто)
+                    {(order as any)?.templateId ? 'Из библиотеки (готов)' : 'Стандартный (авто)'}
                   </span>
                 ) : order.stickerApprovalStatus === 'APPROVED' ? (
                   <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
@@ -2017,6 +2002,7 @@ export const AdminOrderDetailPage: React.FC = () => {
           labelHeight={layoutHeightMm}
           hasCodesFile={Boolean(order.codesFileUrl)}
           hasLayout={Boolean(layoutElements.length > 0 || (order.stickerLayout as any)?.elements?.length > 0)}
+          startLabelNumber={(order as any).startLabelNumber}
         />
       )}
 

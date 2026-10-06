@@ -36,6 +36,7 @@ interface RollSplitModalProps {
   hasLayout?: boolean;
   canPrintBatch?: boolean;
   blockReason?: string;
+  startLabelNumber?: number;
 }
 
 export const RollSplitModal: React.FC<RollSplitModalProps> = ({
@@ -50,6 +51,7 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
   hasLayout = true,
   canPrintBatch = true,
   blockReason,
+  startLabelNumber,
 }) => {
   const [activeTab, setActiveTab] = useState<'rolls' | 'reprint'>('rolls');
 
@@ -153,11 +155,14 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
         `/orders/${orderId}/pdf?roll=${rollNum}&offset=${start}&limit=${count}`,
         { responseType: 'blob', timeout: 300000 }
       );
+      const baseNum = startLabelNumber ?? 1;
+      const rollStartNum = baseNum + start;
+      const rollEndNum = baseNum + start + count - 1;
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.setAttribute('download', `Roll_${rollNum}_(${start + 1}-${start + count})_${orderNumber}.pdf`);
+      link.setAttribute('download', `Roll_${rollNum}_(№${rollStartNum}-№${rollEndNum})_${orderNumber}.pdf`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -491,6 +496,9 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
               {rolls.map((r) => {
                 const isDownloaded = downloadedRolls[r.rollNum];
                 const isCurrent = downloadingRoll === r.rollNum;
+                const baseNum = startLabelNumber ?? 1;
+                const rollStartNum = baseNum + r.start;
+                const rollEndNum = baseNum + r.end - 1;
 
                 return (
                   <div
@@ -520,7 +528,7 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
                           )}
                         </div>
                         <span className="text-[10px] text-gray-400 font-mono">
-                          коды: {r.start + 1} — {r.end}
+                          этикетки: № {rollStartNum} — № {rollEndNum}
                         </span>
                       </div>
                     </div>

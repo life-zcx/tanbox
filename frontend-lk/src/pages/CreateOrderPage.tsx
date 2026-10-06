@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useOrders } from '../hooks/useOrders';
+import { useAuth } from '../hooks/useAuth';
 import { OrderCategory, TariffType, UserStickerTemplate } from '../types';
 import { apiClient } from '../api/client';
 import { CATEGORIES_LIST, CATEGORY_MAP, getCategoryLabel } from '../data/categories';
@@ -32,193 +33,11 @@ import {
   Boxes,
 } from 'lucide-react';
 
-interface CategoryStickerSpecs {
-  lawTitle: string;
-  lawNote: string;
-  tags: string[];
-  productNameLabel: string;
-  productNamePlaceholder: string;
-  brandLabel: string;
-  brandPlaceholder: string;
-  articleLabel: string;
-  articlePlaceholder: string;
-  compositionLabel: string;
-  compositionPlaceholder: string;
-  extraDetailsPlaceholder: string;
-}
-
-const getCategoryStickerSpecs = (category: OrderCategory | null): CategoryStickerSpecs => {
-  switch (category) {
-    case 'SHOES':
-      return {
-        lawTitle: 'ТР ТС 017/2011 и Закон РК «О защите прав потребителей» (Обувь)',
-        lawNote: 'По законам РК на этикетке обуви обязательно: модель/артикул, размер, материал верха, подкладки и подошвы раздельно, изготовитель, организация по претензиям / импортер в РК, знак EAC. Информация на казахском и русском языках.',
-        tags: ['Материал верха/низа/подкладки', 'Размер обуви', 'Импортер в РК', 'Знак EAC', 'Каз / Рус'],
-        productNameLabel: 'Наименование товара (каз. / рус.)',
-        productNamePlaceholder: 'Например: Ботинки мужские зимние / Ерлер қысқы бәтеңкесі',
-        brandLabel: 'Бренд / Производитель',
-        brandPlaceholder: 'Например: NORTH STEP / ТОО «Обувная фабрика»',
-        articleLabel: 'Модель / Артикул',
-        articlePlaceholder: 'Например: NS-8821 / Цвет: Чёрный',
-        compositionLabel: 'Материалы (верх, подкладка, подошва)',
-        compositionPlaceholder: 'Например: Верх: нат. кожа, подкладка: шерсть, подошва: ТЭП',
-        extraDetailsPlaceholder: 'Укажите размер обуви, цвет, страну происхождения, адрес изготовителя и реквизиты импортера в РК (ТОО ...)...',
-      };
-    case 'TEXTILE':
-      return {
-        lawTitle: 'ТР ТС 017/2011 и Закон РК «О защите прав потребителей» (Легпром)',
-        lawNote: 'По законам РК обязательно: процентный состав сырья (натуральное/синтетика), размер изделия, символы по уходу (стирка, глажка), изготовитель, импортер в РК, знак EAC на двух языках.',
-        tags: ['Процентный состав ткани (%)', 'Размер (рост/обхват)', 'Символы по уходу', 'Импортер в РК', 'Знак EAC'],
-        productNameLabel: 'Наименование товара (каз. / рус.)',
-        productNamePlaceholder: 'Например: Футболка мужская оверсайз / Ерлер футболкасы',
-        brandLabel: 'Бренд / Производитель',
-        brandPlaceholder: 'Например: URBAN WEAR / ТОО «Текстиль КЗ»',
-        articleLabel: 'Артикул / Модель',
-        articlePlaceholder: 'Например: TS-204 / Белый',
-        compositionLabel: 'Процентный состав сырья (%)',
-        compositionPlaceholder: 'Например: 95% мақта (хлопок), 5% эластан (или: верх — 100% полиэстер)',
-        extraDetailsPlaceholder: 'Укажите размер (рост, обхват груди/талии), символы по уходу (стирка, температура, отбеливание), импортера в РК...',
-      };
-    case 'WATER':
-      return {
-        lawTitle: 'ТР ЕАЭС 044/2017, ТР ТС 021/2011 и 022/2011 (Вода и напитки)',
-        lawNote: 'В РК обязательно: номинальный объем, источник/скважина, химический состав (минерализация), дата розлива, срок годности, условия хранения, изготовитель/импортер в РК, знак EAC.',
-        tags: ['Объем (л/мл)', 'Номер скважины / источник', 'Срок годности и условия', 'Импортер в РК', 'Знак EAC'],
-        productNameLabel: 'Наименование (природная, питьевая, минеральная)',
-        productNamePlaceholder: 'Например: Вода питьевая природная негазированная / Табиғи ауыз суы',
-        brandLabel: 'Торговая марка / Производитель',
-        brandPlaceholder: 'Например: TAZA SU / ТОО «Аква Казахстан»',
-        articleLabel: 'Номинальный объем и тара',
-        articlePlaceholder: 'Например: 0.5 л (ПЭТ) или 18.9 л (бутыль)',
-        compositionLabel: 'Условия хранения и срок годности',
-        compositionPlaceholder: 'Например: Срок 12 мес. Хранить при +2°C до +25°C в защищенном от света месте',
-        extraDetailsPlaceholder: 'Укажите номер скважины / месторождение, группу минерализации, дату розлива, контакты импортера в РК...',
-      };
-    case 'BEER':
-      return {
-        lawTitle: 'ТР ЕАЭС 047/2018 и Закон РК «О регулировании оборота алкогольной продукции»',
-        lawNote: 'В РК обязательно: объемная доля спирта (% об.), состав, предупреждение о вреде алкоголя на каз/рус языках, срок годности, дата розлива, EAC, производитель/импортер в РК.',
-        tags: ['Крепость (% об.)', 'Объем (л)', 'Предупреждение о вреде', 'Срок годности', 'Импортер в РК', 'Знак EAC'],
-        productNameLabel: 'Наименование напитка (каз. / рус.)',
-        productNamePlaceholder: 'Например: Пиво светлое фильтрованное пастеризованное / Ашық сыра',
-        brandLabel: 'Бренд / Производитель',
-        brandPlaceholder: 'Например: CRAFT BREW / ТОО «Пивоварня КЗ»',
-        articleLabel: 'Объемная доля спирта (% об.) и тара',
-        articlePlaceholder: 'Например: Алк. 4.7% об., экстрактивность нач. сусла 11%, ж/б 0.45 л',
-        compositionLabel: 'Состав сырья и срок годности',
-        compositionPlaceholder: 'Например: Вода, солод ячменный, хмель. Срок 9 мес. при +2...+20°C',
-        extraDetailsPlaceholder: 'Укажите дату розлива, предупреждение о вреде чрезмерного употребления (на каз/рус), реквизиты импортера в РК...',
-      };
-    case 'OILS':
-      return {
-        lawTitle: 'ТР ТС 030/2012 «О требованиях к смазочным материалам и маслам»',
-        lawNote: 'В РК обязательно: марка масла, класс вязкости SAE, спецификации API/ACEA, объем/масса, дата изготовления, срок хранения, меры безопасности при обращении/утилизации, EAC.',
-        tags: ['Класс вязкости SAE', 'Классификация API/ACEA', 'Объем тары', 'Меры безопасности', 'Знак EAC'],
-        productNameLabel: 'Наименование масла / техжидкости',
-        productNamePlaceholder: 'Например: Масло моторное синтетическое / Синтетикалық мотор майы',
-        brandLabel: 'Бренд / Производитель',
-        brandPlaceholder: 'Например: LUBRICANT PRO / ТОО «Ойл Трейд»',
-        articleLabel: 'Вязкость и допуски (SAE, API, ACEA)',
-        articlePlaceholder: 'Например: SAE 5W-40, API SN/CF, ACEA A3/B4',
-        compositionLabel: 'Объем тары и срок хранения',
-        compositionPlaceholder: 'Например: 4 л канистра. Срок хранения 5 лет с даты изготовления',
-        extraDetailsPlaceholder: 'Укажите допуски автопроизводителей (VW, MB, BMW), номер партии, дату производства, меры экологии/утилизации...',
-      };
-    case 'MEDICINE':
-      return {
-        lawTitle: 'Кодекс РК «О здоровье народа» и Правила маркировки лекарств в РК',
-        lawNote: 'В РК обязательно: торговое название, МНН, дозировка, форма выпуска, № рег. удостоверения в РК (РК-ЛС-...), номер серии, срок годности, условия хранения и отпуска, изготовитель.',
-        tags: ['№ Регистрации РК', 'Серия и срок годности', 'Дозировка и форма', 'Условия отпуска (рецепт)', 'Каз / Рус'],
-        productNameLabel: 'Торговое название и МНН (каз. / рус.)',
-        productNamePlaceholder: 'Например: Парацетамол 500 мг / Парацетамол 500 мг',
-        brandLabel: 'Производитель / Владелец РУ',
-        brandPlaceholder: 'Например: Фармацевтический завод / ТОО «Фарма КЗ»',
-        articleLabel: '№ Рег. удостоверения в РК и Серия',
-        articlePlaceholder: 'Например: РК-ЛС-5№012345, Серия 0524',
-        compositionLabel: 'Форма выпуска, дозировка и фасовка',
-        compositionPlaceholder: 'Например: Таблетки 500 мг, 10 табл. в блистере, №20 в упаковке',
-        extraDetailsPlaceholder: 'Укажите срок годности (Годен до: ММ.ГГГГ), температуру хранения (+15...+25°C), условия отпуска (по рецепту/без)...',
-      };
-    case 'DIETARY_SUPPLEMENTS':
-      return {
-        lawTitle: 'ТР ТС 021/2011, 022/2011 и Закон РК «О защите прав потребителей» (БАД)',
-        lawNote: 'В РК обязательно: № СГР (свидетельство о госрегистрации), фраза «Дәрілік зат болып табылмайды / Не является лекарственным средством», форма выпуска, состав, противопоказания, EAC.',
-        tags: ['№ Свидетельства СГР', '«Не является лекарством»', 'Состав и дозировка', 'Срок годности', 'Знак EAC'],
-        productNameLabel: 'Наименование БАД (каз. / рус.)',
-        productNamePlaceholder: 'Например: Биологически активная добавка «Омега-3 1000 мг»',
-        brandLabel: 'Бренд / Производитель',
-        brandPlaceholder: 'Например: BIO HEALTH / ТОО «Нутришн КЗ»',
-        articleLabel: '№ СГР и Форма выпуска',
-        articlePlaceholder: 'Например: СГР № KZ.16.01..., Капсулы по 1000 мг, №60',
-        compositionLabel: 'Активные компоненты и дозировка',
-        compositionPlaceholder: 'Например: Рыбий жир 1000 мг (EPA 180 мг, DHA 120 мг), желатин',
-        extraDetailsPlaceholder: 'Укажите фразу «Не является лекарством», способ применения, противопоказания, срок годности, импортера в РК...',
-      };
-    case 'TOBACCO':
-      return {
-        lawTitle: 'ТР ТС 035/2014 и Кодекс РК «О здоровье народа» (Табачная продукция)',
-        lawNote: 'В РК обязательно: наименование, вид изделия, кол-во штук, МРЦ (макс. розничная цена в ₸), дата производства (ММ.ГГ), предупреждение о вреде курения (на каз/рус), EAC.',
-        tags: ['МРЦ (в тенге ₸)', 'Количество штук', 'Дата производства', 'Предупреждение о вреде', 'Знак EAC'],
-        productNameLabel: 'Наименование табачного изделия',
-        productNamePlaceholder: 'Например: Сигареты с фильтром / Сигариллы',
-        brandLabel: 'Торговая марка / Производитель',
-        brandPlaceholder: 'Например: BRAND TOBACCO / ТОО «Табак КЗ»',
-        articleLabel: 'Количество штук и МРЦ (₸)',
-        articlePlaceholder: 'Например: 20 штук, МРЦ: 850 ₸',
-        compositionLabel: 'Вид изделия и формат',
-        compositionPlaceholder: 'Например: С фильтром, формат King Size',
-        extraDetailsPlaceholder: 'Укажите месяц и год производства (напр. 04.2026), предупреждение о вреде здоровья, импортера в РК...',
-      };
-    case 'JEWELRY':
-      return {
-        lawTitle: 'Закон РК «О драгоценных металлах и драгоценных камнях» (Ювелирные изделия)',
-        lawNote: 'В РК обязательно: наименование изделия, металл и проба, масса в граммах, характеристики вставок (камней), клеймо пробирной палаты РК / изготовитель.',
-        tags: ['Проба металла', 'Масса (в граммах)', 'Характеристики вставок', 'Пробирное клеймо РК'],
-        productNameLabel: 'Наименование изделия (каз. / рус.)',
-        productNamePlaceholder: 'Например: Кольцо женское из золота / Әйелдер алтын сақинасы',
-        brandLabel: 'Бренд / Ювелирный завод',
-        brandPlaceholder: 'Например: GOLD JEWELRY / ТОО «Алтын КЗ»',
-        articleLabel: 'Артикул и Проба',
-        articlePlaceholder: 'Например: Арт. 1024-К, Золото 585°',
-        compositionLabel: 'Масса (г) и Вставки',
-        compositionPlaceholder: 'Например: Масса 2.85 г. Вставка: Фианит 1 шт., 0.05 ct',
-        extraDetailsPlaceholder: 'Укажите размер кольца/браслета, номер партии, адрес изготовителя в РК, отметку об опробовании...',
-      };
-    case 'SAIGA':
-      return {
-        lawTitle: 'Законодательство РК по учету и обороту дериватов сайгака',
-        lawNote: 'Обязательно в РК: учетная серия, индивидуальный номер маркировки, разрешение уполномоченного органа (Минэкологии РК / Охотзоопром), масса (кг/г).',
-        tags: ['Индивидуальный номер', 'Разрешение уполн. органа', 'Учетная масса', 'QR / DataMatrix'],
-        productNameLabel: 'Наименование деривата',
-        productNamePlaceholder: 'Например: Рога сайгака (учетная партия)',
-        brandLabel: 'Организация / Заготовитель',
-        brandPlaceholder: 'Например: РГКП «ПО «Охотзоопром»',
-        articleLabel: 'Учетная серия и № разрешения',
-        articlePlaceholder: 'Например: Серия SG-2026, Разрешение № 45/ЭКО',
-        compositionLabel: 'Характеристики и масса',
-        compositionPlaceholder: 'Например: Масса нетто: 0.450 кг, 1 категория',
-        extraDetailsPlaceholder: 'Укажите дату регистрации, номер акта взвешивания, реквизиты уполномоченной организации...',
-      };
-    default:
-      return {
-        lawTitle: 'Закон РК «О защите прав потребителей» и ТР ТС (Маркировка в Республике Казахстан)',
-        lawNote: 'По законодательству РК на этикетке обязательно: наименование, страна происхождения, изготовитель, организация по претензиям / импортер в РК, знак EAC (при наличии ТР ТС), информация на казахском и русском языках.',
-        tags: ['Наименование каз/рус', 'Изготовитель и страна', 'Импортер в РК', 'Знак EAC'],
-        productNameLabel: 'Наименование товара (на каз. и рус.)',
-        productNamePlaceholder: 'Например: Наименование товара / Тауардың атауы',
-        brandLabel: 'Бренд / Производитель',
-        brandPlaceholder: 'Например: Торговая марка / ТОО Компания',
-        articleLabel: 'Артикул / Модель',
-        articlePlaceholder: 'Например: ART-12345',
-        compositionLabel: 'Состав / Материалы / Свойства',
-        compositionPlaceholder: 'Например: Материал изделия или состав',
-        extraDetailsPlaceholder: 'Укажите нужные знаки (СТ РК, переработка, уход), цвет, страну, адрес изготовителя и импортера в РК...',
-      };
-  }
-};
+import { CategoryStickerSpecs, getCategoryStickerSpecs } from '../data/categoryStickerSpecs';
 
 export const CreateOrderPage: React.FC = () => {
   const { createOrder } = useOrders();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -311,7 +130,7 @@ export const CreateOrderPage: React.FC = () => {
   };
 
   // Saved warehouses from user profile (localStorage)
-  const savedWarehouses = useMemo(() => {
+  const [savedWarehouses, setSavedWarehouses] = useState<any[]>(() => {
     try {
       const saved = localStorage.getItem('tanbox_warehouses');
       if (saved) {
@@ -321,7 +140,59 @@ export const CreateOrderPage: React.FC = () => {
       // ignore
     }
     return [];
-  }, []);
+  });
+
+  // State to optionally save entered address to profile
+  const [saveAddressToProfile, setSaveAddressToProfile] = useState<boolean>(true);
+  const [addressSavedSuccess, setAddressSavedSuccess] = useState<boolean>(false);
+
+  // Helper to save current warehouse address to user profile
+  const handleSaveAddressToProfile = (customAddress?: string) => {
+    const raw = (customAddress || warehouseAddress).trim();
+    if (!raw) return;
+
+    try {
+      const currentList: any[] = JSON.parse(localStorage.getItem('tanbox_warehouses') || '[]');
+
+      // Check if already in list
+      const alreadyExists = currentList.some((w: any) => {
+        const formatted = `${w.city}, ${w.address} (${w.name})`;
+        return raw === formatted || raw === `${w.city}, ${w.address}` || (w.address && raw.toLowerCase().includes(w.address.toLowerCase()));
+      });
+
+      if (!alreadyExists) {
+        let city = 'г. Алматы';
+        let streetAddress = raw;
+
+        const cityMatch = raw.match(/^(г\.\s*[^,]+),\s*(.+)$/i);
+        if (cityMatch) {
+          city = cityMatch[1].trim();
+          streetAddress = cityMatch[2].trim();
+        }
+
+        const newWh = {
+          id: `wh_${Date.now()}`,
+          name: `Склад №${currentList.length + 1}`,
+          city,
+          address: streetAddress,
+          warehouseContact: user?.companyName || 'Контактное лицо',
+          warehousePhone: user?.phone || '',
+          selectedDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'],
+          startTime: '09:00',
+          endTime: '18:00',
+          isPrimary: currentList.length === 0,
+        };
+
+        const updated = [...currentList, newWh];
+        localStorage.setItem('tanbox_warehouses', JSON.stringify(updated));
+        setSavedWarehouses(updated);
+        setAddressSavedSuccess(true);
+        setTimeout(() => setAddressSavedSuccess(false), 3000);
+      }
+    } catch (err) {
+      console.warn('Failed to save warehouse address:', err);
+    }
+  };
 
   // Auto-populate warehouse from profile (primary warehouse or first warehouse)
   useEffect(() => {
@@ -721,6 +592,11 @@ export const CreateOrderPage: React.FC = () => {
       try {
         localStorage.removeItem('tanbox_pending_order');
       } catch {}
+
+      // Save warehouse address to profile if user kept option checked
+      if (saveAddressToProfile && warehouseAddress.trim()) {
+        handleSaveAddressToProfile(warehouseAddress);
+      }
 
       const isOnSite = Boolean(hasAnyWarehouseOption || tariffType === 'STANDARD' || tariffType === 'PRO' || extraServices.includes('ON_SITE_STICKERING'));
       navigate(newOrderId ? `/orders/${newOrderId}` : '/orders', {
@@ -1626,6 +1502,38 @@ export const CreateOrderPage: React.FC = () => {
                     : 'border-gray-200/80'
                 }`}
               />
+
+              {/* Option to save new address to profile */}
+              {warehouseAddress.trim().length > 3 && !savedWarehouses.some((w: any) => `${w.city}, ${w.address} (${w.name})` === warehouseAddress || `${w.city}, ${w.address}` === warehouseAddress) && (
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 px-0.5">
+                  <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={saveAddressToProfile}
+                      onChange={(e) => setSaveAddressToProfile(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded border-gray-300 text-[#0082FB] focus:ring-[#0082FB] cursor-pointer"
+                    />
+                    <span className="text-[11px] font-semibold text-gray-600">
+                      Сохранить этот адрес в профиль для будущих заказов
+                    </span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSaveAddressToProfile()}
+                    className="text-[11px] font-bold text-[#0082FB] hover:text-[#0070DA] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    {addressSavedSuccess ? (
+                      <span className="text-emerald-600 font-bold flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" /> Сохранено в профиль
+                      </span>
+                    ) : (
+                      <span>+ Сохранить сейчас</span>
+                    )}
+                  </button>
+                </div>
+              )}
+
               {!warehouseAddress.trim() && errorMsg && (
                 <p className="text-[11px] text-red-600 font-bold animate-in fade-in duration-150">
                   Пожалуйста, введите адрес склада или выберите один из ваших адресов выше.

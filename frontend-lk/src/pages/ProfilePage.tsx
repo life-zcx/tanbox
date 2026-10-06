@@ -153,7 +153,7 @@ export const ProfilePage: React.FC = () => {
       setWhEnd(wh.endTime);
     } else {
       setEditingWhId(null);
-      setWhName(`Склад №${warehouses.length + 1}`);
+      setWhName(warehouses.length === 0 ? 'Основной склад' : `Склад №${warehouses.length + 1}`);
       setWhCity('г. Алматы');
       setWhAddress('');
       setWhContact('');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   CheckCircle2, 
   Clock, 
@@ -43,6 +43,7 @@ export const CategoriesPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedServiceTitle, setSelectedServiceTitle] = useState('Аудит ТН ВЭД и подготовка к маркировке 2026–2027');
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setPageSeo(
@@ -278,54 +279,10 @@ export const CategoriesPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Main Filter & Content Section */}
+      {/* Main Content Section */}
       <section className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        
-        {/* Filter Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-gray-200/80 pb-6">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-[#0082FB]" />
-            <span className="text-xs font-extrabold text-[#111827] uppercase tracking-wider">Фильтр категорий:</span>
-          </div>
-
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <button
-              onClick={() => setActiveFilter('ALL')}
-              className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-all ${
-                activeFilter === 'ALL'
-                  ? 'bg-[#0082FB] text-white shadow-md'
-                  : 'bg-white text-[#475569] hover:bg-gray-100 shadow-sm'
-              }`}
-            >
-              Все категории ({categories.length})
-            </button>
-
-            <button
-              onClick={() => setActiveFilter('ACTIVE')}
-              className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-all ${
-                activeFilter === 'ACTIVE'
-                  ? 'bg-[#0082FB] text-white shadow-md'
-                  : 'bg-white text-[#475569] hover:bg-gray-100 shadow-sm'
-              }`}
-            >
-              Действующая маркировка (5)
-            </button>
-
-            <button
-              onClick={() => setActiveFilter('UPCOMING')}
-              className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-all ${
-                activeFilter === 'UPCOMING'
-                  ? 'bg-[#0082FB] text-white shadow-md'
-                  : 'bg-white text-[#475569] hover:bg-gray-100 shadow-sm'
-              }`}
-            >
-              Внедряется в 2026–2027 (5)
-            </button>
-          </div>
-        </div>
-
         {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredCategories.map((item) => {
             const isActive = item.status === 'ACTIVE';
 
@@ -333,96 +290,70 @@ export const CategoriesPage: React.FC = () => {
               <div
                 key={item.id}
                 id={item.id}
-                className="bg-white rounded-2xl p-5 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between space-y-4 border border-gray-100"
+                onClick={() => navigate(`/categories/${item.id}`)}
+                className="bg-white rounded-2xl p-6 sm:p-7 border border-gray-200/90 hover:border-[#0082FB] hover:shadow-lg transition-all duration-200 flex flex-col justify-between group space-y-5 cursor-pointer"
               >
-                <div className="space-y-3.5">
+                <div className="space-y-4">
                   {/* Top Badge & TNVED */}
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <span
-                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${
                         isActive
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-[#EBF5FF] text-[#0082FB]'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                          : 'bg-blue-50 text-[#0082FB] border-blue-200/80'
                       }`}
                     >
-                      {isActive ? (
-                        <CheckCircle2 className="w-3 h-3 inline mr-1 text-emerald-600" />
-                      ) : (
-                        <Clock className="w-3 h-3 inline mr-1 text-[#0082FB]" />
-                      )}
-                      {item.statusText}
+                      {isActive ? '✓ Обязательная маркировка' : item.statusText}
                     </span>
 
-                    <span className="text-[11px] font-mono font-bold text-[#64748B] bg-[#F8FAFC] px-2.5 py-0.5 rounded-md">
+                    <span className="text-[11px] font-mono font-bold text-[#475569] bg-gray-50 border border-gray-200/80 px-2.5 py-1 rounded-lg">
                       ТН ВЭД: {item.tnved}
                     </span>
                   </div>
 
-                  {/* Title without AI icon */}
+                  {/* Title & Date */}
                   <div>
-                    <h3 className="text-lg font-bold text-[#111827] tracking-tight leading-snug">
+                    <h3 className="text-lg sm:text-xl font-bold text-[#111827] group-hover:text-[#0082FB] transition-colors tracking-tight leading-snug">
                       {item.title}
                     </h3>
-                    <p className="text-xs text-[#64748B] mt-1 flex items-center gap-1.5 font-medium">
-                      <Calendar className="w-3.5 h-3.5 text-[#0082FB]" />
-                      {item.date}
+                    <p className="text-xs text-[#64748B] mt-1.5 flex items-center gap-1.5 font-medium">
+                      <Clock className="w-3.5 h-3.5 text-gray-400" />
+                      Срок введения: <strong className="text-[#111827]">{item.date}</strong>
                     </p>
                   </div>
 
                   {/* Description */}
-                  <p className="text-xs sm:text-[13px] text-[#64748B] leading-relaxed font-normal">
+                  <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
                     {item.description}
                   </p>
 
-                  {/* Stages Breakdown (if available) - compact */}
-                  {item.stages && item.stages.length > 0 && (
-                    <div className="bg-[#F8FAFC] border border-gray-100 rounded-xl p-3 space-y-1.5">
-                      <p className="text-[11px] font-bold text-[#0082FB] uppercase tracking-wider flex items-center gap-1">
-                        <Layers className="w-3.5 h-3.5 text-[#0082FB]" />
-                        Этапы вступления в силу:
-                      </p>
-                      <ul className="space-y-1.5">
-                        {item.stages.map((stg, sIdx) => (
-                          <li key={sIdx} className="text-xs text-[#111827] font-medium leading-relaxed flex items-start gap-2">
-                            <span className="font-bold bg-[#0082FB] text-white px-1.5 py-0.5 rounded text-[10px] shrink-0 whitespace-nowrap">
-                              {stg.date}
-                            </span>
-                            <span className="text-xs">{stg.title}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Key Features Details - Compact & without AI box icons */}
-                  <div className="bg-[#F8FAFC] rounded-xl p-3 border border-gray-100 space-y-1.5">
-                    <p className="text-[11px] font-bold text-[#111827] uppercase tracking-wider">Ключевые особенности:</p>
-                    <ul className="space-y-1">
-                      {item.details.map((detail, idx) => (
-                        <li key={idx} className="text-xs text-[#475569] flex items-start gap-2 font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#0082FB] shrink-0 mt-1.5" />
-                          <span>{detail}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  {/* Key Features List - Strict & Clean without nested gray boxes */}
+                  <ul className="space-y-2 pt-3 border-t border-gray-100">
+                    {item.details.map((detail, idx) => (
+                      <li key={idx} className="text-xs text-[#334155] flex items-start gap-2 font-medium">
+                        <CheckCircle2 className="w-4 h-4 text-[#0082FB] shrink-0 mt-0.5" />
+                        <span>{detail}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
-                {/* Bottom Action - Compact */}
-                <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2.5 flex-wrap">
-                  <Link
-                    to={`/categories/${item.id}`}
-                    className="inline-flex items-center gap-1.5 bg-[#0082FB] text-white font-bold text-xs px-3.5 py-2 rounded-xl hover:bg-[#0070DA] transition-all active:scale-95 shrink-0 shadow-sm"
+                {/* Bottom Action Bar */}
+                <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(item.link);
+                    }}
+                    className="inline-flex items-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm cursor-pointer"
                   >
-                    Подробнее о категории <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                    Рассчитать партию <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
 
-                  <Link
-                    to={item.link}
-                    className="inline-flex items-center gap-1.5 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#111827] font-bold text-xs px-3.5 py-2 rounded-xl transition-all active:scale-95 shrink-0"
-                  >
-                    Рассчитать стоимость
-                  </Link>
+                  <span className="text-xs font-bold text-[#64748B] group-hover:text-[#0082FB] flex items-center gap-1 transition-colors">
+                    Регламент ТР ТС <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </span>
                 </div>
               </div>
             );

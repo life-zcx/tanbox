@@ -168,11 +168,11 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
 
     // 3. Compute Financial & Operational Metrics
     const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.totalPrice || 0)), 0);
     const totalItemsCodes = orders.reduce((sum, o) => sum + (o.itemsCount || 0), 0);
     const paidRevenue = orders
       .filter((o) => o.paymentStatus === 'PAID')
-      .reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+      .reduce((sum, o) => sum + (Number(o.totalPrice || 0)), 0);
     const unpaidRevenue = totalRevenue - paidRevenue;
 
     const estimatedProfitMargin = Math.round(totalRevenue * 0.72);
@@ -198,7 +198,7 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
       return Number((((curr - prev) / prev) * 100).toFixed(1));
     };
 
-    const prevRevenue = prevOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const prevRevenue = prevOrders.reduce((sum, o) => sum + (Number(o.totalPrice || 0)), 0);
     const prevTotalOrders = prevOrders.length;
     const prevItemsCodes = prevOrders.reduce((sum, o) => sum + (o.itemsCount || 0), 0);
 
@@ -247,7 +247,7 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
           codes: 0,
         };
       }
-      timelineMap[key].revenue += o.totalPrice || 0;
+      timelineMap[key].revenue += Number(o.totalPrice || 0);
       timelineMap[key].orders += 1;
       timelineMap[key].codes += o.itemsCount || 0;
     });
@@ -273,7 +273,7 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
         tariffMap[tKey] = { key: tKey, name: tKey, count: 0, revenue: 0, percentage: 0 };
       }
       tariffMap[tKey].count += 1;
-      tariffMap[tKey].revenue += o.totalPrice || 0;
+      tariffMap[tKey].revenue += Number(o.totalPrice || 0);
     });
 
     Object.values(tariffMap).forEach((t) => {
@@ -312,7 +312,7 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
       }
       categoryMap[cKey].count += 1;
       categoryMap[cKey].codes += o.itemsCount || 0;
-      categoryMap[cKey].revenue += o.totalPrice || 0;
+      categoryMap[cKey].revenue += Number(o.totalPrice || 0);
     });
 
     Object.values(categoryMap).forEach((c) => {
@@ -335,7 +335,7 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
       const sKey = o.status;
       if (statusMap[sKey]) {
         statusMap[sKey].count += 1;
-        statusMap[sKey].revenue += o.totalPrice || 0;
+        statusMap[sKey].revenue += Number(o.totalPrice || 0);
       }
     });
 
@@ -372,7 +372,7 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
         };
       }
       clientAggMap[u.id].ordersCount += 1;
-      clientAggMap[u.id].totalRevenue += o.totalPrice || 0;
+      clientAggMap[u.id].totalRevenue += Number(o.totalPrice || 0);
       clientAggMap[u.id].totalCodes += o.itemsCount || 0;
     });
 

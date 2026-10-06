@@ -52,10 +52,10 @@ export async function computeOrderPricing(params: CalculationParams): Promise<Pr
   };
 
   const t = fallbackPrices[tariffType] || fallbackPrices.STANDARD;
-  const priceRetail = dbTariff?.priceRetail ?? t.retail;
-  const priceWholesale = dbTariff?.priceWholesale ?? t.wholesale;
-  const priceLargeWholesale = dbTariff?.priceLargeWholesale ?? t.large;
-  const costEstimate = dbTariff?.costEstimate ?? t.cost;
+  const priceRetail = dbTariff ? Number(dbTariff.priceRetail) : t.retail;
+  const priceWholesale = dbTariff ? Number(dbTariff.priceWholesale) : t.wholesale;
+  const priceLargeWholesale = dbTariff ? Number(dbTariff.priceLargeWholesale) : t.large;
+  const costEstimate = dbTariff ? Number(dbTariff.costEstimate) : t.cost;
 
   // Determine unit base price according to batch size
   let unitBasePrice = priceRetail;
@@ -69,10 +69,10 @@ export async function computeOrderPricing(params: CalculationParams): Promise<Pr
   }
 
   // Extra services exact additions
-  const ssccPricePerItem = dbSettings?.ssccPrice ?? 5.0;
-  const stickerLayoutPrice = dbSettings?.stickerLayoutPrice ?? 5000.0;
-  const urgentPercent = dbSettings?.urgentPercent ?? 20.0;
-  const expressDeliveryPrice = dbSettings?.expressDeliveryPrice ?? 15000.0;
+  const ssccPricePerItem = dbSettings ? Number(dbSettings.ssccPrice) : 5.0;
+  const stickerLayoutPrice = dbSettings ? Number(dbSettings.stickerLayoutPrice) : 5000.0;
+  const urgentPercent = dbSettings ? Number(dbSettings.urgentPercent) : 20.0;
+  const expressDeliveryPrice = dbSettings ? Number(dbSettings.expressDeliveryPrice) : 15000.0;
 
   let flatAdditions = 0;
   let unitAdditions = 0;
@@ -91,14 +91,18 @@ export async function computeOrderPricing(params: CalculationParams): Promise<Pr
     flatAdditions += expressDeliveryPrice;
   }
 
-  const finalUnitPrice = Math.round(unitBasePrice + unitAdditions);
-  let totalPrice = finalUnitPrice * safeItemsCount + flatAdditions;
+  const baseBatchTotal = unitBasePrice * safeItemsCount;
+  const hasSeparateSscc = (ssccNeeded || extraServices.includes('SSCC_AGGREGATION')) && tariffType !== 'PRO';
+  const ssccBatchTotal = hasSeparateSscc ? ssccPricePerItem * safeItemsCount : 0;
 
+  const productionSubtotal = baseBatchTotal + ssccBatchTotal;
+  let urgentAddition = 0;
   if (extraServices.includes('URGENT_PROCESSING')) {
-    totalPrice *= 1 + urgentPercent / 100;
+    urgentAddition = Math.round(productionSubtotal * (urgentPercent / 100));
   }
 
-  totalPrice = Math.round(totalPrice);
+  const finalUnitPrice = Math.round(unitBasePrice + (hasSeparateSscc ? ssccPricePerItem : 0));
+  const totalPrice = Math.round(productionSubtotal + flatAdditions + urgentAddition);
 
   // Estimated execution time
   let estDays = 1;

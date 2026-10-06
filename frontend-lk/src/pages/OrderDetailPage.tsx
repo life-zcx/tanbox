@@ -5,6 +5,7 @@ import { apiClient } from '../api/client';
 import { OrderItem } from '../types';
 import { StatusBadge, parseOrderNotes } from '@shared';
 import { getCategoryLabel } from '../data/categories';
+import { downloadHtmlAsPdf } from '../utils/clientPdf';
 import {
   ArrowLeft,
   MapPin,
@@ -584,30 +585,22 @@ export const OrderDetailPage: React.FC = () => {
   const handleDownloadAct = async () => {
     if (!order) return;
     setDownloadingDoc('act');
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write('<!DOCTYPE html><html><head><title>Подготовка PDF...</title></head><body style="font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc;color:#334155;"><div style="text-align:center;"><div style="font-size:18px;font-weight:700;margin-bottom:8px;">Загрузка PDF АВР...</div><div style="font-size:13px;color:#64748b;">Пожалуйста, подождите пару секунд</div></div></body></html>');
-    }
     try {
       const res = await apiClient.get(`/orders/${order.id}/act`, {
         responseType: 'blob',
       });
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const blobUrl = URL.createObjectURL(blob);
-      if (win && !win.closed) {
-        win.location.href = blobUrl;
-      } else {
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = `Act_${order.orderNumber}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `Act_${order.orderNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     } catch (err: any) {
-      if (win && !win.closed) win.close();
       console.error('Download act error:', err);
-      alert('Ошибка при формировании PDF акта: ' + (err.response?.data?.message || err.message));
+      alert('Ошибка при формировании Акта выполненных работ: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingDoc(null);
     }
@@ -616,30 +609,22 @@ export const OrderDetailPage: React.FC = () => {
   const handleDownloadInvoice = async () => {
     if (!order) return;
     setDownloadingDoc('invoice');
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write('<!DOCTYPE html><html><head><title>Подготовка PDF...</title></head><body style="font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc;color:#334155;"><div style="text-align:center;"><div style="font-size:18px;font-weight:700;margin-bottom:8px;">Загрузка PDF счёта на оплату...</div><div style="font-size:13px;color:#64748b;">Пожалуйста, подождите пару секунд</div></div></body></html>');
-    }
     try {
       const res = await apiClient.get(`/orders/${order.id}/invoice`, {
         responseType: 'blob',
       });
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const blobUrl = URL.createObjectURL(blob);
-      if (win && !win.closed) {
-        win.location.href = blobUrl;
-      } else {
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = `Invoice_${order.orderNumber}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `Invoice_${order.orderNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     } catch (err: any) {
-      if (win && !win.closed) win.close();
       console.error('Download invoice error:', err);
-      alert('Ошибка при формировании PDF счета: ' + (err.response?.data?.message || err.message));
+      alert('Ошибка при формировании Счёта на оплату: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingDoc(null);
     }
@@ -1029,16 +1014,10 @@ export const OrderDetailPage: React.FC = () => {
                   </div>
                   <div>
                     <h2 className="text-sm font-extrabold text-[#111827]">
-                      {isReusedTemplate ? 'Макет этикетки (из библиотеки)' : 'Требования к макету стикера'}
+                      Макет этикетки
                     </h2>
                     <p className="text-xs text-[#64748B]">
-                      {isReusedTemplate ? (
-                        <span className="text-emerald-700 font-semibold">
-                          ✓ Использован готовый шаблон из вашей библиотеки (без повторной оплаты)
-                        </span>
-                      ) : (
-                        <>Размер: <strong className="text-[#111827]">{labelRequirements?.size || '58×40 мм'}</strong> • Техническое задание для дизайнера</>
-                      )}
+                      Размер: <strong className="text-[#111827]">{layoutWidthMm}×{layoutHeightMm} мм</strong>
                     </p>
                   </div>
                 </div>
@@ -1046,7 +1025,7 @@ export const OrderDetailPage: React.FC = () => {
                 <div className="flex flex-col items-end self-start sm:self-auto">
                   <span
                     className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border ${
-                      approvalStatus === 'APPROVED'
+                      isReusedTemplate || approvalStatus === 'APPROVED'
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
                         : approvalStatus === 'CHANGES_REQUESTED'
                         ? 'bg-amber-50 text-amber-700 border-amber-200/80'
@@ -1055,15 +1034,15 @@ export const OrderDetailPage: React.FC = () => {
                         : 'bg-gray-100 text-[#475569] border-gray-200'
                     }`}
                   >
-                    {approvalStatus === 'APPROVED'
-                      ? '✓ Макет утвержден'
+                    {isReusedTemplate || approvalStatus === 'APPROVED'
+                      ? '✓ Утвержден'
                       : approvalStatus === 'CHANGES_REQUESTED'
                       ? 'Запрошены правки'
                       : approvalStatus === 'WAITING_APPROVAL'
                       ? 'Ожидает согласования'
                       : 'В разработке у дизайнера'}
                   </span>
-                  {approvalStatus === 'APPROVED' && approvalData.approvedAt && (
+                  {(isReusedTemplate || approvalStatus === 'APPROVED') && approvalData.approvedAt && (
                     <span className="text-[10px] text-gray-400 mt-1 font-medium">
                       {approvalData.approvedAt}
                     </span>
@@ -1075,72 +1054,83 @@ export const OrderDetailPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 {/* Left parameters (7 cols) */}
                 <div className="md:col-span-7 space-y-2.5 text-xs">
-                  {labelRequirements?.productName && (
+                  {isReusedTemplate ? (
                     <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
-                      <span className="text-[#64748B] font-medium">Товар:</span>
-                      <span className="col-span-2 font-bold text-[#111827]">
-                        {labelRequirements.productName}
+                      <span className="text-[#64748B] font-medium">Размер стикера:</span>
+                      <span className="col-span-2 text-[#111827] font-bold">
+                        {layoutWidthMm}×{layoutHeightMm} мм
                       </span>
                     </div>
-                  )}
+                  ) : (
+                    <>
+                      {labelRequirements?.productName && (
+                        <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
+                          <span className="text-[#64748B] font-medium">Товар:</span>
+                          <span className="col-span-2 font-bold text-[#111827]">
+                            {labelRequirements.productName}
+                          </span>
+                        </div>
+                      )}
 
-                  {labelRequirements?.brand && (
-                    <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
-                      <span className="text-[#64748B] font-medium">Бренд:</span>
-                      <span className="col-span-2 font-bold text-[#111827]">
-                        {labelRequirements.brand}
-                      </span>
-                    </div>
-                  )}
+                      {labelRequirements?.brand && (
+                        <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
+                          <span className="text-[#64748B] font-medium">Бренд:</span>
+                          <span className="col-span-2 font-bold text-[#111827]">
+                            {labelRequirements.brand}
+                          </span>
+                        </div>
+                      )}
 
-                  {labelRequirements?.article && (
-                    <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
-                      <span className="text-[#64748B] font-medium">Артикул / Модель:</span>
-                      <span className="col-span-2 font-mono font-bold text-[#111827]">
-                        {labelRequirements.article}
-                      </span>
-                    </div>
-                  )}
+                      {labelRequirements?.article && (
+                        <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
+                          <span className="text-[#64748B] font-medium">Артикул / Модель:</span>
+                          <span className="col-span-2 font-mono font-bold text-[#111827]">
+                            {labelRequirements.article}
+                          </span>
+                        </div>
+                      )}
 
-                  {labelRequirements?.composition && (
-                    <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
-                      <span className="text-[#64748B] font-medium">Состав:</span>
-                      <span className="col-span-2 text-[#111827] font-semibold">
-                        {labelRequirements.composition}
-                      </span>
-                    </div>
-                  )}
+                      {labelRequirements?.composition && (
+                        <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
+                          <span className="text-[#64748B] font-medium">Состав:</span>
+                          <span className="col-span-2 text-[#111827] font-semibold">
+                            {labelRequirements.composition}
+                          </span>
+                        </div>
+                      )}
 
-                  <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
-                    <span className="text-[#64748B] font-medium">Размер стикера:</span>
-                    <span className="col-span-2 text-[#111827] font-bold">
-                      {labelRequirements?.size || `${layoutWidthMm}×${layoutHeightMm} мм`}
-                    </span>
-                  </div>
+                      <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
+                        <span className="text-[#64748B] font-medium">Размер стикера:</span>
+                        <span className="col-span-2 text-[#111827] font-bold">
+                          {labelRequirements?.size || `${layoutWidthMm}×${layoutHeightMm} мм`}
+                        </span>
+                      </div>
 
-                  {labelRequirements?.symbols && (
-                    <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
-                      <span className="text-[#64748B] font-medium">Обязательные знаки:</span>
-                      <span className="col-span-2 text-[#0082FB] font-bold">
-                        {labelRequirements.symbols}
-                      </span>
-                    </div>
-                  )}
+                      {labelRequirements?.symbols && (
+                        <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
+                          <span className="text-[#64748B] font-medium">Обязательные знаки:</span>
+                          <span className="col-span-2 text-[#0082FB] font-bold">
+                            {labelRequirements.symbols}
+                          </span>
+                        </div>
+                      )}
 
-                  {labelRequirements?.barcode && (
-                    <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
-                      <span className="text-[#64748B] font-medium">Штрихкод EAN-13:</span>
-                      <span className="col-span-2 text-[#111827] font-mono font-bold">
-                        {labelRequirements.barcode}
-                      </span>
-                    </div>
-                  )}
+                      {labelRequirements?.barcode && (
+                        <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100">
+                          <span className="text-[#64748B] font-medium">Штрихкод EAN-13:</span>
+                          <span className="col-span-2 text-[#111827] font-mono font-bold">
+                            {labelRequirements.barcode}
+                          </span>
+                        </div>
+                      )}
 
-                  {labelRequirements?.wishes && (
-                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-200/70 text-[11px] text-[#64748B]">
-                      <span className="font-bold text-[#111827] block mb-0.5">Пожелания к макету:</span>
-                      {labelRequirements.wishes}
-                    </div>
+                      {labelRequirements?.wishes && (
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-200/70 text-[11px] text-[#64748B]">
+                          <span className="font-bold text-[#111827] block mb-0.5">Пожелания к макету:</span>
+                          {labelRequirements.wishes}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -1191,8 +1181,8 @@ export const OrderDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Approval Area - ONLY shown when action is needed */}
-              {approvalStatus === 'APPROVED' ? null : (
+              {/* Approval Area - ONLY shown when action is needed for custom design orders */}
+              {isReusedTemplate || !isStickerDesign || approvalStatus === 'APPROVED' ? null : (
                 <div className="pt-3 border-t border-gray-100">
                   {approvalStatus === 'IN_DESIGN' ? (
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#64748B] py-1">
@@ -1872,6 +1862,7 @@ export const OrderDetailPage: React.FC = () => {
           hasLayout={Boolean(hasLayoutReady || (order.stickerLayout as any)?.elements?.length > 0)}
           canPrintBatch={canPrintBatch}
           blockReason={printBlockReason}
+          startLabelNumber={(order as any).startLabelNumber}
         />
       )}
 

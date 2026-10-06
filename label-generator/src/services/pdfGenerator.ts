@@ -19,6 +19,49 @@ export class LabelPdfGenerator {
   private boldFontBuffer: Buffer | null = null;
 
   constructor() {
+    this.regularFontPath = '';
+    this.boldFontPath = '';
+    this.ensureFontsLoaded();
+  }
+
+  private loadFontBufferSafe(filePath: string): Buffer | null {
+    if (!filePath || !fs.existsSync(filePath)) return null;
+
+    // In Docker Linux environments, reading directly from a virtiofs/9p Windows mount
+    // with fs.readFileSync can cause "ENOMEM: not enough memory, read".
+    // Copying the font to /tmp/tanbox-fonts (local container tmpfs) avoids this completely.
+    try {
+      const isUnix = process.platform !== 'win32';
+      const tmpDir = isUnix ? '/tmp/tanbox-fonts' : path.join(process.cwd(), '.fonts_cache');
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+      const targetFile = path.join(tmpDir, path.basename(filePath));
+      const srcStat = fs.statSync(filePath);
+      if (!fs.existsSync(targetFile) || fs.statSync(targetFile).size !== srcStat.size) {
+        fs.copyFileSync(filePath, targetFile);
+      }
+      const buf = fs.readFileSync(targetFile);
+      if (buf && buf.length > 0) {
+        return buf;
+      }
+    } catch (copyErr) {
+      console.warn(`[LabelPdfGenerator] Safe font copy for ${filePath} failed:`, copyErr);
+    }
+
+    // Direct read fallback
+    try {
+      return fs.readFileSync(filePath);
+    } catch (directErr) {
+      console.warn(`[LabelPdfGenerator] Direct readFileSync for ${filePath} failed:`, directErr);
+    }
+
+    return null;
+  }
+
+  private ensureFontsLoaded(): void {
+    if (this.regularFontBuffer && this.boldFontBuffer) return;
+
     const candidateDirs = [
       path.join(process.cwd(), 'assets/fonts'),
       path.join(process.cwd(), 'label-generator/assets/fonts'),
@@ -26,11 +69,10 @@ export class LabelPdfGenerator {
       path.join(__dirname, '../../assets/fonts'),
       path.join(__dirname, '../assets/fonts'),
       path.join(__dirname, 'assets/fonts'),
+      '/usr/share/fonts/truetype/dejavu',
+      '/usr/share/fonts/TTF',
       'C:\\Windows\\Fonts',
     ];
-
-    this.regularFontPath = '';
-    this.boldFontPath = '';
 
     for (const dir of candidateDirs) {
       const reg = path.join(dir, 'Arial-Regular.ttf');
@@ -49,15 +91,20 @@ export class LabelPdfGenerator {
       }
     }
 
-    if (this.regularFontPath && fs.existsSync(this.regularFontPath)) {
-      try {
-        this.regularFontBuffer = fs.readFileSync(this.regularFontPath);
-        this.boldFontBuffer = (this.boldFontPath && fs.existsSync(this.boldFontPath))
-          ? fs.readFileSync(this.boldFontPath)
-          : this.regularFontBuffer;
-      } catch (err) {
-        console.warn('Failed to preload font buffers:', err);
+    if (this.regularFontPath) {
+      this.regularFontBuffer = this.loadFontBufferSafe(this.regularFontPath);
+      this.boldFontBuffer = this.boldFontPath
+        ? this.loadFontBufferSafe(this.boldFontPath)
+        : this.regularFontBuffer;
+      if (this.regularFontBuffer && !this.boldFontBuffer) {
+        this.boldFontBuffer = this.regularFontBuffer;
       }
+    }
+
+    if (this.regularFontBuffer) {
+      console.log(`[LabelPdfGenerator] Fonts loaded successfully: ${this.regularFontBuffer.length} bytes (Regular), ${this.boldFontBuffer?.length} bytes (Bold)`);
+    } else {
+      console.error('[LabelPdfGenerator] CRITICAL: Failed to load Unicode fonts! Cyrillic text will be garbled!');
     }
   }
 
@@ -80,6 +127,7 @@ export class LabelPdfGenerator {
     });
 
     // Register Cyrillic Unicode fonts using preloaded in-memory Buffers (prevents repeated fs.readFileSync ENOMEM)
+    this.ensureFontsLoaded();
     const hasCustomFonts = Boolean(this.regularFontBuffer);
     if (this.regularFontBuffer && this.boldFontBuffer) {
       doc.registerFont('AppFont', this.regularFontBuffer);

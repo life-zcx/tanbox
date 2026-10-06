@@ -4,7 +4,6 @@ import { CategoriesSection } from '../components/landing/CategoriesSection';
 import { DataMatrixInfoSection } from '../components/landing/DataMatrixInfoSection';
 import { CalculatorSection } from '../components/landing/CalculatorSection';
 import { HowItWorksSection } from '../components/landing/HowItWorksSection';
-import { SeoContentSection } from '../components/landing/SeoContentSection';
 import { FaqSection } from '../components/landing/FaqSection';
 import { ContactsSection } from '../components/landing/ContactsSection';
 import { TariffCode } from '../types';
@@ -34,7 +33,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) 
       <DataMatrixInfoSection />
       <CalculatorSection onOrderQuick={onOrderQuick} />
       <HowItWorksSection />
-      <SeoContentSection />
       <FaqSection />
       <ContactsSection />
     </main>

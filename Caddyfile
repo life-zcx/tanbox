@@ -9,12 +9,15 @@
         X-Frame-Options "SAMEORIGIN"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
         -Server
     }
 }
 
+# --- PRODUCTION DOMAINS (Automatic HTTPS / TLS via Let's Encrypt / ZeroSSL) ---
+
 # 1. Landing (tanbox.kz)
-http://tanbox.local:80, http://localhost:80, http://127.0.0.1:80, http://tanbox.kz, :80 {
+tanbox.kz {
     import security_headers
     handle /api/* {
         reverse_proxy backend:5050
@@ -25,7 +28,7 @@ http://tanbox.local:80, http://localhost:80, http://127.0.0.1:80, http://tanbox.
 }
 
 # 2. Client Cabinet (lk.tanbox.kz)
-http://lk.tanbox.local:80, http://lk.tanbox.kz {
+lk.tanbox.kz {
     import security_headers
     handle /api/* {
         reverse_proxy backend:5050
@@ -36,11 +39,8 @@ http://lk.tanbox.local:80, http://lk.tanbox.kz {
 }
 
 # 3. Admin Cabinet (admin.tanbox.kz)
-http://admin.tanbox.local:80, http://admin.tanbox.kz {
+admin.tanbox.kz {
     import security_headers
-    handle /api/labels/* {
-        reverse_proxy label-generator:5060
-    }
     handle /api/* {
         reverse_proxy backend:5050
     }
@@ -50,7 +50,48 @@ http://admin.tanbox.local:80, http://admin.tanbox.kz {
 }
 
 # 4. Backend REST API (api.tanbox.kz)
-http://api.tanbox.local:80, http://api.tanbox.kz {
+api.tanbox.kz {
+    import security_headers
+    reverse_proxy backend:5050
+}
+
+# --- LOCAL DEVELOPMENT & INTRANET BLOCKS (HTTP) ---
+
+# Local Landing
+http://tanbox.local, http://localhost:80, http://127.0.0.1:80, :80 {
+    import security_headers
+    handle /api/* {
+        reverse_proxy backend:5050
+    }
+    handle {
+        reverse_proxy frontend-landing:3000
+    }
+}
+
+# Local Client Cabinet
+http://lk.tanbox.local {
+    import security_headers
+    handle /api/* {
+        reverse_proxy backend:5050
+    }
+    handle {
+        reverse_proxy frontend-lk:3001
+    }
+}
+
+# Local Admin Cabinet
+http://admin.tanbox.local {
+    import security_headers
+    handle /api/* {
+        reverse_proxy backend:5050
+    }
+    handle {
+        reverse_proxy frontend-admin:3002
+    }
+}
+
+# Local Backend REST API
+http://api.tanbox.local {
     import security_headers
     reverse_proxy backend:5050
 }
