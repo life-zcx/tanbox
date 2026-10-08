@@ -4,12 +4,12 @@ import fs from 'fs';
 import http from 'http';
 import { prisma } from '../config/db';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { OrderCategory, TariffType, OrderStatus, PaymentStatus, StickerApprovalStatus, CodeItemStatus } from '@prisma/client';
+import { OrderCategory, TariffType, OrderStatus, PaymentStatus, StickerApprovalStatus, CodeItemStatus, MarkirovkaOrderStatus } from '@prisma/client';
 import { computeOrderPricing } from '../utils/pricing';
 import { pdfQueue } from '../services/pdfQueue.service';
 import { renderHtmlToPdf } from '../services/pdfRenderer.service';
 import { getClientOrderStartIndex, reindexClientOrders } from '../utils/orderNumbering';
-import { parseCodesFile, ensureOrderCodesPopulated } from '../services/orderCodes.service';
+import { parseCodesFile, ensureOrderCodesPopulated, attachCodesToOrder } from '../services/orderCodes.service';
 import { 
   generateOrderActHtml, 
   generateOrderInvoiceHtml, 
@@ -20,6 +20,7 @@ import {
 import { getDefaultStickerLayout } from '../utils/stickerLayout.utils';
 import { telegram } from '../services/telegram.service';
 import { MarkirovkaClient } from '../services/markirovkaClient.service';
+import { logger } from '../utils/logger';
 export { getDefaultStickerLayout };
 
 function isSafeUrl(url?: string | null): boolean {
@@ -60,6 +61,28 @@ async function findOrderByIdOrNumber(identifier: string) {
           binIin: true,
           email: true,
           phone: true,
+        },
+      },
+      markirovkaOrders: {
+        include: {
+          account: {
+            select: {
+              id: true,
+              name: true,
+              environment: true,
+              login: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      },
+      markirovkaReports: {
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      },
+      _count: {
+        select: {
+          codeItems: true,
         },
       },
     },
@@ -272,36 +295,41 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
               },
             });
 
-            // Fetch generated codes buffer
-            const codes = await client.fetchCodes(
+            // Poll generated codes buffer (up to 8 seconds)
+            const pollRes = await client.pollAndFetchCodes(
               emission.orderId,
               String(markirovkaGtin).trim(),
               countNum,
+              8000,
               category as OrderCategory
             );
 
-            if (codes && codes.length > 0) {
+            if (pollRes.codes && pollRes.codes.length > 0) {
               await prisma.markirovkaOrder.update({
                 where: { id: createdMarkirovkaOrder.id },
                 data: {
-                  codes,
-                  quantityReceived: codes.length,
+                  codes: pollRes.codes,
+                  quantityReceived: pollRes.codes.length,
                   status: 'COMPLETED',
+                  errorDetails: null,
                 },
               });
 
-              // Populate OrderCodeItem so Tanbox warehouse & printing immediately have access
-              const codeItemData = codes.map((codeStr, idx) => ({
-                orderId: newOrder.id,
-                index: idx + 1,
-                code: codeStr,
-                gtin: String(markirovkaGtin).trim(),
-                status: CodeItemStatus.NEW,
-              }));
-
-              await prisma.orderCodeItem.createMany({
-                data: codeItemData,
-                skipDuplicates: true,
+              // Populate OrderCodeItem AND save physical CSV file and set codesFileUrl on Order
+              const attachRes = await attachCodesToOrder(
+                newOrder.id,
+                pollRes.codes,
+                String(markirovkaGtin).trim(),
+                'markirovka_emission'
+              );
+              newOrder.codesFileUrl = attachRes.relativeUrl;
+              newOrder.codesFileName = `markirovka_emission_${newOrder.orderNumber}.csv`;
+            } else {
+              await prisma.markirovkaOrder.update({
+                where: { id: createdMarkirovkaOrder.id },
+                data: {
+                  status: pollRes.status === 'READY' ? MarkirovkaOrderStatus.READY : MarkirovkaOrderStatus.FETCHING,
+                },
               });
             }
           } catch (emissionErr: any) {
@@ -1049,7 +1077,19 @@ export const downloadOrderCodesFile = async (req: AuthRequest, res: Response) =>
       return res.status(403).json({ message: 'Нет доступа к данному заказу' });
     }
 
-    if (!existing.codesFileUrl) {
+    // If file is not present on disk, try auto-generating from OrderCodeItem in DB
+    if (!existing.codesFileUrl || !fs.existsSync(path.resolve(process.cwd(), '.' + existing.codesFileUrl))) {
+      const codeItemsCount = await prisma.orderCodeItem.count({ where: { orderId: existing.id } });
+      if (codeItemsCount > 0) {
+        const allCodeItems = await prisma.orderCodeItem.findMany({
+          where: { orderId: existing.id },
+          orderBy: { index: 'asc' },
+          select: { code: true, gtin: true },
+        });
+        const cleanCodes = allCodeItems.map((c) => c.code);
+        const { filePath } = await attachCodesToOrder(existing.id, cleanCodes, allCodeItems[0]?.gtin, 'markirovka_emission');
+        return res.download(filePath, `markirovka_emission_${existing.orderNumber}.csv`);
+      }
       return res.status(404).json({ message: 'К данному заказу еще не прикреплен файл кодов' });
     }
 
@@ -1082,12 +1122,33 @@ export const getOrderCodesContent = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'Нет доступа к данному заказу' });
     }
 
-    if (!existing.codesFileUrl) {
-      return res.json({ hasCodes: false, headers: [], previewRows: [], totalRows: 0 });
-    }
-
-    const filePath = path.resolve(process.cwd(), '.' + existing.codesFileUrl);
-    if (!fs.existsSync(filePath)) {
+    // If codesFileUrl is missing or file does not exist, check if codes are in DB
+    let filePath = existing.codesFileUrl ? path.resolve(process.cwd(), '.' + existing.codesFileUrl) : '';
+    if (!existing.codesFileUrl || !fs.existsSync(filePath)) {
+      const codeItemsCount = await prisma.orderCodeItem.count({ where: { orderId: existing.id } });
+      if (codeItemsCount > 0) {
+        const allCodeItems = await prisma.orderCodeItem.findMany({
+          where: { orderId: existing.id },
+          orderBy: { index: 'asc' },
+          select: { code: true, gtin: true, serial: true },
+        });
+        const cleanCodes = allCodeItems.map((c) => c.code);
+        const attached = await attachCodesToOrder(
+          existing.id,
+          cleanCodes,
+          allCodeItems[0]?.gtin,
+          'markirovka_emission'
+        );
+        return res.json({
+          hasCodes: true,
+          isCsv: true,
+          fileName: `markirovka_emission_${existing.orderNumber}.csv`,
+          fileUrl: attached.relativeUrl,
+          headers: ['code', 'gtin', 'serial'],
+          previewRows: allCodeItems.slice(0, 100),
+          totalRows: allCodeItems.length,
+        });
+      }
       return res.json({ hasCodes: false, headers: [], previewRows: [], totalRows: 0 });
     }
 
@@ -1121,6 +1182,311 @@ export const getOrderCodesContent = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('Get order codes content error:', error);
     return res.status(500).json({ message: 'Ошибка чтения файла кодов' });
+  }
+};
+
+export const syncMarkirovkaOrderCodes = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    const { id } = req.params;
+    const order = await findOrderByIdOrNumber(id);
+    if (!order) return res.status(404).json({ message: 'Заказ не найден' });
+
+    if (req.user.role !== 'ADMIN' && order.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Нет доступа к данному заказу' });
+    }
+
+    const markOrder = await prisma.markirovkaOrder.findFirst({
+      where: { orderId: order.id },
+      include: { account: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!markOrder) {
+      return res.status(400).json({ message: 'К данному заказу не привязана эмиссия Markirovka.kz' });
+    }
+
+    if (!markOrder.account) {
+      return res.status(400).json({ message: 'Подключенный аккаунт Markirovka.kz не найден' });
+    }
+
+    // Fast-path: If markOrder already has all requested codes stored in DB, re-attach immediately
+    if (
+      Array.isArray(markOrder.codes) &&
+      markOrder.codes.length >= markOrder.quantityRequested &&
+      markOrder.codes.length > 0
+    ) {
+      await attachCodesToOrder(
+        order.id,
+        markOrder.codes as string[],
+        markOrder.gtin,
+        'markirovka_emission'
+      );
+      const updatedOrder = await findOrderByIdOrNumber(order.id);
+      return res.json({
+        success: true,
+        message: `Все ${markOrder.codes.length} кодов маркировки успешно синхронизированы в заказ!`,
+        codesCount: markOrder.codes.length,
+        status: MarkirovkaOrderStatus.COMPLETED,
+        order: updatedOrder,
+      });
+    }
+
+    const client = new MarkirovkaClient(markOrder.account);
+
+    // If order was not yet created in IS MPT (or failed before externalOrderId)
+    let externalId = markOrder.externalOrderId;
+    if (!externalId) {
+      const emission = await client.createEmissionOrder({
+        category: markOrder.category,
+        gtin: markOrder.gtin,
+        quantity: markOrder.quantityRequested,
+        serialNumberType: 'OPERATOR',
+      });
+      externalId = emission.orderId;
+      await prisma.markirovkaOrder.update({
+        where: { id: markOrder.id },
+        data: { externalOrderId: externalId, status: MarkirovkaOrderStatus.FETCHING, errorDetails: null },
+      });
+    }
+
+    // Poll / fetch codes (up to 7 seconds)
+    const pollRes = await client.pollAndFetchCodes(
+      externalId,
+      markOrder.gtin,
+      markOrder.quantityRequested,
+      7000,
+      markOrder.category
+    );
+
+    if (pollRes.codes && pollRes.codes.length > 0) {
+      await prisma.markirovkaOrder.update({
+        where: { id: markOrder.id },
+        data: {
+          codes: pollRes.codes,
+          quantityReceived: pollRes.codes.length,
+          status: MarkirovkaOrderStatus.COMPLETED,
+          errorDetails: null,
+        },
+      });
+
+      await attachCodesToOrder(
+        order.id,
+        pollRes.codes,
+        markOrder.gtin,
+        'markirovka_emission'
+      );
+
+      const updatedOrder = await findOrderByIdOrNumber(order.id);
+      return res.json({
+        success: true,
+        message: `Успешно получено и сохранено в БД ${pollRes.codes.length} кодов маркировки!`,
+        codesCount: pollRes.codes.length,
+        status: MarkirovkaOrderStatus.COMPLETED,
+        order: updatedOrder,
+      });
+    }
+
+    // If still pending in IS MPT
+    const statusInfo = await client.getOrderStatus(externalId, markOrder.category).catch(() => null);
+    await prisma.markirovkaOrder.update({
+      where: { id: markOrder.id },
+      data: {
+        status: statusInfo?.status === 'READY' ? MarkirovkaOrderStatus.READY : MarkirovkaOrderStatus.FETCHING,
+      },
+    });
+
+    return res.json({
+      success: false,
+      message: 'Коды еще формируются на сервере ИС МПТ. Попробуйте повторить запрос через несколько секунд.',
+      status: statusInfo?.status || 'PROCESSING',
+      availableCodesCount: statusInfo?.availableCodesCount || 0,
+    });
+  } catch (err: any) {
+    logger.error('syncMarkirovkaOrderCodes error:', err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Ошибка синхронизации кодов с ИС МПТ',
+    });
+  }
+};
+
+export const generateTestCodesForOrder = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Только для администраторов' });
+    }
+    const { id } = req.params;
+    const order = await findOrderByIdOrNumber(id);
+    if (!order) return res.status(404).json({ message: 'Заказ не найден' });
+
+    const markOrder = await prisma.markirovkaOrder.findFirst({
+      where: { orderId: order.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const gtin = (markOrder?.gtin || '05055107433614').replace(/\D/g, '').padStart(14, '0');
+    const count = order.itemsCount || 10;
+
+    const mockCodes: string[] = [];
+    for (let i = 1; i <= count; i++) {
+      const serial = Math.random().toString(36).substring(2, 9).toUpperCase() + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const cryptoKey = Math.random().toString(36).substring(2, 6);
+      const cryptoTail = Buffer.from(Math.random().toString()).toString('base64').slice(0, 44);
+      mockCodes.push(`01${gtin}21${serial}\u001d91${cryptoKey}\u001d92${cryptoTail}`);
+    }
+
+    if (markOrder) {
+      await prisma.markirovkaOrder.update({
+        where: { id: markOrder.id },
+        data: {
+          codes: mockCodes,
+          quantityReceived: mockCodes.length,
+          status: 'COMPLETED',
+          errorDetails: null,
+        },
+      });
+    }
+
+    await attachCodesToOrder(order.id, mockCodes, gtin, 'markirovka_emission');
+    const updatedOrder = await findOrderByIdOrNumber(order.id);
+
+    return res.json({
+      success: true,
+      message: `Тестовые коды (${mockCodes.length} шт.) успешно сгенерированы и сохранены в БД!`,
+      codesCount: mockCodes.length,
+      order: updatedOrder,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+export const submitOrderUtilisationReport = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    const { id } = req.params;
+    const order = await findOrderByIdOrNumber(id);
+    if (!order) return res.status(404).json({ message: 'Заказ не найден' });
+
+    if (req.user.role !== 'ADMIN' && order.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Нет доступа к данному заказу' });
+    }
+
+    // Determine account to use
+    let account = null;
+    const mOrder = order.markirovkaOrders?.[0];
+    if (mOrder?.accountId) {
+      account = await prisma.markirovkaAccount.findUnique({ where: { id: mOrder.accountId } });
+    }
+    if (!account) {
+      account = await prisma.markirovkaAccount.findFirst({
+        where: { status: 'ACTIVE' },
+        orderBy: { updatedAt: 'desc' },
+      });
+    }
+    if (!account) {
+      return res.status(400).json({ message: 'Нет активного аккаунта Markirovka.kz для отправки отчета' });
+    }
+
+    // Get codes for this order
+    let codes: string[] = [];
+    const codeItems = await prisma.orderCodeItem.findMany({
+      where: { orderId: order.id },
+      select: { code: true },
+      orderBy: { index: 'asc' },
+    });
+
+    if (codeItems && codeItems.length > 0) {
+      codes = codeItems.map((c) => c.code);
+    } else if (order.codesFileUrl) {
+      const filePath = path.resolve(order.codesFileUrl);
+      if (fs.existsSync(filePath)) {
+        const parsed = await parseCodesFile(filePath);
+        codes = parsed.rows.map((r) => r.code || Object.values(r)[0]).filter(Boolean);
+      }
+    }
+
+    if (!codes || codes.length === 0) {
+      return res.status(400).json({ message: 'В заказе нет кодов маркировки для отправки отчета о нанесении' });
+    }
+
+    const {
+      productionDate,
+      expirationDate,
+      manufacturerCountry,
+      releaseType,
+      series,
+      businessPlaceId,
+    } = req.body;
+
+    const gtin = mOrder?.gtin || (codes[0]?.startsWith('01') ? codes[0].slice(2, 16) : undefined);
+    const reportLog = await prisma.markirovkaUtilisationReport.create({
+      data: {
+        accountId: account.id,
+        orderId: order.id,
+        category: order.category,
+        gtin: gtin || null,
+        codesCount: codes.length,
+        status: 'SUBMITTED',
+        reportData: {
+          codesCount: codes.length,
+          sampleCode: codes[0],
+          productionDate,
+          expirationDate,
+          manufacturerCountry,
+          releaseType,
+          series,
+        } as any,
+      },
+    });
+
+    const client = new MarkirovkaClient(account);
+    try {
+      const result = await client.submitUtilisationReport({
+        category: order.category,
+        gtin,
+        codes,
+        productionDate,
+        expirationDate,
+        manufacturerCountry,
+        releaseType,
+        series,
+        businessPlaceId,
+      });
+
+      await prisma.markirovkaUtilisationReport.update({
+        where: { id: reportLog.id },
+        data: {
+          externalReportId: result.reportId,
+          status: 'ACCEPTED',
+          submittedAt: new Date(),
+        },
+      });
+
+      const updatedOrder = await findOrderByIdOrNumber(order.id);
+      return res.json({
+        success: true,
+        reportId: result.reportId,
+        codesCount: codes.length,
+        message: `Отчет о нанесении ${codes.length} кодов успешно принят ИС МПТ (ID: ${result.reportId})`,
+        order: updatedOrder,
+      });
+    } catch (reportErr: any) {
+      await prisma.markirovkaUtilisationReport.update({
+        where: { id: reportLog.id },
+        data: {
+          status: 'REJECTED',
+          errorDetails: reportErr.message,
+        },
+      });
+      throw reportErr;
+    }
+  } catch (err: any) {
+    logger.error('submitOrderUtilisationReport error:', err);
+    return res.status(400).json({
+      message: err.message || 'Ошибка отправки отчета о нанесении в ИС МПТ',
+    });
   }
 };
 
@@ -1386,15 +1752,20 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // For large PDF rendering tasks (up to 150,000+ codes), extend socket timeout to 60 minutes
+    req.setTimeout(3600000);
+    res.setTimeout(3600000);
+
     const requestLabelGeneratorPdf = (payload: any): Promise<Buffer> => {
       return new Promise((resolve, reject) => {
         const postData = JSON.stringify(payload);
-        const req = http.request(
+        const microReq = http.request(
           {
             hostname: process.env.LABEL_GENERATOR_HOST || 'label-generator',
             port: parseInt(process.env.LABEL_GENERATOR_PORT || '5060', 10),
             path: '/api/labels/generate-pdf',
             method: 'POST',
+            timeout: 3600000,
             headers: {
               'Content-Type': 'application/json',
               'Content-Length': Buffer.byteLength(postData),
@@ -1414,9 +1785,10 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
             microRes.on('end', () => resolve(Buffer.concat(chunks)));
           }
         );
-        req.on('error', (err) => reject(err));
-        req.write(postData);
-        req.end();
+        microReq.setTimeout(3600000);
+        microReq.on('error', (err) => reject(err));
+        microReq.write(postData);
+        microReq.end();
       });
     };
 
@@ -1709,8 +2081,11 @@ export const getCodesRegistry = async (req: AuthRequest, res: Response) => {
       where.OR = orConditions;
     }
 
+    const statsWhere = { ...where };
+    delete statsWhere.status;
+
     // Query paginated items and stats
-    const [total, items, totalPrinted] = await Promise.all([
+    const [total, items, statsTotal, totalPrinted] = await Promise.all([
       prisma.orderCodeItem.count({ where }),
       prisma.orderCodeItem.findMany({
         where,
@@ -1741,9 +2116,10 @@ export const getCodesRegistry = async (req: AuthRequest, res: Response) => {
         skip: (page - 1) * limit,
         take: limit,
       }),
+      prisma.orderCodeItem.count({ where: statsWhere }),
       prisma.orderCodeItem.count({
         where: {
-          ...where,
+          ...statsWhere,
           status: { in: ['PRINTED', 'REPRINTED'] },
         },
       }),
@@ -1784,9 +2160,9 @@ export const getCodesRegistry = async (req: AuthRequest, res: Response) => {
       totalPages: Math.ceil(total / limit) || 1,
       limit,
       stats: {
-        totalCodes: total,
+        totalCodes: statsTotal,
         printedCodes: totalPrinted,
-        newCodes: total - totalPrinted,
+        newCodes: Math.max(0, statsTotal - totalPrinted),
         totalOrders: availableOrders.length,
       },
       availableOrders,
@@ -2148,7 +2524,78 @@ export const downloadRangeItemsPdf = async (req: AuthRequest, res: Response) => 
 };
 
 export const getPdfQueueStatus = async (req: AuthRequest, res: Response) => {
-  return res.json(pdfQueue.getStats());
+  return res.json(pdfQueue.getDetailedStats());
+};
+
+export const updatePdfQueueConcurrency = async (req: AuthRequest, res: Response) => {
+  if (!req.user || req.user.role !== 'ADMIN') {
+    return res.status(403).json({ message: 'Доступ разрешен только администратору' });
+  }
+  const { concurrency } = req.body;
+  const num = parseInt(String(concurrency), 10);
+  if (!isNaN(num) && num >= 1 && num <= 10) {
+    pdfQueue.setMaxConcurrency(num);
+  }
+  return res.json(pdfQueue.getDetailedStats());
+};
+
+export const getOrderPdfStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    const { id } = req.params;
+    const order = await findOrderByIdOrNumber(id);
+    if (!order) return res.status(404).json({ message: 'Заказ не найден' });
+
+    if (req.user.role !== 'ADMIN' && order.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Нет доступа к заказу' });
+    }
+
+    const jobInfo = pdfQueue.getOrderJobs(order.id);
+
+    // Check if files are cached on disk
+    const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', order.id);
+    const pdfPath = path.join(orderDir, `order_${order.orderNumber}.pdf`);
+    const hasFullPdf = fs.existsSync(pdfPath);
+    let fullPdfSizeMb = 0;
+    if (hasFullPdf) {
+      try {
+        fullPdfSizeMb = parseFloat((fs.statSync(pdfPath).size / (1024 * 1024)).toFixed(2));
+      } catch {}
+    }
+
+    // Check cached rolls
+    const cachedRolls: Array<{ rollNum: number; filename: string; sizeMb: number }> = [];
+    if (fs.existsSync(orderDir)) {
+      try {
+        const files = fs.readdirSync(orderDir);
+        for (const f of files) {
+          const m = f.match(/^roll_(\d+)_/i);
+          if (m && f.endsWith('.pdf')) {
+            const stat = fs.statSync(path.join(orderDir, f));
+            cachedRolls.push({
+              rollNum: parseInt(m[1], 10),
+              filename: f,
+              sizeMb: parseFloat((stat.size / (1024 * 1024)).toFixed(2)),
+            });
+          }
+        }
+      } catch {}
+    }
+
+    return res.json({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      isGenerating: jobInfo.hasActive || jobInfo.hasWaiting,
+      activeJob: jobInfo.activeJob,
+      waitingJob: jobInfo.waitingJob,
+      hasFullPdf,
+      fullPdfSizeMb,
+      pdfUrl: hasFullPdf ? `/api/orders/${order.id}/pdf` : null,
+      cachedRolls,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ message: 'Ошибка получения статуса PDF: ' + err.message });
+  }
 };
 
 export const updateOrderStickeringEstimate = async (req: AuthRequest, res: Response) => {

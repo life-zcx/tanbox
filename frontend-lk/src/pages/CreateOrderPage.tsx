@@ -83,6 +83,8 @@ export const CreateOrderPage: React.FC = () => {
   const [markirovkaGtin, setMarkirovkaGtin] = useState<string>('');
   const [manualCount, setManualCount] = useState<number>(500);
   const [isConnectModalOpen, setIsConnectModalOpen] = useState<boolean>(false);
+  const [emissionReleaseType, setEmissionReleaseType] = useState<'PRODUCTION' | 'IMPORT' | 'REMAINDER'>('PRODUCTION');
+  const [emissionPurpose, setEmissionPurpose] = useState<'FOR_SALE' | 'CROSS_BORDER'>('FOR_SALE');
 
   // Load available markirovka accounts on mount
   useEffect(() => {
@@ -627,6 +629,8 @@ export const CreateOrderPage: React.FC = () => {
         markirovkaMode,
         markirovkaAccountId: markirovkaMode === 'EMISSION' ? markirovkaAccountId : undefined,
         markirovkaGtin: markirovkaMode === 'EMISSION' ? markirovkaGtin.trim() : undefined,
+        markirovkaReleaseType: markirovkaMode === 'EMISSION' ? emissionReleaseType : undefined,
+        markirovkaPurpose: markirovkaMode === 'EMISSION' ? emissionPurpose : undefined,
       } as any);
 
       const newOrderId = res?.order?.id || res?.id;
@@ -2145,6 +2149,54 @@ export const CreateOrderPage: React.FC = () => {
                 <p className="text-[10px] text-gray-500 mt-1">
                   14-значный номер GTIN зарегистрированного товара в Национальном каталоге товаров
                 </p>
+              </div>
+
+              {/* Release Type & Purpose */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">
+                    Способ выпуска в оборот *
+                  </label>
+                  <select
+                    value={emissionReleaseType}
+                    onChange={(e) => setEmissionReleaseType(e.target.value as any)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB]"
+                  >
+                    <option value="PRODUCTION">Производство в РК (внутреннее)</option>
+                    <option value="IMPORT">Импорт в РК (ввоз товара)</option>
+                    <option value="REMAINDER">Маркировка остатков / в обороте</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">
+                    Цель маркировки *
+                  </label>
+                  <select
+                    value={emissionPurpose}
+                    onChange={(e) => setEmissionPurpose(e.target.value as any)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB]"
+                  >
+                    <option value="FOR_SALE">Для реализации в РК</option>
+                    <option value="CROSS_BORDER">Трансграничная торговля / ЕАЭС</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Auto context: Category & Warehouse location */}
+              <div className="p-3 bg-gray-50/80 rounded-xl border border-gray-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-500 font-medium">Товарная группа ИС МПТ:</span>
+                  <span className="font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                    {category ? getCategoryLabel(category) : 'Определяется выбором в Шаге 1'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-500 font-medium">Место осуществления:</span>
+                  <span className="font-bold text-gray-800 truncate max-w-xs" title={warehouseAddress || 'Склад из Шага 4'}>
+                    {warehouseAddress ? warehouseAddress : 'Склад из Шага 4'}
+                  </span>
+                </div>
               </div>
 
               {/* SLA Info */}

@@ -80,6 +80,37 @@ export interface OrderAdminItem {
     email: string;
     phone: string;
   };
+  markirovkaOrders?: {
+    id: string;
+    accountId: string;
+    status: 'PENDING' | 'READY' | 'FETCHING' | 'COMPLETED' | 'FAILED';
+    gtin: string;
+    quantityRequested: number;
+    quantityReceived: number;
+    externalOrderId?: string | null;
+    errorDetails?: string | null;
+    codes?: string[];
+    createdAt: string;
+    account?: {
+      id: string;
+      name: string;
+      environment: 'TEST' | 'PROD';
+      login: string;
+    };
+  }[];
+  markirovkaReports?: {
+    id: string;
+    accountId: string;
+    status: 'SUBMITTED' | 'ACCEPTED' | 'REJECTED';
+    codesCount: number;
+    externalReportId?: string | null;
+    errorDetails?: string | null;
+    submittedAt?: string | null;
+    createdAt: string;
+  }[];
+  _count?: {
+    codeItems?: number;
+  };
 }
 
 export interface DailyTimelinePoint {

@@ -57,8 +57,14 @@ export interface UtilisationParams {
   category: OrderCategory;
   gtin?: string;
   codes: string[];
-  productionDate?: Date;
+  productionDate?: string | Date;
+  expirationDate?: string | Date;
+  manufacturerCountry?: string;
+  releaseType?: 'PRODUCTION' | 'IMPORT' | 'REMAINDER' | string;
+  series?: string;
+  businessPlaceId?: number | string;
   factoryName?: string;
+  factoryAddress?: string;
 }
 
 export class MarkirovkaClient {
@@ -358,6 +364,36 @@ export class MarkirovkaClient {
   }
 
   /**
+   * Helper to perform fetch with authorization and automatic token refresh on 401
+   */
+  public async fetchRawWithAuth(
+    path: string,
+    init: RequestInit = {}
+  ): Promise<Response> {
+    let auth = await this.authenticate(false);
+    const headers = new Headers(init.headers || {});
+    headers.set('Authorization', `Bearer ${auth.token}`);
+    if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+
+    let res = await fetch(`${this.baseUrl}${path}`, {
+      ...init,
+      headers,
+    });
+
+    if (res.status === 401) {
+      logger.warn(`Token 401 for account ${this.account.name}, refreshing token...`);
+      auth = await this.authenticate(true);
+      headers.set('Authorization', `Bearer ${auth.token}`);
+      res = await fetch(`${this.baseUrl}${path}`, {
+        ...init,
+        headers,
+      });
+    }
+
+    return res;
+  }
+
+  /**
    * Create an emission order in Kazakhstan IS MPT (/api/facade/orders)
    */
   public async createEmissionOrder(params: CreateOrderParams): Promise<{
@@ -365,7 +401,6 @@ export class MarkirovkaClient {
     expectedCompletionTime?: string;
     raw: any;
   }> {
-    const auth = await this.authenticate(false);
     const productGroup = CATEGORY_TO_OMS_EXTENSION[params.category] || 'autofluids';
     const businessPlaceId = await this.getBusinessPlaceId();
 
@@ -387,11 +422,8 @@ export class MarkirovkaClient {
     const form = new FormData();
     form.append('document', JSON.stringify(doc));
 
-    const res = await fetch(`${this.baseUrl}/api/facade/orders`, {
+    const res = await this.fetchRawWithAuth('/api/facade/orders', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${auth.token}`,
-      },
       body: form,
       signal: AbortSignal.timeout(30000),
     });
@@ -422,12 +454,7 @@ export class MarkirovkaClient {
     availableCodesCount?: number;
     raw: any;
   }> {
-    const auth = await this.authenticate(false);
-    const res = await fetch(`${this.baseUrl}/api/facade/orders/${orderId}`, {
-      headers: {
-        'Authorization': `Bearer ${auth.token}`,
-        'Accept': 'application/json',
-      },
+    const res = await this.fetchRawWithAuth(`/api/facade/orders/${orderId}`, {
       signal: AbortSignal.timeout(15000),
     });
 
@@ -456,20 +483,12 @@ export class MarkirovkaClient {
     quantity: number,
     _category?: OrderCategory
   ): Promise<string[]> {
-    const auth = await this.authenticate(false);
-
     // 1. Get packId from /api/facade/codes
     let packId: string | null = null;
     try {
-      const codesInfoRes = await fetch(
-        `${this.baseUrl}/api/facade/codes?orderId=${orderId}&gtin=${gtin.trim()}&quantity=${quantity}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${auth.token}`,
-            'Accept': 'application/json',
-          },
-          signal: AbortSignal.timeout(30000),
-        }
+      const codesInfoRes = await this.fetchRawWithAuth(
+        `/api/facade/codes?orderId=${orderId}&gtin=${gtin.trim()}&quantity=${quantity}`,
+        { signal: AbortSignal.timeout(30000) }
       );
       if (codesInfoRes.ok) {
         const infoData: any = await codesInfoRes.json().catch(() => null);
@@ -481,9 +500,10 @@ export class MarkirovkaClient {
 
     // Fallback: check retry-list
     if (!packId) {
-      const retryRes = await fetch(`${this.baseUrl}/api/facade/codes/retry-list?orderId=${orderId}`, {
-        headers: { 'Authorization': `Bearer ${auth.token}` },
-      });
+      const retryRes = await this.fetchRawWithAuth(
+        `/api/facade/codes/retry-list?orderId=${orderId}`,
+        { signal: AbortSignal.timeout(30000) }
+      );
       if (retryRes.ok) {
         const retryData: any = await retryRes.json().catch(() => null);
         const item = (retryData?.list || []).find((l: any) => l.gtin === gtin.trim()) || retryData?.list?.[0];
@@ -496,21 +516,23 @@ export class MarkirovkaClient {
     }
 
     // 2. Fetch DataMatrix codes via POST /api/facade/codes/print
-    const printRes = await fetch(`${this.baseUrl}/api/facade/codes/print`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${auth.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        orderId,
-        packId,
-        gtin: gtin.trim(),
-        quantity: Number(quantity),
-        format: 'CSV',
-      }),
-      signal: AbortSignal.timeout(30000),
-    });
+    const printRes = await this.fetchRawWithAuth(
+      '/api/facade/codes/print',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId,
+          packId,
+          gtin: gtin.trim(),
+          quantity: Number(quantity),
+          format: 'CSV',
+        }),
+        signal: AbortSignal.timeout(30000),
+      }
+    );
 
     if (!printRes.ok) {
       const errText = await printRes.text();
@@ -531,6 +553,52 @@ export class MarkirovkaClient {
   }
 
   /**
+   * Polls order status until ready (up to timeoutMs) and fetches DataMatrix codes
+   */
+  public async pollAndFetchCodes(
+    orderId: string,
+    gtin: string,
+    quantity: number,
+    timeoutMs: number = 10000,
+    category?: OrderCategory
+  ): Promise<{ status: 'READY' | 'PENDING' | 'FAILED'; codes: string[] }> {
+    const startTime = Date.now();
+    let lastStatus: 'READY' | 'PENDING' | 'FAILED' = 'PENDING';
+
+    while (Date.now() - startTime < timeoutMs) {
+      try {
+        const orderStatus = await this.getOrderStatus(orderId, category);
+        lastStatus = orderStatus.status;
+
+        if (orderStatus.status === 'READY') {
+          // Codes are ready in buffer, fetch them
+          const codes = await this.fetchCodes(orderId, gtin, quantity, category);
+          return { status: 'READY', codes };
+        } else if (orderStatus.status === 'FAILED') {
+          return { status: 'FAILED', codes: [] };
+        }
+      } catch (err: any) {
+        logger.warn(`Polling IS MPT order ${orderId}: ${err?.message}`);
+      }
+
+      // Wait 1.5 seconds before next poll
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+
+    // Try fetching one last time before giving up
+    try {
+      const codes = await this.fetchCodes(orderId, gtin, quantity, category);
+      if (codes && codes.length > 0) {
+        return { status: 'READY', codes };
+      }
+    } catch {
+      // Still not ready
+    }
+
+    return { status: lastStatus, codes: [] };
+  }
+
+  /**
    * Submit utilisation report (Отчет о нанесении кодов маркировки)
    */
   public async submitUtilisationReport(params: UtilisationParams): Promise<{
@@ -538,27 +606,57 @@ export class MarkirovkaClient {
     status: 'ACCEPTED' | 'REJECTED' | 'SUBMITTED';
     raw: any;
   }> {
-    const auth = await this.authenticate(false);
     const productGroup = CATEGORY_TO_OMS_EXTENSION[params.category] || 'autofluids';
-    const businessPlaceId = await this.getBusinessPlaceId();
-    const now = params.productionDate || new Date();
+    const businessPlaceId = params.businessPlaceId || (await this.getBusinessPlaceId());
 
-    const doc = {
+    // In Kazakhstan IS MPT, productionDate cannot be >= server transaction time.
+    // Ensure productionDate is strictly in the past (at least 2 hours ago) to avoid HTTP 400: invalid-input-parameter
+    const dateCandidate = params.productionDate ? new Date(params.productionDate) : new Date(Date.now() - 2 * 3600 * 1000);
+    const prodDate = dateCandidate.getTime() > Date.now() - 30 * 60 * 1000
+      ? new Date(Date.now() - 2 * 3600 * 1000)
+      : dateCandidate;
+
+    const hasExpiration = ['OILS', 'MEDICINE', 'WATER', 'BEER', 'DIETARY_SUPPLEMENTS'].includes(params.category);
+    let expDateIso: string | undefined = undefined;
+    if (params.expirationDate) {
+      expDateIso = new Date(params.expirationDate).toISOString();
+    } else if (hasExpiration) {
+      expDateIso = new Date(prodDate.getTime() + 3 * 365 * 24 * 3600 * 1000).toISOString();
+    }
+
+    const cleanCodes = params.codes
+      .map((c) => c.replace(/[\r\n]/g, '').trim())
+      .filter((c) => c.length > 0);
+
+    const releaseType = params.releaseType || 'PRODUCTION';
+    let manufacturerCountry = params.manufacturerCountry || 'KZ';
+    if (releaseType === 'PRODUCTION') {
+      manufacturerCountry = 'KZ';
+    } else if (releaseType === 'IMPORT' && manufacturerCountry === 'KZ') {
+      manufacturerCountry = 'RU';
+    }
+
+    const doc: any = {
       productGroup,
       businessPlaceId: Number(businessPlaceId) || 44,
-      productionDate: now.toISOString(),
-      expirationDate: new Date(now.getTime() + 3 * 365 * 24 * 3600 * 1000).toISOString(),
-      manufacturerCountry: 'KZ',
-      releaseType: 'PRODUCTION',
-      sntins: params.codes,
+      productionDate: prodDate.toISOString(),
+      manufacturerCountry,
+      releaseType,
+      sntins: cleanCodes,
     };
+
+    if (expDateIso) {
+      doc.expirationDate = expDateIso;
+    }
+    // Note: doc.series is intentionally not passed to IS MPT facade API
+    // because IS MPT СУЗ returns HTTP 400 invalid-format if series is in the payload.
+    // It is preserved in the local database markirovkaUtilisationReport.reportData.
 
     const form = new FormData();
     form.append('document', JSON.stringify(doc));
 
-    const res = await fetch(`${this.baseUrl}/api/facade/reports/utilisation`, {
+    const res = await this.fetchRawWithAuth('/api/facade/reports/utilisation', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${auth.token}` },
       body: form,
       signal: AbortSignal.timeout(30000),
     });
@@ -566,7 +664,14 @@ export class MarkirovkaClient {
     const data: any = await res.json().catch(() => null);
 
     if (!res.ok) {
-      const errDetail = Array.isArray(data) ? (data[0]?.code || JSON.stringify(data)) : (data?.message || data?.error || res.statusText);
+      let errDetail = res.statusText;
+      if (Array.isArray(data)) {
+        errDetail = data
+          .map((d: any) => `${d.code || 'error'}${d.context?.parameter ? ` (параметр: ${d.context.parameter})` : ''}`)
+          .join(', ');
+      } else if (data?.message || data?.error) {
+        errDetail = data.message || data.error;
+      }
       throw new Error(`Ошибка отправки отчета в ИС МПТ: HTTP ${res.status}: ${errDetail}`);
     }
 

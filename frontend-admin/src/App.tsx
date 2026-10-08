@@ -14,6 +14,7 @@ import { AdminOrderDetailPage } from './pages/AdminOrderDetailPage';
 import { AdminUserDetailPage } from './pages/AdminUserDetailPage';
 import { AdminStickeringCalcPage } from './pages/AdminStickeringCalcPage';
 import { AdminSystemPage } from './pages/AdminSystemPage';
+import { AdminPdfQueuePage } from './pages/AdminPdfQueuePage';
 import { AdminMarkirovkaAccountsPage } from './pages/AdminMarkirovkaAccountsPage';
 import { AdminMarkirovkaOrdersPage } from './pages/AdminMarkirovkaOrdersPage';
 import { AdminMarkirovkaUtilisationPage } from './pages/AdminMarkirovkaUtilisationPage';
@@ -165,6 +166,15 @@ export const App: React.FC = () => {
             element={
               <ProtectedAdminLayout>
                 <AdminSystemPage />
+              </ProtectedAdminLayout>
+            }
+          />
+
+          <Route
+            path="/pdf-queue"
+            element={
+              <ProtectedAdminLayout>
+                <AdminPdfQueuePage />
               </ProtectedAdminLayout>
             }
           />

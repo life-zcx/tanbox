@@ -20,7 +20,12 @@ import {
   downloadSingleItemPdf,
   downloadRangeItemsPdf,
   getPdfQueueStatus,
+  updatePdfQueueConcurrency,
+  getOrderPdfStatus,
   checkCodesFile,
+  syncMarkirovkaOrderCodes,
+  generateTestCodesForOrder,
+  submitOrderUtilisationReport,
 } from '../controllers/orders.controller';
 import { authenticateJWT, requireAdmin } from '../middleware/auth.middleware';
 import { orderCodesUpload } from '../middleware/upload.middleware';
@@ -33,7 +38,9 @@ router.post('/check-codes', orderCodesUpload.single('file'), checkCodesFile);
 router.post('/', createOrder);
 router.get('/', getOrders);
 router.get('/queue/status', getPdfQueueStatus);
+router.post('/queue/concurrency', requireAdmin, updatePdfQueueConcurrency);
 router.get('/registry/codes', getCodesRegistry);
+router.get('/:id/pdf-status', getOrderPdfStatus);
 router.get('/:id', getOrderById);
 router.patch('/:id/status', requireAdmin, updateOrderStatus);
 router.patch('/:id/print-permission', requireAdmin, updateOrderPrintPermission);
@@ -42,6 +49,9 @@ router.patch('/:id/sticker-approval', updateStickerApproval);
 router.patch('/:id/adjust-count', adjustOrderItemsCount);
 router.patch('/:id/stickering-estimate', requireAdmin, updateOrderStickeringEstimate);
 router.post('/:id/upload-codes', orderCodesUpload.single('file'), uploadOrderCodesFile);
+router.post('/:id/sync-markirovka', syncMarkirovkaOrderCodes);
+router.post('/:id/generate-test-codes', requireAdmin, generateTestCodesForOrder);
+router.post('/:id/submit-utilisation', requireAdmin, submitOrderUtilisationReport);
 router.get('/:id/codes-file', downloadOrderCodesFile);
 router.get('/:id/codes-content', getOrderCodesContent);
 router.get('/:id/items', getOrderCodeItems);

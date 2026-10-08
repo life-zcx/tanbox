@@ -1,7 +1,9 @@
+import fs from 'fs';
+import path from 'path';
 import { Response } from 'express';
 import { prisma } from '../config/db';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { OrderCategory } from '@prisma/client';
+import { OrderCategory, OrderStatus } from '@prisma/client';
 
 function isSafeUrl(url?: string | null): boolean {
   if (!url) return true;
@@ -186,6 +188,56 @@ export const updateUserTemplate = async (req: AuthRequest, res: Response) => {
       where: { id },
       data: updateData,
     });
+
+    // Auto-sync active orders linked to this template
+    if (elements !== undefined || widthMm !== undefined || heightMm !== undefined) {
+      try {
+        const newLayout = {
+          widthMm: Number(widthMm) || existing.widthMm || 58,
+          heightMm: Number(heightMm) || existing.heightMm || 40,
+          elements: elements !== undefined ? elements : existing.elements,
+          updatedAt: new Date().toISOString(),
+        };
+
+        const ordersToUpdate = await prisma.order.findMany({
+          where: {
+            templateId: id,
+            status: { notIn: [OrderStatus.COMPLETED, OrderStatus.CANCELLED] },
+          },
+          select: { id: true },
+        });
+
+        if (ordersToUpdate.length > 0) {
+          await prisma.order.updateMany({
+            where: {
+              id: { in: ordersToUpdate.map((o) => o.id) },
+            },
+            data: {
+              stickerLayout: newLayout,
+            },
+          });
+
+          // Invalidate cached PDFs for these orders so new PDF generation uses updated layout
+          for (const ord of ordersToUpdate) {
+            const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', ord.id);
+            if (fs.existsSync(orderDir)) {
+              try {
+                const files = fs.readdirSync(orderDir);
+                for (const f of files) {
+                  if (f.endsWith('.pdf')) {
+                    try { fs.unlinkSync(path.join(orderDir, f)); } catch {}
+                  }
+                }
+              } catch (e) {
+                console.warn('Could not clear cached PDFs on template update:', e);
+              }
+            }
+          }
+        }
+      } catch (syncErr) {
+        console.error('Error auto-syncing orders for updated template:', syncErr);
+      }
+    }
 
     return res.json({
       message: 'Шаблон успешно обновлен',

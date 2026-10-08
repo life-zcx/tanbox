@@ -176,7 +176,13 @@ process.on('unhandledRejection', (reason: any) => {
   }).catch(() => {});
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   logger.info(`🚀 TANBOX Backend REST API running on port ${PORT}`);
   telegram.startPolling();
 });
+
+// Configure server timeouts for heavy operations (large PDF batches up to 150k items)
+server.setTimeout(3600000);
+server.requestTimeout = 3600000;
+server.headersTimeout = 3600000;
+server.keepAliveTimeout = 65000;

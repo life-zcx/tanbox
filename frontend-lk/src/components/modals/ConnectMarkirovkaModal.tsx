@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ShieldCheck, CheckCircle2, AlertCircle, Loader2, KeyRound, Globe, Building2, Eye, EyeOff } from 'lucide-react';
+import { X, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff, Barcode } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
 interface ConnectMarkirovkaModalProps {
@@ -18,7 +18,6 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [omsId, setOmsId] = useState('');
   const [environment, setEnvironment] = useState<'TEST' | 'PROD'>('TEST');
 
   const [testing, setTesting] = useState(false);
@@ -59,7 +58,6 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
         environment,
         login: login.trim(),
         password: password.trim(),
-        omsId: omsId.trim() || undefined,
       });
 
       if (res.data?.success) {
@@ -99,7 +97,6 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
         login: login.trim(),
         password: password.trim(),
         environment,
-        omsId: omsId.trim() || undefined,
       });
 
       onSuccess(res.data);
@@ -115,26 +112,27 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity" 
         onClick={onClose} 
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-10 flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-10 flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-emerald-50/50 via-teal-50/30 to-white">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/20">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+              <Barcode className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-gray-900">Подключение Markirovka.kz</h3>
-              <p className="text-xs text-gray-500">Прямая интеграция с ИС МПТ Казахстана</p>
+              <h3 className="text-sm font-extrabold text-[#111827]">Подключение Markirovka.kz</h3>
+              <p className="text-xs text-[#64748B]">Прямая интеграция с личным кабинетом ИС МПТ</p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-700 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -143,14 +141,14 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSave} className="p-6 overflow-y-auto space-y-4">
           {errorMsg && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-2.5 text-xs text-red-700">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {testResult && (
-            <div className={`p-3 rounded-2xl flex items-start gap-2.5 text-xs border ${
+            <div className={`p-3 rounded-xl flex items-start gap-2.5 text-xs border ${
               testResult.success 
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
                 : 'bg-amber-50 border-amber-200 text-amber-800'
@@ -165,127 +163,109 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Название подключения (для вас)
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">
+              Название подключения
             </label>
-            <div className="relative">
-              <Building2 className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Например: Основной аккаунт ТОО"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full pl-10 pr-3 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
-                required
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Например: Основной аккаунт ТОО"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#111827] focus:bg-white focus:border-[#0082FB] focus:outline-none transition-colors"
+              required
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">
               Контур ИС МПТ
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => setEnvironment('TEST')}
-                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all text-center ${
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
                   environment === 'TEST'
-                    ? 'bg-amber-50 border-amber-400 text-amber-900 shadow-sm'
-                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                    ? 'bg-white text-[#111827] shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800'
                 }`}
               >
-                🛠️ Тестовый (Песочница)
+                Тестовый (Песочница)
               </button>
               <button
                 type="button"
                 onClick={() => setEnvironment('PROD')}
-                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all text-center ${
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
                   environment === 'PROD'
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-900 shadow-sm'
-                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                    ? 'bg-white text-[#111827] shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800'
                 }`}
               >
-                🚀 Боевой (Прод)
+                Боевой (Прод)
               </button>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">
               Логин в Markirovka.kz (ИС МПТ)
             </label>
-            <div className="relative">
-              <Globe className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="kz.123456789012"
-                value={login}
-                onChange={(e) => setLogin(e.target.value)}
-                className="w-full pl-10 pr-3 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
-                required
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Логин от личного кабинета (ИНН/БИН или логин)"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#111827] font-mono focus:bg-white focus:border-[#0082FB] focus:outline-none transition-colors"
+              required
+              autoComplete="off"
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">
               Пароль от кабинета Markirovka.kz
             </label>
             <div className="relative">
-              <KeyRound className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••••••"
+                placeholder="Пароль"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                className="w-full pl-3.5 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#111827] focus:bg-white focus:border-[#0082FB] focus:outline-none transition-colors"
                 required
+                autoComplete="new-password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
             <p className="mt-1 text-[11px] text-gray-400">
-              🔒 Пароль сохраняется в зашифрованном виде (AES-256) и используется исключительно для получения токенов ИС МПТ.
+              Пароль сохраняется в зашифрованном виде и используется исключительно для взаимодействия с API ИС МПТ.
             </p>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              OMS ID (необязательно)
-            </label>
-            <input
-              type="text"
-              placeholder="Идентификатор СУЗ (если есть)"
-              value={omsId}
-              onChange={(e) => setOmsId(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-50/70 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
-            />
-          </div>
-
-          <div className="pt-2 flex flex-col sm:flex-row gap-2">
+          <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
             <button
               type="button"
               onClick={handleTestConnection}
               disabled={testing || !login || !password}
-              className="flex-1 py-2.5 px-4 rounded-xl border border-gray-300 hover:bg-gray-50 font-semibold text-xs text-gray-700 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="py-2 px-3.5 rounded-xl border border-gray-300 hover:bg-gray-50 font-semibold text-xs text-gray-700 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
             >
-              {testing ? <Loader2 className="w-4 h-4 animate-spin text-emerald-600" /> : <ShieldCheck className="w-4 h-4 text-emerald-600" />}
-              <span>Проверить связь</span>
+              <Loader2 className={`w-3.5 h-3.5 ${testing ? 'animate-spin' : 'hidden'}`} />
+              <span>{testing ? 'Проверка...' : 'Проверить связь'}</span>
             </button>
 
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50"
+              className="py-2 px-4 rounded-xl bg-[#0082FB] hover:bg-[#0070DA] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              <span>Сохранить аккаунт</span>
+              {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>{saving ? 'Сохранение...' : 'Сохранить аккаунт'}</span>
             </button>
           </div>
         </form>

@@ -29,6 +29,7 @@ import {
   RefreshCw,
   Lock,
   Receipt,
+  Loader2,
 } from 'lucide-react';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
 import RollSplitModal from '../components/modals/RollSplitModal';
@@ -90,6 +91,27 @@ const getTariffKey = (t?: string): string => {
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [createdToastMsg, setCreatedToastMsg] = useState<string | null>(() => {
+    return (location.state as any)?.fromCreate ? 'Заказ успешно оформлен и передан в работу.' : null;
+  });
+
+  useEffect(() => {
+    if ((location.state as any)?.fromCreate) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
+
+  useEffect(() => {
+    if (createdToastMsg) {
+      const timer = setTimeout(() => {
+        setCreatedToastMsg(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [createdToastMsg]);
+
   const [order, setOrder] = useState<OrderItem | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +128,15 @@ export const OrderDetailPage: React.FC = () => {
   const [uploadingCodes, setUploadingCodes] = useState<boolean>(false);
   const [downloadingCodes, setDownloadingCodes] = useState<boolean>(false);
   const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
+  const [pdfStatus, setPdfStatus] = useState<{
+    isGenerating: boolean;
+    activeJob?: any;
+    waitingJob?: any;
+    hasFullPdf: boolean;
+    fullPdfSizeMb: number;
+    pdfUrl?: string;
+    cachedRolls?: any[];
+  } | null>(null);
   const [printingSample, setPrintingSample] = useState<boolean>(false);
   const [codesSuccessMsg, setCodesSuccessMsg] = useState<string | null>(null);
   const [isCodesDragOver, setIsCodesDragOver] = useState<boolean>(false);
@@ -231,6 +262,39 @@ export const OrderDetailPage: React.FC = () => {
       } catch {}
     }
   }, [order]);
+
+  const fetchPdfStatus = async () => {
+    const targetId = order?.id || id;
+    if (!targetId) return;
+    try {
+      const res = await apiClient.get(`/orders/${targetId}/pdf-status`);
+      setPdfStatus(res.data);
+      if (res.data?.hasFullPdf && res.data?.pdfUrl && !order?.pdfUrl) {
+        setOrder((prev) => (prev ? { ...prev, pdfUrl: res.data.pdfUrl } : prev));
+      }
+      if (!res.data?.isGenerating && downloadingPdf) {
+        setDownloadingPdf(false);
+      }
+    } catch (e) {
+      // non-blocking
+    }
+  };
+
+  useEffect(() => {
+    if (order?.id || id) {
+      fetchPdfStatus();
+    }
+  }, [order?.id, id]);
+
+  useEffect(() => {
+    if (!order?.id && !id) return;
+    if (pdfStatus?.isGenerating || downloadingPdf) {
+      const interval = setInterval(() => {
+        fetchPdfStatus();
+      }, 2500);
+      return () => clearInterval(interval);
+    }
+  }, [order?.id, id, pdfStatus?.isGenerating, downloadingPdf]);
 
   // Load codes summary to detect count discrepancies
   useEffect(() => {
@@ -550,10 +614,11 @@ export const OrderDetailPage: React.FC = () => {
       return;
     }
     setDownloadingPdf(true);
+    setTimeout(() => fetchPdfStatus(), 400);
     try {
       const res = await apiClient.get(`/orders/${order.id}/pdf`, {
         responseType: 'blob',
-        timeout: 300000,
+        timeout: 600000,
       });
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
@@ -564,6 +629,7 @@ export const OrderDetailPage: React.FC = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
+      fetchPdfStatus();
     } catch (err: any) {
       console.error('Download PDF error:', err);
       let errMsg = 'Ошибка при скачивании PDF файла.';
@@ -579,6 +645,7 @@ export const OrderDetailPage: React.FC = () => {
       alert(errMsg);
     } finally {
       setDownloadingPdf(false);
+      fetchPdfStatus();
     }
   };
 
@@ -726,8 +793,7 @@ export const OrderDetailPage: React.FC = () => {
 
   const currentStepIdx = getStepIndex(order.status);
 
-  const location = useLocation();
-  const isJustCreated = Boolean((location.state as any)?.fromCreate);
+
 
   // Try retrieving user warehouses from localStorage
   let defaultWarehouse = '';
@@ -774,21 +840,15 @@ export const OrderDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Integrated status notice inside order card */}
-        {!parsedNotes.confirmedEstimate && (parsedNotes.warehouseConditions || order.extraServices?.includes('ON_SITE_STICKERING') || order.tariffType === 'STANDARD' || order.tariffType === 'PRO') ? (
+        {/* Integrated status notice inside order card for on-site warehouse stickering */}
+        {!parsedNotes.confirmedEstimate && (parsedNotes.warehouseConditions || order.extraServices?.includes('ON_SITE_STICKERING') || order.tariffType === 'STANDARD' || order.tariffType === 'PRO') && (
           <div className="pt-3 border-t border-gray-100 flex items-center gap-2.5 text-xs text-[#0B3A78] bg-blue-50/60 rounded-xl px-3.5 py-2.5 border border-blue-100/80">
             <Clock className="w-4 h-4 text-[#0082FB] shrink-0" />
             <span>
-              {isJustCreated ? 'Заказ оформлен. ' : ''}
               <strong>Идет расчет сметы выезда</strong> — менеджер подготовит расчет и согласует детали в течение 2 часов.
             </span>
           </div>
-        ) : isJustCreated ? (
-          <div className="pt-3 border-t border-gray-100 flex items-center gap-2.5 text-xs text-emerald-900 bg-emerald-50/60 rounded-xl px-3.5 py-2.5 border border-emerald-200/60">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Заказ успешно оформлен и передан в работу.</span>
-          </div>
-        ) : null}
+        )}
       </div>
 
       {/* Connected Order Lifecycle Stepper */}
@@ -1433,14 +1493,27 @@ export const OrderDetailPage: React.FC = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50/60 rounded-xl border border-gray-200/80 gap-3">
                     <div className="flex items-center gap-3.5 min-w-0">
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-blue-50 text-[#0082FB]">
-                        <FileText className="w-5 h-5" />
+                        {pdfStatus?.isGenerating || downloadingPdf ? (
+                          <RefreshCw className="w-5 h-5 animate-spin text-[#0082FB]" />
+                        ) : (
+                          <FileText className="w-5 h-5" />
+                        )}
                       </div>
                       <div className="min-w-0">
                         <h3 className="text-xs font-extrabold text-[#111827]">
                           Макеты кодов Data Matrix (PDF)
                         </h3>
                         <p className="text-[11px] text-[#64748B] mt-0.5">
-                          Формат {labelWidth}×{labelHeight} мм для термотрансферной печати • {order.itemsCount.toLocaleString()} кодов
+                          {pdfStatus?.isGenerating || downloadingPdf ? (
+                            <span className="text-blue-700 font-medium">
+                              Формирование на сервере • {order.itemsCount.toLocaleString()} кодов • {pdfStatus?.activeJob?.elapsedSec ?? 0} сек (можно обновлять страницу)
+                            </span>
+                          ) : (
+                            <span>
+                              Формат {labelWidth}×{labelHeight} мм для термотрансферной печати • {order.itemsCount.toLocaleString()} кодов
+                              {pdfStatus?.fullPdfSizeMb ? ` • ${pdfStatus.fullPdfSizeMb} МБ` : ''}
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -1474,23 +1547,27 @@ export const OrderDetailPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={handleDownloadPdf}
-                        disabled={downloadingPdf || !canPrintBatch}
+                        disabled={downloadingPdf || pdfStatus?.isGenerating || !canPrintBatch}
                         className={`inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 ${
-                          canPrintBatch
+                          canPrintBatch && !downloadingPdf && !pdfStatus?.isGenerating
                             ? 'bg-[#0082FB] hover:bg-[#0070DA] text-white cursor-pointer active:scale-95'
+                            : (downloadingPdf || pdfStatus?.isGenerating)
+                            ? 'bg-blue-600 text-white opacity-95 cursor-wait'
                             : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                         }`}
                         title={canPrintBatch ? 'Скачать итоговый PDF для принтера' : printBlockReason}
                       >
-                        {canPrintBatch ? (
-                          <Download className={`w-3.5 h-3.5 ${downloadingPdf ? 'animate-bounce' : ''}`} />
+                        {downloadingPdf || pdfStatus?.isGenerating ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : canPrintBatch ? (
+                          <Download className="w-3.5 h-3.5" />
                         ) : (
                           <Lock className="w-3.5 h-3.5 text-slate-400" />
                         )}
-                        {downloadingPdf
-                          ? 'Формирование PDF...'
+                        {downloadingPdf || pdfStatus?.isGenerating
+                          ? `Генерация (${pdfStatus?.activeJob?.elapsedSec ?? 0} сек)...`
                           : canPrintBatch
-                          ? 'Скачать все (PDF)'
+                          ? (pdfStatus?.fullPdfSizeMb ? `Скачать все (${pdfStatus.fullPdfSizeMb} МБ)` : 'Скачать все (PDF)')
                           : 'Печать заблокирована'}
                       </button>
                     </div>
@@ -1864,6 +1941,25 @@ export const OrderDetailPage: React.FC = () => {
           blockReason={printBlockReason}
           startLabelNumber={(order as any).startLabelNumber}
         />
+      )}
+
+      {/* Floating Notification Toast */}
+      {createdToastMsg && (
+        <div className="fixed top-6 right-6 z-50 max-w-sm w-full animate-in slide-in-from-top-3 fade-in duration-200 pointer-events-auto">
+          <div className="bg-[#0F172A] text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="leading-snug truncate">{createdToastMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCreatedToastMsg(null)}
+              className="text-gray-400 hover:text-white font-bold p-1 rounded-lg cursor-pointer transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
       )}
 
     </div>

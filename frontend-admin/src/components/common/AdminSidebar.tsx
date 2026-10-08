@@ -13,6 +13,7 @@ import {
   Calculator,
   Server,
   Radio,
+  ListOrdered,
 } from 'lucide-react';
 import { AdminUser } from '../../types';
 
@@ -27,6 +28,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, onLogout }) =>
   const links = [
     { to: '/dashboard', label: 'Обзор систем', icon: LayoutDashboard },
     { to: '/orders', label: 'Заказы', icon: FileText },
+    { to: '/pdf-queue', label: 'Очередь PDF & Задачи', icon: ListOrdered },
     { to: '/markirovka', label: 'Маркировка ИС МПТ', icon: Radio },
     { to: '/stickering-calc', label: 'Калькулятор выезда', icon: Calculator },
     { to: '/leads', label: 'Заявки на услуги', icon: ClipboardList },

@@ -111,15 +111,41 @@ export const AdminLabelDesignerPage: React.FC = () => {
     }
   };
 
-  // Order integration state
+  // Order & User Template integration state
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('orderId');
+  const userTemplateId = searchParams.get('userTemplateId');
   const [orderData, setOrderData] = useState<any>(null);
+  const [userTemplateData, setUserTemplateData] = useState<any>(null);
   const [orderSentSuccess, setOrderSentSuccess] = useState<boolean>(false);
 
   useEffect(() => {
     fetchSavedTemplates();
   }, []);
+
+  // When opened with ?userTemplateId=..., load client's template
+  useEffect(() => {
+    if (!userTemplateId) return;
+    const loadUserTemplate = async () => {
+      try {
+        const res = await apiClient.get(`/user-templates/${userTemplateId}`);
+        const tpl = res.data?.template;
+        if (tpl) {
+          setUserTemplateData(tpl);
+          setWidthMm(tpl.widthMm || 58);
+          setHeightMm(tpl.heightMm || 40);
+          setTemplateName(tpl.name || 'Шаблон клиента');
+          setSaveTemplateName(tpl.name || 'Шаблон клиента');
+          if (Array.isArray(tpl.elements) && tpl.elements.length > 0) {
+            setElements(tpl.elements);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading user template into designer:', err);
+      }
+    };
+    loadUserTemplate();
+  }, [userTemplateId]);
 
   // When opened with ?orderId=..., load order specifications and starter layout
   useEffect(() => {
@@ -219,9 +245,10 @@ export const AdminLabelDesignerPage: React.FC = () => {
     loadOrderContext();
   }, [orderId]);
 
-  // Save layout for this order and send to client in DB
-  const handleSaveAndSendToClient = async () => {
+  // Save layout for this order in PostgreSQL DB (with or without re-sending for client approval)
+  const handleSaveOrderLayout = async (sendToClient: boolean = false) => {
     if (!orderId || !orderData) return;
+    setSavingTemplate(true);
     try {
       const layoutData = {
         widthMm,
@@ -235,38 +262,83 @@ export const AdminLabelDesignerPage: React.FC = () => {
       // 1. Save directly to PostgreSQL database via backend API
       await apiClient.patch(`/orders/${targetId}/sticker-layout`, {
         stickerLayout: layoutData,
-        sendToClient: true,
+        sendToClient,
         pdfUrl: `/api/orders/${targetId}/pdf`,
       });
 
-      // 2. Save local backup
+      // 2. If this order is linked to a user template in library, auto-update it as well
+      if (orderData.templateId) {
+        try {
+          await apiClient.put(`/user-templates/${orderData.templateId}`, {
+            widthMm,
+            heightMm,
+            elements,
+          });
+        } catch (e) {
+          console.warn('Could not auto-sync linked user template:', e);
+        }
+      }
+
+      // 3. Save local backup
       localStorage.setItem(`tanbox_order_label_${targetId}`, JSON.stringify(layoutData));
       if (orderData.orderNumber) {
         localStorage.setItem(`tanbox_order_label_${orderData.orderNumber}`, JSON.stringify(layoutData));
       }
-      localStorage.setItem(
-        `tanbox_sticker_approval_${orderId}`,
-        JSON.stringify({
-          status: 'WAITING_APPROVAL',
-          sentAt: new Date().toLocaleString('ru-RU'),
-        })
-      );
+      if (sendToClient) {
+        localStorage.setItem(
+          `tanbox_sticker_approval_${targetId}`,
+          JSON.stringify({
+            status: 'WAITING_APPROVAL',
+            sentAt: new Date().toLocaleString('ru-RU'),
+          })
+        );
+      }
 
       setOrderData((prev: any) =>
         prev
           ? {
               ...prev,
-              stickerApprovalStatus: 'WAITING_APPROVAL',
               stickerLayout: layoutData,
+              ...(sendToClient ? { stickerApprovalStatus: 'WAITING_APPROVAL' } : {}),
             }
           : prev
       );
 
       setOrderSentSuccess(true);
       setTimeout(() => setOrderSentSuccess(false), 4000);
-      alert('Макет стикера сохранён в базе данных и передан клиенту на согласование!');
+      alert(
+        sendToClient
+          ? 'Макет стикера сохранён в базе данных и отправлен клиенту на повторное согласование!'
+          : 'Макет стикера успешно сохранён и обновлён в заказе!'
+      );
     } catch (e: any) {
-      alert('Ошибка при сохранении: ' + (e.response?.data?.message || e.message));
+      alert('Ошибка при сохранении в заказ: ' + (e.response?.data?.message || e.message));
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const handleSaveAndSendToClient = () => handleSaveOrderLayout(true);
+
+  // Save user template directly if opened in user template mode
+  const handleSaveUserTemplate = async () => {
+    if (!userTemplateId) return;
+    setSavingTemplate(true);
+    try {
+      const name = (templateName || saveTemplateName || 'Шаблон клиента').trim();
+      await apiClient.put(`/user-templates/${userTemplateId}`, {
+        name,
+        widthMm,
+        heightMm,
+        elements,
+      });
+      setSaveSuccessMsg(`Шаблон «${name}» сохранён!`);
+      setTimeout(() => setSaveSuccessMsg(null), 3000);
+      alert(`Шаблон клиента «${name}» успешно сохранён в базе данных!`);
+    } catch (err: any) {
+      alert('Ошибка сохранения шаблона клиента: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSavingTemplate(false);
     }
   };
 
@@ -299,6 +371,16 @@ export const AdminLabelDesignerPage: React.FC = () => {
 
   // Direct save current template (if already loaded/saved), or open naming modal (if new)
   const handleSaveClick = async () => {
+    if (orderId) {
+      // If opened in order context, save directly to order!
+      await handleSaveOrderLayout(false);
+      return;
+    }
+    if (userTemplateId) {
+      // If opened in user template context, save directly to user template!
+      await handleSaveUserTemplate();
+      return;
+    }
     if (selectedTemplateId) {
       // Directly update the existing template in PostgreSQL without asking for name again!
       setSavingTemplate(true);
@@ -866,9 +948,9 @@ export const AdminLabelDesignerPage: React.FC = () => {
 
           <div className="flex items-center gap-2">
             {orderSentSuccess ? (
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-3.5 py-1.5 rounded-xl flex items-center gap-1.5">
+              <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 animate-in fade-in">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                Макет передан клиенту на согласование!
+                Макет сохранён и обновлён в заказе!
               </span>
             ) : orderData?.stickerApprovalStatus === 'WAITING_APPROVAL' ? (
               <div className="flex items-center gap-2">
@@ -878,12 +960,13 @@ export const AdminLabelDesignerPage: React.FC = () => {
                 </span>
                 <button
                   type="button"
-                  onClick={handleSaveAndSendToClient}
-                  className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                  onClick={() => handleSaveOrderLayout(false)}
+                  disabled={savingTemplate}
+                  className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
                   title="Сохранить текущие правки в базу данных"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  Сохранить в БД
+                  {savingTemplate ? 'Сохранение...' : 'Сохранить в заказ'}
                 </button>
               </div>
             ) : orderData?.stickerApprovalStatus === 'CHANGES_REQUESTED' ? (
@@ -893,29 +976,92 @@ export const AdminLabelDesignerPage: React.FC = () => {
                 </span>
                 <button
                   type="button"
-                  onClick={handleSaveAndSendToClient}
-                  className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                  onClick={() => handleSaveOrderLayout(true)}
+                  disabled={savingTemplate}
+                  className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  Отправить обновленный макет клиенту
+                  {savingTemplate ? 'Отправка...' : 'Отправить обновленный макет клиенту'}
                 </button>
               </div>
             ) : orderData?.stickerApprovalStatus === 'APPROVED' ? (
-              <span className="text-xs font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-3.5 py-1.5 rounded-xl flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                Макет утвержден клиентом
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-3.5 py-1.5 rounded-xl flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  Макет утвержден клиентом
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => handleSaveOrderLayout(false)}
+                  disabled={savingTemplate}
+                  className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                  title="Сохранить внесенные изменения в заказ (обновляет макет партии без сброса статуса)"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {savingTemplate ? 'Сохранение...' : 'Сохранить изменения в заказ'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Отправить измененный макет клиенту на повторное согласование?')) {
+                      handleSaveOrderLayout(true);
+                    }
+                  }}
+                  disabled={savingTemplate}
+                  className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                  title="Запросить повторное утверждение у клиента"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  Повторно на согласование
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
-                onClick={handleSaveAndSendToClient}
-                className="inline-flex items-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                onClick={() => handleSaveOrderLayout(true)}
+                disabled={savingTemplate}
+                className="inline-flex items-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
               >
                 <Send className="w-3.5 h-3.5" />
-                Отправить клиенту на согласование
+                {savingTemplate ? 'Отправка...' : 'Отправить клиенту на согласование'}
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* User Template Context Header (when opened from a client's library template) */}
+      {userTemplateId && !orderId && (
+        <div className="bg-[#111827] text-white px-5 py-3 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/users"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-300 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl transition-all"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> К списку клиентов
+            </Link>
+            <span className="text-gray-500">|</span>
+            <div>
+              <span className="text-xs font-bold text-white block">
+                Редактирование шаблона из библиотеки: {userTemplateData?.name || templateName}
+              </span>
+              <span className="text-[11px] text-gray-400">
+                Размер: {widthMm}×{heightMm} мм {userTemplateData?.category && `• Категория: ${userTemplateData.category}`}
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveUserTemplate}
+            disabled={savingTemplate}
+            className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+          >
+            <Save className="w-3.5 h-3.5" />
+            {savingTemplate ? 'Сохранение...' : 'Сохранить шаблон клиента'}
+          </button>
         </div>
       )}
 

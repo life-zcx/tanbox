@@ -26,6 +26,12 @@ app.get('/health', (req, res) => {
 // Microservice Routes
 app.use('/api/labels', labelsRoutes);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🏷️ TANBOX Label Generator Microservice running on port ${PORT}`);
 });
+
+// Configure server timeouts for heavy batches (up to 150k codes / ~60 minutes)
+server.setTimeout(3600000);
+server.requestTimeout = 3600000;
+server.headersTimeout = 3600000;
+server.keepAliveTimeout = 65000;

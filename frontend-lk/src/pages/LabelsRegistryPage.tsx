@@ -79,12 +79,23 @@ export const LabelsRegistryPage: React.FC = () => {
 
   // Search & Filters
   const [search, setSearch] = useState<string>(searchParams.get('q') || '');
-  const [selectedOrderId, setSelectedOrderId] = useState<string>(searchParams.get('order') || '');
+  const [selectedOrderId, setSelectedOrderId] = useState<string>(
+    searchParams.get('order') || searchParams.get('orderId') || ''
+  );
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'ALL');
   const [page, setPage] = useState<number>(parseInt(searchParams.get('page') || '1', 10));
   const [pageSize, setPageSize] = useState<number>(50);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
+
+  // Sync state when URL search params change
+  useEffect(() => {
+    const o = searchParams.get('order') || searchParams.get('orderId') || '';
+    if (o !== selectedOrderId) {
+      setSelectedOrderId(o);
+      setPage(1);
+    }
+  }, [searchParams]);
 
   // Interactive UI
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -180,6 +191,53 @@ export const LabelsRegistryPage: React.FC = () => {
         }
       />
 
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#64748B] font-bold">
+            <span>Всего этикеток</span>
+            <Tag className="w-4 h-4 text-[#0082FB]" />
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-[#111827] mt-1.5 font-mono">
+            {stats.totalCodes.toLocaleString('ru-RU')}
+          </div>
+          <div className="text-[10px] text-gray-400 mt-0.5">В текущей выборке</div>
+        </div>
+
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#64748B] font-bold">
+            <span>Новые</span>
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-[#0082FB] mt-1.5 font-mono">
+            {stats.newCodes.toLocaleString('ru-RU')}
+          </div>
+          <div className="text-[10px] text-gray-400 mt-0.5">Готовы к печати</div>
+        </div>
+
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#64748B] font-bold">
+            <span>Распечатано</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-emerald-600 mt-1.5 font-mono">
+            {stats.printedCodes.toLocaleString('ru-RU')}
+          </div>
+          <div className="text-[10px] text-gray-400 mt-0.5">Сформированы в PDF</div>
+        </div>
+
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-xs">
+          <div className="flex items-center justify-between text-xs text-[#64748B] font-bold">
+            <span>Заказов</span>
+            <Layers className="w-4 h-4 text-purple-500" />
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-[#111827] mt-1.5 font-mono">
+            {stats.totalOrders.toLocaleString('ru-RU')}
+          </div>
+          <div className="text-[10px] text-gray-400 mt-0.5">С активными кодами</div>
+        </div>
+      </div>
+
       {/* Filter and Control Bar */}
       <div className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-xs space-y-3">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
@@ -243,7 +301,7 @@ export const LabelsRegistryPage: React.FC = () => {
                   : 'text-[#64748B] hover:text-[#111827]'
               }`}
             >
-              Все ({stats.totalCodes})
+              Все ({stats.totalCodes.toLocaleString('ru-RU')})
             </button>
             <button
               onClick={() => {
@@ -256,7 +314,7 @@ export const LabelsRegistryPage: React.FC = () => {
                   : 'text-[#64748B] hover:text-[#0082FB]'
               }`}
             >
-              Новые
+              Новые ({stats.newCodes.toLocaleString('ru-RU')})
             </button>
             <button
               onClick={() => {
@@ -269,7 +327,7 @@ export const LabelsRegistryPage: React.FC = () => {
                   : 'text-[#64748B] hover:text-emerald-700'
               }`}
             >
-              Распечатанные
+              Распечатанные ({stats.printedCodes.toLocaleString('ru-RU')})
             </button>
           </div>
         </div>

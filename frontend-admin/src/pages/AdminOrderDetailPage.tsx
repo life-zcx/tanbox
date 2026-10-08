@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { OrderAdminItem, OrderStatus } from '../types';
@@ -37,6 +38,11 @@ import {
   Tag,
   Boxes,
   Calculator,
+  Zap,
+  Loader2,
+  Barcode,
+  FileCheck2,
+  X,
 } from 'lucide-react';
 import axios from 'axios';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
@@ -92,6 +98,15 @@ export const AdminOrderDetailPage: React.FC = () => {
   // PDF generation state
   const [generatingPdf, setGeneratingPdf] = useState<boolean>(false);
   const [pdfSuccessMsg, setPdfSuccessMsg] = useState<string | null>(null);
+  const [pdfStatus, setPdfStatus] = useState<{
+    isGenerating: boolean;
+    activeJob?: any;
+    waitingJob?: any;
+    hasFullPdf: boolean;
+    fullPdfSizeMb: number;
+    pdfUrl?: string;
+    cachedRolls?: any[];
+  } | null>(null);
 
   // Codes file upload state
   const [uploadingCodes, setUploadingCodes] = useState<boolean>(false);
@@ -118,6 +133,106 @@ export const AdminOrderDetailPage: React.FC = () => {
   const [updatingPrintPermission, setUpdatingPrintPermission] = useState<boolean>(false);
   const [printPermissionMsg, setPrintPermissionMsg] = useState<string | null>(null);
   const [downloadingDoc, setDownloadingDoc] = useState<'invoice' | 'act' | null>(null);
+
+  // Markirovka emission sync state
+  const [syncingMarkirovka, setSyncingMarkirovka] = useState<boolean>(false);
+  const [markirovkaMsg, setMarkirovkaMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const handleSyncMarkirovka = async () => {
+    if (!order) return;
+    setSyncingMarkirovka(true);
+    setMarkirovkaMsg(null);
+    try {
+      const res = await apiClient.post(`/orders/${order.id}/sync-markirovka`);
+      if (res.data.success) {
+        setMarkirovkaMsg({ text: res.data.message || 'Коды успешно получены и сохранены в БД!', type: 'success' });
+        await fetchOrder();
+      } else {
+        setMarkirovkaMsg({ text: res.data.message || 'Коды еще формируются на сервере ИС МПТ', type: 'error' });
+      }
+    } catch (err: any) {
+      setMarkirovkaMsg({ text: err.response?.data?.message || 'Ошибка синхронизации кодов', type: 'error' });
+    } finally {
+      setSyncingMarkirovka(false);
+      setTimeout(() => setMarkirovkaMsg(null), 6000);
+    }
+  };
+
+  // Markirovka utilisation report modal state
+  const [isUtilisationModalOpen, setIsUtilisationModalOpen] = useState<boolean>(false);
+  const [submittingUtilisation, setSubmittingUtilisation] = useState<boolean>(false);
+  const [utilisationMsg, setUtilisationMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const [utilisationReleaseType, setUtilisationReleaseType] = useState<'PRODUCTION' | 'IMPORT' | 'REMAINDER'>('PRODUCTION');
+  const [utilisationCountry, setUtilisationCountry] = useState<string>('KZ');
+  const [utilisationProdDate, setUtilisationProdDate] = useState<string>('');
+  const [utilisationExpDate, setUtilisationExpDate] = useState<string>('');
+  const [utilisationSeries, setUtilisationSeries] = useState<string>('');
+
+  const CATEGORIES_WITH_EXPIRATION = [
+    'OILS',
+    'PHARMA',
+    'MEDICINE',
+    'WATER',
+    'MILK',
+    'ALCOHOL',
+    'BEER',
+    'SUPPLEMENTS',
+    'ANTISEPTIC',
+  ];
+
+  const hasCategoryExpiration = (cat?: string) => {
+    if (!cat) return false;
+    return CATEGORIES_WITH_EXPIRATION.includes(cat.toUpperCase());
+  };
+
+  const handleOpenUtilisationModal = () => {
+    if (!order) return;
+    setUtilisationReleaseType('PRODUCTION');
+    setUtilisationCountry('KZ');
+    setUtilisationProdDate('');
+    setUtilisationExpDate('');
+    setUtilisationSeries(order.orderNumber || '');
+    setIsUtilisationModalOpen(true);
+  };
+
+  const handleConfirmSubmitUtilisation = async () => {
+    if (!order) return;
+    setSubmittingUtilisation(true);
+    setUtilisationMsg(null);
+    try {
+      const res = await apiClient.post(`/orders/${order.id}/submit-utilisation`, {
+        releaseType: utilisationReleaseType,
+        manufacturerCountry: utilisationCountry,
+        productionDate: utilisationProdDate || undefined,
+        expirationDate: hasCategoryExpiration(order.category) ? (utilisationExpDate || undefined) : undefined,
+        series: utilisationSeries.trim() || undefined,
+      });
+      setUtilisationMsg({
+        text: res.data.message || 'Отчет о нанесении кодов успешно отправлен и принят ИС МПТ!',
+        type: 'success',
+      });
+      setIsUtilisationModalOpen(false);
+      await fetchOrder();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Ошибка отправки отчета о нанесении в ИС МПТ';
+      setUtilisationMsg({ text: msg, type: 'error' });
+    } finally {
+      setSubmittingUtilisation(false);
+      setTimeout(() => setUtilisationMsg(null), 10000);
+    }
+  };
+
+  // Lock body scroll while utilisation modal is visible
+  useEffect(() => {
+    if (isUtilisationModalOpen) {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = original;
+      };
+    }
+  }, [isUtilisationModalOpen]);
 
   const fetchOrder = async () => {
     if (!id) return;
@@ -165,16 +280,50 @@ export const AdminOrderDetailPage: React.FC = () => {
     fetchOrder();
   }, [id]);
 
+  const fetchPdfStatus = async () => {
+    const targetId = order?.id || id;
+    if (!targetId) return;
+    try {
+      const res = await apiClient.get(`/orders/${targetId}/pdf-status`);
+      setPdfStatus(res.data);
+      if (res.data?.hasFullPdf && res.data?.pdfUrl) {
+        setPdfUrl(res.data.pdfUrl);
+        setOrder((prev) => (prev ? { ...prev, pdfUrl: res.data.pdfUrl } : prev));
+      }
+      if (!res.data?.isGenerating && generatingPdf) {
+        setGeneratingPdf(false);
+      }
+    } catch (e) {
+      // non-blocking
+    }
+  };
+
+  useEffect(() => {
+    if (order?.id || id) {
+      fetchPdfStatus();
+    }
+  }, [order?.id, id]);
+
+  useEffect(() => {
+    if (!order?.id && !id) return;
+    if (pdfStatus?.isGenerating || generatingPdf) {
+      const interval = setInterval(() => {
+        fetchPdfStatus();
+      }, 2500);
+      return () => clearInterval(interval);
+    }
+  }, [order?.id, id, pdfStatus?.isGenerating, generatingPdf]);
+
   // Load codes summary to detect count discrepancies
   useEffect(() => {
-    if (!order?.id || !order.codesFileUrl) {
+    if (!order?.id) {
       setCodesSummary(null);
       return;
     }
     apiClient
       .get(`/orders/${order.id}/codes-content`)
       .then((res) => {
-        if (res.data && res.data.totalRows !== undefined) {
+        if (res.data && res.data.totalRows !== undefined && res.data.hasCodes) {
           setCodesSummary({
             totalRows: res.data.totalRows,
             fileName: res.data.fileName || order.codesFileName || 'codes.csv',
@@ -335,6 +484,66 @@ export const AdminOrderDetailPage: React.FC = () => {
     }
   };
 
+  const handleSyncFromLibraryTemplate = async () => {
+    let targetId = savedTemplateInfo?.id || (order as any)?.templateId;
+    if (!order) return;
+
+    if (!targetId) {
+      try {
+        const tplRes = await apiClient.get(`/user-templates?userId=${order.userId}`);
+        const found = tplRes.data?.templates?.find((t: any) => t.sourceOrderId === order.id);
+        if (found) {
+          targetId = found.id;
+          setSavedTemplateInfo(found);
+        }
+      } catch (e) {
+        console.warn('Could not auto-resolve template ID:', e);
+      }
+    }
+
+    if (!targetId) {
+      alert('Не удалось определить идентификатор шаблона в библиотеке клиента');
+      return;
+    }
+
+    setSavingTemplate(true);
+    try {
+      const res = await apiClient.get(`/user-templates/${targetId}`);
+      const tpl = res.data?.template;
+      if (!tpl || !tpl.elements || !Array.isArray(tpl.elements) || tpl.elements.length === 0) {
+        alert('Шаблон в библиотеке не содержит элементов');
+        return;
+      }
+
+      const newLayout = {
+        widthMm: tpl.widthMm || 58,
+        heightMm: tpl.heightMm || 40,
+        elements: tpl.elements,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await apiClient.patch(`/orders/${order.id}/sticker-layout`, {
+        stickerLayout: newLayout,
+        sendToClient: false,
+      });
+
+      // Update local storage backup
+      localStorage.setItem(`tanbox_order_label_${order.id}`, JSON.stringify(newLayout));
+      if (order.orderNumber) {
+        localStorage.setItem(`tanbox_order_label_${order.orderNumber}`, JSON.stringify(newLayout));
+      }
+
+      setOrder((prev) => (prev ? { ...prev, stickerLayout: newLayout } : prev));
+      setSavedTemplateInfo(tpl);
+      setTemplateSavedMsg(`Макет заказа успешно обновлён из библиотеки клиента («${tpl.name}»)!`);
+      setTimeout(() => setTemplateSavedMsg(null), 5000);
+    } catch (err: any) {
+      alert('Ошибка при загрузке шаблона из библиотеки: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
   const handleUpdateUserTemplate = async () => {
     let targetId = savedTemplateInfo?.id || (order as any)?.templateId;
     if (!order || !layoutElements.length) return;
@@ -358,7 +567,7 @@ export const AdminOrderDetailPage: React.FC = () => {
     }
 
     const tplName = savedTemplateInfo?.name || 'текущий шаблон';
-    if (!window.confirm(`Обновить существующий шаблон «${tplName}» в библиотеке клиента текущей версией макета?`)) {
+    if (!window.confirm(`Перезаписать шаблон «${tplName}» в библиотеке клиента текущей версией макета из этого заказа?`)) {
       return;
     }
     setSavingTemplate(true);
@@ -372,10 +581,10 @@ export const AdminOrderDetailPage: React.FC = () => {
       if (res.data?.template) {
         setSavedTemplateInfo(res.data.template);
       }
-      setTemplateSavedMsg(`Шаблон «${res.data?.template?.name || tplName}» успешно обновлен!`);
+      setTemplateSavedMsg(`Шаблон «${res.data?.template?.name || tplName}» в библиотеке успешно обновлен!`);
       setTimeout(() => setTemplateSavedMsg(null), 5000);
     } catch (err: any) {
-      alert('Ошибка при обновлении шаблона: ' + (err.response?.data?.message || err.message));
+      alert('Ошибка при обновлении шаблона в библиотеке: ' + (err.response?.data?.message || err.message));
     } finally {
       setSavingTemplate(false);
     }
@@ -693,6 +902,9 @@ export const AdminOrderDetailPage: React.FC = () => {
       });
 
       // 2. Request PDF generation on the backend with force=true (processes all codes from uploaded file/DB)
+      // Trigger status check immediately so polling picks up the running task
+      setTimeout(() => fetchPdfStatus(), 400);
+
       const response = await apiClient.get(`/orders/${order.id}/pdf?force=true`, {
         responseType: 'blob',
         timeout: 600000,
@@ -715,10 +927,12 @@ export const AdminOrderDetailPage: React.FC = () => {
       );
       setPdfSuccessMsg(`PDF этикеток партии (${order.itemsCount.toLocaleString()} шт.) успешно сформирован на основе макета!`);
       setTimeout(() => setPdfSuccessMsg(null), 5000);
+      fetchPdfStatus();
     } catch (err: any) {
       alert('Ошибка при генерации PDF: ' + (err.response?.data?.message || err.message));
     } finally {
       setGeneratingPdf(false);
+      fetchPdfStatus();
     }
   };
 
@@ -1194,6 +1408,283 @@ export const AdminOrderDetailPage: React.FC = () => {
             })()}
           </div>
 
+          {/* MARKIROVKA.KZ EMISSION INTEGRATION CARD */}
+          {order.markirovkaOrders && order.markirovkaOrders.length > 0 && (() => {
+            const mOrder = order.markirovkaOrders[0];
+            const isReportAccepted = Boolean(order.markirovkaReports && order.markirovkaReports.some((r) => r.status === 'ACCEPTED'));
+            const isReportPending = Boolean(order.markirovkaReports && order.markirovkaReports.some((r) => r.status === 'SUBMITTED'));
+            const isCompleted = Boolean(mOrder.status === 'COMPLETED' || (order.codesFileUrl && order.codesFileUrl.includes('markirovka')));
+            const isFetching = mOrder.status === 'FETCHING' || mOrder.status === 'PENDING';
+            const isReady = mOrder.status === 'READY';
+
+            return (
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+                      <Barcode className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-extrabold text-[#111827]">
+                        Эмиссия кодов через Markirovka.kz
+                      </h2>
+                      <p className="text-xs text-[#64748B]">
+                        Прямая интеграция с личным кабинетом маркировки Казахстана (ИС МПТ РК)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {isReportAccepted ? (
+                      <span className="text-[11px] font-bold px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Нанесение подтверждено ({mOrder.quantityReceived || order.itemsCount} шт.)
+                      </span>
+                    ) : isReportPending ? (
+                      <span className="text-[11px] font-bold px-3 py-1 rounded-lg bg-blue-50 text-[#0082FB] border border-blue-200 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-[#0082FB]" />
+                        Отчет на проверке в ИС МПТ
+                      </span>
+                    ) : isCompleted ? (
+                      <span className="text-[11px] font-bold px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Коды получены ({mOrder.quantityReceived || order.itemsCount} шт.)
+                      </span>
+                    ) : isFetching ? (
+                      <span className="text-[11px] font-bold px-3 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                        В обработке ИС МПТ
+                      </span>
+                    ) : isReady ? (
+                      <span className="text-[11px] font-bold px-3 py-1 rounded-lg bg-blue-50 text-[#0082FB] border border-blue-200 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-[#0082FB]" />
+                        Готовы к загрузке
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-bold px-3 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                        Ошибка эмиссии
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Markirovka message banner */}
+                {markirovkaMsg && (
+                  <div
+                    className={`text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 border ${
+                      markirovkaMsg.type === 'success'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                        : 'bg-amber-50 border-amber-200 text-amber-800'
+                    }`}
+                  >
+                    {markirovkaMsg.type === 'success' ? (
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    )}
+                    {markirovkaMsg.text}
+                  </div>
+                )}
+
+                {/* Details grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase block">
+                      Аккаунт ИС МПТ
+                    </span>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="text-xs font-extrabold text-[#111827] truncate">
+                        {mOrder.account?.name || 'Markirovka.kz'}
+                      </span>
+                      {mOrder.account?.environment && (
+                        <span
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                            mOrder.account.environment === 'PROD'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}
+                        >
+                          {mOrder.account.environment}
+                        </span>
+                      )}
+                    </div>
+                    {mOrder.account?.login && (
+                      <span className="text-[10px] text-gray-400 font-mono block mt-0.5 truncate">
+                        {mOrder.account.login}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase block">
+                      GTIN упаковки
+                    </span>
+                    <span className="text-xs font-mono font-extrabold text-[#111827] mt-1 block">
+                      {mOrder.gtin || '—'}
+                    </span>
+                    <span className="text-[10px] text-gray-400 block mt-0.5">14-значный номер</span>
+                  </div>
+
+                  <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase block">
+                      Объем эмиссии
+                    </span>
+                    <span className="text-xs font-extrabold text-[#111827] mt-1 block">
+                      {mOrder.quantityRequested.toLocaleString()} шт.
+                    </span>
+                    <span className="text-[10px] text-gray-500 block mt-0.5">
+                      Получено: {mOrder.quantityReceived.toLocaleString()} шт.
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase block">
+                      Заказ в OMS (ID)
+                    </span>
+                    <span className="text-xs font-mono text-gray-700 mt-1 block truncate" title={mOrder.externalOrderId || ''}>
+                      {mOrder.externalOrderId || '—'}
+                    </span>
+                    <span className="text-[10px] text-gray-400 block mt-0.5">OMS Order ID</span>
+                  </div>
+                </div>
+
+                {/* Error details if any */}
+                {mOrder.errorDetails && (
+                  <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs p-3 rounded-xl flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="block font-bold">Детали ошибки ИС МПТ:</strong>
+                      <span>{mOrder.errorDetails}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Markirovka reports history banner */}
+                {order.markirovkaReports && order.markirovkaReports.length > 0 && (() => {
+                  const lastReport = order.markirovkaReports[0];
+                  return (
+                    <div className={`text-xs font-medium px-4 py-2.5 rounded-xl flex items-center justify-between gap-2 border ${
+                      lastReport.status === 'ACCEPTED'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                        : lastReport.status === 'REJECTED'
+                        ? 'bg-rose-50 border-rose-200 text-rose-800'
+                        : 'bg-blue-50 border-blue-200 text-blue-800'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        {lastReport.status === 'ACCEPTED' ? (
+                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        ) : lastReport.status === 'REJECTED' ? (
+                          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        ) : (
+                          <Clock className="w-4 h-4 text-blue-600 shrink-0" />
+                        )}
+                        <span>
+                          {lastReport.status === 'ACCEPTED'
+                            ? `Отчет о нанесении принят ИС МПТ (${lastReport.codesCount} шт.)`
+                            : lastReport.status === 'REJECTED'
+                            ? `Отчет о нанесении отклонен: ${lastReport.errorDetails || 'ошибка'}`
+                            : `Отчет о нанесении отправлен (${lastReport.codesCount} шт.)`}
+                        </span>
+                      </div>
+                      {lastReport.externalReportId && (
+                        <span className="font-mono text-[11px] text-gray-500 shrink-0">
+                          ID: {lastReport.externalReportId}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Utilisation fresh message banner */}
+                {utilisationMsg && (
+                  <div
+                    className={`text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 border ${
+                      utilisationMsg.type === 'success'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                        : 'bg-rose-50 border-rose-200 text-rose-800'
+                    }`}
+                  >
+                    {utilisationMsg.type === 'success' ? (
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    )}
+                    {utilisationMsg.text}
+                  </div>
+                )}
+
+                {/* Actions toolbar */}
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSyncMarkirovka}
+                      disabled={syncingMarkirovka || isReportAccepted || isCompleted}
+                      className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-xs font-semibold px-3.5 py-2 rounded-xl shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={
+                        isReportAccepted
+                          ? 'Эмиссия и нанесение кодов в ИС МПТ полностью завершены'
+                          : isCompleted
+                          ? 'Все коды уже получены и сохранены в БД'
+                          : 'Синхронизировать статус и коды с ИС МПТ'
+                      }
+                    >
+                      {isCompleted ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <RefreshCw className={`w-3.5 h-3.5 ${syncingMarkirovka ? 'animate-spin' : ''}`} />
+                      )}
+                      {syncingMarkirovka
+                        ? 'Синхронизация...'
+                        : isReportAccepted
+                        ? 'Эмиссия завершена'
+                        : isCompleted
+                        ? 'Коды синхронизированы'
+                        : 'Синхронизировать с ИС МПТ'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleOpenUtilisationModal}
+                      disabled={
+                        submittingUtilisation ||
+                        isReportAccepted ||
+                        isReportPending ||
+                        (!order.codesFileUrl && !(order._count?.codeItems && order._count.codeItems > 0))
+                      }
+                      className={`inline-flex items-center gap-1.5 border text-xs font-semibold px-3.5 py-2 rounded-xl shadow-2xs transition-all ${
+                        isReportAccepted
+                          ? 'bg-emerald-50/70 border-emerald-200 text-emerald-800 cursor-not-allowed opacity-90'
+                          : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+                      }`}
+                      title={
+                        isReportAccepted
+                          ? 'Отчет о нанесении уже успешно принят ИС МПТ'
+                          : isReportPending
+                          ? 'Отчет уже отправлен и ожидает подтверждения ИС МПТ'
+                          : 'Отправить в ИС МПТ отчет о фактическом нанесении кодов маркировки'
+                      }
+                    >
+                      {isReportAccepted ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <FileCheck2 className={`w-3.5 h-3.5 text-emerald-600 ${submittingUtilisation ? 'animate-bounce' : ''}`} />
+                      )}
+                      {submittingUtilisation
+                        ? 'Отправка отчета...'
+                        : isReportAccepted
+                        ? 'Отчет о нанесении принят'
+                        : isReportPending
+                        ? 'Отчет на проверке'
+                        : 'Отправить отчет о нанесении КМ'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* CODES FILE MANAGEMENT CARD */}
           <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
@@ -1211,7 +1702,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {!order.codesFileUrl && (
+              {!order.codesFileUrl && !(order.markirovkaOrders && order.markirovkaOrders.some((m) => m.status === 'COMPLETED' || m.quantityReceived > 0)) && (
                 <span className="text-[11px] font-bold px-3 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" /> Ожидает загрузки файлов кодов
                 </span>
@@ -1551,51 +2042,51 @@ export const AdminOrderDetailPage: React.FC = () => {
               </div>
 
               {/* Action Toolbar for Sticker Layout & Library */}
-              <div className="pt-4 border-t border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+              <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2.5">
                 {/* Left group: Designer CTA + Approval Status */}
-                <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex items-center gap-2 shrink-0">
                   <Link
                     to={`/label-designer?orderId=${order.id}`}
-                    className="inline-flex items-center gap-2 bg-[#111827] hover:bg-black text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 group shrink-0 whitespace-nowrap"
+                    className="h-9 inline-flex items-center gap-2 bg-[#111827] hover:bg-black text-white text-xs font-bold px-3.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 group shrink-0 whitespace-nowrap"
                   >
-                    <Palette className="w-4 h-4 text-blue-400 group-hover:rotate-12 transition-transform" />
+                    <Palette className="w-3.5 h-3.5 text-blue-400 group-hover:rotate-12 transition-transform" />
                     <span>Открыть в конструкторе макетов</span>
                     <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
 
                   {approvalStatus === 'WAITING_APPROVAL' ? (
-                    <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-2xs whitespace-nowrap shrink-0">
-                      <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
+                    <span className="h-9 inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 text-xs font-bold px-3 rounded-xl shadow-2xs whitespace-nowrap shrink-0">
+                      <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
                       Ожидает согласования клиентом
                     </span>
                   ) : approvalStatus === 'CHANGES_REQUESTED' ? (
                     <button
                       type="button"
                       onClick={handleSendToClientApproval}
-                      className="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap shrink-0"
+                      className="h-9 inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap shrink-0"
                     >
-                      <Check className="w-4 h-4" />
+                      <Check className="w-3.5 h-3.5" />
                       Отправить обновленный макет клиенту
                     </button>
                   ) : approvalStatus === 'APPROVED' ? (
-                    <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-2xs whitespace-nowrap shrink-0">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span className="h-9 inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-bold px-3 rounded-xl shadow-2xs whitespace-nowrap shrink-0">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                       Макет утвержден клиентом
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={handleSendToClientApproval}
-                      className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap shrink-0"
+                      className="h-9 inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap shrink-0"
                     >
-                      <Check className="w-4 h-4" />
+                      <Check className="w-3.5 h-3.5" />
                       Отправить клиенту на согласование
                     </button>
                   )}
 
                   {/* Show draft pill only if not approved and not saved to template library */}
                   {hasSavedLabel && approvalStatus !== 'APPROVED' && !isTemplateAlreadySaved && (
-                    <span className="text-xs text-slate-600 font-medium flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/70 whitespace-nowrap shrink-0">
+                    <span className="h-9 text-xs text-slate-600 font-medium inline-flex items-center gap-1.5 bg-slate-50 px-3 rounded-xl border border-slate-200/70 whitespace-nowrap shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                       Черновик сохранён
                     </span>
@@ -1606,23 +2097,35 @@ export const AdminOrderDetailPage: React.FC = () => {
                 {layoutElements.length > 0 && (
                   <div className="flex items-center shrink-0">
                     {isTemplateAlreadySaved ? (
-                      <div className="inline-flex items-center gap-2 bg-emerald-50/80 border border-emerald-200/80 rounded-xl px-3 py-1.5 shadow-2xs">
-                        <BookmarkCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <div className="h-9 inline-flex items-center gap-2 bg-emerald-50/80 border border-emerald-200/80 rounded-xl px-3 shadow-2xs">
+                        <BookmarkCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                         <span className="text-xs text-gray-500 font-medium whitespace-nowrap">В библиотеке:</span>
                         <span className="text-xs font-bold text-[#111827] max-w-[200px] truncate whitespace-nowrap" title={savedTemplateInfo?.name || 'Шаблон клиента'}>
                           «{savedTemplateInfo?.name || 'Шаблон клиента'}»
                         </span>
                         {(savedTemplateInfo?.id || (order as any)?.templateId) && (
-                          <button
-                            type="button"
-                            onClick={handleUpdateUserTemplate}
-                            disabled={savingTemplate}
-                            title="Обновить существующий шаблон в библиотеке клиента текущей версией макета"
-                            className="ml-1 inline-flex items-center gap-1.5 bg-white hover:bg-emerald-600 hover:text-white border border-emerald-300 text-emerald-800 text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95 disabled:opacity-50 whitespace-nowrap shrink-0"
-                          >
-                            <RefreshCw className={`w-3.5 h-3.5 ${savingTemplate ? 'animate-spin' : 'text-emerald-600'}`} />
-                            <span>{savingTemplate ? 'Обновление...' : 'Обновить'}</span>
-                          </button>
+                          <div className="flex items-center gap-1.5 ml-1">
+                            <button
+                              type="button"
+                              onClick={handleSyncFromLibraryTemplate}
+                              disabled={savingTemplate}
+                              title="Подтянуть свежую версию макета из библиотеки клиента в этот заказ"
+                              className="h-6 inline-flex items-center gap-1 bg-white hover:bg-[#0082FB] hover:text-white border border-blue-200 text-[#0082FB] text-[11px] font-bold px-2 rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95 disabled:opacity-50 whitespace-nowrap shrink-0"
+                            >
+                              <RefreshCw className={`w-3 h-3 ${savingTemplate ? 'animate-spin' : ''}`} />
+                              <span>Подтянуть из библиотеки</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleUpdateUserTemplate}
+                              disabled={savingTemplate}
+                              title="Перезаписать шаблон в библиотеке клиента текущей версией макета из этого заказа"
+                              className="h-6 inline-flex items-center gap-1 bg-white hover:bg-emerald-600 hover:text-white border border-emerald-300 text-emerald-800 text-[11px] font-bold px-2 rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95 disabled:opacity-50 whitespace-nowrap shrink-0"
+                            >
+                              <BookmarkCheck className="w-3 h-3 text-emerald-600" />
+                              <span>В библиотеку</span>
+                            </button>
+                          </div>
                         )}
                       </div>
                     ) : (
@@ -1630,9 +2133,9 @@ export const AdminOrderDetailPage: React.FC = () => {
                         type="button"
                         onClick={handleSaveToUserTemplates}
                         disabled={savingTemplate}
-                        className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer active:scale-95 disabled:opacity-50 shadow-2xs whitespace-nowrap"
+                        className="h-9 inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-bold px-3.5 rounded-xl transition-all cursor-pointer active:scale-95 disabled:opacity-50 shadow-2xs whitespace-nowrap"
                       >
-                        <BookmarkCheck className="w-4 h-4 text-emerald-600" />
+                        <BookmarkCheck className="w-3.5 h-3.5 text-emerald-600" />
                         <span>{savingTemplate ? 'Сохранение...' : 'Сохранить в шаблоны клиента'}</span>
                       </button>
                     )}
@@ -1681,8 +2184,41 @@ export const AdminOrderDetailPage: React.FC = () => {
               </div>
             )}
 
-            {/* If PDF already generated/attached */}
-            {order.pdfUrl ? (
+            {/* If PDF is generating in background */}
+            {pdfStatus?.isGenerating || generatingPdf ? (
+              <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-blue-100 text-[#0082FB] flex items-center justify-center shrink-0">
+                    <RefreshCw className="w-5 h-5 text-[#0082FB] animate-spin" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-extrabold text-[#111827] block">
+                      Идет формирование PDF партии ({order.itemsCount.toLocaleString()} шт.)...
+                    </span>
+                    <span className="text-[11px] text-[#64748B]">
+                      Фоновый процесс на сервере • Время работы: {pdfStatus?.activeJob?.elapsedSec ?? 0} сек • Можно обновлять страницу (F5)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={fetchPdfStatus}
+                    className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all shadow-2xs cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-gray-500" />
+                    <span>Обновить статус</span>
+                  </button>
+                  <Link
+                    to="/system"
+                    className="text-xs font-bold text-[#0082FB] hover:underline px-2 py-1 whitespace-nowrap"
+                  >
+                    Очередь задач →
+                  </Link>
+                </div>
+              </div>
+            ) : order.pdfUrl || pdfStatus?.hasFullPdf ? (
               <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
@@ -1693,7 +2229,8 @@ export const AdminOrderDetailPage: React.FC = () => {
                       Файл этикеток партии сформирован
                     </span>
                     <span className="text-[11px] text-emerald-800">
-                      Партия: {order.itemsCount.toLocaleString()} шт. • Размер: {labelRequirements?.size || '58×40 мм'} • Доступен клиенту в ЛК
+                      Партия: {order.itemsCount.toLocaleString()} шт. • Размер: {labelRequirements?.size || '58×40 мм'}
+                      {pdfStatus?.fullPdfSizeMb ? ` • ${pdfStatus.fullPdfSizeMb} МБ` : ''} • Доступен клиенту в ЛК
                     </span>
                   </div>
                 </div>
@@ -1718,15 +2255,15 @@ export const AdminOrderDetailPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleGeneratePdfFromDesigner}
-                    disabled={generatingPdf}
+                    disabled={generatingPdf || pdfStatus?.isGenerating}
                     className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${generatingPdf ? 'animate-spin' : ''}`} />
-                    {generatingPdf ? 'Генерация...' : 'Перегенерировать'}
+                    <RefreshCw className={`w-3.5 h-3.5 ${(generatingPdf || pdfStatus?.isGenerating) ? 'animate-spin' : ''}`} />
+                    {(generatingPdf || pdfStatus?.isGenerating) ? 'Генерация...' : 'Перегенерировать'}
                   </button>
                 </div>
               </div>
-            ) : (
+            ) : !pdfStatus?.isGenerating && !generatingPdf && (
               /* If not generated yet */
               <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-5 text-center space-y-3">
                 <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center mx-auto text-[#64748B] shadow-xs">
@@ -1745,11 +2282,11 @@ export const AdminOrderDetailPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleGeneratePdfFromDesigner}
-                    disabled={generatingPdf}
+                    disabled={generatingPdf || pdfStatus?.isGenerating}
                     className="inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
                   >
                     <Printer className="w-4 h-4" />
-                    {generatingPdf ? 'Генерация файла партии...' : `Сгенерировать PDF партии (${order.itemsCount.toLocaleString()} шт.)`}
+                    {(generatingPdf || pdfStatus?.isGenerating) ? 'Генерация файла партии...' : `Сгенерировать PDF партии (${order.itemsCount.toLocaleString()} шт.)`}
                   </button>
 
                   <Link
@@ -2004,6 +2541,255 @@ export const AdminOrderDetailPage: React.FC = () => {
           hasLayout={Boolean(layoutElements.length > 0 || (order.stickerLayout as any)?.elements?.length > 0)}
           startLabelNumber={(order as any).startLabelNumber}
         />
+      )}
+
+      {/* Modal: Отчет о нанесении кодов маркировки (ИС МПТ / СУЗ) */}
+      {isUtilisationModalOpen && order && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !submittingUtilisation) {
+              setIsUtilisationModalOpen(false);
+            }
+          }}
+        >
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-xl w-full p-6 sm:p-7 space-y-4 animate-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-gray-100 pb-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+                  <FileCheck2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[#111827]">
+                    Отчет о нанесении кодов маркировки
+                  </h3>
+                  <p className="text-xs text-[#64748B] mt-0.5">
+                    Заказ {order.orderNumber} • ИС МПТ / СУЗ (Казахстан)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !submittingUtilisation && setIsUtilisationModalOpen(false)}
+                disabled={submittingUtilisation}
+                className="text-gray-400 hover:text-black p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Modal Body */}
+            <div className="space-y-4 overflow-y-auto pr-1">
+              {/* Order Info Summary */}
+              <div className="bg-[#F8FAFC] border border-gray-200/80 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#64748B] font-medium">Партия:</span>
+                  <span className="font-extrabold text-[#111827] font-mono">{order.orderNumber}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#64748B] font-medium">Товарная группа:</span>
+                  <span className="font-bold text-[#0082FB] bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200/60">
+                    {CATEGORY_NAMES[order.category] || order.category}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#64748B] font-medium">Количество КМ:</span>
+                  <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200/60">
+                    {order.itemsCount} шт.
+                  </span>
+                </div>
+              </div>
+
+              {/* Form Fields */}
+              <div className="space-y-3.5 text-left">
+                {/* 1. Способ выпуска в оборот */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">
+                    Способ выпуска в оборот *
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: 'PRODUCTION', label: 'Производство в РК', desc: 'Внутреннее производство' },
+                      { id: 'IMPORT', label: 'Импорт в РК', desc: 'Ввоз из третьих стран / ЕАЭС' },
+                      { id: 'REMAINDER', label: 'Маркировка остатков', desc: 'Товары в обороте' },
+                    ].map((st) => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => {
+                          setUtilisationReleaseType(st.id as any);
+                          if (st.id === 'PRODUCTION') {
+                            setUtilisationCountry('KZ');
+                          } else if (st.id === 'IMPORT' && utilisationCountry === 'KZ') {
+                            setUtilisationCountry('RU');
+                          }
+                        }}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                          utilisationReleaseType === st.id
+                            ? 'border-[#0082FB] bg-blue-50/70 text-[#0082FB] ring-1 ring-[#0082FB]'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="font-bold text-xs">{st.label}</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">{st.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Страна производства & Серия/партия */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">
+                      Страна производства *
+                    </label>
+                    <select
+                      value={utilisationCountry}
+                      onChange={(e) => setUtilisationCountry(e.target.value)}
+                      disabled={utilisationReleaseType === 'PRODUCTION'}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB] transition-all disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                    >
+                      {utilisationReleaseType !== 'IMPORT' && (
+                        <option value="KZ">Казахстан (KZ)</option>
+                      )}
+                      <option value="RU">Россия (RU)</option>
+                      <option value="CN">Китай (CN)</option>
+                      <option value="TR">Турция (TR)</option>
+                      <option value="UZ">Узбекистан (UZ)</option>
+                      <option value="KG">Кыргызстан (KG)</option>
+                      <option value="BY">Беларусь (BY)</option>
+                      <option value="DE">Германия (DE)</option>
+                      <option value="IT">Италия (IT)</option>
+                      <option value="PL">Польша (PL)</option>
+                      <option value="VN">Вьетнам (VN)</option>
+                      <option value="IN">Индия (IN)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">
+                      Серия / Партия товара
+                    </label>
+                    <input
+                      type="text"
+                      value={utilisationSeries}
+                      onChange={(e) => setUtilisationSeries(e.target.value)}
+                      placeholder={order.orderNumber}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB] transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Дата производства */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-gray-700 uppercase">
+                      Дата и время производства
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const now = new Date(Date.now() - 2 * 3600 * 1000);
+                        setUtilisationProdDate(now.toISOString().slice(0, 16));
+                      }}
+                      className="text-[11px] font-bold text-[#0082FB] hover:underline cursor-pointer"
+                    >
+                      Подставить текущую дату
+                    </button>
+                  </div>
+                  <input
+                    type="datetime-local"
+                    value={utilisationProdDate}
+                    onChange={(e) => setUtilisationProdDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB] transition-all"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Если оставить пустым, система автоматически передаст дату текущей смены (в соответствии с регламентом ИС МПТ).
+                  </p>
+                </div>
+
+                {/* 4. Срок годности - CONDITIONAL based on category */}
+                {hasCategoryExpiration(order.category) ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-gray-700 uppercase">
+                        Срок годности (Годен до) *
+                      </label>
+                      <div className="flex items-center gap-2">
+                        {[
+                          { label: '+1 год', years: 1 },
+                          { label: '+2 года', years: 2 },
+                          { label: '+3 года', years: 3 },
+                        ].map((item) => (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => {
+                              const base = utilisationProdDate ? new Date(utilisationProdDate) : new Date();
+                              const exp = new Date(base.getTime() + item.years * 365 * 24 * 3600 * 1000);
+                              setUtilisationExpDate(exp.toISOString().slice(0, 16));
+                            }}
+                            className="text-[10px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded-md cursor-pointer transition-colors"
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <input
+                      type="datetime-local"
+                      value={utilisationExpDate}
+                      onChange={(e) => setUtilisationExpDate(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB] transition-all"
+                    />
+                    <p className="text-[10px] text-[#0082FB] font-medium mt-1">
+                      Обязательное поле для категории «{CATEGORY_NAMES[order.category] || order.category}».
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-200/70 text-[11px] text-gray-500 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      Для категории <strong>{CATEGORY_NAMES[order.category] || order.category}</strong> указание срока годности не требуется стандартами маркировки Казахстана.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Actions Footer */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsUtilisationModalOpen(false)}
+                disabled={submittingUtilisation}
+                className="px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-50 cursor-pointer disabled:opacity-50"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSubmitUtilisation}
+                disabled={submittingUtilisation}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-extrabold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submittingUtilisation ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    Отправка в ИС МПТ...
+                  </>
+                ) : (
+                  <>
+                    <FileCheck2 className="w-4 h-4 text-white" />
+                    Подтвердить и отправить отчет
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Floating Top-Right Toast Notifications */}

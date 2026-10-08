@@ -224,3 +224,74 @@ export const ensureOrderCodesPopulated = async (orderId: string): Promise<number
   activePopulations.set(orderId, taskPromise);
   return taskPromise;
 };
+
+export const attachCodesToOrder = async (
+  orderId: string,
+  codes: string[],
+  gtin?: string | null,
+  fileNamePrefix: string = 'markirovka_emission'
+): Promise<{ count: number; filePath: string; relativeUrl: string }> => {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, orderNumber: true, userId: true, createdAt: true },
+  });
+  if (!order) throw new Error(`Order ${orderId} not found`);
+
+  const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', order.id);
+  if (!fs.existsSync(orderDir)) {
+    fs.mkdirSync(orderDir, { recursive: true });
+  }
+
+  const cleanCodes = codes.map((c) => (c || '').trim()).filter((c) => c.length > 0);
+  const fileName = `${fileNamePrefix}_${order.orderNumber}.csv`;
+  const targetFilePath = path.join(orderDir, fileName);
+  const relativeUrl = `/uploads/orders/${order.id}/${fileName}`;
+
+  // Write CSV content with all emitted codes
+  const csvContent = cleanCodes.join('\n');
+  await fs.promises.writeFile(targetFilePath, csvContent, 'utf-8');
+
+  // Populate OrderCodeItem in DB
+  await prisma.orderCodeItem.deleteMany({ where: { orderId: order.id } });
+  const startIndex = await getClientOrderStartIndex(order.userId, order.id, order.createdAt);
+
+  const items = cleanCodes.map((codeStr, idx) => {
+    let itemGtin: string | null = gtin || null;
+    let itemSerial: string | null = null;
+    const m = codeStr.match(/^01(\d{14})21([^\u001d\s]+)/);
+    if (m) {
+      itemGtin = m[1];
+      itemSerial = m[2];
+    }
+    return {
+      orderId: order.id,
+      index: startIndex + idx,
+      code: codeStr,
+      gtin: itemGtin,
+      serial: itemSerial,
+      status: CodeItemStatus.NEW,
+    };
+  });
+
+  const BATCH_SIZE = 2000;
+  for (let b = 0; b < items.length; b += BATCH_SIZE) {
+    await prisma.orderCodeItem.createMany({
+      data: items.slice(b, b + BATCH_SIZE),
+      skipDuplicates: true,
+    });
+  }
+
+  await reindexClientOrders(order.userId);
+
+  // Update Order with the new codes file URL and name
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      codesFileUrl: relativeUrl,
+      codesFileName: fileName,
+      itemsCount: items.length > 0 ? items.length : undefined,
+    },
+  });
+
+  return { count: items.length, filePath: targetFilePath, relativeUrl };
+};
