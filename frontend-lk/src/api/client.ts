@@ -32,6 +32,10 @@ apiClient.interceptors.response.use(
 
     console.error(`[API Error] [${status}] ${url}:`, error.response?.data || message);
 
+    if (error.response?.status === 503 && error.response?.data?.maintenance) {
+      window.dispatchEvent(new CustomEvent('tanbox:maintenance', { detail: error.response.data }));
+    }
+
     if (error.response?.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/register')) {
       localStorage.removeItem('tanbox_token');
       if (window.location.pathname !== '/login') {

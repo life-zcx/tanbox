@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/db';
 import { logger } from '../utils/logger';
+import { telegram } from '../services/telegram.service';
 
 export const createLead = async (req: Request, res: Response) => {
   try {
@@ -37,6 +38,17 @@ export const createLead = async (req: Request, res: Response) => {
         status: 'NEW',
       },
     });
+
+    // Asynchronously dispatch notification to Telegram Leads chat
+    telegram.sendNewLeadNotification({
+      id: lead.id,
+      serviceTitle: lead.serviceTitle,
+      companyName: lead.companyName,
+      phone: lead.phone,
+      email: lead.email,
+      binIin: lead.binIin,
+      notes: lead.notes,
+    }).catch(() => {});
 
     return res.status(201).json({
       message: 'Заявка успешно создана',

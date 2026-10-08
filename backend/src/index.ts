@@ -3,6 +3,7 @@ import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
 import authRoutes from './routes/auth.routes';
 import calculatorRoutes from './routes/calculator.routes';
 import ordersRoutes from './routes/orders.routes';
@@ -14,8 +15,12 @@ import tariffsRoutes from './routes/tariffs.routes';
 import labelTemplatesRoutes from './routes/labelTemplates.routes';
 import userTemplatesRoutes from './routes/userTemplates.routes';
 import labelsRoutes from './routes/labels.routes';
+import systemRoutes from './routes/system.routes';
+import markirovkaRoutes from './routes/markirovka.routes';
 import { logger } from './utils/logger';
 import { generalApiLimiter } from './middleware/rateLimiter';
+import { telegram } from './services/telegram.service';
+import { isMaintenanceActive, getMaintenanceMessage } from './controllers/system.controller';
 
 dotenv.config();
 
@@ -85,9 +90,45 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint
+// Health check and maintenance status endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'tanbox-backend-api', timestamp: new Date() });
+  res.json({
+    status: 'ok',
+    service: 'tanbox-backend-api',
+    maintenance: isMaintenanceActive(),
+    maintenanceMessage: getMaintenanceMessage(),
+    timestamp: new Date(),
+  });
+});
+
+// Maintenance mode guard (returns 503 for all public & non-admin requests when active)
+app.use((req, res, next) => {
+  if (isMaintenanceActive()) {
+    const isExcluded = 
+      req.path.startsWith('/api/system') || 
+      req.path.startsWith('/api/auth/login') ||
+      req.path.startsWith('/api/auth/me') ||
+      req.path === '/api/health';
+
+    if (!isExcluded) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          const token = authHeader.split(' ')[1];
+          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'tanbox_kz_jwt_secret_key_super_secure_2026') as any;
+          if (decoded && decoded.role === 'ADMIN') {
+            return next(); // Admins bypass maintenance mode
+          }
+        } catch {}
+      }
+
+      return res.status(503).json({
+        maintenance: true,
+        message: getMaintenanceMessage(),
+      });
+    }
+  }
+  next();
 });
 
 // API Routes
@@ -102,6 +143,8 @@ app.use('/api/tariffs', tariffsRoutes);
 app.use('/api/label-templates', labelTemplatesRoutes);
 app.use('/api/user-templates', userTemplatesRoutes);
 app.use('/api/labels', labelsRoutes);
+app.use('/api/system', systemRoutes);
+app.use('/api/markirovka', markirovkaRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -109,9 +152,31 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     return res.status(403).json({ message: 'Доступ запрещён политикой CORS' });
   }
   logger.error(`Unhandled Error on ${req.method} ${req.url}:`, err);
+
+  // Dispatch alert to DevOps Telegram group
+  telegram.sendServerErrorAlert({
+    method: req.method,
+    url: req.originalUrl || req.url,
+    statusCode: 500,
+    error: err,
+    ip: (req.ip || req.headers['x-forwarded-for']) as string,
+    userId: (req as any).user?.id,
+  }).catch(() => {});
+
   return res.status(500).json({ message: 'Внутренняя ошибка сервера' });
+});
+
+process.on('unhandledRejection', (reason: any) => {
+  logger.error('Unhandled Rejection detected:', reason);
+  telegram.sendServerErrorAlert({
+    method: 'BACKGROUND',
+    url: 'unhandledRejection',
+    statusCode: 500,
+    error: reason,
+  }).catch(() => {});
 });
 
 app.listen(PORT, () => {
   logger.info(`🚀 TANBOX Backend REST API running on port ${PORT}`);
+  telegram.startPolling();
 });

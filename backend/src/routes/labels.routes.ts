@@ -5,8 +5,8 @@ import { logger } from '../utils/logger';
 
 const router = Router();
 
-// Protect ALL label generator operations with JWT and Admin role
-router.use(authenticateJWT, requireAdmin);
+// Protect label generator operations with JWT
+router.use(authenticateJWT);
 
 const LABEL_GENERATOR_HOST = process.env.LABEL_GENERATOR_HOST || 'label-generator';
 const LABEL_GENERATOR_PORT = parseInt(process.env.LABEL_GENERATOR_PORT || '5060', 10);

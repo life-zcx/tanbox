@@ -7,11 +7,21 @@ async function main() {
   console.log('🌱 Starting DB seeding...');
 
   // 1. Password hashes (using env variables or fallback for initial bootstrap)
-  const initialAdminPass = process.env.INITIAL_ADMIN_PASSWORD || 'Admin_Tanbox_2026!Secure';
-  const initialClientPass = process.env.INITIAL_CLIENT_PASSWORD || 'Client_Tanbox_2026!Secure';
+  const isProd = process.env.NODE_ENV === 'production';
+  const initialAdminPass = process.env.INITIAL_ADMIN_PASSWORD;
+  const initialClientPass = process.env.INITIAL_CLIENT_PASSWORD;
 
-  const adminPassword = await bcrypt.hash(initialAdminPass, 10);
-  const clientPassword = await bcrypt.hash(initialClientPass, 10);
+  if (isProd && (!initialAdminPass || initialAdminPass === 'Admin_Tanbox_2026!Secure')) {
+    throw new Error(
+      'CRITICAL SECURITY ERROR: Cannot seed production database without specifying a secure INITIAL_ADMIN_PASSWORD in environment!'
+    );
+  }
+
+  const effectiveAdminPass = initialAdminPass || 'Admin_Tanbox_2026!Secure';
+  const effectiveClientPass = initialClientPass || 'Client_Tanbox_2026!Secure';
+
+  const adminPassword = await bcrypt.hash(effectiveAdminPass, 10);
+  const clientPassword = await bcrypt.hash(effectiveClientPass, 10);
 
   // 2. Admin User - only create if not exists
   const existingAdmin = await prisma.user.findUnique({ where: { email: 'admin@tanbox.kz' } });

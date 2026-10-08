@@ -1,4 +1,5 @@
 import EventEmitter from 'events';
+import { telegram } from './telegram.service';
 
 export interface PdfJob {
   id: string;
@@ -153,6 +154,7 @@ class PdfGenerationQueue extends EventEmitter {
     const timeoutHandle = setTimeout(() => {
       timedOut = true;
       console.error(`[PdfQueue] ⚠️ Task "${task.description}" exceeded 6 minute timeout guard!`);
+      telegram.sendPdfWorkerAlert(task.description, 'Превышен максимальный лимит времени генерации (6 минут)').catch(() => {});
       this.currentRunningDescriptions.delete(task.key);
       this.activeCount = Math.max(0, this.activeCount - 1);
       this.totalFailed++;
@@ -176,6 +178,7 @@ class PdfGenerationQueue extends EventEmitter {
       if (!timedOut) {
         clearTimeout(timeoutHandle);
         console.error(`[PdfQueue] ❌ Failed task "${task.description}":`, err.message);
+        telegram.sendPdfWorkerAlert(task.description, err.message || 'Ошибка генератора PDF').catch(() => {});
         this.totalFailed++;
         this.currentRunningDescriptions.delete(task.key);
         this.activeCount = Math.max(0, this.activeCount - 1);

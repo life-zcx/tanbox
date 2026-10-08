@@ -77,6 +77,7 @@ model User {
 
   orders           Order[]
   stickerTemplates UserStickerTemplate[]
+  markirovkaAccounts MarkirovkaAccount[]
 }
 
 model Order {
@@ -112,6 +113,8 @@ model Order {
   updatedAt             DateTime              @updatedAt
 
   codeItems             OrderCodeItem[]
+  markirovkaOrders      MarkirovkaOrder[]
+  markirovkaReports     MarkirovkaUtilisationReport[]
 
   @@index([userId])
   @@index([status])
@@ -131,6 +134,7 @@ model OrderCodeItem {
 
   @@id([orderId, index])
   @@index([orderId, code])
+  @@index([code])
 }
 
 model Tariff {
@@ -214,3 +218,99 @@ model UserStickerTemplate {
 
   @@index([userId])
 }
+
+enum MarkirovkaEnvironment {
+  TEST
+  PROD
+}
+
+enum MarkirovkaAccountStatus {
+  ACTIVE
+  AUTH_ERROR
+  DISABLED
+}
+
+enum MarkirovkaOrderStatus {
+  PENDING
+  READY
+  FETCHING
+  COMPLETED
+  FAILED
+}
+
+enum MarkirovkaReportStatus {
+  DRAFT
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+}
+
+model MarkirovkaAccount {
+  id                String                  @id @default(uuid())
+  userId            String?
+  user              User?                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  environment       MarkirovkaEnvironment   @default(TEST)
+  baseUrl           String?
+  login             String
+  encryptedPassword String
+  omsId             String?
+  status            MarkirovkaAccountStatus @default(ACTIVE)
+  token             String?                 @db.Text
+  tokenExpiresAt    DateTime?
+  lastCheckedAt     DateTime?
+  lastError         String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  orders            MarkirovkaOrder[]
+  reports           MarkirovkaUtilisationReport[]
+
+  @@index([userId])
+  @@index([environment])
+}
+
+model MarkirovkaOrder {
+  id                String                @id @default(uuid())
+  accountId         String
+  account           MarkirovkaAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  orderId           String?
+  order             Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  externalOrderId   String?
+  category          OrderCategory
+  gtin              String
+  quantityRequested Int
+  quantityReceived  Int                   @default(0)
+  status            MarkirovkaOrderStatus @default(PENDING)
+  errorDetails      String?
+  codes             Json?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@index([accountId])
+  @@index([orderId])
+  @@index([status])
+}
+
+model MarkirovkaUtilisationReport {
+  id               String                 @id @default(uuid())
+  accountId        String
+  account          MarkirovkaAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  orderId          String?
+  order            Order?                 @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  externalReportId String?
+  category         OrderCategory
+  gtin             String?
+  codesCount       Int
+  status           MarkirovkaReportStatus @default(DRAFT)
+  reportData       Json?
+  errorDetails     String?
+  submittedAt      DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@index([accountId])
+  @@index([orderId])
+  @@index([status])
+}
+

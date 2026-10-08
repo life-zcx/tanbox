@@ -8,6 +8,7 @@ import { CATEGORIES_LIST, CATEGORY_MAP, getCategoryLabel } from '../data/categor
 import { PageHeader } from '@shared';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
 import { TariffHelpModal } from '../components/modals/TariffHelpModal';
+import { ConnectMarkirovkaModal } from '../components/modals/ConnectMarkirovkaModal';
 import {
   Check,
   ArrowRight,
@@ -74,6 +75,31 @@ export const CreateOrderPage: React.FC = () => {
   const [loadingTemplates, setLoadingTemplates] = useState<boolean>(true);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [templateChoice, setTemplateChoice] = useState<'SAVED' | 'NEW' | 'NONE'>('NONE');
+
+  // Turnkey Markirovka Emission states
+  const [markirovkaMode, setMarkirovkaMode] = useState<'FILE' | 'EMISSION'>('FILE');
+  const [markirovkaAccounts, setMarkirovkaAccounts] = useState<any[]>([]);
+  const [markirovkaAccountId, setMarkirovkaAccountId] = useState<string>('');
+  const [markirovkaGtin, setMarkirovkaGtin] = useState<string>('');
+  const [manualCount, setManualCount] = useState<number>(500);
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState<boolean>(false);
+
+  // Load available markirovka accounts on mount
+  useEffect(() => {
+    const fetchMarkirovkaAccounts = async () => {
+      try {
+        const res = await apiClient.get('/markirovka/accounts');
+        const list = res.data.accounts || [];
+        setMarkirovkaAccounts(list);
+        if (list.length > 0) {
+          setMarkirovkaAccountId(list[0].id);
+        }
+      } catch (err) {
+        console.warn('Could not load markirovka accounts:', err);
+      }
+    };
+    fetchMarkirovkaAccounts();
+  }, []);
 
   // Load user saved sticker templates on mount
   useEffect(() => {
@@ -330,7 +356,7 @@ export const CreateOrderPage: React.FC = () => {
 
   // Recalculate price on changes (debounced by 200ms to prevent race conditions and server spam)
   useEffect(() => {
-    if (!itemsCount || itemsCount < 1) return;
+    if (!tariffType || !itemsCount || itemsCount < 1) return;
 
     const timer = setTimeout(async () => {
       setLoading(true);
@@ -444,16 +470,36 @@ export const CreateOrderPage: React.FC = () => {
       return;
     }
 
-    if (!codesFile) {
-      setErrorMsg('Пожалуйста, прикрепите файл с кодами маркировки (Шаг 5). Создание заказа без файла кодов невозможно.');
-      document.getElementById('step-codes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
+    if (markirovkaMode === 'FILE') {
+      if (!codesFile) {
+        setErrorMsg('Пожалуйста, прикрепите файл с кодами маркировки (Шаг 5). Создание заказа без файла кодов невозможно.');
+        document.getElementById('step-codes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
 
-    if (itemsCount < 1) {
-      setErrorMsg('В прикреплённом файле не найдено новых кодов для заказа. Загрузите файл со свежими кодами маркировки.');
-      document.getElementById('step-codes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
+      if (itemsCount < 1) {
+        setErrorMsg('В прикреплённом файле не найдено новых кодов для заказа. Загрузите файл со свежими кодами маркировки.');
+        document.getElementById('step-codes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    } else {
+      if (!markirovkaAccountId) {
+        setErrorMsg('Пожалуйста, выберите аккаунт маркировки (Шаг 5).');
+        document.getElementById('step-codes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      if (!markirovkaGtin.trim()) {
+        setErrorMsg('Пожалуйста, укажите GTIN товара (14 цифр) для эмиссии кодов (Шаг 5).');
+        document.getElementById('step-codes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      if (itemsCount < 1) {
+        setErrorMsg('Пожалуйста, укажите количество товара для заказа (Шаг 5).');
+        document.getElementById('step-codes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
     }
 
     executeSubmit(itemsCount);
@@ -461,7 +507,14 @@ export const CreateOrderPage: React.FC = () => {
 
   // Final submission execution
   const executeSubmit = async (finalCount: number) => {
-    if (!category || !tariffType || !warehouseAddress.trim() || !codesFile || finalCount < 1) {
+    if (
+      !category ||
+      !tariffType ||
+      !warehouseAddress.trim() ||
+      (markirovkaMode === 'FILE' && !codesFile) ||
+      (markirovkaMode === 'EMISSION' && (!markirovkaAccountId || !markirovkaGtin.trim())) ||
+      finalCount < 1
+    ) {
       return;
     }
 
@@ -571,7 +624,10 @@ export const CreateOrderPage: React.FC = () => {
           : undefined,
         stickerWidth: usedTemplate ? usedTemplate.widthMm : parseInt(String(labelWidth), 10) || 58,
         stickerHeight: usedTemplate ? usedTemplate.heightMm : parseInt(String(labelHeight), 10) || 40,
-      });
+        markirovkaMode,
+        markirovkaAccountId: markirovkaMode === 'EMISSION' ? markirovkaAccountId : undefined,
+        markirovkaGtin: markirovkaMode === 'EMISSION' ? markirovkaGtin.trim() : undefined,
+      } as any);
 
       const newOrderId = res?.order?.id || res?.id;
 
@@ -1674,8 +1730,8 @@ export const CreateOrderPage: React.FC = () => {
           )}
         </div>
 
-        {/* Step 5: Codes File Attachment (MANDATORY) */}
-        <div id="step-codes-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-5">
+        {/* Step 5: Codes / Emission Selection */}
+        <div id="step-codes-section" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
@@ -1683,15 +1739,15 @@ export const CreateOrderPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-sm font-extrabold text-[#111827]">
-                  Файл с кодами маркировки (.CSV)
+                  Шаг 5: Коды маркировки и эмиссия
                 </h3>
                 <p className="text-xs text-[#64748B]">
-                  Объем партии рассчитывается автоматически из загруженного файла кодов
+                  Выберите источник кодов: загрузите свой файл или закажите выпуск кодов через Tanbox
                 </p>
               </div>
             </div>
 
-            {codesFile && (
+            {markirovkaMode === 'FILE' && codesFile && (
               <button
                 type="button"
                 onClick={() => {
@@ -1706,6 +1762,71 @@ export const CreateOrderPage: React.FC = () => {
               </button>
             )}
           </div>
+
+          {/* Mode Switcher Tabs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setMarkirovkaMode('FILE');
+                setItemsCount(fileCodesCount || 0);
+              }}
+              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-3.5 ${
+                markirovkaMode === 'FILE'
+                  ? 'border-[#0082FB] bg-blue-50/50 shadow-sm ring-1 ring-[#0082FB]'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
+            >
+              <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  markirovkaMode === 'FILE' ? 'bg-[#0082FB] text-white shadow-sm' : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-extrabold text-[#111827]">У меня есть файл кодов (CSV)</div>
+                <div className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+                  Загрузка уже выгруженных кодов DataMatrix из вашего кабинета ИС МПТ
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMarkirovkaMode('EMISSION');
+                setItemsCount(manualCount || 500);
+              }}
+              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-3.5 ${
+                markirovkaMode === 'EMISSION'
+                  ? 'border-[#0082FB] bg-blue-50/50 shadow-sm ring-1 ring-[#0082FB]'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
+            >
+              <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  markirovkaMode === 'EMISSION' ? 'bg-[#0082FB] text-white shadow-sm' : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                <Zap className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-extrabold text-[#111827] flex items-center gap-1.5">
+                  Заказать эмиссию через Tanbox
+                  <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-[#0082FB] text-white">
+                    Авто
+                  </span>
+                </div>
+                <div className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+                  Эмиссия кодов под ключ в ИС МПТ Казахстана без ручной выгрузки файлов
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {/* Mode 1: File Upload */}
+          {markirovkaMode === 'FILE' && (
 
           <div
             onDragOver={handleCodesDragOver}
@@ -1919,6 +2040,122 @@ export const CreateOrderPage: React.FC = () => {
               </div>
             )}
           </div>
+          )}
+
+          {/* Mode 2: Turnkey Automatic Emission */}
+          {markirovkaMode === 'EMISSION' && (
+            <div className="space-y-4 p-5 bg-gradient-to-b from-blue-50/40 to-white rounded-2xl border border-blue-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Quantity */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">
+                    Количество кодов (тираж партии) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="150000"
+                    value={manualCount}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+                      setManualCount(val);
+                      setItemsCount(val);
+                    }}
+                    placeholder="500"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB]"
+                  />
+                  <div className="flex items-center gap-1.5 mt-2">
+                    {[100, 500, 1000, 5000].map((step) => (
+                      <button
+                        key={step}
+                        type="button"
+                        onClick={() => {
+                          setManualCount(step);
+                          setItemsCount(step);
+                        }}
+                        className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 hover:border-[#0082FB] hover:text-[#0082FB] cursor-pointer"
+                      >
+                        +{step}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Account Selection */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-gray-700 uppercase">
+                      Аккаунт Markirovka.kz *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsConnectModalOpen(true)}
+                      className="text-xs font-bold text-[#0082FB] hover:text-[#0070DA] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      + Подключить аккаунт
+                    </button>
+                  </div>
+                  <select
+                    value={markirovkaAccountId}
+                    onChange={(e) => setMarkirovkaAccountId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB]"
+                  >
+                    {markirovkaAccounts.length === 0 ? (
+                      <option value="">Нет сохраненных аккаунтов</option>
+                    ) : (
+                      markirovkaAccounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name} ({acc.environment} — {acc.login})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  {markirovkaAccounts.length === 0 ? (
+                    <div className="mt-1.5 flex items-center justify-between p-2 bg-amber-50/80 rounded-lg border border-amber-200/80 text-[11px] text-amber-900">
+                      <span>У вас еще нет привязанных аккаунтов ИС МПТ.</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsConnectModalOpen(true)}
+                        className="font-bold text-[#0082FB] hover:underline shrink-0 ml-2"
+                      >
+                        Подключить сейчас →
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      Эмиссия будет выполнена от имени выбранного личного кабинета
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* GTIN input */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">
+                  GTIN товара (штрихкод упаковки, 14 цифр) *
+                </label>
+                <input
+                  type="text"
+                  maxLength={14}
+                  value={markirovkaGtin}
+                  onChange={(e) => setMarkirovkaGtin(e.target.value.replace(/\D/g, ''))}
+                  placeholder="05055107433614"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold font-mono text-gray-900 bg-white focus:outline-none focus:border-[#0082FB]"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">
+                  14-значный номер GTIN зарегистрированного товара в Национальном каталоге товаров
+                </p>
+              </div>
+
+              {/* SLA Info */}
+              <div className="p-3.5 bg-blue-100/60 rounded-xl border border-blue-200/70 flex items-start gap-2.5 text-xs text-blue-950">
+                <CheckCircle2 className="w-4 h-4 text-[#0082FB] shrink-0 mt-0.5" />
+                <span>
+                  Tanbox автоматически отправит заказ в ИС МПТ, выпустит коды DataMatrix и сформирует готовые термоэтикетки для оклейки партии на складе.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Error message if any */}
@@ -1949,8 +2186,12 @@ export const CreateOrderPage: React.FC = () => {
               <span>•</span>
               <span>
                 Объем:{' '}
-                <strong className={codesFile && itemsCount > 0 ? 'text-[#0082FB]' : 'text-amber-600'}>
-                  {codesFile && itemsCount > 0 ? `${itemsCount.toLocaleString()} шт.` : 'Требуется файл кодов'}
+                <strong className={itemsCount > 0 ? 'text-[#0082FB]' : 'text-amber-600'}>
+                  {itemsCount > 0
+                    ? `${itemsCount.toLocaleString()} шт.`
+                    : markirovkaMode === 'EMISSION'
+                    ? 'Укажите количество'
+                    : 'Требуется файл кодов'}
                 </strong>
               </span>
               {calculated && itemsCount > 0 && (
@@ -1973,13 +2214,22 @@ export const CreateOrderPage: React.FC = () => {
             </div>
 
             <p className="text-[11px] text-[#64748B]">
-              * Стоимость рассчитывается автоматически на основании чистых кодов из загруженного файла.
+              * Стоимость рассчитывается автоматически на основании тиража кодов маркировки.
             </p>
           </div>
 
           <button
             type="submit"
-            disabled={submitting || loading || !category || !tariffType || !warehouseAddress.trim() || !codesFile || itemsCount < 1}
+            disabled={
+              submitting ||
+              loading ||
+              !category ||
+              !tariffType ||
+              !warehouseAddress.trim() ||
+              (markirovkaMode === 'FILE' && !codesFile) ||
+              (markirovkaMode === 'EMISSION' && (!markirovkaAccountId || !markirovkaGtin.trim())) ||
+              itemsCount < 1
+            }
             className="bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-4 px-8 rounded-xl transition-all active:scale-95 shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed self-start md:self-auto"
           >
             {submitting ? (
@@ -1993,10 +2243,14 @@ export const CreateOrderPage: React.FC = () => {
               <span>Выберите тариф (Шаг 2)</span>
             ) : !warehouseAddress.trim() ? (
               <span>Укажите адрес склада (Шаг 4)</span>
-            ) : !codesFile ? (
+            ) : markirovkaMode === 'FILE' && !codesFile ? (
               <span>Загрузите файл с кодами (Шаг 5)</span>
+            ) : markirovkaMode === 'EMISSION' && !markirovkaAccountId ? (
+              <span>Выберите аккаунт маркировки (Шаг 5)</span>
+            ) : markirovkaMode === 'EMISSION' && !markirovkaGtin.trim() ? (
+              <span>Укажите GTIN товара (Шаг 5)</span>
             ) : itemsCount < 1 ? (
-              <span>В файле нет кодов для заказа</span>
+              <span>Укажите тираж заказа</span>
             ) : (
               <>
                 <span>Подтвердить и отправить заказ ({itemsCount.toLocaleString()} шт.)</span>
@@ -2013,6 +2267,15 @@ export const CreateOrderPage: React.FC = () => {
         onClose={() => setShowTariffHelpModal(false)}
         onSelectTariff={(t) => setTariffType(t)}
         currentTariff={tariffType}
+      />
+
+      <ConnectMarkirovkaModal
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+        onSuccess={(newAccount) => {
+          setMarkirovkaAccounts((prev) => [newAccount, ...prev]);
+          setMarkirovkaAccountId(newAccount.id);
+        }}
       />
     </div>
   );

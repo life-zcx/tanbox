@@ -119,7 +119,8 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Укажите email и пароль' });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (!user) {
       return res.status(401).json({ message: 'Неверный email или пароль' });
     }
@@ -187,3 +188,67 @@ export const getMe = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+
+export const updateMe = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Не авторизован' });
+    }
+
+    const { phone, currentPassword, newPassword } = req.body;
+    const updateData: any = {};
+
+    if (phone !== undefined) {
+      const phoneDigits = String(phone).replace(/\D/g, '');
+      if (phoneDigits.length < 10 || phoneDigits.length > 12) {
+        return res.status(400).json({ message: 'Номер телефона должен содержать 10–11 цифр' });
+      }
+      updateData.phone = String(phone).trim();
+    }
+
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ message: 'Для смены пароля введите текущий пароль' });
+      }
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: 'Новый пароль должен содержать минимум 8 символов' });
+      }
+
+      const existingUser = await prisma.user.findUnique({ where: { id: req.user.id } });
+      if (!existingUser) {
+        return res.status(404).json({ message: 'Пользователь не найден' });
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, existingUser.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Неверный текущий пароль' });
+      }
+
+      updateData.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: 'Нет данных для обновления' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        companyName: true,
+        binIin: true,
+        phone: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+
+    return res.json({ message: 'Профиль успешно обновлен', user: updatedUser });
+  } catch (error: any) {
+    console.error('Update profile error:', error);
+    return res.status(500).json({ message: 'Ошибка обновления профиля' });
+  }
+};
+

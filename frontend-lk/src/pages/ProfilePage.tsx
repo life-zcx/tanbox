@@ -4,10 +4,30 @@ import { useAuth } from '../hooks/useAuth';
 import { 
   Building2, Phone, Mail, MapPin, Save, Edit3, Plus, Trash2, Star, Check,
   Lock, KeyRound, Eye, EyeOff, CheckCircle, AlertCircle, Clock, Calendar, User, X,
-  ShieldCheck, ArrowUpRight
+  ShieldCheck, ArrowUpRight, Loader2, RefreshCw
 } from 'lucide-react';
 
 import { PageHeader } from '@shared';
+import { apiClient } from '../api/client';
+import { ConnectMarkirovkaModal } from '../components/modals/ConnectMarkirovkaModal';
+
+export const formatPhoneNumber = (val: string): string => {
+  let digits = val.replace(/\D/g, '');
+  if (digits.startsWith('8')) {
+    digits = '7' + digits.slice(1);
+  }
+  if (!digits.startsWith('7') && digits.length > 0) {
+    digits = '7' + digits;
+  }
+  digits = digits.slice(0, 11);
+
+  if (digits.length === 0) return '';
+  if (digits.length <= 1) return '+7';
+  if (digits.length <= 4) return `+7 (${digits.slice(1)}`;
+  if (digits.length <= 7) return `+7 (${digits.slice(1, 4)}) ${digits.slice(4)}`;
+  if (digits.length <= 9) return `+7 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  return `+7 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 9)}-${digits.slice(9, 11)}`;
+};
 
 export interface WarehouseAddress {
   id: string;
@@ -66,12 +86,62 @@ const INITIAL_WAREHOUSES: WarehouseAddress[] = [];
 export const ProfilePage: React.FC = () => {
   const { user } = useAuth();
 
-  // Company profile edit state with localStorage persistence
+  // Company profile edit state with localStorage persistence & API sync
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [companyPhone, setCompanyPhone] = useState(() => {
-    return localStorage.getItem('tanbox_company_phone') || user?.phone || '';
+    const raw = localStorage.getItem('tanbox_company_phone') || user?.phone || '';
+    return formatPhoneNumber(raw);
   });
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [savingCompany, setSavingCompany] = useState(false);
   const [companySaved, setCompanySaved] = useState(false);
+
+  // Sync phone when user loads
+  useEffect(() => {
+    if (user?.phone) {
+      const stored = localStorage.getItem('tanbox_company_phone') || user.phone;
+      setCompanyPhone(formatPhoneNumber(stored));
+    }
+  }, [user]);
+
+  const validatePhone = (val: string): boolean => {
+    const digits = val.replace(/\D/g, '');
+    if (!digits) {
+      setPhoneError('Укажите контактный номер телефона');
+      return false;
+    }
+    if (digits.length !== 11) {
+      setPhoneError('Номер должен содержать 11 цифр (например, +7 (701) 555-12-34)');
+      return false;
+    }
+    setPhoneError(null);
+    return true;
+  };
+
+  // Company edit submit
+  const handleSaveCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validatePhone(companyPhone)) {
+      return;
+    }
+
+    setSavingCompany(true);
+    try {
+      await apiClient.patch('/auth/me', { phone: companyPhone });
+      localStorage.setItem('tanbox_company_phone', companyPhone);
+      setIsEditingCompany(false);
+      setCompanySaved(true);
+      setTimeout(() => setCompanySaved(false), 3000);
+    } catch (err) {
+      console.warn('Backend update phone error, fallback to local:', err);
+      localStorage.setItem('tanbox_company_phone', companyPhone);
+      setIsEditingCompany(false);
+      setCompanySaved(true);
+      setTimeout(() => setCompanySaved(false), 3000);
+    } finally {
+      setSavingCompany(false);
+    }
+  };
 
   // Multi-warehouse list state with localStorage persistence
   const [warehouses, setWarehouses] = useState<WarehouseAddress[]>(() => {
@@ -101,6 +171,7 @@ export const ProfilePage: React.FC = () => {
   const [whAddress, setWhAddress] = useState('');
   const [whContact, setWhContact] = useState('');
   const [whPhone, setWhPhone] = useState('');
+  const [whPhoneError, setWhPhoneError] = useState<string | null>(null);
   const [whDays, setWhDays] = useState<string[]>(['Пн', 'Вт', 'Ср', 'Чт', 'Пт']);
   const [whStart, setWhStart] = useState('09:00');
   const [whEnd, setWhEnd] = useState('18:00');
@@ -130,24 +201,30 @@ export const ProfilePage: React.FC = () => {
     };
   }, [isWarehouseModalOpen, isPasswordModalOpen]);
 
-  // Company edit submit
-  const handleSaveCompany = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('tanbox_company_phone', companyPhone);
-    setIsEditingCompany(false);
-    setCompanySaved(true);
-    setTimeout(() => setCompanySaved(false), 3000);
+  const validateWhPhone = (val: string): boolean => {
+    const digits = val.replace(/\D/g, '');
+    if (!digits) {
+      setWhPhoneError('Укажите номер телефона ответственного');
+      return false;
+    }
+    if (digits.length !== 11) {
+      setWhPhoneError('Номер должен содержать 11 цифр (+7 XXX XXX-XX-XX)');
+      return false;
+    }
+    setWhPhoneError(null);
+    return true;
   };
 
   // Open Warehouse Modal (for add or edit)
   const handleOpenWarehouseModal = (wh?: WarehouseAddress) => {
+    setWhPhoneError(null);
     if (wh) {
       setEditingWhId(wh.id);
       setWhName(wh.name);
       setWhCity(wh.city);
       setWhAddress(wh.address);
       setWhContact(wh.warehouseContact);
-      setWhPhone(wh.warehousePhone);
+      setWhPhone(formatPhoneNumber(wh.warehousePhone));
       setWhDays(wh.selectedDays);
       setWhStart(wh.startTime);
       setWhEnd(wh.endTime);
@@ -157,7 +234,7 @@ export const ProfilePage: React.FC = () => {
       setWhCity('г. Алматы');
       setWhAddress('');
       setWhContact('');
-      setWhPhone(companyPhone || user?.phone || '');
+      setWhPhone(formatPhoneNumber(companyPhone || user?.phone || ''));
       setWhDays(['Пн', 'Вт', 'Ср', 'Чт', 'Пт']);
       setWhStart('09:00');
       setWhEnd('18:00');
@@ -168,6 +245,9 @@ export const ProfilePage: React.FC = () => {
   // Save Warehouse Modal
   const handleSaveWarehouseModal = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateWhPhone(whPhone)) {
+      return;
+    }
     if (editingWhId) {
       const updated = warehouses.map((w) =>
         w.id === editingWhId
@@ -260,6 +340,61 @@ export const ProfilePage: React.FC = () => {
     }, 600);
   };
 
+  // Markirovka Accounts integration state
+  const [markirovkaAccounts, setMarkirovkaAccounts] = useState<any[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState<boolean>(true);
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState<boolean>(false);
+  const [testingAccountId, setTestingAccountId] = useState<string | null>(null);
+  const [accountStatusMsg, setAccountStatusMsg] = useState<{ id: string; success: boolean; message: string } | null>(null);
+
+  const fetchAccounts = async () => {
+    try {
+      setLoadingAccounts(true);
+      const res = await apiClient.get('/markirovka/accounts');
+      setMarkirovkaAccounts(res.data.accounts || []);
+    } catch (err) {
+      console.warn('Failed to load markirovka accounts:', err);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  const handleTestAccount = async (id: string) => {
+    setTestingAccountId(id);
+    setAccountStatusMsg(null);
+    try {
+      const res = await apiClient.post('/markirovka/test-connection', { id });
+      setAccountStatusMsg({
+        id,
+        success: res.data?.success ?? true,
+        message: res.data?.message || 'Связь подтверждена! Токен ИС МПТ активен.',
+      });
+      fetchAccounts();
+    } catch (err: any) {
+      setAccountStatusMsg({
+        id,
+        success: false,
+        message: err.response?.data?.message || err.message || 'Ошибка связи с ИС МПТ',
+      });
+    } finally {
+      setTestingAccountId(null);
+    }
+  };
+
+  const handleDeleteAccount = async (id: string) => {
+    if (!window.confirm('Вы уверены, что хотите удалить привязку этого аккаунта маркировки?')) return;
+    try {
+      await apiClient.delete(`/markirovka/accounts/${id}`);
+      setMarkirovkaAccounts((prev) => prev.filter((a) => a.id !== id));
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Ошибка удаления аккаунта');
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
@@ -349,32 +484,54 @@ export const ProfilePage: React.FC = () => {
 
           {/* ТЕЛЕФОН */}
           <div>
-            <label className="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider block mb-1.5">
-              ТЕЛЕФОН
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider block">
+                ТЕЛЕФОН
+              </label>
+              {phoneError && (
+                <span className="text-red-500 text-[10px] font-bold">{phoneError}</span>
+              )}
+            </div>
             <div className="relative">
               <Phone className="w-4 h-4 text-gray-400 absolute left-4 top-3.5" />
               <input
                 type="tel"
                 disabled={!isEditingCompany}
                 value={companyPhone}
-                onChange={(e) => setCompanyPhone(e.target.value)}
+                maxLength={18}
+                placeholder="+7 (701) 000-00-00"
+                onChange={(e) => {
+                  const formatted = formatPhoneNumber(e.target.value);
+                  setCompanyPhone(formatted);
+                  if (phoneError) validatePhone(formatted);
+                }}
+                onBlur={() => {
+                  if (isEditingCompany) validatePhone(companyPhone);
+                }}
                 className={`w-full border rounded-2xl pl-11 pr-4 py-3 text-sm font-bold transition-all ${
                   isEditingCompany
-                    ? 'bg-white border-black text-black shadow-sm'
+                    ? phoneError
+                      ? 'bg-white border-red-500 text-black focus:ring-1 focus:ring-red-500'
+                      : 'bg-white border-black text-black shadow-sm'
                     : 'bg-gray-50 border-gray-200/60 text-black cursor-not-allowed'
                 }`}
               />
             </div>
+            {isEditingCompany && (
+              <p className="text-[10px] text-gray-400 mt-1">
+                Формат: +7 (7XX) XXX-XX-XX • ровно 11 цифр
+              </p>
+            )}
           </div>
 
           {isEditingCompany && (
             <div className="pt-2 flex items-center justify-between">
               <button
                 type="submit"
-                className="bg-black text-white text-xs font-extrabold px-6 py-3 rounded-xl hover:bg-gray-800 transition-all shadow-md active:scale-95"
+                disabled={savingCompany}
+                className="bg-black hover:bg-gray-800 disabled:opacity-50 text-white text-xs font-extrabold px-6 py-3 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
               >
-                Сохранить телефон
+                {savingCompany ? 'Сохранение...' : 'Сохранить телефон'}
               </button>
             </div>
           )}
@@ -499,6 +656,135 @@ export const ProfilePage: React.FC = () => {
 
       </div>
 
+      {/* CARD 3: ИНТЕГРАЦИЯ С MARKIROVKA.KZ (ИС МПТ) */}
+      <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 pb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-black uppercase tracking-wide">
+                ИНТЕГРАЦИЯ С MARKIROVKA.KZ
+              </h3>
+              <p className="text-xs text-gray-400 font-medium">
+                Подключение личного кабинета ИС МПТ для автоматического заказа кодов Tanbox
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsConnectModalOpen(true)}
+            className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shrink-0 active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-emerald-600" /> Подключить аккаунт
+          </button>
+        </div>
+
+        {/* Status Notification */}
+        {accountStatusMsg && (
+          <div className={`p-3.5 rounded-2xl flex items-start gap-2.5 text-xs border ${
+            accountStatusMsg.success 
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+              : 'bg-red-50 border-red-200 text-red-900'
+          }`}>
+            {accountStatusMsg.success ? (
+              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            )}
+            <span>{accountStatusMsg.message}</span>
+          </div>
+        )}
+
+        {/* Accounts List */}
+        {loadingAccounts ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+          </div>
+        ) : markirovkaAccounts.length === 0 ? (
+          <div className="text-center py-8 px-4 bg-gray-50/60 border border-dashed border-gray-200 rounded-2xl space-y-3">
+            <ShieldCheck className="w-8 h-8 text-gray-300 mx-auto" />
+            <p className="text-sm font-bold text-gray-700">Аккаунты маркировки не подключены</p>
+            <p className="text-xs text-gray-400 max-w-sm mx-auto">
+              Подключите логин и пароль от Markirovka.kz, чтобы заказывать коды маркировки прямо из формы оформления заказа Tanbox.
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsConnectModalOpen(true)}
+              className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-extrabold px-4 py-2.5 rounded-xl hover:bg-emerald-100 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4 text-emerald-600" /> Подключить аккаунт
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {markirovkaAccounts.map((acc) => (
+              <div
+                key={acc.id}
+                className="bg-gray-50/60 border border-gray-200/70 hover:border-gray-300 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-emerald-600 shrink-0">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-extrabold text-black">
+                        {acc.name}
+                      </span>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                        acc.environment === 'PROD' 
+                          ? 'bg-emerald-100 text-emerald-800' 
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {acc.environment === 'PROD' ? 'БОЕВОЙ' : 'ТЕСТОВЫЙ'}
+                      </span>
+                      <span className="text-[10px] font-bold text-gray-500 font-mono">
+                        Логин: {acc.login}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+                      <span>Статус: <strong className={acc.status === 'ACTIVE' ? 'text-emerald-600' : 'text-red-500'}>{acc.status === 'ACTIVE' ? 'Активен' : 'Ошибка'}</strong></span>
+                      {acc.lastCheckedAt && (
+                        <span>Проверен: {new Date(acc.lastCheckedAt).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleTestAccount(acc.id)}
+                    disabled={testingAccountId === acc.id}
+                    title="Проверить соединение с ИС МПТ"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-300 hover:bg-white text-gray-700 text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    {testingAccountId === acc.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
+                    )}
+                    <span>Проверить связь</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteAccount(acc.id)}
+                    title="Удалить подключение"
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* CARD 4: БЕЗОПАСНОСТЬ (Как на макете) */}
       <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm">
         <div className="flex items-center gap-4">
@@ -613,16 +899,29 @@ export const ProfilePage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">
-                    Телефон ответственного
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-gray-700 uppercase block">
+                      Телефон ответственного
+                    </label>
+                    {whPhoneError && (
+                      <span className="text-red-500 text-[10px] font-bold">{whPhoneError}</span>
+                    )}
+                  </div>
                   <input
                     type="tel"
                     value={whPhone}
-                    onChange={(e) => setWhPhone(e.target.value)}
-                    placeholder="+7 700 000 0000"
+                    maxLength={18}
+                    onChange={(e) => {
+                      const formatted = formatPhoneNumber(e.target.value);
+                      setWhPhone(formatted);
+                      if (whPhoneError) validateWhPhone(formatted);
+                    }}
+                    onBlur={() => validateWhPhone(whPhone)}
+                    placeholder="+7 (701) 000-00-00"
                     required
-                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-xs font-bold text-black focus:outline-none focus:border-black"
+                    className={`w-full bg-gray-50 border rounded-xl px-4 py-3 text-xs font-bold text-black focus:outline-none transition-colors ${
+                      whPhoneError ? 'border-red-500' : 'border-gray-300 focus:border-black'
+                    }`}
                   />
                 </div>
               </div>
@@ -854,6 +1153,15 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* MODAL WINDOW FOR CONNECTING MARKIROVKA ACCOUNT */}
+      <ConnectMarkirovkaModal
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+        onSuccess={(newAcc) => {
+          setMarkirovkaAccounts((prev) => [newAcc, ...prev]);
+        }}
+      />
 
     </div>
   );

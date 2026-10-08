@@ -13,6 +13,11 @@ import { AdminLabelsRegistryPage } from './pages/AdminLabelsRegistryPage';
 import { AdminOrderDetailPage } from './pages/AdminOrderDetailPage';
 import { AdminUserDetailPage } from './pages/AdminUserDetailPage';
 import { AdminStickeringCalcPage } from './pages/AdminStickeringCalcPage';
+import { AdminSystemPage } from './pages/AdminSystemPage';
+import { AdminMarkirovkaAccountsPage } from './pages/AdminMarkirovkaAccountsPage';
+import { AdminMarkirovkaOrdersPage } from './pages/AdminMarkirovkaOrdersPage';
+import { AdminMarkirovkaUtilisationPage } from './pages/AdminMarkirovkaUtilisationPage';
+import { AdminMarkirovkaActivityPage } from './pages/AdminMarkirovkaActivityPage';
 
 const AdminOrderLabelsRedirect: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -154,6 +159,53 @@ export const App: React.FC = () => {
               </ProtectedAdminLayout>
             }
           />
+
+          <Route
+            path="/system"
+            element={
+              <ProtectedAdminLayout>
+                <AdminSystemPage />
+              </ProtectedAdminLayout>
+            }
+          />
+
+          <Route
+            path="/markirovka"
+            element={<Navigate to="/markirovka/accounts" replace />}
+          />
+          <Route
+            path="/markirovka/accounts"
+            element={
+              <ProtectedAdminLayout>
+                <AdminMarkirovkaAccountsPage />
+              </ProtectedAdminLayout>
+            }
+          />
+          <Route
+            path="/markirovka/orders"
+            element={
+              <ProtectedAdminLayout>
+                <AdminMarkirovkaOrdersPage />
+              </ProtectedAdminLayout>
+            }
+          />
+          <Route
+            path="/markirovka/utilisation"
+            element={
+              <ProtectedAdminLayout>
+                <AdminMarkirovkaUtilisationPage />
+              </ProtectedAdminLayout>
+            }
+          />
+          <Route
+            path="/markirovka/activity"
+            element={
+              <ProtectedAdminLayout>
+                <AdminMarkirovkaActivityPage />
+              </ProtectedAdminLayout>
+            }
+          />
+
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

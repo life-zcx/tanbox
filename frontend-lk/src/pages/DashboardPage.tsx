@@ -22,7 +22,7 @@ export const DashboardPage: React.FC = () => {
         action={
           <Link
             to="/orders/new"
-            className="inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs px-5 py-3 rounded-2xl shadow-sm transition-all active:scale-95"
+            className="hidden sm:inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs px-5 py-3 rounded-2xl shadow-sm transition-all active:scale-95"
           >
             + Создать заказ
           </Link>
@@ -80,36 +80,64 @@ export const DashboardPage: React.FC = () => {
             </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-gray-100 text-xs font-extrabold text-[#64748B] uppercase tracking-wider">
-                  <th className="py-3 px-4">№ Заказа</th>
-                  <th className="py-3 px-4">Категория</th>
-                  <th className="py-3 px-4">Тариф</th>
-                  <th className="py-3 px-4">Объем</th>
-                  <th className="py-3 px-4">Сумма (₸)</th>
-                  <th className="py-3 px-4">Статус</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-sm font-semibold">
-                {orders.slice(0, 5).map((ord) => (
-                  <tr key={ord.id} className="hover:bg-[#F4F6F9]/60 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#111827]">
-                      <Link to={`/orders/${ord.id}`} className="hover:underline hover:text-[#0082FB] transition-colors">
-                        {ord.orderNumber}
-                      </Link>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#475569]">{getCategoryLabel(ord.category)}</td>
-                    <td className="py-3.5 px-4 text-[#475569]">{ord.tariffType}</td>
-                    <td className="py-3.5 px-4 font-extrabold text-[#111827]">{ord.itemsCount.toLocaleString()} шт</td>
-                    <td className="py-3.5 px-4 font-bold text-[#111827]">{ord.totalPrice.toLocaleString()} ₸</td>
-                    <td className="py-3.5 px-4"><StatusBadge status={ord.status} /></td>
+          <>
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {orders.slice(0, 5).map((ord) => (
+                <div key={ord.id} className="py-3.5 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Link
+                      to={`/orders/${ord.id}`}
+                      className="font-mono font-bold text-sm text-[#0082FB] hover:underline"
+                    >
+                      {ord.orderNumber}
+                    </Link>
+                    <StatusBadge status={ord.status} tariffType={ord.tariffType} />
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-[#64748B]">
+                    <span className="font-semibold text-[#111827]">{getCategoryLabel(ord.category)}</span>
+                    <span className="font-extrabold text-[#111827]">{ord.totalPrice.toLocaleString()} ₸</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-[#94A3B8]">
+                    <span>Тариф: {ord.tariffType}</span>
+                    <span>{ord.itemsCount.toLocaleString()} шт.</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-100 text-xs font-extrabold text-[#64748B] uppercase tracking-wider">
+                    <th className="py-3 px-4">№ Заказа</th>
+                    <th className="py-3 px-4">Категория</th>
+                    <th className="py-3 px-4">Тариф</th>
+                    <th className="py-3 px-4">Объем</th>
+                    <th className="py-3 px-4">Сумма (₸)</th>
+                    <th className="py-3 px-4">Статус</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-sm font-semibold">
+                  {orders.slice(0, 5).map((ord) => (
+                    <tr key={ord.id} className="hover:bg-[#F4F6F9]/60 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-[#111827]">
+                        <Link to={`/orders/${ord.id}`} className="hover:underline hover:text-[#0082FB] transition-colors">
+                          {ord.orderNumber}
+                        </Link>
+                      </td>
+                      <td className="py-3.5 px-4 text-[#475569]">{getCategoryLabel(ord.category)}</td>
+                      <td className="py-3.5 px-4 text-[#475569]">{ord.tariffType}</td>
+                      <td className="py-3.5 px-4 font-extrabold text-[#111827]">{ord.itemsCount.toLocaleString()} шт</td>
+                      <td className="py-3.5 px-4 font-bold text-[#111827]">{ord.totalPrice.toLocaleString()} ₸</td>
+                      <td className="py-3.5 px-4"><StatusBadge status={ord.status} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

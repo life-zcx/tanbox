@@ -11,6 +11,8 @@ import {
   QrCode,
   Tag,
   Calculator,
+  Server,
+  Radio,
 } from 'lucide-react';
 import { AdminUser } from '../../types';
 
@@ -25,12 +27,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, onLogout }) =>
   const links = [
     { to: '/dashboard', label: 'Обзор систем', icon: LayoutDashboard },
     { to: '/orders', label: 'Заказы', icon: FileText },
+    { to: '/markirovka', label: 'Маркировка ИС МПТ', icon: Radio },
     { to: '/stickering-calc', label: 'Калькулятор выезда', icon: Calculator },
     { to: '/leads', label: 'Заявки на услуги', icon: ClipboardList },
     { to: '/label-designer', label: 'Конструктор макетов', icon: QrCode },
     { to: '/labels', label: 'Реестр этикеток', icon: Tag },
     { to: '/tariffs', label: 'Тарифы и цены', icon: Settings },
     { to: '/users', label: 'Пользователи', icon: Users },
+    { to: '/system', label: 'Сервер & DevOps', icon: Server },
   ];
 
   return (
@@ -59,7 +63,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, onLogout }) =>
         <nav className="space-y-1">
           {links.map((link) => {
             const Icon = link.icon;
-            const isActive = location.pathname === link.to;
+            const isActive =
+              link.to === '/markirovka'
+                ? location.pathname.startsWith('/markirovka')
+                : location.pathname === link.to;
             return (
               <Link
                 key={link.to}

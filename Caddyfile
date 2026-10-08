@@ -9,16 +9,30 @@
         X-Frame-Options "SAMEORIGIN"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         -Server
+    }
+}
+
+# Reusable structured logging snippet with automatic rotation
+(caddy_logging) {
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 20mb
+            roll_keep 5
+        }
+        format json
     }
 }
 
 # --- PRODUCTION DOMAINS (Automatic HTTPS / TLS via Let's Encrypt / ZeroSSL) ---
 
-# 1. Landing (tanbox.kz)
-tanbox.kz {
+# 1. Landing (tanbox.kz, www.tanbox.kz)
+tanbox.kz, www.tanbox.kz {
     import security_headers
+    import caddy_logging
+    encode gzip zstd
+
     handle /api/* {
         reverse_proxy backend:5050
     }
@@ -30,6 +44,9 @@ tanbox.kz {
 # 2. Client Cabinet (lk.tanbox.kz)
 lk.tanbox.kz {
     import security_headers
+    import caddy_logging
+    encode gzip zstd
+
     handle /api/* {
         reverse_proxy backend:5050
     }
@@ -41,6 +58,9 @@ lk.tanbox.kz {
 # 3. Admin Cabinet (admin.tanbox.kz)
 admin.tanbox.kz {
     import security_headers
+    import caddy_logging
+    encode gzip zstd
+
     handle /api/* {
         reverse_proxy backend:5050
     }
@@ -52,14 +72,17 @@ admin.tanbox.kz {
 # 4. Backend REST API (api.tanbox.kz)
 api.tanbox.kz {
     import security_headers
+    import caddy_logging
+    encode gzip zstd
     reverse_proxy backend:5050
 }
 
 # --- LOCAL DEVELOPMENT & INTRANET BLOCKS (HTTP) ---
 
-# Local Landing
-http://tanbox.local, http://localhost:80, http://127.0.0.1:80, :80 {
+http://tanbox.local, http://localhost, http://127.0.0.1 {
     import security_headers
+    encode gzip zstd
+
     handle /api/* {
         reverse_proxy backend:5050
     }
@@ -68,9 +91,10 @@ http://tanbox.local, http://localhost:80, http://127.0.0.1:80, :80 {
     }
 }
 
-# Local Client Cabinet
 http://lk.tanbox.local {
     import security_headers
+    encode gzip zstd
+
     handle /api/* {
         reverse_proxy backend:5050
     }
@@ -79,9 +103,10 @@ http://lk.tanbox.local {
     }
 }
 
-# Local Admin Cabinet
 http://admin.tanbox.local {
     import security_headers
+    encode gzip zstd
+
     handle /api/* {
         reverse_proxy backend:5050
     }
@@ -90,9 +115,8 @@ http://admin.tanbox.local {
     }
 }
 
-# Local Backend REST API
 http://api.tanbox.local {
     import security_headers
+    encode gzip zstd
     reverse_proxy backend:5050
 }
-

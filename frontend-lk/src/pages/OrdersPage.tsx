@@ -40,7 +40,7 @@ export const OrdersPage: React.FC = () => {
         action={
           <Link
             to="/orders/new"
-            className="inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-500/20 active:scale-95"
+            className="hidden sm:inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-500/20 active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Создать заказ</span>
@@ -85,56 +85,108 @@ export const OrdersPage: React.FC = () => {
 
       </div>
 
-      {/* Table */}
+      {/* Orders List / Table */}
       <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="text-center py-12 text-[#64748B] text-sm">Загрузка данных...</div>
         ) : filteredOrders.length === 0 ? (
           <div className="text-center py-12 text-[#64748B] text-sm font-normal">Заказы не найдены.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#F4F6F9]/60 border-b border-gray-100 text-xs font-extrabold text-[#64748B] uppercase tracking-wider">
-                  <th className="py-4 px-5">№ Заказа</th>
-                  <th className="py-4 px-5">Дата</th>
-                  <th className="py-4 px-5">Категория</th>
-                  <th className="py-4 px-5">Тариф</th>
-                  <th className="py-4 px-5">Объем (шт)</th>
-                  <th className="py-4 px-5">Стоимость (₸)</th>
-                  <th className="py-4 px-5">Статус</th>
-                  <th className="py-4 px-5 text-right">Действие</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-sm font-semibold">
-                {filteredOrders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-[#F4F6F9]/50 transition-colors">
-                    <td className="py-4 px-5 font-mono font-bold text-[#111827]">
-                      <Link to={`/orders/${ord.id}`} className="hover:underline hover:text-[#0082FB] transition-colors">
-                        {ord.orderNumber}
-                      </Link>
-                    </td>
-                    <td className="py-4 px-5 text-xs text-[#64748B] font-normal">
+          <>
+            {/* Mobile Cards (Visible only on < md) */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {filteredOrders.map((ord) => (
+                <div key={ord.id} className="p-4 space-y-3 hover:bg-gray-50/60 transition-colors">
+                  <div className="flex items-center justify-between gap-2">
+                    <Link
+                      to={`/orders/${ord.id}`}
+                      className="font-mono font-bold text-sm text-[#0082FB] hover:underline"
+                    >
+                      {ord.orderNumber}
+                    </Link>
+                    <StatusBadge status={ord.status} tariffType={ord.tariffType} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs text-[#64748B]">
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-[#94A3B8]">Товар</span>
+                      <span className="font-semibold text-[#111827]">{getCategoryLabel(ord.category)}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-[#94A3B8]">Тариф</span>
+                      <span className="font-semibold text-[#111827]">{ord.tariffType}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-[#94A3B8]">Объем</span>
+                      <span className="font-extrabold text-[#111827]">{ord.itemsCount.toLocaleString()} шт.</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-[#94A3B8]">Сумма</span>
+                      <span className="font-extrabold text-[#111827]">{ord.totalPrice.toLocaleString()} ₸</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs">
+                    <span className="text-[#94A3B8] text-[11px]">
                       {new Date(ord.createdAt).toLocaleDateString('ru-RU')}
-                    </td>
-                    <td className="py-4 px-5 text-[#475569]">{getCategoryLabel(ord.category)}</td>
-                    <td className="py-4 px-5 text-[#475569]">{ord.tariffType}</td>
-                    <td className="py-4 px-5 font-extrabold text-[#111827]">{ord.itemsCount.toLocaleString()}</td>
-                    <td className="py-4 px-5 font-bold text-[#111827]">{ord.totalPrice.toLocaleString()} ₸</td>
-                    <td className="py-4 px-5"><StatusBadge status={ord.status} /></td>
-                    <td className="py-4 px-5 text-right">
-                      <Link
-                        to={`/orders/${ord.id}`}
-                        className="inline-flex items-center gap-1.5 bg-[#EBF5FF] text-[#0082FB] hover:bg-[#0082FB] hover:text-white px-4 py-2 rounded-xl text-xs font-extrabold transition-all shadow-sm"
-                      >
-                        <Eye className="w-3.5 h-3.5" /> Детали
-                      </Link>
-                    </td>
+                    </span>
+                    <Link
+                      to={`/orders/${ord.id}`}
+                      className="inline-flex items-center gap-1.5 bg-[#EBF5FF] text-[#0082FB] hover:bg-[#0082FB] hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all active:scale-95"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Детали заказа</span>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table (Visible on md and above) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#F4F6F9]/60 border-b border-gray-100 text-xs font-extrabold text-[#64748B] uppercase tracking-wider">
+                    <th className="py-4 px-5">№ Заказа</th>
+                    <th className="py-4 px-5">Дата</th>
+                    <th className="py-4 px-5">Категория</th>
+                    <th className="py-4 px-5">Тариф</th>
+                    <th className="py-4 px-5">Объем (шт)</th>
+                    <th className="py-4 px-5">Стоимость (₸)</th>
+                    <th className="py-4 px-5">Статус</th>
+                    <th className="py-4 px-5 text-right">Действие</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-sm font-semibold">
+                  {filteredOrders.map((ord) => (
+                    <tr key={ord.id} className="hover:bg-[#F4F6F9]/50 transition-colors">
+                      <td className="py-4 px-5 font-mono font-bold text-[#111827]">
+                        <Link to={`/orders/${ord.id}`} className="hover:underline hover:text-[#0082FB] transition-colors">
+                          {ord.orderNumber}
+                        </Link>
+                      </td>
+                      <td className="py-4 px-5 text-xs text-[#64748B] font-normal">
+                        {new Date(ord.createdAt).toLocaleDateString('ru-RU')}
+                      </td>
+                      <td className="py-4 px-5 text-[#475569]">{getCategoryLabel(ord.category)}</td>
+                      <td className="py-4 px-5 text-[#475569]">{ord.tariffType}</td>
+                      <td className="py-4 px-5 font-extrabold text-[#111827]">{ord.itemsCount.toLocaleString()}</td>
+                      <td className="py-4 px-5 font-bold text-[#111827]">{ord.totalPrice.toLocaleString()} ₸</td>
+                      <td className="py-4 px-5"><StatusBadge status={ord.status} /></td>
+                      <td className="py-4 px-5 text-right">
+                        <Link
+                          to={`/orders/${ord.id}`}
+                          className="inline-flex items-center gap-1.5 bg-[#EBF5FF] text-[#0082FB] hover:bg-[#0082FB] hover:text-white px-4 py-2 rounded-xl text-xs font-extrabold transition-all shadow-sm"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Детали
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

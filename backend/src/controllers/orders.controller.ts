@@ -18,6 +18,8 @@ import {
   parseStickeringEstimateFromNotes 
 } from '../services/orderDocuments.service';
 import { getDefaultStickerLayout } from '../utils/stickerLayout.utils';
+import { telegram } from '../services/telegram.service';
+import { MarkirovkaClient } from '../services/markirovkaClient.service';
 export { getDefaultStickerLayout };
 
 function isSafeUrl(url?: string | null): boolean {
@@ -229,6 +231,113 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     if (!newOrder) {
       throw new Error('Не удалось сгенерировать уникальный номер заказа, попробуйте еще раз');
     }
+
+    // Process turnkey automatic Markirovka emission if requested
+    const { markirovkaMode, markirovkaAccountId, markirovkaGtin } = req.body;
+    let createdMarkirovkaOrder: any = null;
+
+    if (markirovkaMode === 'EMISSION' && markirovkaAccountId && markirovkaGtin) {
+      try {
+        const markAccount = await prisma.markirovkaAccount.findUnique({
+          where: { id: String(markirovkaAccountId) },
+        });
+
+        if (markAccount) {
+          createdMarkirovkaOrder = await prisma.markirovkaOrder.create({
+            data: {
+              accountId: markAccount.id,
+              orderId: newOrder.id,
+              category: category as OrderCategory,
+              gtin: String(markirovkaGtin).trim(),
+              quantityRequested: countNum,
+              status: 'PENDING',
+            },
+          });
+
+          // Dispatch emission to IS MPT asynchronously/synchronously
+          try {
+            const client = new MarkirovkaClient(markAccount);
+            const emission = await client.createEmissionOrder({
+              category: category as OrderCategory,
+              gtin: String(markirovkaGtin).trim(),
+              quantity: countNum,
+              serialNumberType: 'OPERATOR',
+            });
+
+            await prisma.markirovkaOrder.update({
+              where: { id: createdMarkirovkaOrder.id },
+              data: {
+                externalOrderId: emission.orderId,
+                status: 'FETCHING',
+              },
+            });
+
+            // Fetch generated codes buffer
+            const codes = await client.fetchCodes(
+              emission.orderId,
+              String(markirovkaGtin).trim(),
+              countNum,
+              category as OrderCategory
+            );
+
+            if (codes && codes.length > 0) {
+              await prisma.markirovkaOrder.update({
+                where: { id: createdMarkirovkaOrder.id },
+                data: {
+                  codes,
+                  quantityReceived: codes.length,
+                  status: 'COMPLETED',
+                },
+              });
+
+              // Populate OrderCodeItem so Tanbox warehouse & printing immediately have access
+              const codeItemData = codes.map((codeStr, idx) => ({
+                orderId: newOrder.id,
+                index: idx + 1,
+                code: codeStr,
+                gtin: String(markirovkaGtin).trim(),
+                status: CodeItemStatus.NEW,
+              }));
+
+              await prisma.orderCodeItem.createMany({
+                data: codeItemData,
+                skipDuplicates: true,
+              });
+            }
+          } catch (emissionErr: any) {
+            console.error('[Markirovka Auto-Emission] Emission error:', emissionErr.message);
+            await prisma.markirovkaOrder.update({
+              where: { id: createdMarkirovkaOrder.id },
+              data: {
+                status: 'FAILED',
+                errorDetails: emissionErr.message || 'Ошибка эмиссии кодов в ИС МПТ',
+              },
+            });
+          }
+        }
+      } catch (markErr: any) {
+        console.error('[Markirovka Auto-Emission] Error setting up markirovka order:', markErr);
+      }
+    }
+
+    // Dispatch Telegram notification to Leads & Orders group
+    telegram.sendNewOrderNotification({
+      id: newOrder.id,
+      orderNumber: newOrder.orderNumber,
+      category: newOrder.category,
+      tariffType: newOrder.tariffType,
+      itemsCount: newOrder.itemsCount,
+      pricePerItem: newOrder.pricePerItem,
+      totalPrice: newOrder.totalPrice,
+      warehouseAddress: newOrder.warehouseAddress,
+      notes: newOrder.notes,
+      user: {
+        companyName: req.user.companyName,
+        binIin: req.user.binIin,
+        email: req.user.email,
+        phone: req.user.phone,
+      },
+    }).catch(() => {});
 
     return res.status(201).json({
       message: 'Заказ успешно создан и отправлен на обработку',
@@ -589,6 +698,15 @@ export const updateStickerApproval = async (req: AuthRequest, res: Response) => 
         }
       }
     }
+
+    // Notify Telegram Leads/Orders chat about sticker layout approval / change request
+    telegram.sendStickerApprovalNotification({
+      orderId: existing.id,
+      orderNumber: existing.orderNumber,
+      status: approvalStatus as any,
+      companyName: existing.user?.companyName,
+      notes: comment,
+    }).catch(() => {});
 
     return res.json({
       message: approvalStatus === 'APPROVED' ? 'Макет успешно утвержден' : 'Запрос на доработку передан дизайнеру',

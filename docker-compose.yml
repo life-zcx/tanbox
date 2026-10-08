@@ -4,11 +4,10 @@ services:
     container_name: tanbox_postgres
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-tanbox_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD must be defined in .env}
-      POSTGRES_DB: ${POSTGRES_DB:-tanbox_db}
-    ports:
-      - "127.0.0.1:5432:5432"
+      POSTGRES_USER: "${POSTGRES_USER:-tanbox_user}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-tanbox_pass_2026}"
+      POSTGRES_DB: "${POSTGRES_DB:-tanbox_db}"
+    command: postgres -c log_min_duration_statement=500 -c log_statement=ddl
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -16,94 +15,111 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    networks:
+      - tanbox_net
 
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: tanbox_backend
     restart: always
-    ports:
-      - "127.0.0.1:5050:5050"
     environment:
-      PORT: ${PORT:-5050}
-      DATABASE_URL: ${DATABASE_URL:?Error: DATABASE_URL must be defined in .env}
-      JWT_SECRET: ${JWT_SECRET:?Error: JWT_SECRET must be defined in .env}
-      NODE_ENV: ${NODE_ENV:-development}
-      NODE_OPTIONS: "--max-old-space-size=512"
+      PORT: 5050
+      DATABASE_URL: "${DATABASE_URL:-postgresql://tanbox_user:tanbox_pass_2026@postgres:5432/tanbox_db?schema=public}"
+      JWT_SECRET: "${JWT_SECRET:-tanbox_kz_jwt_secret_key_super_secure_2026}"
+      NODE_ENV: production
+      LABEL_GENERATOR_HOST: label-generator
+      LABEL_GENERATOR_PORT: 5060
+      PDF_CONCURRENCY: ${PDF_CONCURRENCY:-2}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_LEADS_CHAT_ID: ${TELEGRAM_LEADS_CHAT_ID:-}
+      TELEGRAM_ALERTS_CHAT_ID: ${TELEGRAM_ALERTS_CHAT_ID:-}
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - tanbox_uploads:/app/uploads
+      - tanbox_logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    networks:
+      - tanbox_net
 
   frontend-landing:
     build:
       context: ./frontend-landing
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: tanbox_frontend_landing
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "127.0.0.1:3000:3000"
-    environment:
-      - VITE_API_URL=/api
-      - NODE_OPTIONS=--max-old-space-size=512
-    volumes:
-      - ./frontend-landing:/app
-      - /app/node_modules
+    networks:
+      - tanbox_net
 
   frontend-lk:
     build:
       context: .
-      dockerfile: ./frontend-lk/Dockerfile.dev
+      dockerfile: ./frontend-lk/Dockerfile
     container_name: tanbox_frontend_lk
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "127.0.0.1:3001:3001"
-    environment:
-      - VITE_API_URL=/api
-      - NODE_OPTIONS=--max-old-space-size=512
-    volumes:
-      - ./frontend-lk:/app
-      - ./shared:/shared
-      - /app/node_modules
+    networks:
+      - tanbox_net
 
   frontend-admin:
     build:
       context: .
-      dockerfile: ./frontend-admin/Dockerfile.dev
+      dockerfile: ./frontend-admin/Dockerfile
     container_name: tanbox_frontend_admin
     restart: always
-    ports:
-      - "127.0.0.1:3002:3002"
-    environment:
-      - VITE_API_URL=/api
-      - VITE_BACKEND_URL=http://backend:5050
-      - VITE_LABEL_SERVICE_URL=http://label-generator:5060
-      - NODE_OPTIONS=--max-old-space-size=512
     depends_on:
       - backend
-    volumes:
-      - ./frontend-admin:/app
-      - ./shared:/shared
-      - /app/node_modules
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - "127.0.0.1:3002:3002"
+    networks:
+      - tanbox_net
 
   label-generator:
     build:
       context: ./label-generator
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: tanbox_label_generator
     restart: always
-    ports:
-      - "127.0.0.1:5060:5060"
     environment:
       PORT: 5060
-      NODE_ENV: ${NODE_ENV:-development}
-      NODE_OPTIONS: "--max-old-space-size=512"
-    volumes:
-      - ./label-generator:/app
-      - /app/node_modules
+      NODE_ENV: production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    networks:
+      - tanbox_net
 
   caddy:
     image: caddy:2-alpine
@@ -113,17 +129,33 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      - caddy_logs:/var/log/caddy
     depends_on:
       - frontend-landing
       - frontend-lk
       - frontend-admin
       - backend
       - label-generator
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    networks:
+      - tanbox_net
 
 volumes:
   pgdata:
+  tanbox_uploads:
+  tanbox_logs:
   caddy_data:
   caddy_config:
+  caddy_logs:
+
+networks:
+  tanbox_net:
+    name: tanbox_default
+    external: true

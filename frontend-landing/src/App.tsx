@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { Wrench } from 'lucide-react';
+import axios from 'axios';
 import { Header } from './components/common/Header';
 import { Footer } from './components/common/Footer';
 import { CookieBanner } from './components/common/CookieBanner';
@@ -28,11 +30,44 @@ const ScrollToTop: React.FC = () => {
 };
 
 export const App: React.FC = () => {
+  const [maintenance, setMaintenance] = useState<{ active: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    const checkMaintenance = async () => {
+      try {
+        const res = await axios.get('/api/health');
+        if (res.data?.maintenance) {
+          setMaintenance({
+            active: true,
+            message: res.data.maintenanceMessage || '',
+          });
+        } else {
+          setMaintenance(null);
+        }
+      } catch (err: any) {
+        if (err.response?.status === 503 && err.response?.data?.maintenance) {
+          setMaintenance({
+            active: true,
+            message: err.response.data.message || '',
+          });
+        }
+      }
+    };
+
+    checkMaintenance();
+    const timer = setInterval(checkMaintenance, 20000);
+    return () => clearInterval(timer);
+  }, []);
+
   const handleOpenAuth = () => {
     window.open('http://127.0.0.1:3001/dashboard', '_blank', 'noopener,noreferrer');
   };
 
   const handleOpenQuickOrder = (tariffType: TariffCode, itemsCount: number, totalPrice: number) => {
+    if (maintenance?.active) {
+      alert('На платформе проводятся регламентные технические работы. Оформление заказов временно приостановлено на 10–15 минут.');
+      return;
+    }
     try {
       localStorage.setItem(
         'tanbox_pending_order',
@@ -51,7 +86,7 @@ export const App: React.FC = () => {
     <BrowserRouter>
       <ScrollToTop />
       <div className="min-h-screen flex flex-col justify-between bg-white text-black">
-        <Header onOpenAuth={handleOpenAuth} />
+        <Header onOpenAuth={handleOpenAuth} maintenance={maintenance?.active} />
 
         <Routes>
           <Route
