@@ -14,6 +14,7 @@ import {
   Radio,
   ArrowRight,
   ExternalLink,
+  History,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@shared';
@@ -394,6 +395,15 @@ export const AdminMarkirovkaAccountsPage: React.FC = () => {
                       <RefreshCw className={`w-3.5 h-3.5 ${isCheckingThis ? 'animate-spin text-[#0082FB]' : ''}`} />
                       {isCheckingThis ? 'Проверка...' : 'Проверить связь'}
                     </button>
+
+                    <Link
+                      to="/markirovka/activity"
+                      state={{ accountId: acc.id }}
+                      className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-blue-50 hover:text-[#0082FB] transition-colors"
+                      title="Перейти к операциям этого клиента"
+                    >
+                      <History className="w-4 h-4" />
+                    </Link>
 
                     <button
                       onClick={() => openEditModal(acc)}

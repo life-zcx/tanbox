@@ -46,10 +46,39 @@ router.post('/parse-csv', upload.single('file'), (req: Request, res: Response) =
   }
 });
 
+interface JobProgress {
+  current: number;
+  total: number;
+  percent: number;
+  updatedAt: number;
+}
+const progressMap = new Map<string, JobProgress>();
+
+// Periodically clean stale track IDs (older than 30 minutes)
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [key, val] of progressMap.entries()) {
+    if (val.updatedAt < cutoff) progressMap.delete(key);
+  }
+}, 60000);
+
+/**
+ * Check generation progress for a tracked task
+ */
+router.get('/progress/:trackId', (req: Request, res: Response) => {
+  const trackId = String(req.params.trackId || '');
+  const p = progressMap.get(trackId);
+  if (!p) {
+    return res.json({ found: false, current: 0, total: 0, percent: 0 });
+  }
+  return res.json({ found: true, ...p });
+});
+
 /**
  * 2. Generate Roll PDF (multi-page, 1 label per page, thermal printer ready)
  */
 router.post('/generate-pdf', upload.single('file'), async (req: Request, res: Response) => {
+  const trackId = (req.query.trackId || req.body.trackId) ? String(req.query.trackId || req.body.trackId) : undefined;
   try {
     let template: LabelTemplate;
     let rows: Record<string, string>[] = [];
@@ -84,13 +113,43 @@ router.post('/generate-pdf', upload.single('file'), async (req: Request, res: Re
       }
     }
 
+    if (trackId) {
+      progressMap.set(trackId, {
+        current: 0,
+        total: rows.length,
+        percent: 0,
+        updatedAt: Date.now(),
+      });
+    }
+
     const filename = `tanbox-labels-${template.widthMm}x${template.heightMm}-${Date.now()}.pdf`;
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
-    await pdfGen.generateRollPdf(template, rows, res);
+    await pdfGen.generateRollPdf(template, rows, res, (current, total) => {
+      if (trackId) {
+        progressMap.set(trackId, {
+          current,
+          total,
+          percent: total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0,
+          updatedAt: Date.now(),
+        });
+      }
+    });
+
+    if (trackId) {
+      // Keep completed state for 15 seconds before deleting
+      progressMap.set(trackId, {
+        current: rows.length,
+        total: rows.length,
+        percent: 100,
+        updatedAt: Date.now(),
+      });
+      setTimeout(() => progressMap.delete(trackId), 15000);
+    }
   } catch (err: any) {
+    if (trackId) progressMap.delete(trackId);
     console.error('PDF Generation Error:', err);
     if (!res.headersSent) {
       return res.status(500).json({ message: 'Ошибка при генерации PDF файла этикеток' });

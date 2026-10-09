@@ -160,4 +160,4 @@ volumes:
 networks:
   tanbox_net:
     name: tanbox_default
-    external: true
+    driver: bridge

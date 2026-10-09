@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Lock, Mail, Building2, Phone, Hash } from 'lucide-react';
+import { getLkUrl } from '../../utils/navigation';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       return;
     }
     // Redirect to client cabinet auth endpoint
-    window.location.href = `http://127.0.0.1:3001/${isLoginMode ? 'login' : 'register'}`;
+    window.location.href = getLkUrl(`/${isLoginMode ? 'login' : 'register'}`);
   };
 
   return createPortal(

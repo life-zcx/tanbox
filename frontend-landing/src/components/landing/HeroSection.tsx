@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
+import { getLkUrl } from '../../utils/navigation';
 
 interface HeroSectionProps {
   onOpenCalculator: () => void;
@@ -47,7 +48,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onOp
           </button>
 
           <a
-            href="http://127.0.0.1:3001/orders/new"
+            href={getLkUrl('/orders/new')}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-[#111827] border border-gray-200 text-sm sm:text-base lg:text-lg font-extrabold px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl hover:bg-gray-50 transition-all active:scale-95 shadow-xs"

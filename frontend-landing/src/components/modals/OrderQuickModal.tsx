@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { X, CheckCircle2 } from 'lucide-react';
 import { TariffCode } from '../../types';
 import { apiClient } from '../../api/client';
+import { getLkUrl } from '../../utils/navigation';
 
 interface OrderQuickModalProps {
   isOpen: boolean;
@@ -112,7 +113,7 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
             </p>
             <div className="pt-4">
               <a
-                href="http://127.0.0.1:3001/orders"
+                href={getLkUrl('/orders')}
                 className="inline-block bg-black text-white font-extrabold text-sm px-6 py-3 rounded-xl hover:bg-gray-800 transition-all"
               >
                 Перейти в личный кабинет lk.tanbox.kz

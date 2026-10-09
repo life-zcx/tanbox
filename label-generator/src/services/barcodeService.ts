@@ -1,15 +1,15 @@
 import bwipjs from 'bwip-js';
 
+export interface RawMatrixSymbol {
+  pixs: number[];
+  pixx: number;
+  pixy: number;
+}
+
 /**
- * Generates high-res DataMatrix ECC200 PNG buffer.
- * By default enforces 4-region (four_regions) structure:
- * Minimum size 32x32 / 36x36 / 40x40 (the official standard for TANBA / Таңба and ИС МПТ Казахстан).
- * Automatically adds ^FNC1 codeword if code starts with AI 01 for full GS1 / scanner compliance.
+ * Normalizes input text and applies GS1 FNC1 encoding for TANBA / ИС МПТ Kazakhstan.
  */
-export async function generateDataMatrixBuffer(
-  text: string,
-  matrixStructure: 'four_regions' | 'auto' = 'four_regions'
-): Promise<Buffer> {
+function prepareDataMatrixInput(text: string): { bwipText: string; useParsefnc: boolean } {
   let cleanText = text.trim();
 
   // Strip enclosing quotes if present (e.g. from CSV lines)
@@ -32,7 +32,6 @@ export async function generateDataMatrixBuffer(
     // In DataMatrix ECC200, GS1 compliance requires:
     // 1. FNC1 in the first position (signals GS1 ]d2 format to 2D scanners)
     // 2. FNC1 as the delimiter between variable-length fields (AI 21 serial, AI 91 key)
-    // In bwip-js with parsefnc: true, ^FNC1 generates the official GS1 FNC1 codeword (232).
     let fnc1Body = cleanText.replace(/[\x1D\u001D]/g, '^FNC1');
     if (!fnc1Body.startsWith('^FNC1')) {
       fnc1Body = '^FNC1' + fnc1Body;
@@ -41,8 +40,83 @@ export async function generateDataMatrixBuffer(
     useParsefnc = true;
   }
 
-  // If four_regions is requested (official standard for TANBA / Таңба и ИС МПТ):
-  // Candidate sizes with 4 sub-quadrants: 36x36 (standard for 85-88 chars), 40x40, 44x44
+  return { bwipText, useParsefnc };
+}
+
+/**
+ * High-performance synchronous raw DataMatrix bit extraction.
+ * Bypasses all PNG encoding/decoding and zlib compression.
+ * Enforces 4-region 36x36 / 40x40 / 44x44 structure for TANBA Kazakhstan.
+ */
+export function generateDataMatrixRaw(
+  text: string,
+  matrixStructure: 'four_regions' | 'auto' = 'four_regions'
+): RawMatrixSymbol {
+  const { bwipText, useParsefnc } = prepareDataMatrixInput(text);
+
+  if (matrixStructure !== 'auto') {
+    const candidateSizes = [36, 40, 44, 48];
+    for (const s of candidateSizes) {
+      try {
+        const raw = bwipjs.raw({
+          bcid: 'datamatrix',
+          text: bwipText,
+          parsefnc: useParsefnc,
+          rows: s,
+          columns: s,
+        } as any) as any;
+        if (raw && raw[0] && raw[0].pixs && raw[0].pixx && raw[0].pixy) {
+          return {
+            pixs: raw[0].pixs,
+            pixx: raw[0].pixx,
+            pixy: raw[0].pixy,
+          };
+        }
+      } catch {
+        // try next larger size
+      }
+    }
+  }
+
+  const raw = bwipjs.raw({
+    bcid: 'datamatrix',
+    text: bwipText,
+    parsefnc: useParsefnc,
+  } as any) as any;
+  const first = raw && raw[0];
+  return {
+    pixs: first?.pixs || [],
+    pixx: first?.pixx || 0,
+    pixy: first?.pixy || 0,
+  };
+}
+
+/**
+ * Raw vector QR Code symbol matrix
+ */
+export function generateQRCodeRaw(text: string): RawMatrixSymbol {
+  const cleanText = text.trim();
+  const raw = bwipjs.raw({
+    bcid: 'qrcode',
+    text: cleanText,
+  } as any) as any;
+  const first = raw && raw[0];
+  return {
+    pixs: first?.pixs || [],
+    pixx: first?.pixx || 0,
+    pixy: first?.pixy || 0,
+  };
+}
+
+/**
+ * Generates high-res DataMatrix ECC200 PNG buffer (legacy fallback).
+ */
+export async function generateDataMatrixBuffer(
+  text: string,
+  matrixStructure: 'four_regions' | 'auto' = 'four_regions'
+): Promise<Buffer> {
+  const { bwipText, useParsefnc } = prepareDataMatrixInput(text);
+
   if (matrixStructure !== 'auto') {
     const candidateSizes = [36, 40, 44, 48];
     for (const s of candidateSizes) {
@@ -55,21 +129,18 @@ export async function generateDataMatrixBuffer(
               parsefnc: useParsefnc,
               rows: s,
               columns: s,
-              padding: 2, // 2-module quiet zone required for barcode scanner detection
-              scale: 5,   // High resolution for 203/300 DPI thermal printing
+              padding: 2,
+              scale: 5,
               includetext: false,
             } as any,
             (err, buf) => (err ? reject(err) : resolve(buf))
           );
         });
         return png;
-      } catch {
-        // Continue to next larger matrix size that fits the text
-      }
+      } catch {}
     }
   }
 
-  // Fallback to auto-sizing with quiet zone
   return new Promise<Buffer>((resolve, reject) => {
     bwipjs.toBuffer(
       {

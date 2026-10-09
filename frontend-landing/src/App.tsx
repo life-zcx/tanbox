@@ -16,6 +16,7 @@ import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { TermsPage } from './pages/TermsPage';
 import { CookiePolicyPage } from './pages/CookiePolicyPage';
 import { TariffCode } from './types';
+import { getLkUrl } from './utils/navigation';
 
 const ScrollToTop: React.FC = () => {
   const { pathname, hash } = useLocation();
@@ -60,7 +61,7 @@ export const App: React.FC = () => {
   }, []);
 
   const handleOpenAuth = () => {
-    window.open('http://127.0.0.1:3001/dashboard', '_blank', 'noopener,noreferrer');
+    window.open(getLkUrl('/dashboard'), '_blank', 'noopener,noreferrer');
   };
 
   const handleOpenQuickOrder = (tariffType: TariffCode, itemsCount: number, totalPrice: number) => {
@@ -79,7 +80,7 @@ export const App: React.FC = () => {
         })
       );
     } catch {}
-    window.location.href = `http://127.0.0.1:3001/register?tariff=${tariffType}&count=${itemsCount}&price=${totalPrice}`;
+    window.location.href = getLkUrl(`/register?tariff=${tariffType}&count=${itemsCount}&price=${totalPrice}`);
   };
 
   return (

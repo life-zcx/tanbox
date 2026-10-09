@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tanbox_pass_2026}
       POSTGRES_DB: ${POSTGRES_DB:-tanbox_db}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "5432:5432"
     volumes:
       - pgdata_dev:/var/lib/postgresql/data
     healthcheck:
@@ -24,13 +24,15 @@ services:
     container_name: tanbox_backend_dev
     restart: always
     ports:
-      - "127.0.0.1:5050:5050"
+      - "5050:5050"
     environment:
       PORT: ${PORT:-5050}
       DATABASE_URL: ${DATABASE_URL:-postgresql://tanbox_user:tanbox_pass_2026@postgres:5432/tanbox_db?schema=public}
       JWT_SECRET: ${JWT_SECRET:-dev_only_local_secret_please_change_in_env_file}
       NODE_ENV: development
       NODE_OPTIONS: "--max-old-space-size=512"
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
       LABEL_GENERATOR_HOST: label-generator
       LABEL_GENERATOR_PORT: 5060
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
@@ -41,7 +43,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-      - /app/node_modules
+      - backend_node_modules_dev:/app/node_modules
       - tanbox_uploads_dev:/app/uploads
       - tanbox_logs_dev:/app/logs
 
@@ -52,13 +54,15 @@ services:
     container_name: tanbox_frontend_landing_dev
     restart: always
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     environment:
       - VITE_API_URL=/api
       - NODE_OPTIONS=--max-old-space-size=512
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
     volumes:
       - ./frontend-landing:/app
-      - /app/node_modules
+      - landing_node_modules_dev:/app/node_modules
 
   frontend-lk:
     build:
@@ -67,14 +71,16 @@ services:
     container_name: tanbox_frontend_lk_dev
     restart: always
     ports:
-      - "127.0.0.1:3001:3001"
+      - "3001:3001"
     environment:
       - VITE_API_URL=/api
       - NODE_OPTIONS=--max-old-space-size=512
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
     volumes:
       - ./frontend-lk:/app
       - ./shared:/shared
-      - /app/node_modules
+      - lk_node_modules_dev:/app/node_modules
 
   frontend-admin:
     build:
@@ -83,16 +89,18 @@ services:
     container_name: tanbox_frontend_admin_dev
     restart: always
     ports:
-      - "127.0.0.1:3002:3002"
+      - "3002:3002"
     environment:
       - VITE_API_URL=/api
       - NODE_OPTIONS=--max-old-space-size=512
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
     depends_on:
       - backend
     volumes:
       - ./frontend-admin:/app
       - ./shared:/shared
-      - /app/node_modules
+      - admin_node_modules_dev:/app/node_modules
 
   label-generator:
     build:
@@ -101,14 +109,16 @@ services:
     container_name: tanbox_label_generator_dev
     restart: always
     ports:
-      - "127.0.0.1:5060:5060"
+      - "5060:5060"
     environment:
       PORT: 5060
       NODE_ENV: development
       NODE_OPTIONS: "--max-old-space-size=512"
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
     volumes:
       - ./label-generator:/app
-      - /app/node_modules
+      - label_generator_node_modules_dev:/app/node_modules
 
   caddy:
     image: caddy:2-alpine
@@ -130,6 +140,11 @@ services:
 
 volumes:
   pgdata_dev:
+  backend_node_modules_dev:
+  landing_node_modules_dev:
+  lk_node_modules_dev:
+  admin_node_modules_dev:
+  label_generator_node_modules_dev:
   tanbox_uploads_dev:
   tanbox_logs_dev:
   caddy_data_dev:

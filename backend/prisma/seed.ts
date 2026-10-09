@@ -1,4 +1,4 @@
-import { PrismaClient, Role, OrderCategory, TariffType, OrderStatus } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -9,7 +9,6 @@ async function main() {
   // 1. Password hashes (using env variables or fallback for initial bootstrap)
   const isProd = process.env.NODE_ENV === 'production';
   const initialAdminPass = process.env.INITIAL_ADMIN_PASSWORD;
-  const initialClientPass = process.env.INITIAL_CLIENT_PASSWORD;
 
   if (isProd && (!initialAdminPass || initialAdminPass === 'Admin_Tanbox_2026!Secure')) {
     throw new Error(
@@ -18,10 +17,7 @@ async function main() {
   }
 
   const effectiveAdminPass = initialAdminPass || 'Admin_Tanbox_2026!Secure';
-  const effectiveClientPass = initialClientPass || 'Client_Tanbox_2026!Secure';
-
   const adminPassword = await bcrypt.hash(effectiveAdminPass, 10);
-  const clientPassword = await bcrypt.hash(effectiveClientPass, 10);
 
   // 2. Admin User - only create if not exists
   const existingAdmin = await prisma.user.findUnique({ where: { email: 'admin@tanbox.kz' } });
@@ -41,25 +37,7 @@ async function main() {
     console.log(`ℹ️ Admin user already exists, keeping existing credentials.`);
   }
 
-  // 3. Test Client User - only create if not exists
-  const existingClient = await prisma.user.findUnique({ where: { email: 'client@tanbox.kz' } });
-  let clientId = existingClient?.id;
-  if (!existingClient) {
-    const createdClient = await prisma.user.create({
-      data: {
-        email: 'client@tanbox.kz',
-        password: clientPassword,
-        companyName: 'ТОО "ТехноМаркет Казахстан"',
-        binIin: '980412354890',
-        phone: '+7 701 555 1234',
-        role: Role.CLIENT,
-      },
-    });
-    clientId = createdClient.id;
-    console.log(`👤 Created initial Client`);
-  }
-
-  // 4. Tariffs - only create if not yet existing (preserving any customizations made by admin)
+  // 3. Tariffs - only create if not yet existing (preserving any customizations made by admin)
   const defaultTariffs = [
     {
       code: 'DIGITAL',
@@ -122,7 +100,7 @@ async function main() {
     }
   }
 
-  // 5. Global Pricing Settings - create if not exists
+  // 4. Global Pricing Settings - create if not exists
   const existingSettings = await prisma.pricingSettings.findUnique({ where: { key: 'GLOBAL' } });
   if (!existingSettings) {
     await prisma.pricingSettings.create({
@@ -136,45 +114,6 @@ async function main() {
         volumeTier2: 100000,
       },
     });
-  }
-
-  // 6. Test Orders for Client (only if zero orders exist)
-  if (clientId) {
-    const existingOrders = await prisma.order.count();
-    if (existingOrders === 0) {
-      await prisma.order.createMany({
-        data: [
-          {
-            orderNumber: 'TB-0001',
-            userId: clientId,
-            category: OrderCategory.SHOES,
-            tariffType: TariffType.PRO,
-            itemsCount: 5000,
-            pricePerItem: 95.0,
-            totalPrice: 475000.0,
-            status: OrderStatus.PROCESSING,
-            extraServices: ['SSCC_AGGREGATION', 'EXPRESS_DELIVERY'],
-            ssccNeeded: true,
-            notes: 'Срочная маркировка партий зимней обуви из Турции',
-            pdfUrl: '/samples/data_matrix_shoes_sample.pdf',
-          },
-          {
-            orderNumber: 'TB-0002',
-            userId: clientId,
-            category: OrderCategory.WATER,
-            tariffType: TariffType.STANDARD,
-            itemsCount: 20000,
-            pricePerItem: 55.0,
-            totalPrice: 1100000.0,
-            status: OrderStatus.COMPLETED,
-            extraServices: ['ON_SITE_STICKERING'],
-            ssccNeeded: false,
-            notes: 'Минеральная вода, склад в г. Алматы',
-            pdfUrl: '/samples/data_matrix_water_completed.pdf',
-          },
-        ],
-      });
-    }
   }
 
   console.log('✅ DB Seeding completed safely!');

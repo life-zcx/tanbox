@@ -13,8 +13,8 @@ import {
   Calculator,
   Server,
   Radio,
-  ListOrdered,
 } from 'lucide-react';
+import { getLandingUrl } from '@shared';
 import { AdminUser } from '../../types';
 
 interface AdminSidebarProps {
@@ -28,7 +28,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, onLogout }) =>
   const links = [
     { to: '/dashboard', label: 'Обзор систем', icon: LayoutDashboard },
     { to: '/orders', label: 'Заказы', icon: FileText },
-    { to: '/pdf-queue', label: 'Очередь PDF & Задачи', icon: ListOrdered },
     { to: '/markirovka', label: 'Маркировка ИС МПТ', icon: Radio },
     { to: '/stickering-calc', label: 'Калькулятор выезда', icon: Calculator },
     { to: '/leads', label: 'Заявки на услуги', icon: ClipboardList },
@@ -51,7 +50,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, onLogout }) =>
             </span>
           </Link>
           <a
-            href="http://127.0.0.1:3000"
+            href={getLandingUrl()}
             target="_blank"
             rel="noopener noreferrer"
             title="Перейти на главный сайт tanbox.kz"
@@ -68,6 +67,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, onLogout }) =>
             const isActive =
               link.to === '/markirovka'
                 ? location.pathname.startsWith('/markirovka')
+                : link.to === '/system'
+                ? location.pathname.startsWith('/system')
                 : location.pathname === link.to;
             return (
               <Link

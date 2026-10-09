@@ -14,11 +14,12 @@ export default defineConfig({
     port: 3000,
     allowedHosts: true,
     hmr: {
+      clientPort: 3000,
       overlay: false,
     },
     watch: {
       usePolling: true,
-      interval: 1000,
+      interval: 300,
       ignored: ['**/node_modules/**', '**/.git/**', '**/dist/**'],
     },
     proxy: {

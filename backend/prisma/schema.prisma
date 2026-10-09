@@ -258,6 +258,8 @@ model MarkirovkaAccount {
   status            MarkirovkaAccountStatus @default(ACTIVE)
   token             String?                 @db.Text
   tokenExpiresAt    DateTime?
+  trueApiToken      String?                 @db.Text
+  trueApiExpiresAt  DateTime?
   lastCheckedAt     DateTime?
   lastError         String?
   createdAt         DateTime                @default(now())
@@ -265,9 +267,49 @@ model MarkirovkaAccount {
 
   orders            MarkirovkaOrder[]
   reports           MarkirovkaUtilisationReport[]
+  operations        MarkirovkaOperation[]
 
   @@index([userId])
   @@index([environment])
+}
+
+enum MarkirovkaOperationType {
+  IMPORT_NOTIFICATION
+  UTILISATION
+  AGGREGATION
+  RETIREMENT
+  VALIDATION
+  CORRECTION
+  DISAGGREGATION
+  RETURN_TO_TURNOVER
+}
+
+enum MarkirovkaOperationStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model MarkirovkaOperation {
+  id              String                    @id @default(uuid())
+  type            MarkirovkaOperationType
+  accountId       String?
+  account         MarkirovkaAccount?        @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  documentNumber  String?
+  codesCount      Int                       @default(0)
+  status          MarkirovkaOperationStatus @default(PROCESSING)
+  isSigned        Boolean                   @default(false)
+  signature       String?                   @db.Text
+  requestPayload  Json?
+  responsePayload Json?
+  errorDetails    String?
+  createdById     String?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([accountId])
 }
 
 model MarkirovkaOrder {

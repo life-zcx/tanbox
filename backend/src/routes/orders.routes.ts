@@ -21,7 +21,10 @@ import {
   downloadRangeItemsPdf,
   getPdfQueueStatus,
   updatePdfQueueConcurrency,
+  cancelPdfQueueJob,
+  clearPdfQueue,
   getOrderPdfStatus,
+  triggerAsyncOrderPdfGeneration,
   checkCodesFile,
   syncMarkirovkaOrderCodes,
   generateTestCodesForOrder,
@@ -39,8 +42,11 @@ router.post('/', createOrder);
 router.get('/', getOrders);
 router.get('/queue/status', getPdfQueueStatus);
 router.post('/queue/concurrency', requireAdmin, updatePdfQueueConcurrency);
+router.delete('/queue/jobs/:id', requireAdmin, cancelPdfQueueJob);
+router.delete('/queue/clear', requireAdmin, clearPdfQueue);
 router.get('/registry/codes', getCodesRegistry);
 router.get('/:id/pdf-status', getOrderPdfStatus);
+router.post('/:id/generate-async', triggerAsyncOrderPdfGeneration);
 router.get('/:id', getOrderById);
 router.patch('/:id/status', requireAdmin, updateOrderStatus);
 router.patch('/:id/print-permission', requireAdmin, updateOrderPrintPermission);

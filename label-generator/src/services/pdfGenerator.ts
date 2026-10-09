@@ -2,7 +2,14 @@ import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
 import { LabelTemplate, LabelElement } from '../types.js';
-import { generateDataMatrixBuffer, generateCode128Buffer, generateQRCodeBuffer } from './barcodeService.js';
+import {
+  generateDataMatrixBuffer,
+  generateDataMatrixRaw,
+  generateQRCodeRaw,
+  generateCode128Buffer,
+  generateQRCodeBuffer,
+  RawMatrixSymbol,
+} from './barcodeService.js';
 import { drawSymbol } from './symbolsService.js';
 
 // Conversion constant: 1 mm ≈ 2.83464567 points
@@ -10,6 +17,66 @@ export const MM_TO_PT = 2.83464567;
 
 export function mmToPt(mm: number): number {
   return mm * MM_TO_PT;
+}
+
+/**
+ * Draws a 2D matrix (DataMatrix ECC200 or QR code) directly with PDFKit vector rectangles.
+ * Merges consecutive horizontal black modules (run-length encoding) to minimize PDF operators.
+ * Completely eliminates PNG rasterization, decompression, and zlib overhead.
+ * Results in 100% sharp vector printing at any DPI (203/300/600 DPI) with zero blur.
+ */
+export function drawMatrixVector(
+  doc: typeof PDFDocument,
+  matrix: RawMatrixSymbol,
+  xPt: number,
+  yPt: number,
+  sizePt: number,
+  quietModules: number = 1
+): void {
+  const { pixs, pixx, pixy } = matrix;
+  if (!pixs || pixx <= 0 || pixy <= 0) return;
+
+  const totalCols = pixx + 2 * quietModules;
+  const totalRows = pixy + 2 * quietModules;
+  const modSize = sizePt / Math.max(totalCols, totalRows);
+
+  doc.save();
+  // Clear white background for quiet zone
+  doc.rect(xPt, yPt, sizePt, sizePt).fill('#ffffff');
+
+  const startX = xPt + quietModules * modSize;
+  const startY = yPt + quietModules * modSize;
+
+  doc.fillColor('#000000');
+  for (let r = 0; r < pixy; r++) {
+    let runLen = 0;
+    let runStart = 0;
+    const rowOffset = r * pixx;
+    for (let c = 0; c < pixx; c++) {
+      if (pixs[rowOffset + c]) {
+        if (runLen === 0) runStart = c;
+        runLen++;
+      } else if (runLen > 0) {
+        doc.rect(
+          startX + runStart * modSize,
+          startY + r * modSize,
+          runLen * modSize,
+          modSize
+        );
+        runLen = 0;
+      }
+    }
+    if (runLen > 0) {
+      doc.rect(
+        startX + runStart * modSize,
+        startY + r * modSize,
+        runLen * modSize,
+        modSize
+      );
+    }
+  }
+  doc.fill();
+  doc.restore();
 }
 
 export class LabelPdfGenerator {
@@ -114,7 +181,8 @@ export class LabelPdfGenerator {
   public async generateRollPdf(
     template: LabelTemplate,
     rows: Record<string, string>[],
-    outputStream: NodeJS.WritableStream
+    outputStream: NodeJS.WritableStream,
+    onProgress?: (current: number, total: number) => void
   ): Promise<void> {
     const widthPt = mmToPt(template.widthMm);
     const heightPt = mmToPt(template.heightMm);
@@ -148,8 +216,24 @@ export class LabelPdfGenerator {
 
     // If rows array is empty, render at least 1 sample page
     const dataList = rows.length > 0 ? rows : [{}];
+    const totalCount = dataList.length;
 
-    for (let i = 0; i < dataList.length; i++) {
+    for (let i = 0; i < totalCount; i++) {
+      if ((outputStream as any).destroyed || (outputStream as any).closed || (outputStream as any).writableEnded) {
+        console.log('[LabelPdfGenerator] Client aborted connection, stopping roll PDF generation');
+        allowPageAddition = true;
+        try {
+          doc.end();
+        } catch {}
+        return;
+      }
+
+      if (onProgress && (i % 100 === 0 || i === totalCount - 1)) {
+        try {
+          onProgress(i + 1, totalCount);
+        } catch {}
+      }
+
       const row = dataList[i];
 
       // Add a page for each label (thermal printer roll page)
@@ -161,6 +245,12 @@ export class LabelPdfGenerator {
       allowPageAddition = false;
 
       await this.renderLabelElements(doc, template.elements, row, hasCustomFonts, heightPt, widthPt);
+    }
+
+    if (onProgress) {
+      try {
+        onProgress(totalCount, totalCount);
+      } catch {}
     }
 
     allowPageAddition = true;
@@ -224,15 +314,18 @@ export class LabelPdfGenerator {
           if (!rawCode) {
             rawCode = '0104600439931256215ABC12391FFD092';
           }
+          const sizePt = mmToPt(el.size);
           try {
-            const pngBuf = await generateDataMatrixBuffer(rawCode, el.matrixStructure || 'four_regions');
-            const sizePt = mmToPt(el.size);
-            doc.image(pngBuf, xPt, yPt, { width: sizePt, height: sizePt });
+            const rawMatrix = generateDataMatrixRaw(rawCode, el.matrixStructure || 'four_regions');
+            drawMatrixVector(doc, rawMatrix, xPt, yPt, sizePt, 1);
           } catch (err) {
-            console.error('Error generating DataMatrix for label:', err);
-            // Draw placeholder rect on error
-            const sizePt = mmToPt(el.size);
-            doc.rect(xPt, yPt, sizePt, sizePt).lineWidth(1).strokeColor('#ff0000').stroke();
+            try {
+              const pngBuf = await generateDataMatrixBuffer(rawCode, el.matrixStructure || 'four_regions');
+              doc.image(pngBuf, xPt, yPt, { width: sizePt, height: sizePt });
+            } catch (bufErr) {
+              console.error('Error generating DataMatrix for label:', bufErr);
+              doc.rect(xPt, yPt, sizePt, sizePt).lineWidth(1).strokeColor('#ff0000').stroke();
+            }
           }
           break;
         }
@@ -293,12 +386,17 @@ export class LabelPdfGenerator {
 
         case 'qrcode': {
           const val = this.resolveVariable(el.columnName, row) || el.columnName || 'https://tanbox.kz';
+          const sizePt = mmToPt(el.size);
           try {
-            const qrPng = await generateQRCodeBuffer(val);
-            const sizePt = mmToPt(el.size);
-            doc.image(qrPng, xPt, yPt, { width: sizePt, height: sizePt });
+            const rawMatrix = generateQRCodeRaw(val);
+            drawMatrixVector(doc, rawMatrix, xPt, yPt, sizePt, 1);
           } catch (err) {
-            console.error('Error rendering QR code:', err);
+            try {
+              const qrPng = await generateQRCodeBuffer(val);
+              doc.image(qrPng, xPt, yPt, { width: sizePt, height: sizePt });
+            } catch (qrErr) {
+              console.error('Error rendering QR code:', qrErr);
+            }
           }
           break;
         }

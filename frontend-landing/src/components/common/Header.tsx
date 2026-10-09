@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, UserCheck } from 'lucide-react';
+import { getLkUrl } from '../../utils/navigation';
 
 interface HeaderProps {
   onOpenAuth: () => void;
@@ -114,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Desktop LK Button */}
             <a
-              href="http://127.0.0.1:3001/dashboard"
+              href={getLkUrl('/dashboard')}
               target="_blank"
               rel="noopener noreferrer"
               className="hidden md:inline-flex bg-[#0082FB] text-white font-extrabold text-xs sm:text-sm px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl hover:bg-[#0070DA] transition-all shadow-md shadow-blue-500/20 active:scale-95 items-center gap-2"
@@ -185,7 +186,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
           {/* Bottom Action: Только Личный кабинет */}
           <div className="pt-6 border-t border-gray-100">
             <a
-              href="http://127.0.0.1:3001/dashboard"
+              href={getLkUrl('/dashboard')}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setIsMobileMenuOpen(false)}

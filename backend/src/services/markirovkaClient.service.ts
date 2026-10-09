@@ -39,6 +39,146 @@ export function getDefaultBaseUrl(env: MarkirovkaEnvironment): string {
   return 'https://prod.markirovka.kz';
 }
 
+/**
+ * Recursively sort JSON object keys alphabetically (A-Z)
+ * as required by Kazakhstan xTrace ICOM REST API specification.
+ */
+export function sortKeysAlphabetically(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(sortKeysAlphabetically);
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const sorted: Record<string, any> = {};
+    Object.keys(obj)
+      .sort()
+      .forEach((key) => {
+        sorted[key] = sortKeysAlphabetically(obj[key]);
+      });
+    return sorted;
+  }
+  return obj;
+}
+
+/**
+ * Generate a valid 18-digit GS1 SSCC (Serial Shipping Container Code)
+ * Structure:
+ * 1 digit: Extension (0)
+ * 7 digits: GS1 Kazakhstan prefix (0487000)
+ * 9 digits: Serial reference (timestamp)
+ * 1 digit: GS1 Modulo-10 checksum
+ */
+export function generateValidSscc18(companyPrefix: string = '0487000'): string {
+  const ext = '0';
+  const prefix = companyPrefix.replace(/\D/g, '').slice(0, 7).padStart(7, '0');
+  const serial = Date.now().toString().slice(-9);
+  const base17 = `${ext}${prefix}${serial}`.slice(0, 17);
+
+  let sum = 0;
+  for (let i = 0; i < 17; i++) {
+    const weight = i % 2 === 0 ? 3 : 1;
+    sum += parseInt(base17[i], 10) * weight;
+  }
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return `00${base17}${checkDigit}`;
+}
+
+export function normalizeSscc18(input?: string): string {
+  if (!input || !input.trim()) return generateValidSscc18();
+  let clean = input.replace(/\D/g, '').trim();
+
+  // If already 20 digits starting with 00:
+  if (clean.length === 20 && clean.startsWith('00')) {
+    const payload17 = clean.slice(2, 19);
+    let sum = 0;
+    for (let i = 0; i < 17; i++) {
+      const weight = i % 2 === 0 ? 3 : 1;
+      sum += parseInt(payload17[i], 10) * weight;
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return `00${payload17}${checkDigit}`;
+  }
+
+  // If 18 digits (payload without AI 00):
+  if (clean.length === 18) {
+    const payload17 = clean.slice(0, 17);
+    let sum = 0;
+    for (let i = 0; i < 17; i++) {
+      const weight = i % 2 === 0 ? 3 : 1;
+      sum += parseInt(payload17[i], 10) * weight;
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return `00${payload17}${checkDigit}`;
+  }
+
+  // If other length >= 17:
+  if (clean.length >= 17) {
+    const payload17 = clean.replace(/^00/, '').slice(0, 17).padEnd(17, '0');
+    let sum = 0;
+    for (let i = 0; i < 17; i++) {
+      const weight = i % 2 === 0 ? 3 : 1;
+      sum += parseInt(payload17[i], 10) * weight;
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return `00${payload17}${checkDigit}`;
+  }
+
+  return generateValidSscc18();
+}
+
+/**
+ * Извлекает чистый Код Идентификации (КИ) или нормализованный SSCC из полного кода маркировки DataMatrix.
+ * В юридические документы xTrace ICOM (ввод в оборот/импорт, агрегация, вывод из оборота, списание)
+ * согласно регламенту ИС МПТ передается ТОЛЬКО Код Идентификации (без криптохвоста 91 и 92).
+ */
+export function extractIdentificationCode(raw?: string): string {
+  if (!raw) return '';
+  let code = raw.trim();
+
+  // Удаляем невидимые символы (BOM, zero-width space и т.д.)
+  code = code.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+
+  // Если это транспортный код SSCC:
+  if (code.startsWith('00') && /^\d{18,20}$/.test(code)) {
+    return normalizeSscc18(code);
+  }
+  if (/^\d{18}$/.test(code)) {
+    return normalizeSscc18(code);
+  }
+
+  // 1. Если присутствует символ-разделитель GS (\x1d, \u001d или текстовое обозначение <GS>)
+  const gsIndex = code.search(/[\x1d\u001d]|<GS>/i);
+  if (gsIndex !== -1) {
+    code = code.slice(0, gsIndex).trim();
+  }
+
+  // 2. Стандартный DataMatrix формата GS1: 01 + 14 цифр GTIN + 21 + серийный номер
+  const match0121 = code.match(/^01(\d{14})21(.+)$/);
+  if (match0121) {
+    const gtin = match0121[1];
+    const serialAndTail = match0121[2];
+
+    // Если разделитель GS был потерян при копировании через буфер обмена:
+    // Криптохвост начинается с идентификатора применения 91 (4 символа ключа проверки) и 92 (подпись)
+    const cryptoMatch = serialAndTail.match(/^(.*?)(?:91[^\s]{4}92.+|91[a-zA-Z0-9+/=]{4}92.*)$/);
+    if (cryptoMatch && cryptoMatch[1] && cryptoMatch[1].length >= 6) {
+      return `01${gtin}21${cryptoMatch[1]}`;
+    }
+
+    // Если серийный номер стандартной длины 13 символов (для обуви, одежды и т.д. в ИС МПТ КЗ)
+    // и после 13-го символа идет '91':
+    if (serialAndTail.length >= 15 && serialAndTail.slice(13, 15) === '91') {
+      return `01${gtin}21${serialAndTail.slice(0, 13)}`;
+    }
+
+    // Если длина полного кода более 70 символов (полный код с криптоподписью 85+ символов)
+    if (code.length >= 70 && serialAndTail.length >= 13) {
+      return `01${gtin}21${serialAndTail.slice(0, 13)}`;
+    }
+  }
+
+  return code;
+}
+
 export interface AuthResult {
   token: string;
   expiresAt: Date;
@@ -99,8 +239,13 @@ export class MarkirovkaClient {
     const login = this.account.login.trim();
     const password = this.decryptedPassword;
 
-    // Potential endpoints supported by Qazmarka / True API / OMS Cloud
+    // Potential endpoints supported by Kazakhstan ICOM REST API / xTrace / OMS
     const candidateEndpoints = [
+      {
+        path: '/api/users/authenticate',
+        method: 'POST',
+        body: { login: login, password: password },
+      },
       {
         path: '/api/v1/party/users/authenticate',
         method: 'POST',
@@ -216,6 +361,9 @@ export class MarkirovkaClient {
         },
       });
     }
+
+    this.account.token = token;
+    this.account.tokenExpiresAt = expiresAt;
 
 
     return {
@@ -700,4 +848,936 @@ export class MarkirovkaClient {
     }
     return lines.join('\n');
   }
+
+  /**
+   * Returns base URL for Kazakhstan True-API gateway
+   */
+  public getTrueApiBaseUrl(): string {
+    if (this.account.environment === MarkirovkaEnvironment.TEST) {
+      return 'https://stage.ismet.kz/api/v3/true-api';
+    }
+    return 'https://elk.prod.markirovka.ismet.kz/api/v3/true-api';
+  }
+
+  /**
+   * 1. Register Import (Ввод в оборот / Импорт товаров) via ICOM REST API xTrace
+   * POST /public/api/v1/doc/import
+   */
+  public async sendIcomImportDocument(params: {
+    businessPlaceId?: number;
+    codes: string[];
+    customsDeclaration: {
+      date: string;
+      number: string;
+      authorityCode?: string;
+    };
+    exportCountry?: string;
+    rawDocString?: string;
+    signature?: string;
+  }): Promise<{
+    success: boolean;
+    httpStatus: number;
+    url: string;
+    documentId?: string;
+    response: any;
+    error?: string;
+  }> {
+    let auth = await this.authenticate(false);
+    const targetUrl = `${this.baseUrl}/public/api/v1/doc/import`;
+
+    let base64Body: string;
+    const cleanCodes = params.codes.map((c) => extractIdentificationCode(c)).filter(Boolean);
+    if (params.rawDocString) {
+      base64Body = Buffer.from(params.rawDocString, 'utf-8').toString('base64');
+    } else {
+      const docObj = {
+        businessPlaceId: Number(params.businessPlaceId) || 44,
+        codes: cleanCodes,
+        customsDeclaration: {
+          ...(params.customsDeclaration.authorityCode ? { authorityCode: params.customsDeclaration.authorityCode } : {}),
+          date: params.customsDeclaration.date,
+          number: params.customsDeclaration.number,
+        },
+        exportCountry: params.exportCountry || 'CN',
+      };
+      const sortedDoc = sortKeysAlphabetically(docObj);
+      base64Body = Buffer.from(JSON.stringify(sortedDoc), 'utf-8').toString('base64');
+    }
+
+    const requestBody = {
+      documentBody: base64Body,
+      signature: params.signature || '',
+    };
+
+    logger.info(`[ICOM REST API] Submitting import document to ${targetUrl}...`);
+
+    try {
+      let res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      let responseText = await res.text();
+      let responseData: any = null;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        responseData = { raw: responseText };
+      }
+
+      // If token expired / inactive, refresh token and retry once
+      if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
+        logger.info(`[ICOM REST API] Token inactive or expired, refreshing token and retrying...`);
+        auth = await this.authenticate(true);
+        res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${auth.token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(30000),
+        });
+        responseText = await res.text();
+        try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+      }
+
+      const documentId = responseData?.documentId;
+      logger.info(`[ICOM REST API] Import HTTP ${res.status}, documentId=${documentId}`);
+
+      return {
+        success: res.ok,
+        httpStatus: res.status,
+        url: targetUrl,
+        documentId,
+        response: responseData,
+        error: !res.ok ? (responseData?.context?._cause || responseData?.code || responseData?.error || `HTTP ${res.status}`) : undefined,
+      };
+    } catch (err: any) {
+      logger.error(`[ICOM REST API] Network failure calling ${targetUrl}:`, err);
+      return {
+        success: false,
+        httpStatus: 0,
+        url: targetUrl,
+        response: { error: err.message },
+        error: `Сетевая ошибка обращения к ИС МПТ: ${err.message}`,
+      };
+    }
+  }
+
+  /**
+   * 2. Register Aggregation via ICOM REST API xTrace
+   * POST /public/api/v1/doc/aggregation
+   */
+  public async sendIcomAggregationDocument(params: {
+    businessPlaceId?: number;
+    unitSerialNumber: string;
+    codes: string[];
+    signature?: string;
+  }): Promise<{
+    success: boolean;
+    httpStatus: number;
+    url: string;
+    documentId?: string;
+    response: any;
+    error?: string;
+  }> {
+    let auth = await this.authenticate(false);
+    const targetUrl = `${this.baseUrl}/public/api/v1/doc/aggregation`;
+
+    const formattedSscc = normalizeSscc18(params.unitSerialNumber);
+    const cleanCodes = params.codes.map((c) => extractIdentificationCode(c)).filter(Boolean);
+
+    const docObj = {
+      businessPlaceId: Number(params.businessPlaceId) || 44,
+      documentDate: new Date().toISOString(),
+      aggregationUnits: [
+        {
+          shouldBeUnbundled: true,
+          aggregationItemsCount: cleanCodes.length,
+          aggregationUnitCapacity: cleanCodes.length,
+          codes: cleanCodes,
+          unitSerialNumber: formattedSscc,
+        },
+      ],
+    };
+
+    const sortedDoc = sortKeysAlphabetically(docObj);
+    const base64Body = Buffer.from(JSON.stringify(sortedDoc), 'utf-8').toString('base64');
+
+    const requestBody = {
+      documentBody: base64Body,
+      signature: params.signature || '',
+    };
+
+    try {
+      let res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      let responseText = await res.text();
+      let responseData: any = null;
+      try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+
+      if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
+        auth = await this.authenticate(true);
+        res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${auth.token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(30000),
+        });
+        responseText = await res.text();
+        try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+      }
+
+      return {
+        success: res.ok,
+        httpStatus: res.status,
+        url: targetUrl,
+        documentId: responseData?.documentId,
+        response: responseData,
+        error: !res.ok ? (responseData?.context?._cause || responseData?.code || responseData?.error || `HTTP ${res.status}`) : undefined,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        httpStatus: 0,
+        url: targetUrl,
+        response: { error: err.message },
+        error: err.message,
+      };
+    }
+  }
+
+  /**
+   * 3. Register Disaggregation via ICOM REST API xTrace
+   * POST /public/api/v1/doc/transport-code-disaggregation
+   */
+  public async sendIcomDisaggregationDocument(params: {
+    codes: string[];
+  }): Promise<{
+    success: boolean;
+    httpStatus: number;
+    url: string;
+    documentId?: string;
+    response: any;
+    error?: string;
+  }> {
+    let auth = await this.authenticate(false);
+    const targetUrl = `${this.baseUrl}/public/api/v1/doc/transport-code-disaggregation`;
+
+    const formattedCodes = params.codes.map((c) => normalizeSscc18(c));
+
+    const docObj = {
+      businessDatetime: new Date().toISOString(),
+      codes: formattedCodes,
+    };
+
+    const sortedDoc = sortKeysAlphabetically(docObj);
+    const base64Body = Buffer.from(JSON.stringify(sortedDoc), 'utf-8').toString('base64');
+
+    try {
+      let res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ documentBody: base64Body }),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      let responseText = await res.text();
+      let responseData: any = null;
+      try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+
+      if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
+        auth = await this.authenticate(true);
+        res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${auth.token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ documentBody: base64Body }),
+          signal: AbortSignal.timeout(30000),
+        });
+        responseText = await res.text();
+        try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+      }
+
+      return {
+        success: res.ok,
+        httpStatus: res.status,
+        url: targetUrl,
+        documentId: responseData?.documentId,
+        response: responseData,
+        error: !res.ok ? (responseData?.context?._cause || responseData?.code || responseData?.error || `HTTP ${res.status}`) : undefined,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        httpStatus: 0,
+        url: targetUrl,
+        response: { error: err.message },
+        error: err.message,
+      };
+    }
+  }
+
+  /**
+   * 4. Register Withdrawal (Вывод из оборота) via ICOM REST API xTrace
+   * POST /public/api/v1/doc/withdrawal
+   */
+  public async sendIcomWithdrawalDocument(params: {
+    businessPlaceId?: number;
+    withdrawalType?: 'WITHDRAWAL' | 'WRITE_OFF';
+    withdrawalReason: string;
+    codes: string[];
+    primaryDocument?: { type?: string; date?: string; number?: string };
+    signature?: string;
+  }): Promise<{
+    success: boolean;
+    httpStatus: number;
+    url: string;
+    documentId?: string;
+    response: any;
+    error?: string;
+  }> {
+    let auth = await this.authenticate(false);
+    const targetUrl = `${this.baseUrl}/public/api/v1/doc/withdrawal`;
+
+    const withdrawalType = params.withdrawalType || (params.withdrawalReason === 'DAMAGE' ? 'WRITE_OFF' : 'WITHDRAWAL');
+    const cleanCodes = params.codes.map((c) => extractIdentificationCode(c)).filter(Boolean);
+
+    const docObj = {
+      businessPlaceId: Number(params.businessPlaceId) || 44,
+      childrenWriteOff: false,
+      codes: cleanCodes.map((c) => ({ code: c })),
+      primaryDocument: {
+        date: params.primaryDocument?.date || new Date().toISOString().slice(0, 10),
+        number: params.primaryDocument?.number || 'DOC-001',
+        type: params.primaryDocument?.type || '',
+      },
+      withdrawPartialQuantity: false,
+      withdrawalDate: new Date().toISOString(),
+      withdrawalReason: params.withdrawalReason || 'OTHER',
+      withdrawalType,
+    };
+
+    const sortedDoc = sortKeysAlphabetically(docObj);
+    const base64Body = Buffer.from(JSON.stringify(sortedDoc), 'utf-8').toString('base64');
+
+    const requestBody = {
+      documentBody: base64Body,
+      signature: params.signature || '',
+    };
+
+    try {
+      let res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      let responseText = await res.text();
+      let responseData: any = null;
+      try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+
+      if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
+        auth = await this.authenticate(true);
+        res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${auth.token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(30000),
+        });
+        responseText = await res.text();
+        try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+      }
+
+      return {
+        success: res.ok,
+        httpStatus: res.status,
+        url: targetUrl,
+        documentId: responseData?.documentId,
+        response: responseData,
+        error: !res.ok ? (responseData?.context?._cause || responseData?.code || responseData?.error || `HTTP ${res.status}`) : undefined,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        httpStatus: 0,
+        url: targetUrl,
+        response: { error: err.message },
+        error: err.message,
+      };
+    }
+  }
+
+  /**
+   * 5. Validate Codes via ICOM REST API xTrace
+   * POST /public/api/cod/public/codes
+   */
+  public async validateCodesIcom(codes: string[]): Promise<{
+    success: boolean;
+    httpStatus: number;
+    url: string;
+    results: any[];
+    raw: any;
+  }> {
+    let auth = await this.authenticate(false);
+    const targetUrl = `${this.baseUrl}/public/api/cod/public/codes`;
+
+    const cleanCodes = codes.map((c) => extractIdentificationCode(c)).filter(Boolean);
+
+    try {
+      let res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ codes: cleanCodes }),
+        signal: AbortSignal.timeout(20000),
+      });
+
+      let data: any = await res.json().catch(async () => ({ raw: await res.text() }));
+
+      if (res.status === 401 || data?.context?._cause === 'inactive-token') {
+        auth = await this.authenticate(true);
+        res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${auth.token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ codes: cleanCodes }),
+          signal: AbortSignal.timeout(20000),
+        });
+        data = await res.json().catch(async () => ({ raw: await res.text() }));
+      }
+
+      const results = Array.isArray(data) ? data : (data?.codes || []);
+
+      return {
+        success: res.ok,
+        httpStatus: res.status,
+        url: targetUrl,
+        results,
+        raw: data,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        httpStatus: 0,
+        url: targetUrl,
+        results: [],
+        raw: { error: err.message },
+      };
+    }
+  }
+
+  /**
+   * 6. Check Document Status in Storage
+   * GET /public/api/v1/doc/storage/docs/:documentId
+   */
+  public async getIcomDocumentStatus(documentId: string): Promise<any> {
+    let auth = await this.authenticate(false);
+    const targetUrl = `${this.baseUrl}/public/api/v1/doc/storage/docs/${documentId}`;
+    let res = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${auth.token}`,
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.status === 401) {
+      auth = await this.authenticate(true);
+      res = await fetch(targetUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+    }
+    return res.json().catch(() => null);
+  }
+
+  /**
+   * Get processed codes from document storage
+   * GET /public/api/v1/doc/storage/docs/:documentId/codes
+   */
+  public async getIcomDocumentCodes(documentId: string, limit: number = 500): Promise<any[]> {
+    let auth = await this.authenticate(false);
+    const targetUrl = `${this.baseUrl}/public/api/v1/doc/storage/docs/${documentId}/codes?limit=${limit}`;
+    let res = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${auth.token}`,
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.status === 401) {
+      auth = await this.authenticate(true);
+      res = await fetch(targetUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+    }
+    const data = await res.json().catch(() => []);
+    return Array.isArray(data) ? data : (data?.codes || []);
+  }
+
+  /**
+   * Get validation errors for document from storage
+   * GET /public/api/v1/doc/storage/errors/:documentId
+   */
+  public async getIcomDocumentErrors(documentId: string): Promise<any> {
+    let auth = await this.authenticate(false);
+    const targetUrl = `${this.baseUrl}/public/api/v1/doc/storage/errors/${documentId}`;
+    let res = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${auth.token}`,
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.status === 401) {
+      auth = await this.authenticate(true);
+      res = await fetch(targetUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+    }
+    return res.json().catch(() => null);
+  }
+
+  /**
+   * Search product in National Catalog by GTIN
+   * GET /public/api/v1/product-registry/product?productGroup=...&gtin=...
+   */
+  public async searchProductByGtin(gtin: string, productGroup?: string): Promise<any> {
+    let auth = await this.authenticate(false);
+    const cleanGtin = gtin.trim();
+
+    // Check requested group first, then fallback to other common categories if not found
+    const candidateGroups = productGroup
+      ? [productGroup, 'autofluids', 'shoes', 'clothes', 'tobacco', 'pharma', 'water'].filter(
+          (v, i, a) => a.indexOf(v) === i
+        )
+      : ['autofluids', 'shoes', 'clothes', 'tobacco', 'pharma', 'water'];
+
+    let foundProduct: any = null;
+    let lastStatus = 404;
+
+    for (const pg of candidateGroups) {
+      const targetUrl = `${this.baseUrl}/public/api/v1/product-registry/product?productGroup=${encodeURIComponent(pg)}&gtin=${encodeURIComponent(cleanGtin)}`;
+      let res = await fetch(targetUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(10000),
+      }).catch(() => null);
+
+      if (res && res.status === 401) {
+        auth = await this.authenticate(true);
+        res = await fetch(targetUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${auth.token}`,
+            'Accept': 'application/json',
+          },
+          signal: AbortSignal.timeout(10000),
+        }).catch(() => null);
+      }
+
+      if (res) {
+        lastStatus = res.status;
+        if (res.ok) {
+          const data: any = await res.json().catch(() => null);
+          if (Array.isArray(data) && data.length > 0) {
+            foundProduct = data[0];
+            break;
+          } else if (data && !Array.isArray(data) && (data.gtin || data.id)) {
+            foundProduct = data;
+            break;
+          }
+        }
+      }
+    }
+
+    return {
+      success: !!foundProduct,
+      httpStatus: foundProduct ? 200 : lastStatus,
+      product: foundProduct,
+    };
+  }
+
+  /**
+   * Check participant registration status by TIN (ИИН/БИН)
+   * GET /public/api/v1/party/parties/:tin/status
+   */
+  public async checkPartyStatus(tin: string): Promise<any> {
+    let auth = await this.authenticate(false);
+    const cleanTin = tin.trim();
+    const targetUrl = `${this.baseUrl}/public/api/v1/party/parties/${encodeURIComponent(cleanTin)}/status`;
+
+    let res = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${auth.token}`,
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (res.status === 401) {
+      auth = await this.authenticate(true);
+      res = await fetch(targetUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+    }
+
+    const data: any = await res.json().catch(() => null);
+    return {
+      success: res.ok,
+      httpStatus: res.status,
+      party: data,
+    };
+  }
+
+  /**
+   * 8. Register Return to Turnover (Возврат в оборот) via ICOM REST API xTrace
+   * POST /public/api/v1/doc/return-to-turnover
+   */
+  public async sendIcomReturnToTurnoverDocument(params: {
+    businessPlaceId?: number;
+    businessDate?: string;
+    returnReason: string;
+    primaryDocument?: { type?: string; date?: string; number?: string };
+    codes: string[];
+    rawDocString?: string;
+    signature?: string;
+  }): Promise<{
+    success: boolean;
+    httpStatus: number;
+    url: string;
+    documentId?: string;
+    response: any;
+    error?: string;
+  }> {
+    let auth = await this.authenticate(false);
+    const targetUrl = `${this.baseUrl}/public/api/v1/doc/return-to-turnover`;
+
+    let base64Body: string;
+    const cleanCodes = params.codes.map((c) => extractIdentificationCode(c)).filter(Boolean);
+    if (params.rawDocString) {
+      base64Body = Buffer.from(params.rawDocString, 'utf-8').toString('base64');
+    } else {
+      const docObj = {
+        businessDate: params.businessDate || new Date().toISOString(),
+        businessPlaceId: Number(params.businessPlaceId) || 44,
+        codes: cleanCodes.map((c) => ({ code: c })),
+        primaryDocument: {
+          date: params.primaryDocument?.date || new Date().toISOString().slice(0, 10),
+          number: params.primaryDocument?.number || 'DOC-001',
+          type: params.primaryDocument?.type || 'Приказ',
+        },
+        returnReason: params.returnReason || 'RETAIL_RETURN',
+      };
+      const sortedDoc = sortKeysAlphabetically(docObj);
+      base64Body = Buffer.from(JSON.stringify(sortedDoc), 'utf-8').toString('base64');
+    }
+
+    const requestBody = {
+      documentBody: base64Body,
+      signature: params.signature || '',
+    };
+
+    try {
+      let res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      let responseText = await res.text();
+      let responseData: any = null;
+      try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+
+      if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
+        auth = await this.authenticate(true);
+        res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${auth.token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(30000),
+        });
+        responseText = await res.text();
+        try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+      }
+
+      return {
+        success: res.ok,
+        httpStatus: res.status,
+        url: targetUrl,
+        documentId: responseData?.documentId,
+        response: responseData,
+        error: !res.ok ? (responseData?.context?._cause || responseData?.code || responseData?.error || `HTTP ${res.status}`) : undefined,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        httpStatus: 0,
+        url: targetUrl,
+        response: { error: err.message },
+        error: err.message,
+      };
+    }
+  }
+
+  /**
+   * 7. Register Correction (Корректировка сведений о кодах маркировки) via ICOM REST API xTrace
+   * POST /public/api/v1/doc/correction
+   */
+  public async sendIcomCorrectionDocument(params: {
+    codes: string[];
+    updatedFields?: {
+      expirationDatetime?: string;
+      productionDatetime?: string;
+      manufacturerCountry?: string;
+      seriesNumber?: string;
+    };
+    rawDocString?: string;
+    signature?: string;
+  }): Promise<{
+    success: boolean;
+    httpStatus: number;
+    url: string;
+    documentId?: string;
+    response: any;
+    error?: string;
+  }> {
+    let auth = await this.authenticate(false);
+    const targetUrl = `${this.baseUrl}/public/api/v1/doc/correction`;
+
+    let base64Body: string;
+    const cleanCodes = params.codes.map((c) => extractIdentificationCode(c)).filter(Boolean);
+    if (params.rawDocString) {
+      base64Body = Buffer.from(params.rawDocString, 'utf-8').toString('base64');
+    } else {
+      const docObj = {
+        businessDatetime: new Date().toISOString(),
+        codes: cleanCodes,
+        updatedFields: params.updatedFields || {},
+      };
+      const sortedDoc = sortKeysAlphabetically(docObj);
+      base64Body = Buffer.from(JSON.stringify(sortedDoc), 'utf-8').toString('base64');
+    }
+
+    const requestBody = {
+      documentBody: base64Body,
+      signature: params.signature || '',
+    };
+
+    try {
+      let res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(30000),
+      });
+
+      let responseText = await res.text();
+      let responseData: any = null;
+      try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+
+      if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
+        auth = await this.authenticate(true);
+        res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${auth.token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(30000),
+        });
+        responseText = await res.text();
+        try { responseData = JSON.parse(responseText); } catch { responseData = { raw: responseText }; }
+      }
+
+      return {
+        success: res.ok,
+        httpStatus: res.status,
+        url: targetUrl,
+        documentId: responseData?.documentId,
+        response: responseData,
+        error: !res.ok ? (responseData?.context?._cause || responseData?.code || responseData?.error || `HTTP ${res.status}`) : undefined,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        httpStatus: 0,
+        url: targetUrl,
+        response: { error: err.message },
+        error: err.message,
+      };
+    }
+  }
+
+  // Deprecated True-API methods kept as backward compatibility wrappers
+  public async sendTrueApiDocument(params: any): Promise<any> {
+    return this.sendIcomImportDocument({
+      codes: params.documentPayload?.products?.map((p: any) => p.cis) || [],
+      customsDeclaration: {
+        date: params.documentPayload?.declaration_date || new Date().toISOString(),
+        number: params.documentPayload?.declaration_number || 'IMP-001',
+      },
+      signature: params.signature,
+    });
+  }
+
+  public async validateCisesTrueApi(codes: string[]): Promise<any> {
+    return this.validateCodesIcom(codes);
+  }
+
+  /**
+   * Request True-API authentication challenge (uuid & data)
+   */
+  public async getTrueApiChallenge(): Promise<{ uuid: string; data: string }> {
+    const trueApiBase = this.getTrueApiBaseUrl();
+    const res = await fetch(`${trueApiBase}/auth/key`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: Ошибка получения auth/key от ${trueApiBase}`);
+    }
+    const data: any = await res.json();
+    return { uuid: data.uuid, data: data.data };
+  }
+
+  /**
+   * Exchange signed challenge for True-API JWT session token
+   */
+  public async signInTrueApiWithEds(uuid: string, signedData: string): Promise<string> {
+    const trueApiBase = this.getTrueApiBaseUrl();
+    const cleanSig = signedData.trim().replace(/[\r\n]/g, '');
+
+    logger.info(`[IS MPT True-API] Submitting simpleSignIn to ${trueApiBase}/auth/simpleSignIn (uuid=${uuid}, sigLen=${cleanSig.length})`);
+
+    const res = await fetch(`${trueApiBase}/auth/simpleSignIn`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ uuid, data: cleanSig }),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    const responseText = await res.text();
+    let data: any = null;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = { raw: responseText };
+    }
+
+    logger.info(`[IS MPT True-API] simpleSignIn HTTP ${res.status}: ${responseText.slice(0, 300)}`);
+
+    if (!res.ok) {
+      const err =
+        data?.error_message ||
+        data?.error_description ||
+        data?.message ||
+        data?.error ||
+        (data?.raw ? data.raw.slice(0, 150) : '') ||
+        `HTTP ${res.status}`;
+      throw new Error(`Ошибка авторизации в True-API: ${err}`);
+    }
+
+    const token = data.token || data.accessToken || data.value || data;
+    if (this.account.id) {
+      await prisma.markirovkaAccount.update({
+        where: { id: this.account.id },
+        data: {
+          trueApiToken: String(token),
+          trueApiExpiresAt: new Date(Date.now() + 10 * 3600 * 1000),
+        },
+      });
+      (this.account as any).trueApiToken = String(token);
+    }
+    return String(token);
+  }
 }
+

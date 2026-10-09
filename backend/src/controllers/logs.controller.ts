@@ -120,3 +120,38 @@ export const getSystemLogs = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ message: 'Ошибка чтения системных логов' });
   }
 };
+
+/**
+ * Admin endpoint to clear system log files
+ */
+export const clearSystemLogs = async (req: AuthRequest, res: Response) => {
+  try {
+    const type = String(req.body?.type || req.query?.type || 'error').toLowerCase();
+
+    const clearFile = async (name: string) => {
+      const p = path.join(logsDir, name);
+      if (fs.existsSync(p)) {
+        await fs.promises.writeFile(p, '', 'utf-8');
+      }
+    };
+
+    if (type === 'all') {
+      await clearFile('error.log');
+      await clearFile('access.log');
+      await clearFile('frontend.log');
+    } else if (type === 'access') {
+      await clearFile('access.log');
+    } else if (type === 'frontend') {
+      await clearFile('frontend.log');
+    } else {
+      await clearFile('error.log');
+    }
+
+    logger.info(`Logs cleared by admin: type=${type}`);
+    return res.json({ status: 'ok', message: `Файл логов (${type}) успешно очищен` });
+  } catch (err: any) {
+    logger.error('Failed to clear system logs:', err);
+    return res.status(500).json({ message: 'Ошибка очистки логов' });
+  }
+};
+

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, PackagePlus, FileText, User, LogOut, ExternalLink, Phone, Mail, Send, Tag, X } from 'lucide-react';
+import { getLandingUrl } from '@shared';
 import { UserProfile } from '../../types';
 
 interface SidebarProps {
@@ -58,7 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen = false
           </Link>
           <div className="flex items-center gap-2">
             <a
-              href="http://127.0.0.1:3000"
+              href={getLandingUrl()}
               target="_blank"
               rel="noopener noreferrer"
               title="Перейти на главный сайт tanbox.kz"

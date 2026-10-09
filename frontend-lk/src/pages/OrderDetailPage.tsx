@@ -128,6 +128,7 @@ export const OrderDetailPage: React.FC = () => {
   const [uploadingCodes, setUploadingCodes] = useState<boolean>(false);
   const [downloadingCodes, setDownloadingCodes] = useState<boolean>(false);
   const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
+  const [triggeringAsync, setTriggeringAsync] = useState<boolean>(false);
   const [pdfStatus, setPdfStatus] = useState<{
     isGenerating: boolean;
     activeJob?: any;
@@ -160,7 +161,7 @@ export const OrderDetailPage: React.FC = () => {
           if (parsed.status) return parsed.status;
         }
       }
-    } catch {}
+    } catch { }
     return 'IN_DESIGN';
   });
 
@@ -173,7 +174,7 @@ export const OrderDetailPage: React.FC = () => {
         const saved = localStorage.getItem(`tanbox_sticker_approval_${id}`);
         if (saved) return JSON.parse(saved);
       }
-    } catch {}
+    } catch { }
     return {};
   });
 
@@ -227,7 +228,7 @@ export const OrderDetailPage: React.FC = () => {
             });
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     } else {
       try {
         const saved =
@@ -236,7 +237,7 @@ export const OrderDetailPage: React.FC = () => {
         if (saved) {
           setDesignerLabel(JSON.parse(saved));
         }
-      } catch {}
+      } catch { }
     }
 
     // Check DB approval status
@@ -259,7 +260,7 @@ export const OrderDetailPage: React.FC = () => {
           if (parsed.status) setApprovalStatus(parsed.status);
           setApprovalData(parsed);
         }
-      } catch {}
+      } catch { }
     }
   }, [order]);
 
@@ -492,7 +493,7 @@ export const OrderDetailPage: React.FC = () => {
       setShowRevisionInput(false);
       try {
         localStorage.setItem(`tanbox_sticker_approval_${id}`, JSON.stringify(data));
-      } catch {}
+      } catch { }
       alert('Макет успешно утвержден и сохранён в вашу библиотеку для повторных заказов!');
     } catch (err: any) {
       alert('Ошибка при согласовании макета: ' + (err.response?.data?.message || err.message));
@@ -515,7 +516,7 @@ export const OrderDetailPage: React.FC = () => {
       setShowRevisionInput(false);
       try {
         localStorage.setItem(`tanbox_sticker_approval_${id}`, JSON.stringify(data));
-      } catch {}
+      } catch { }
     } catch (err: any) {
       alert('Ошибка при отправке правок: ' + (err.response?.data?.message || err.message));
     }
@@ -638,13 +639,34 @@ export const OrderDetailPage: React.FC = () => {
           const text = await err.response.data.text();
           const json = JSON.parse(text);
           if (json.message) errMsg = json.message;
-        } catch {}
+        } catch { }
       } else if (err.response?.data?.message) {
         errMsg = err.response.data.message;
       }
       alert(errMsg);
     } finally {
       setDownloadingPdf(false);
+      fetchPdfStatus();
+    }
+  };
+
+  const handleTriggerAsyncGeneration = async () => {
+    if (!order) return;
+    if (!canPrintBatch) {
+      alert(printBlockReason || 'Печать партии заблокирована.');
+      return;
+    }
+    setTriggeringAsync(true);
+    try {
+      const res = await apiClient.post(`/orders/${order.id}/generate-async`);
+      fetchPdfStatus();
+      if (res.data?.message) {
+        // non-blocking
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Ошибка запуска фоновой генерации');
+    } finally {
+      setTriggeringAsync(false);
       fetchPdfStatus();
     }
   };
@@ -715,7 +737,7 @@ export const OrderDetailPage: React.FC = () => {
           const text = await err.response.data.text();
           const json = JSON.parse(text);
           if (json.message) errMsg = json.message;
-        } catch {}
+        } catch { }
       } else if (err.response?.data?.message) {
         errMsg = err.response.data.message;
       }
@@ -755,23 +777,23 @@ export const OrderDetailPage: React.FC = () => {
   // If custom layout design is requested, adapt the stages to include design/approval step
   const STEPS = isStickerDesign
     ? [
-        { key: 'NEW', title: 'Создан', desc: 'Оформлен в системе' },
-        {
-          key: 'PROCESSING',
-          title: approvalStatus === 'IN_DESIGN' ? 'Разработка макета' : 'Согласование макета',
-          desc:
-            approvalStatus === 'APPROVED'
-              ? 'Макет утвержден'
-              : approvalStatus === 'CHANGES_REQUESTED'
+      { key: 'NEW', title: 'Создан', desc: 'Оформлен в системе' },
+      {
+        key: 'PROCESSING',
+        title: approvalStatus === 'IN_DESIGN' ? 'Разработка макета' : 'Согласование макета',
+        desc:
+          approvalStatus === 'APPROVED'
+            ? 'Макет утвержден'
+            : approvalStatus === 'CHANGES_REQUESTED'
               ? 'Правки в работе'
               : approvalStatus === 'WAITING_APPROVAL'
-              ? 'Ожидает согласования'
-              : 'Дизайнер готовит макет',
-        },
-        baseSteps[2] || { key: 'PRINTING', title: 'Печать кодов', desc: 'Печать этикеток партии' },
-        baseSteps[3] || { key: 'STICKERING', title: 'Стикеровка', desc: 'Оклейка товаров на складе' },
-        baseSteps[4] || { key: 'COMPLETED', title: 'Выполнен', desc: 'Партия готова и сдана в Танба' },
-      ]
+                ? 'Ожидает согласования'
+                : 'Дизайнер готовит макет',
+      },
+      baseSteps[2] || { key: 'PRINTING', title: 'Печать кодов', desc: 'Печать этикеток партии' },
+      baseSteps[3] || { key: 'STICKERING', title: 'Стикеровка', desc: 'Оклейка товаров на складе' },
+      baseSteps[4] || { key: 'COMPLETED', title: 'Выполнен', desc: 'Партия готова и сдана в Танба' },
+    ]
     : baseSteps;
 
   const getStepIndex = (st: string) => {
@@ -805,11 +827,11 @@ export const OrderDetailPage: React.FC = () => {
         defaultWarehouse = whList[0].address || whList[0].name;
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 
   return (
     <div className="space-y-6 w-full pb-16">
-      
+
       {/* Top Breadcrumb */}
       <div>
         <Link
@@ -877,35 +899,32 @@ export const OrderDetailPage: React.FC = () => {
               return (
                 <div
                   key={step.key}
-                  className={`relative p-4 rounded-xl border transition-all ${
-                    isCurrent
+                  className={`relative p-4 rounded-xl border transition-all ${isCurrent
                       ? 'bg-blue-50/60 border-[#0082FB] ring-1 ring-[#0082FB]'
                       : isDone
-                      ? 'bg-emerald-50/50 border-emerald-200/80'
-                      : 'bg-gray-50/40 border-gray-200/70'
-                  }`}
+                        ? 'bg-emerald-50/50 border-emerald-200/80'
+                        : 'bg-gray-50/40 border-gray-200/70'
+                    }`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black ${
-                        isDone
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black ${isDone
                           ? 'bg-emerald-500 text-white'
                           : isCurrent
-                          ? 'bg-[#0082FB] text-white ring-2 ring-blue-200'
-                          : 'bg-gray-200 text-gray-500'
-                      }`}
+                            ? 'bg-[#0082FB] text-white ring-2 ring-blue-200'
+                            : 'bg-gray-200 text-gray-500'
+                        }`}
                     >
                       {isDone ? <Check className="w-3.5 h-3.5" /> : idx + 1}
                     </div>
 
                     <span
-                      className={`text-[10px] font-bold uppercase tracking-wider ${
-                        isCurrent
+                      className={`text-[10px] font-bold uppercase tracking-wider ${isCurrent
                           ? 'text-[#0082FB]'
                           : isDone
-                          ? 'text-emerald-700'
-                          : 'text-gray-400'
-                      }`}
+                            ? 'text-emerald-700'
+                            : 'text-gray-400'
+                        }`}
                     >
                       {isCurrent ? 'Текущий' : isDone ? 'Готово' : 'Ожидает'}
                     </span>
@@ -922,10 +941,10 @@ export const OrderDetailPage: React.FC = () => {
 
       {/* Main 2-Column Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        
+
         {/* Left Column: Specification & Documents (2 cols) */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Order Specification Card */}
           <div className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-xs space-y-5">
             <div className="border-b border-gray-100 pb-3">
@@ -1084,23 +1103,22 @@ export const OrderDetailPage: React.FC = () => {
 
                 <div className="flex flex-col items-end self-start sm:self-auto">
                   <span
-                    className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border ${
-                      isReusedTemplate || approvalStatus === 'APPROVED'
+                    className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border ${isReusedTemplate || approvalStatus === 'APPROVED'
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
                         : approvalStatus === 'CHANGES_REQUESTED'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200/80'
-                        : approvalStatus === 'WAITING_APPROVAL'
-                        ? 'bg-blue-50 text-[#0082FB] border-blue-200/80'
-                        : 'bg-gray-100 text-[#475569] border-gray-200'
-                    }`}
+                          ? 'bg-amber-50 text-amber-700 border-amber-200/80'
+                          : approvalStatus === 'WAITING_APPROVAL'
+                            ? 'bg-blue-50 text-[#0082FB] border-blue-200/80'
+                            : 'bg-gray-100 text-[#475569] border-gray-200'
+                      }`}
                   >
                     {isReusedTemplate || approvalStatus === 'APPROVED'
                       ? '✓ Утвержден'
                       : approvalStatus === 'CHANGES_REQUESTED'
-                      ? 'Запрошены правки'
-                      : approvalStatus === 'WAITING_APPROVAL'
-                      ? 'Ожидает согласования'
-                      : 'В разработке у дизайнера'}
+                        ? 'Запрошены правки'
+                        : approvalStatus === 'WAITING_APPROVAL'
+                          ? 'Ожидает согласования'
+                          : 'В разработке у дизайнера'}
                   </span>
                   {(isReusedTemplate || approvalStatus === 'APPROVED') && approvalData.approvedAt && (
                     <span className="text-[10px] text-gray-400 mt-1 font-medium">
@@ -1452,11 +1470,10 @@ export const OrderDetailPage: React.FC = () => {
                 onDragEnter={handleCodesDragEnter}
                 onDragLeave={handleCodesDragLeave}
                 onDrop={handleCodesDrop}
-                className={`border-2 border-dashed rounded-xl p-6 text-center space-y-3 transition-all ${
-                  isCodesDragOver
+                className={`border-2 border-dashed rounded-xl p-6 text-center space-y-3 transition-all ${isCodesDragOver
                     ? 'border-[#0082FB] bg-blue-50/80 ring-2 ring-[#0082FB]/20 scale-[1.01]'
                     : 'border-gray-200 bg-gray-50/50 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center mx-auto text-gray-400 shadow-xs pointer-events-none">
                   <Upload className={`w-5 h-5 transition-colors ${isCodesDragOver ? 'text-[#0082FB] animate-bounce' : 'text-gray-400'}`} />
@@ -1506,7 +1523,7 @@ export const OrderDetailPage: React.FC = () => {
                         <p className="text-[11px] text-[#64748B] mt-0.5">
                           {pdfStatus?.isGenerating || downloadingPdf ? (
                             <span className="text-blue-700 font-medium">
-                              Формирование на сервере • {order.itemsCount.toLocaleString()} кодов • {pdfStatus?.activeJob?.elapsedSec ?? 0} сек (можно обновлять страницу)
+                              Формирование на сервере • {order.itemsCount.toLocaleString()} кодов • {pdfStatus?.activeJob?.elapsedSec ?? 0} сек
                             </span>
                           ) : (
                             <span>
@@ -1533,28 +1550,39 @@ export const OrderDetailPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowRollModal(true)}
-                        className={`inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 ${
-                          canPrintBatch
+                        className={`inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 ${canPrintBatch
                             ? 'bg-white hover:bg-gray-100 text-[#111827] border border-gray-200 cursor-pointer'
                             : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-pointer'
-                        }`}
+                          }`}
                         title={canPrintBatch ? 'Разбить тираж на рулоны (по 500, 1000 или 2000 этикеток) для термопринтера' : printBlockReason}
                       >
                         <Layers className={`w-3.5 h-3.5 ${canPrintBatch ? 'text-[#0082FB]' : 'text-slate-400'}`} />
                         Скачать по рулонам
                       </button>
 
+                      {!pdfStatus?.hasFullPdf && !pdfStatus?.isGenerating && order.itemsCount >= 1000 && (
+                        <button
+                          type="button"
+                          onClick={handleTriggerAsyncGeneration}
+                          disabled={triggeringAsync || !canPrintBatch}
+                          className="inline-flex items-center justify-center gap-1.5 h-9 bg-slate-50 hover:bg-slate-100 text-[#111827] border border-slate-300 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50"
+                          title="Запустить подготовку всей партии на сервере в фоне"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 text-[#0082FB] ${triggeringAsync ? 'animate-spin' : ''}`} />
+                          {triggeringAsync ? 'Запуск...' : 'Сгенерировать в фоне'}
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={handleDownloadPdf}
                         disabled={downloadingPdf || pdfStatus?.isGenerating || !canPrintBatch}
-                        className={`inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 ${
-                          canPrintBatch && !downloadingPdf && !pdfStatus?.isGenerating
+                        className={`inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 ${canPrintBatch && !downloadingPdf && !pdfStatus?.isGenerating
                             ? 'bg-[#0082FB] hover:bg-[#0070DA] text-white cursor-pointer active:scale-95'
                             : (downloadingPdf || pdfStatus?.isGenerating)
-                            ? 'bg-blue-600 text-white opacity-95 cursor-wait'
-                            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                        }`}
+                              ? 'bg-blue-600 text-white opacity-95 cursor-wait'
+                              : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                          }`}
                         title={canPrintBatch ? 'Скачать итоговый PDF для принтера' : printBlockReason}
                       >
                         {downloadingPdf || pdfStatus?.isGenerating ? (
@@ -1567,11 +1595,39 @@ export const OrderDetailPage: React.FC = () => {
                         {downloadingPdf || pdfStatus?.isGenerating
                           ? `Генерация (${pdfStatus?.activeJob?.elapsedSec ?? 0} сек)...`
                           : canPrintBatch
-                          ? (pdfStatus?.fullPdfSizeMb ? `Скачать все (${pdfStatus.fullPdfSizeMb} МБ)` : 'Скачать все (PDF)')
-                          : 'Печать заблокирована'}
+                            ? (pdfStatus?.fullPdfSizeMb ? `Скачать все (${pdfStatus.fullPdfSizeMb} МБ)` : 'Скачать все (PDF)')
+                            : 'Печать заблокирована'}
                       </button>
                     </div>
                   </div>
+
+                  {/* Clean native progress bar during active server generation */}
+                  {(pdfStatus?.isGenerating || downloadingPdf) && (() => {
+                    const currentProg = pdfStatus?.activeJob?.progress;
+                    const progPct = currentProg?.percent ?? (pdfStatus?.activeJob?.elapsedSec ? Math.min(95, Math.round(pdfStatus.activeJob.elapsedSec * 4)) : 5);
+                    const progCurrent = currentProg?.current ?? (pdfStatus?.activeJob?.elapsedSec ? Math.min(order.itemsCount, Math.round(pdfStatus.activeJob.elapsedSec * 40)) : 0);
+                    const progTotal = currentProg?.total ?? order.itemsCount;
+
+                    return (
+                      <div className="mt-3 p-3.5 bg-blue-50/40 rounded-xl border border-blue-200/70 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-gray-700">
+                          <span className="flex items-center gap-1.5 text-blue-700 font-extrabold">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0082FB]" />
+                            Рендеринг этикеток: {progPct}%
+                          </span>
+                          <span className="font-mono text-gray-600 text-[11px]">
+                            {progCurrent.toLocaleString()} / {progTotal.toLocaleString()} шт. • {pdfStatus?.activeJob?.elapsedSec ?? 0} сек
+                          </span>
+                        </div>
+                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-[#0082FB] rounded-full transition-all duration-300 ease-out"
+                            style={{ width: `${Math.max(2, Math.min(100, progPct))}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {!canPrintBatch && (
                     <div className="mt-3 p-3.5 rounded-2xl border border-blue-200/90 bg-gradient-to-r from-blue-50/90 via-sky-50/40 to-white flex items-center gap-3.5 shadow-xs">
@@ -1636,11 +1692,11 @@ export const OrderDetailPage: React.FC = () => {
           </div>
 
 
-          </div>
+        </div>
 
         {/* Right Column: Financial Summary & Notes (1 col) */}
         <div className="lg:col-span-1 space-y-6">
-          
+
           {/* Financial Summary & Payment Breakdown */}
           <div className="bg-white border border-gray-200/80 rounded-2xl p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-gray-100">
@@ -1648,11 +1704,10 @@ export const OrderDetailPage: React.FC = () => {
                 <Receipt className="w-3.5 h-3.5 text-gray-500" />
                 Финансовый расчет
               </h2>
-              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                order.paymentStatus === 'PAID'
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${order.paymentStatus === 'PAID'
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : 'bg-amber-50 text-amber-700 border-amber-200'
-              }`}>
+                }`}>
                 {order.paymentStatus === 'PAID' ? 'Оплачен' : 'К оплате'}
               </span>
             </div>
@@ -1666,10 +1721,10 @@ export const OrderDetailPage: React.FC = () => {
                     {parsedNotes.confirmedEstimate || order.extraServices?.includes('ON_SITE_STICKERING')
                       ? 'Выездная оклейка партии на складе'
                       : order.tariffType === 'DIGITAL'
-                      ? 'Генерация кодов и макетов Data Matrix'
-                      : order.tariffType === 'PRINT'
-                      ? 'Печать тиража рулонов маркировки'
-                      : 'Маркировка и стикеровка партии'}
+                        ? 'Генерация кодов и макетов Data Matrix'
+                        : order.tariffType === 'PRINT'
+                          ? 'Печать тиража рулонов маркировки'
+                          : 'Маркировка и стикеровка партии'}
                   </span>
                   <span className="font-bold text-[#111827]">{(order.itemsCount * order.pricePerItem).toLocaleString()} ₸</span>
                 </div>

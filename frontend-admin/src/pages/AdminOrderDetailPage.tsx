@@ -799,7 +799,7 @@ export const AdminOrderDetailPage: React.FC = () => {
             templateElements = Array.isArray(parsed) ? parsed : parsed.elements || [];
             if (parsed.widthMm) w = parsed.widthMm;
             if (parsed.heightMm) h = parsed.heightMm;
-          } catch {}
+          } catch { }
         }
       }
 
@@ -919,10 +919,10 @@ export const AdminOrderDetailPage: React.FC = () => {
       setOrder((prev) =>
         prev
           ? {
-              ...prev,
-              pdfUrl: generatedPath,
-              stickerLayout: { widthMm: w, heightMm: h, elements: templateElements },
-            }
+            ...prev,
+            pdfUrl: generatedPath,
+            stickerLayout: { widthMm: w, heightMm: h, elements: templateElements },
+          }
           : prev
       );
       setPdfSuccessMsg(`PDF этикеток партии (${order.itemsCount.toLocaleString()} шт.) успешно сформирован на основе макета!`);
@@ -1149,7 +1149,7 @@ export const AdminOrderDetailPage: React.FC = () => {
 
       {/* Main Grid: Specification & Sticker Workflow */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        
+
         {/* Left Column (2 cols): Layout & Specifications */}
         <div className="lg:col-span-2 space-y-6">
 
@@ -1472,11 +1472,10 @@ export const AdminOrderDetailPage: React.FC = () => {
                 {/* Markirovka message banner */}
                 {markirovkaMsg && (
                   <div
-                    className={`text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 border ${
-                      markirovkaMsg.type === 'success'
+                    className={`text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 border ${markirovkaMsg.type === 'success'
                         ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                         : 'bg-amber-50 border-amber-200 text-amber-800'
-                    }`}
+                      }`}
                   >
                     {markirovkaMsg.type === 'success' ? (
                       <Check className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -1499,11 +1498,10 @@ export const AdminOrderDetailPage: React.FC = () => {
                       </span>
                       {mOrder.account?.environment && (
                         <span
-                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                            mOrder.account.environment === 'PROD'
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${mOrder.account.environment === 'PROD'
                               ? 'bg-rose-50 text-rose-700 border border-rose-200'
                               : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}
+                            }`}
                         >
                           {mOrder.account.environment}
                         </span>
@@ -1564,13 +1562,12 @@ export const AdminOrderDetailPage: React.FC = () => {
                 {order.markirovkaReports && order.markirovkaReports.length > 0 && (() => {
                   const lastReport = order.markirovkaReports[0];
                   return (
-                    <div className={`text-xs font-medium px-4 py-2.5 rounded-xl flex items-center justify-between gap-2 border ${
-                      lastReport.status === 'ACCEPTED'
+                    <div className={`text-xs font-medium px-4 py-2.5 rounded-xl flex items-center justify-between gap-2 border ${lastReport.status === 'ACCEPTED'
                         ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                         : lastReport.status === 'REJECTED'
-                        ? 'bg-rose-50 border-rose-200 text-rose-800'
-                        : 'bg-blue-50 border-blue-200 text-blue-800'
-                    }`}>
+                          ? 'bg-rose-50 border-rose-200 text-rose-800'
+                          : 'bg-blue-50 border-blue-200 text-blue-800'
+                      }`}>
                       <div className="flex items-center gap-2">
                         {lastReport.status === 'ACCEPTED' ? (
                           <Check className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -1583,8 +1580,8 @@ export const AdminOrderDetailPage: React.FC = () => {
                           {lastReport.status === 'ACCEPTED'
                             ? `Отчет о нанесении принят ИС МПТ (${lastReport.codesCount} шт.)`
                             : lastReport.status === 'REJECTED'
-                            ? `Отчет о нанесении отклонен: ${lastReport.errorDetails || 'ошибка'}`
-                            : `Отчет о нанесении отправлен (${lastReport.codesCount} шт.)`}
+                              ? `Отчет о нанесении отклонен: ${lastReport.errorDetails || 'ошибка'}`
+                              : `Отчет о нанесении отправлен (${lastReport.codesCount} шт.)`}
                         </span>
                       </div>
                       {lastReport.externalReportId && (
@@ -1599,11 +1596,10 @@ export const AdminOrderDetailPage: React.FC = () => {
                 {/* Utilisation fresh message banner */}
                 {utilisationMsg && (
                   <div
-                    className={`text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 border ${
-                      utilisationMsg.type === 'success'
+                    className={`text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 border ${utilisationMsg.type === 'success'
                         ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                         : 'bg-rose-50 border-rose-200 text-rose-800'
-                    }`}
+                      }`}
                   >
                     {utilisationMsg.type === 'success' ? (
                       <Check className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -1626,8 +1622,8 @@ export const AdminOrderDetailPage: React.FC = () => {
                         isReportAccepted
                           ? 'Эмиссия и нанесение кодов в ИС МПТ полностью завершены'
                           : isCompleted
-                          ? 'Все коды уже получены и сохранены в БД'
-                          : 'Синхронизировать статус и коды с ИС МПТ'
+                            ? 'Все коды уже получены и сохранены в БД'
+                            : 'Синхронизировать статус и коды с ИС МПТ'
                       }
                     >
                       {isCompleted ? (
@@ -1638,10 +1634,10 @@ export const AdminOrderDetailPage: React.FC = () => {
                       {syncingMarkirovka
                         ? 'Синхронизация...'
                         : isReportAccepted
-                        ? 'Эмиссия завершена'
-                        : isCompleted
-                        ? 'Коды синхронизированы'
-                        : 'Синхронизировать с ИС МПТ'}
+                          ? 'Эмиссия завершена'
+                          : isCompleted
+                            ? 'Коды синхронизированы'
+                            : 'Синхронизировать с ИС МПТ'}
                     </button>
 
                     <button
@@ -1653,17 +1649,16 @@ export const AdminOrderDetailPage: React.FC = () => {
                         isReportPending ||
                         (!order.codesFileUrl && !(order._count?.codeItems && order._count.codeItems > 0))
                       }
-                      className={`inline-flex items-center gap-1.5 border text-xs font-semibold px-3.5 py-2 rounded-xl shadow-2xs transition-all ${
-                        isReportAccepted
+                      className={`inline-flex items-center gap-1.5 border text-xs font-semibold px-3.5 py-2 rounded-xl shadow-2xs transition-all ${isReportAccepted
                           ? 'bg-emerald-50/70 border-emerald-200 text-emerald-800 cursor-not-allowed opacity-90'
                           : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
-                      }`}
+                        }`}
                       title={
                         isReportAccepted
                           ? 'Отчет о нанесении уже успешно принят ИС МПТ'
                           : isReportPending
-                          ? 'Отчет уже отправлен и ожидает подтверждения ИС МПТ'
-                          : 'Отправить в ИС МПТ отчет о фактическом нанесении кодов маркировки'
+                            ? 'Отчет уже отправлен и ожидает подтверждения ИС МПТ'
+                            : 'Отправить в ИС МПТ отчет о фактическом нанесении кодов маркировки'
                       }
                     >
                       {isReportAccepted ? (
@@ -1674,10 +1669,10 @@ export const AdminOrderDetailPage: React.FC = () => {
                       {submittingUtilisation
                         ? 'Отправка отчета...'
                         : isReportAccepted
-                        ? 'Отчет о нанесении принят'
-                        : isReportPending
-                        ? 'Отчет на проверке'
-                        : 'Отправить отчет о нанесении КМ'}
+                          ? 'Отчет о нанесении принят'
+                          : isReportPending
+                            ? 'Отчет на проверке'
+                            : 'Отправить отчет о нанесении КМ'}
                     </button>
                   </div>
                 </div>
@@ -1768,11 +1763,10 @@ export const AdminOrderDetailPage: React.FC = () => {
                 onDragEnter={handleCodesDragEnter}
                 onDragLeave={handleCodesDragLeave}
                 onDrop={handleCodesDrop}
-                className={`rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all relative border ${
-                  isCodesDragOver
+                className={`rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all relative border ${isCodesDragOver
                     ? 'border-[#0082FB] bg-blue-50/90 ring-2 ring-[#0082FB]/20 scale-[1.005]'
                     : 'bg-gray-50 border-gray-200'
-                }`}
+                  }`}
               >
                 {isCodesDragOver && (
                   <div className="absolute inset-0 bg-blue-50/95 rounded-xl flex items-center justify-center border-2 border-dashed border-[#0082FB] z-10 pointer-events-none">
@@ -1844,11 +1838,10 @@ export const AdminOrderDetailPage: React.FC = () => {
                 onDragEnter={handleCodesDragEnter}
                 onDragLeave={handleCodesDragLeave}
                 onDrop={handleCodesDrop}
-                className={`border-2 border-dashed rounded-xl p-6 text-center space-y-3 transition-all ${
-                  isCodesDragOver
+                className={`border-2 border-dashed rounded-xl p-6 text-center space-y-3 transition-all ${isCodesDragOver
                     ? 'border-[#0082FB] bg-blue-50/80 ring-2 ring-[#0082FB]/20 scale-[1.01]'
                     : 'border-gray-200 bg-gray-50/50 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center mx-auto text-gray-400 shadow-xs pointer-events-none">
                   <Upload className={`w-5 h-5 transition-colors ${isCodesDragOver ? 'text-[#0082FB] animate-bounce' : 'text-gray-400'}`} />
@@ -1905,23 +1898,22 @@ export const AdminOrderDetailPage: React.FC = () => {
 
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border ${
-                      approvalStatus === 'APPROVED'
+                    className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border ${approvalStatus === 'APPROVED'
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : approvalStatus === 'CHANGES_REQUESTED'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : approvalStatus === 'WAITING_APPROVAL'
-                        ? 'bg-blue-50 text-blue-700 border-blue-200'
-                        : 'bg-gray-100 text-gray-700 border-gray-200'
-                    }`}
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : approvalStatus === 'WAITING_APPROVAL'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : 'bg-gray-100 text-gray-700 border-gray-200'
+                      }`}
                   >
                     {approvalStatus === 'APPROVED'
                       ? '✓ Утвержден клиентом'
                       : approvalStatus === 'CHANGES_REQUESTED'
-                      ? 'Запрошены правки'
-                      : approvalStatus === 'WAITING_APPROVAL'
-                      ? 'Ожидает согласования клиентом'
-                      : 'В разработке у дизайнера'}
+                        ? 'Запрошены правки'
+                        : approvalStatus === 'WAITING_APPROVAL'
+                          ? 'Ожидает согласования клиентом'
+                          : 'В разработке у дизайнера'}
                   </span>
                 </div>
               </div>
@@ -2196,7 +2188,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                       Идет формирование PDF партии ({order.itemsCount.toLocaleString()} шт.)...
                     </span>
                     <span className="text-[11px] text-[#64748B]">
-                      Фоновый процесс на сервере • Время работы: {pdfStatus?.activeJob?.elapsedSec ?? 0} сек • Можно обновлять страницу (F5)
+                      Фоновый процесс на сервере • Время работы: {pdfStatus?.activeJob?.elapsedSec ?? 0} сек
                     </span>
                   </div>
                 </div>
@@ -2490,11 +2482,10 @@ export const AdminOrderDetailPage: React.FC = () => {
                       key={step.st}
                       type="button"
                       onClick={() => handleSaveStatus(step.st)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                        isCurrent
+                      className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${isCurrent
                           ? 'bg-[#111827] text-white border-[#111827] shadow-xs'
                           : 'bg-gray-50/70 hover:bg-gray-100 text-gray-700 border-gray-200'
-                      }`}
+                        }`}
                     >
                       <div>
                         <span className="text-xs font-extrabold block">{step.label}</span>
@@ -2546,25 +2537,25 @@ export const AdminOrderDetailPage: React.FC = () => {
       {/* Modal: Отчет о нанесении кодов маркировки (ИС МПТ / СУЗ) */}
       {isUtilisationModalOpen && order && createPortal(
         <div
-          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50"
           onClick={(e) => {
             if (e.target === e.currentTarget && !submittingUtilisation) {
               setIsUtilisationModalOpen(false);
             }
           }}
         >
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-xl w-full p-6 sm:p-7 space-y-4 animate-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col">
+          <div className="bg-white rounded-xl shadow-xl border border-gray-200 max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-start justify-between border-b border-gray-100 pb-3 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
-                  <FileCheck2 className="w-5 h-5" />
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200/80 text-gray-700 flex items-center justify-center shrink-0">
+                  <FileCheck2 className="w-4 h-4 text-gray-700" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-[#111827]">
+                  <h3 className="text-sm font-bold text-gray-900">
                     Отчет о нанесении кодов маркировки
                   </h3>
-                  <p className="text-xs text-[#64748B] mt-0.5">
+                  <p className="text-[11px] text-gray-500">
                     Заказ {order.orderNumber} • ИС МПТ / СУЗ (Казахстан)
                   </p>
                 </div>
@@ -2573,29 +2564,29 @@ export const AdminOrderDetailPage: React.FC = () => {
                 type="button"
                 onClick={() => !submittingUtilisation && setIsUtilisationModalOpen(false)}
                 disabled={submittingUtilisation}
-                className="text-gray-400 hover:text-black p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
+                className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Scrollable Modal Body */}
-            <div className="space-y-4 overflow-y-auto pr-1">
+            <div className="space-y-3.5 overflow-y-auto pr-1 flex-1">
               {/* Order Info Summary */}
-              <div className="bg-[#F8FAFC] border border-gray-200/80 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-2.5 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-[#64748B] font-medium">Партия:</span>
-                  <span className="font-extrabold text-[#111827] font-mono">{order.orderNumber}</span>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-500 font-medium">Партия:</span>
+                  <span className="font-semibold text-gray-900 font-mono">{order.orderNumber}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[#64748B] font-medium">Товарная группа:</span>
-                  <span className="font-bold text-[#0082FB] bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200/60">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-500 font-medium">Товарная группа:</span>
+                  <span className="font-semibold text-gray-900">
                     {CATEGORY_NAMES[order.category] || order.category}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[#64748B] font-medium">Количество КМ:</span>
-                  <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200/60">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-500 font-medium">Количество КМ:</span>
+                  <span className="font-semibold text-gray-900">
                     {order.itemsCount} шт.
                   </span>
                 </div>
@@ -2605,7 +2596,7 @@ export const AdminOrderDetailPage: React.FC = () => {
               <div className="space-y-3.5 text-left">
                 {/* 1. Способ выпуска в оборот */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Способ выпуска в оборот *
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -2625,30 +2616,30 @@ export const AdminOrderDetailPage: React.FC = () => {
                             setUtilisationCountry('RU');
                           }
                         }}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${
                           utilisationReleaseType === st.id
-                            ? 'border-[#0082FB] bg-blue-50/70 text-[#0082FB] ring-1 ring-[#0082FB]'
+                            ? 'border-blue-500 bg-blue-50/60 text-blue-900'
                             : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                         }`}
                       >
-                        <div className="font-bold text-xs">{st.label}</div>
-                        <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">{st.desc}</div>
+                        <div className="font-semibold text-xs">{st.label}</div>
+                        <div className="text-[11px] text-gray-500 mt-0.5 leading-tight">{st.desc}</div>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 {/* 2. Страна производства & Серия/партия */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
                       Страна производства *
                     </label>
                     <select
                       value={utilisationCountry}
                       onChange={(e) => setUtilisationCountry(e.target.value)}
                       disabled={utilisationReleaseType === 'PRODUCTION'}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB] transition-all disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 text-gray-800 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                     >
                       {utilisationReleaseType !== 'IMPORT' && (
                         <option value="KZ">Казахстан (KZ)</option>
@@ -2668,7 +2659,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
                       Серия / Партия товара
                     </label>
                     <input
@@ -2676,15 +2667,15 @@ export const AdminOrderDetailPage: React.FC = () => {
                       value={utilisationSeries}
                       onChange={(e) => setUtilisationSeries(e.target.value)}
                       placeholder={order.orderNumber}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB] transition-all"
+                      className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 text-gray-800"
                     />
                   </div>
                 </div>
 
                 {/* 3. Дата производства */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-bold text-gray-700 uppercase">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-gray-700">
                       Дата и время производства
                     </label>
                     <button
@@ -2693,7 +2684,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                         const now = new Date(Date.now() - 2 * 3600 * 1000);
                         setUtilisationProdDate(now.toISOString().slice(0, 16));
                       }}
-                      className="text-[11px] font-bold text-[#0082FB] hover:underline cursor-pointer"
+                      className="text-[11px] font-medium text-[#0082FB] hover:underline cursor-pointer"
                     >
                       Подставить текущую дату
                     </button>
@@ -2702,9 +2693,9 @@ export const AdminOrderDetailPage: React.FC = () => {
                     type="datetime-local"
                     value={utilisationProdDate}
                     onChange={(e) => setUtilisationProdDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB] transition-all"
+                    className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 text-gray-800"
                   />
-                  <p className="text-[10px] text-gray-500 mt-1">
+                  <p className="text-[11px] text-gray-500 mt-1">
                     Если оставить пустым, система автоматически передаст дату текущей смены (в соответствии с регламентом ИС МПТ).
                   </p>
                 </div>
@@ -2712,11 +2703,11 @@ export const AdminOrderDetailPage: React.FC = () => {
                 {/* 4. Срок годности - CONDITIONAL based on category */}
                 {hasCategoryExpiration(order.category) ? (
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-bold text-gray-700 uppercase">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-gray-700">
                         Срок годности (Годен до) *
                       </label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         {[
                           { label: '+1 год', years: 1 },
                           { label: '+2 года', years: 2 },
@@ -2730,7 +2721,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                               const exp = new Date(base.getTime() + item.years * 365 * 24 * 3600 * 1000);
                               setUtilisationExpDate(exp.toISOString().slice(0, 16));
                             }}
-                            className="text-[10px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded-md cursor-pointer transition-colors"
+                            className="text-[11px] font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded cursor-pointer transition-colors"
                           >
                             {item.label}
                           </button>
@@ -2741,14 +2732,14 @@ export const AdminOrderDetailPage: React.FC = () => {
                       type="datetime-local"
                       value={utilisationExpDate}
                       onChange={(e) => setUtilisationExpDate(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#0082FB] transition-all"
+                      className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 text-gray-800"
                     />
-                    <p className="text-[10px] text-[#0082FB] font-medium mt-1">
+                    <p className="text-[11px] text-gray-500 mt-1">
                       Обязательное поле для категории «{CATEGORY_NAMES[order.category] || order.category}».
                     </p>
                   </div>
                 ) : (
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-200/70 text-[11px] text-gray-500 flex items-center gap-2">
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-600 flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span>
                       Для категории <strong>{CATEGORY_NAMES[order.category] || order.category}</strong> указание срока годности не требуется стандартами маркировки Казахстана.
@@ -2759,12 +2750,12 @@ export const AdminOrderDetailPage: React.FC = () => {
             </div>
 
             {/* Modal Actions Footer */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 shrink-0">
+            <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100 shrink-0">
               <button
                 type="button"
                 onClick={() => setIsUtilisationModalOpen(false)}
                 disabled={submittingUtilisation}
-                className="px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-50 cursor-pointer disabled:opacity-50"
+                className="px-3.5 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
                 Отмена
               </button>
@@ -2772,17 +2763,17 @@ export const AdminOrderDetailPage: React.FC = () => {
                 type="button"
                 onClick={handleConfirmSubmitUtilisation}
                 disabled={submittingUtilisation}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-extrabold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#0082FB] hover:bg-[#0072de] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submittingUtilisation ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    Отправка в ИС МПТ...
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Отправка в ИС МПТ...</span>
                   </>
                 ) : (
                   <>
-                    <FileCheck2 className="w-4 h-4 text-white" />
-                    Подтвердить и отправить отчет
+                    <FileCheck2 className="w-3.5 h-3.5" />
+                    <span>Подтвердить и отправить отчет</span>
                   </>
                 )}
               </button>

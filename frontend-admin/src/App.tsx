@@ -13,8 +13,12 @@ import { AdminLabelsRegistryPage } from './pages/AdminLabelsRegistryPage';
 import { AdminOrderDetailPage } from './pages/AdminOrderDetailPage';
 import { AdminUserDetailPage } from './pages/AdminUserDetailPage';
 import { AdminStickeringCalcPage } from './pages/AdminStickeringCalcPage';
-import { AdminSystemPage } from './pages/AdminSystemPage';
-import { AdminPdfQueuePage } from './pages/AdminPdfQueuePage';
+import { AdminSystemLayout } from './pages/AdminSystemLayout';
+import { AdminSystemLogsPage } from './pages/system/AdminSystemLogsPage';
+import { AdminSystemBackupsPage } from './pages/system/AdminSystemBackupsPage';
+import { AdminSystemTelegramPage } from './pages/system/AdminSystemTelegramPage';
+import { AdminSystemStoragePage } from './pages/system/AdminSystemStoragePage';
+import { AdminSystemPdfQueuePage } from './pages/system/AdminSystemPdfQueuePage';
 import { AdminMarkirovkaAccountsPage } from './pages/AdminMarkirovkaAccountsPage';
 import { AdminMarkirovkaOrdersPage } from './pages/AdminMarkirovkaOrdersPage';
 import { AdminMarkirovkaUtilisationPage } from './pages/AdminMarkirovkaUtilisationPage';
@@ -165,18 +169,21 @@ export const App: React.FC = () => {
             path="/system"
             element={
               <ProtectedAdminLayout>
-                <AdminSystemPage />
+                <AdminSystemLayout />
               </ProtectedAdminLayout>
             }
-          />
+          >
+            <Route index element={<Navigate to="/system/logs" replace />} />
+            <Route path="logs" element={<AdminSystemLogsPage />} />
+            <Route path="backups" element={<AdminSystemBackupsPage />} />
+            <Route path="telegram" element={<AdminSystemTelegramPage />} />
+            <Route path="storage" element={<AdminSystemStoragePage />} />
+            <Route path="pdf-queue" element={<AdminSystemPdfQueuePage />} />
+          </Route>
 
           <Route
             path="/pdf-queue"
-            element={
-              <ProtectedAdminLayout>
-                <AdminPdfQueuePage />
-              </ProtectedAdminLayout>
-            }
+            element={<Navigate to="/system/pdf-queue" replace />}
           />
 
           <Route

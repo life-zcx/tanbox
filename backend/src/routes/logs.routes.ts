@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { handleFrontendLogs, getSystemLogs } from '../controllers/logs.controller';
+import { handleFrontendLogs, getSystemLogs, clearSystemLogs } from '../controllers/logs.controller';
 import { logsRateLimiter } from '../middleware/rateLimiter';
 import { authenticateJWT, requireAdmin } from '../middleware/auth.middleware';
 
@@ -10,5 +10,7 @@ router.post('/frontend', logsRateLimiter, handleFrontendLogs);
 
 // Protected admin endpoint for inspecting server logs
 router.get('/system', authenticateJWT, requireAdmin, getSystemLogs);
+router.post('/system/clear', authenticateJWT, requireAdmin, clearSystemLogs);
+router.delete('/system', authenticateJWT, requireAdmin, clearSystemLogs);
 
 export default router;

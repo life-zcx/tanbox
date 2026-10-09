@@ -79,7 +79,7 @@ api.tanbox.kz {
 
 # --- LOCAL DEVELOPMENT & INTRANET BLOCKS (HTTP) ---
 
-http://tanbox.local, http://localhost, http://127.0.0.1 {
+:80, http://tanbox.local, http://localhost, http://127.0.0.1 {
     import security_headers
     encode gzip zstd
 

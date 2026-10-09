@@ -828,6 +828,34 @@ class TelegramService {
   }
 
   /**
+   * Оповещение о готовности партии PDF этикеток для клиента / менеджера
+   */
+  public async sendPdfReadyNotification(
+    orderNumber: string,
+    count: number,
+    sizeMb: number,
+    clientChatId?: string
+  ) {
+    const msg = [
+      `✅ <b>ПАРТИЯ ЭТИКЕТОК ГОТОВА К СКАЧИВАНИЮ!</b>`,
+      `──────────────────────────────`,
+      `📦 <b>Заказ:</b> <code>${this.escapeHtml(orderNumber)}</code>`,
+      `🏷️ <b>Количество кодов:</b> ${count.toLocaleString('ru-RU')} шт.`,
+      `💾 <b>Размер файла:</b> ${sizeMb} МБ`,
+      `──────────────────────────────`,
+      `🚀 <i>Файл сгенерирован и сохранён на сервере. Скачивание доступно в личном кабинете.</i>`,
+      `⏰ <i>${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' })} (Алматы)</i>`,
+    ].join('\n');
+
+    if (clientChatId) {
+      await this.sendRaw(clientChatId, msg).catch(() => {});
+    }
+    if (this.leadsChatId) {
+      await this.sendRaw(this.leadsChatId, msg).catch(() => {});
+    }
+  }
+
+  /**
    * Оповещение о критической ошибке JavaScript на фронтенде
    */
   public async sendFrontendTelemetryAlert(errorData: {

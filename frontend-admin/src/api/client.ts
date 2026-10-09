@@ -32,7 +32,11 @@ apiClient.interceptors.response.use(
 
     console.error(`[Admin API Error] [${status}] ${url}:`, error.response?.data || message);
 
-    if (error.response?.status === 401 && !url.includes('/auth/login')) {
+    if (
+      error.response?.status === 401 &&
+      !url.includes('/auth/login') &&
+      !url.includes('/markirovka/operations')
+    ) {
       localStorage.removeItem('tanbox_admin_token');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';

@@ -1717,7 +1717,7 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Strict validation: production rolls and batch PDFs MUST have genuine uploaded codes
+    // Strict validation: production rolls and batch PDFs MUST have genuine uploaded/synced codes
     if (rows.length === 0) {
       if (isSample) {
         // Test calibration row for single label sample
@@ -1732,22 +1732,9 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
             number: String(startIndex),
           },
         ];
-      } else if (req.user.role === 'ADMIN') {
-        // If admin generates batch for order where codes file not attached yet, generate full order count
-        const startIndex = await getClientOrderStartIndex(existing.userId, existing.id, existing.createdAt);
-        rows = Array.from({ length: existing.itemsCount }, (_, i) => ({
-          code: `010460000000000021${String(existing.orderNumber).replace(/\D/g, '')}${String(i + 1).padStart(5, '0')}\u001d91FFD0\u001d92dGVzdA==`,
-          barcode: orderBarcode || `20000000${String(i + 1).padStart(5, '0')}`,
-          brand: existing.user?.companyName || 'Бренд',
-          article: existing.orderNumber,
-          index: String(startIndex + i),
-          number: String(startIndex + i),
-          total: String(existing.itemsCount),
-          orderNumber: existing.orderNumber,
-        }));
       } else {
         return res.status(400).json({
-          message: 'Невозможно сформировать рулоны или файл печати: к данному заказу ещё не прикреплен файл с кодами маркировки Data Matrix.',
+          message: 'Невозможно сформировать рулоны или партию: к данному заказу ещё не прикреплены коды маркировки Data Matrix. Если коды заказаны в ИС МПТ, сначала выполните их синхронизацию в заказе.',
         });
       }
     }
@@ -1756,7 +1743,126 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
     req.setTimeout(3600000);
     res.setTimeout(3600000);
 
-    const requestLabelGeneratorPdf = (payload: any): Promise<Buffer> => {
+    let activeMicroReq: http.ClientRequest | null = null;
+
+    // Direct streaming to disk without allocating huge in-memory Buffers (0% RAM leak)
+    const requestLabelGeneratorPdfToFile = (
+      payload: any,
+      targetFilePath: string,
+      trackId: string
+    ): Promise<{ sizeBytes: number }> => {
+      return new Promise((resolve, reject) => {
+        const postData = JSON.stringify(payload);
+        const tempFilePath = `${targetFilePath}.tmp_${Date.now()}`;
+        const fileStream = fs.createWriteStream(tempFilePath);
+
+        let progressInterval: NodeJS.Timeout | null = null;
+        let isEnded = false;
+
+        const cleanupTemp = () => {
+          if (progressInterval) clearInterval(progressInterval);
+          try {
+            fileStream.destroy();
+          } catch {}
+          if (fs.existsSync(tempFilePath)) {
+            try {
+              fs.unlinkSync(tempFilePath);
+            } catch {}
+          }
+        };
+
+        const microReq = http.request(
+          {
+            hostname: process.env.LABEL_GENERATOR_HOST || 'label-generator',
+            port: parseInt(process.env.LABEL_GENERATOR_PORT || '5060', 10),
+            path: `/api/labels/generate-pdf?trackId=${encodeURIComponent(trackId)}`,
+            method: 'POST',
+            timeout: 3600000,
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(postData),
+            },
+          },
+          (microRes) => {
+            if (microRes.statusCode && microRes.statusCode >= 400) {
+              let errData = '';
+              microRes.on('data', (c) => (errData += c));
+              microRes.on('end', () => {
+                cleanupTemp();
+                reject(new Error(`Label generator responded with status ${microRes.statusCode}: ${errData}`));
+              });
+              return;
+            }
+
+            microRes.pipe(fileStream);
+
+            // Poll live progress from label-generator microservice
+            progressInterval = setInterval(() => {
+              if (isEnded) return;
+              const pReq = http.request(
+                {
+                  hostname: process.env.LABEL_GENERATOR_HOST || 'label-generator',
+                  port: parseInt(process.env.LABEL_GENERATOR_PORT || '5060', 10),
+                  path: `/api/labels/progress/${encodeURIComponent(trackId)}`,
+                  method: 'GET',
+                  timeout: 2000,
+                },
+                (pRes) => {
+                  let pData = '';
+                  pRes.on('data', (c) => (pData += c));
+                  pRes.on('end', () => {
+                    try {
+                      const json = JSON.parse(pData);
+                      if (json.found && json.total > 0) {
+                        pdfQueue.updateJobProgress(trackId, json.current, json.total);
+                      }
+                    } catch {}
+                  });
+                }
+              );
+              pReq.on('error', () => {});
+              pReq.end();
+            }, 1000);
+
+            fileStream.on('finish', () => {
+              isEnded = true;
+              if (progressInterval) clearInterval(progressInterval);
+              try {
+                if (fs.existsSync(targetFilePath)) {
+                  fs.unlinkSync(targetFilePath);
+                }
+                fs.renameSync(tempFilePath, targetFilePath);
+                const stat = fs.statSync(targetFilePath);
+                pdfQueue.updateJobProgress(trackId, payload.csvData?.length || 1, payload.csvData?.length || 1);
+                resolve({ sizeBytes: stat.size });
+              } catch (renameErr) {
+                cleanupTemp();
+                reject(renameErr);
+              }
+            });
+
+            fileStream.on('error', (err) => {
+              isEnded = true;
+              cleanupTemp();
+              reject(err);
+            });
+          }
+        );
+
+        activeMicroReq = microReq;
+        microReq.setTimeout(3600000);
+        microReq.on('error', (err) => {
+          isEnded = true;
+          cleanupTemp();
+          reject(err);
+        });
+        microReq.write(postData);
+        microReq.end();
+      });
+    };
+
+    // Direct streaming to HTTP response for lightweight samples (1 page)
+    const requestLabelGeneratorPdfStream = (payload: any, targetRes: Response): Promise<void> => {
       return new Promise((resolve, reject) => {
         const postData = JSON.stringify(payload);
         const microReq = http.request(
@@ -1765,7 +1871,7 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
             port: parseInt(process.env.LABEL_GENERATOR_PORT || '5060', 10),
             path: '/api/labels/generate-pdf',
             method: 'POST',
-            timeout: 3600000,
+            timeout: 60000,
             headers: {
               'Content-Type': 'application/json',
               'Content-Length': Buffer.byteLength(postData),
@@ -1780,12 +1886,12 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
               );
               return;
             }
-            const chunks: Buffer[] = [];
-            microRes.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
-            microRes.on('end', () => resolve(Buffer.concat(chunks)));
+            microRes.pipe(targetRes);
+            microRes.on('end', () => resolve());
           }
         );
-        microReq.setTimeout(3600000);
+        activeMicroReq = microReq;
+        microReq.setTimeout(60000);
         microReq.on('error', (err) => reject(err));
         microReq.write(postData);
         microReq.end();
@@ -1826,41 +1932,66 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
         ? `Заказ ${existing.orderNumber} - Образец`
         : `Заказ ${existing.orderNumber} - Вся партия (${rowsToGenerate.length} шт.)`;
 
-      const buffer = await pdfQueue.enqueue(queueKey, taskDesc, () =>
-        requestLabelGeneratorPdf({ template, csvData: rowsToGenerate })
-      );
-
       if (isSample) {
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-        return res.send(buffer);
+        await pdfQueue.enqueue(
+          queueKey,
+          taskDesc,
+          () => requestLabelGeneratorPdfStream({ template, csvData: rowsToGenerate }, res),
+          () => {
+            if (activeMicroReq) {
+              try {
+                activeMicroReq.destroy();
+              } catch {}
+            }
+          }
+        );
+        return;
       }
 
       if (!fs.existsSync(orderDir)) {
         fs.mkdirSync(orderDir, { recursive: true });
       }
 
-      if (isRoll) {
-        const rollCacheFile = path.join(orderDir, `roll_${rollNum}_${offsetQuery || 0}_${limitQuery || 1000}.pdf`);
-        fs.writeFileSync(rollCacheFile, buffer);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        return res.send(buffer);
-      }
+      const targetPdfFile = isRoll
+        ? path.join(orderDir, `roll_${rollNum}_${offsetQuery || 0}_${limitQuery || 1000}.pdf`)
+        : pdfPath;
 
-      // Save full batch to disk for future fast access
-      fs.writeFileSync(pdfPath, buffer);
+      await pdfQueue.enqueue(
+        queueKey,
+        taskDesc,
+        () => requestLabelGeneratorPdfToFile({ template, csvData: rowsToGenerate }, targetPdfFile, queueKey),
+        () => {
+          if (activeMicroReq) {
+            try {
+              activeMicroReq.destroy();
+            } catch {}
+          }
+        }
+      );
 
-      if (!existing.pdfUrl) {
+      if (!isRoll && !existing.pdfUrl) {
         await prisma.order.update({
           where: { id: existing.id },
           data: { pdfUrl: `/api/orders/${existing.id}/pdf` },
         });
       }
 
+      if (!isRoll) {
+        const stat = fs.statSync(targetPdfFile);
+        const sizeMb = parseFloat((stat.size / (1024 * 1024)).toFixed(2));
+        telegram.sendPdfReadyNotification(
+          existing.orderNumber,
+          rowsToGenerate.length,
+          sizeMb,
+          (existing.user as any)?.telegramChatId
+        ).catch(() => {});
+      }
+
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      return res.send(buffer);
+      return fs.createReadStream(targetPdfFile).pipe(res);
     } catch (genErr: any) {
       console.error('Dynamic PDF generation error:', genErr);
       return res.status(500).json({ message: 'Ошибка генерации PDF файла партии: ' + genErr.message });
@@ -2539,6 +2670,26 @@ export const updatePdfQueueConcurrency = async (req: AuthRequest, res: Response)
   return res.json(pdfQueue.getDetailedStats());
 };
 
+export const cancelPdfQueueJob = async (req: AuthRequest, res: Response) => {
+  if (!req.user || req.user.role !== 'ADMIN') {
+    return res.status(403).json({ message: 'Доступ разрешен только администратору' });
+  }
+  const { id } = req.params;
+  const ok = pdfQueue.cancelTask(id);
+  if (!ok) {
+    return res.status(404).json({ message: 'Задача не найдена или уже завершена' });
+  }
+  return res.json({ message: 'Задача успешно отменена', stats: pdfQueue.getDetailedStats() });
+};
+
+export const clearPdfQueue = async (req: AuthRequest, res: Response) => {
+  if (!req.user || req.user.role !== 'ADMIN') {
+    return res.status(403).json({ message: 'Доступ разрешен только администратору' });
+  }
+  const count = pdfQueue.clearAll();
+  return res.json({ message: `Очередь задач очищена (остановлено: ${count})`, stats: pdfQueue.getDetailedStats() });
+};
+
 export const getOrderPdfStatus = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
@@ -2554,12 +2705,14 @@ export const getOrderPdfStatus = async (req: AuthRequest, res: Response) => {
 
     // Check if files are cached on disk
     const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', order.id);
-    const pdfPath = path.join(orderDir, `order_${order.orderNumber}.pdf`);
-    const hasFullPdf = fs.existsSync(pdfPath);
+    const pdfPath = path.join(orderDir, 'labels.pdf');
+    const legacyPdfPath = path.join(orderDir, `order_${order.orderNumber}.pdf`);
+    const foundPath = fs.existsSync(pdfPath) ? pdfPath : fs.existsSync(legacyPdfPath) ? legacyPdfPath : null;
+    const hasFullPdf = Boolean(foundPath);
     let fullPdfSizeMb = 0;
-    if (hasFullPdf) {
+    if (foundPath) {
       try {
-        fullPdfSizeMb = parseFloat((fs.statSync(pdfPath).size / (1024 * 1024)).toFixed(2));
+        fullPdfSizeMb = parseFloat((fs.statSync(foundPath).size / (1024 * 1024)).toFixed(2));
       } catch {}
     }
 
@@ -2595,6 +2748,293 @@ export const getOrderPdfStatus = async (req: AuthRequest, res: Response) => {
     });
   } catch (err: any) {
     return res.status(500).json({ message: 'Ошибка получения статуса PDF: ' + err.message });
+  }
+};
+
+export const triggerAsyncOrderPdfGeneration = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    const { id } = req.params;
+    const order = await findOrderByIdOrNumber(id);
+    if (!order) return res.status(404).json({ message: 'Заказ не найден' });
+
+    if (req.user.role !== 'ADMIN' && order.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Нет доступа к заказу' });
+    }
+
+    // Permission checks
+    if (req.user.role !== 'ADMIN') {
+      const isCustomDesignOrder =
+        order.extraServices?.includes('STICKER_LAYOUT_DESIGN') ||
+        (order.notes && /Разработка макета|STICKER_LAYOUT_DESIGN/i.test(order.notes));
+      const isApprovedByClient =
+        (order as any).stickerApprovalStatus === 'APPROVED' ||
+        Boolean((order as any).stickerApprovedAt);
+
+      if (isCustomDesignOrder && !isApprovedByClient) {
+        return res.status(403).json({
+          message: 'Печать партии заблокирована: индивидуальный макет этикетки ещё не согласован. Сначала согласуйте макет.',
+        });
+      }
+
+      const isPrintAllowed = (order as any).printAllowed === true || (order as any).paymentStatus === 'PAID';
+      if (!isPrintAllowed) {
+        return res.status(403).json({
+          message: 'Печать партии заблокирована: ожидается подтверждение оплаты и разрешение администратора.',
+        });
+      }
+    }
+
+    // Check if task is already running or queued
+    const jobInfo = pdfQueue.getOrderJobs(order.id);
+    if (jobInfo.hasActive || jobInfo.hasWaiting) {
+      return res.json({
+        success: true,
+        isGenerating: true,
+        message: 'Генерация партии уже выполняется в очереди',
+        activeJob: jobInfo.activeJob,
+        waitingJob: jobInfo.waitingJob,
+      });
+    }
+
+    // Check cache unless force
+    const force = req.query.force === 'true' || req.query.refresh === 'true';
+    const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', order.id);
+    const pdfPath = path.join(orderDir, 'labels.pdf');
+    if (!force && fs.existsSync(pdfPath)) {
+      return res.json({
+        success: true,
+        alreadyReady: true,
+        pdfUrl: `/api/orders/${order.id}/pdf`,
+        message: 'Файл уже сгенерирован и доступен для скачивания',
+      });
+    }
+
+    // Fetch genuine codes
+    const codeItems = await prisma.orderCodeItem.findMany({
+      where: { orderId: order.id },
+      orderBy: { index: 'asc' },
+    });
+
+    let rows: Record<string, string>[] = [];
+    const orderBarcode = (order as any)?.extraData?.barcode || (order as any).barcode || '';
+
+    if (codeItems && codeItems.length > 0) {
+      const startIndex = await getClientOrderStartIndex(order.userId, order.id, order.createdAt);
+      rows = codeItems.map((ci, idx) => ({
+        barcode: orderBarcode || '',
+        code: ci.code,
+        dm: ci.code,
+        marking_code: ci.code,
+        gtin: ci.gtin || '',
+        serial: ci.serial || '',
+        index: String(ci.index || startIndex + idx),
+        number: String(ci.index || startIndex + idx),
+        total: String(codeItems.length),
+        orderNumber: order.orderNumber,
+      }));
+    } else if (order.codesFileUrl) {
+      const csvPath = path.resolve(process.cwd(), '.' + order.codesFileUrl);
+      if (fs.existsSync(csvPath)) {
+        try {
+          const raw = await fs.promises.readFile(csvPath, 'utf-8');
+          const parsed = parseCodesFile(raw);
+          const startIndex = await getClientOrderStartIndex(order.userId, order.id, order.createdAt);
+          rows = parsed.rows.map((r, idx) => ({
+            barcode: orderBarcode || '',
+            ...r,
+            index: String(startIndex + idx),
+            number: String(startIndex + idx),
+            total: String(parsed.rows.length),
+            orderNumber: order.orderNumber,
+          }));
+        } catch (e) {
+          console.warn('Could not parse CSV for async PDF generation:', e);
+        }
+      }
+    }
+
+    if (rows.length === 0) {
+      return res.status(400).json({
+        message: 'Невозможно запустить генерацию: к данному заказу ещё не прикреплены коды маркировки Data Matrix.',
+      });
+    }
+
+    // Prepare template
+    const stickerLayout = order.stickerLayout as any;
+    let templateElements = stickerLayout?.elements || [];
+    let w = stickerLayout?.widthMm || 58;
+    let h = stickerLayout?.heightMm || 40;
+
+    if (templateElements.length === 0 && order.templateId) {
+      const savedTpl = await prisma.userStickerTemplate.findUnique({
+        where: { id: order.templateId },
+      });
+      if (savedTpl && Array.isArray(savedTpl.elements) && savedTpl.elements.length > 0) {
+        templateElements = savedTpl.elements as any[];
+        w = savedTpl.widthMm;
+        h = savedTpl.heightMm;
+      }
+    }
+
+    if (templateElements.length === 0) {
+      const defaultLayout = getDefaultStickerLayout(w, h, order.user?.companyName);
+      templateElements = defaultLayout.elements;
+    }
+
+    const template = {
+      widthMm: w,
+      heightMm: h,
+      elements: templateElements,
+    };
+
+    if (!fs.existsSync(orderDir)) {
+      fs.mkdirSync(orderDir, { recursive: true });
+    }
+
+    const queueKey = `order_${order.id}_full`;
+    const taskDesc = `Заказ ${order.orderNumber} - Вся партия (${rows.length} шт.)`;
+
+    let activeMicroReq: http.ClientRequest | null = null;
+
+    // Enqueue in background without blocking response
+    pdfQueue.enqueue(
+      queueKey,
+      taskDesc,
+      () =>
+        new Promise<{ sizeBytes: number }>((resolve, reject) => {
+          const postData = JSON.stringify({ template, csvData: rows });
+          const tempFilePath = `${pdfPath}.tmp_${Date.now()}`;
+          const fileStream = fs.createWriteStream(tempFilePath);
+          let progressInterval: NodeJS.Timeout | null = null;
+          let isEnded = false;
+
+          const cleanupTemp = () => {
+            if (progressInterval) clearInterval(progressInterval);
+            try { fileStream.destroy(); } catch {}
+            if (fs.existsSync(tempFilePath)) {
+              try { fs.unlinkSync(tempFilePath); } catch {}
+            }
+          };
+
+          const microReq = http.request(
+            {
+              hostname: process.env.LABEL_GENERATOR_HOST || 'label-generator',
+              port: parseInt(process.env.LABEL_GENERATOR_PORT || '5060', 10),
+              path: `/api/labels/generate-pdf?trackId=${encodeURIComponent(queueKey)}`,
+              method: 'POST',
+              timeout: 3600000,
+              headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(postData),
+              },
+            },
+            (microRes) => {
+              if (microRes.statusCode && microRes.statusCode >= 400) {
+                let errData = '';
+                microRes.on('data', (c) => (errData += c));
+                microRes.on('end', () => {
+                  cleanupTemp();
+                  reject(new Error(`Label generator responded with status ${microRes.statusCode}: ${errData}`));
+                });
+                return;
+              }
+
+              microRes.pipe(fileStream);
+
+              progressInterval = setInterval(() => {
+                if (isEnded) return;
+                const pReq = http.request(
+                  {
+                    hostname: process.env.LABEL_GENERATOR_HOST || 'label-generator',
+                    port: parseInt(process.env.LABEL_GENERATOR_PORT || '5060', 10),
+                    path: `/api/labels/progress/${encodeURIComponent(queueKey)}`,
+                    method: 'GET',
+                    timeout: 2000,
+                  },
+                  (pRes) => {
+                    let pData = '';
+                    pRes.on('data', (c) => (pData += c));
+                    pRes.on('end', () => {
+                      try {
+                        const json = JSON.parse(pData);
+                        if (json.found && json.total > 0) {
+                          pdfQueue.updateJobProgress(queueKey, json.current, json.total);
+                        }
+                      } catch {}
+                    });
+                  }
+                );
+                pReq.on('error', () => {});
+                pReq.end();
+              }, 1000);
+
+              fileStream.on('finish', async () => {
+                isEnded = true;
+                if (progressInterval) clearInterval(progressInterval);
+                try {
+                  if (fs.existsSync(pdfPath)) {
+                    fs.unlinkSync(pdfPath);
+                  }
+                  fs.renameSync(tempFilePath, pdfPath);
+                  const stat = fs.statSync(pdfPath);
+                  const sizeMb = parseFloat((stat.size / (1024 * 1024)).toFixed(2));
+
+                  await prisma.order.update({
+                    where: { id: order.id },
+                    data: { pdfUrl: `/api/orders/${order.id}/pdf` },
+                  });
+
+                  telegram.sendPdfReadyNotification(
+                    order.orderNumber,
+                    rows.length,
+                    sizeMb,
+                    (order.user as any)?.telegramChatId
+                  ).catch(() => {});
+
+                  resolve({ sizeBytes: stat.size });
+                } catch (renameErr) {
+                  cleanupTemp();
+                  reject(renameErr);
+                }
+              });
+
+              fileStream.on('error', (err) => {
+                isEnded = true;
+                cleanupTemp();
+                reject(err);
+              });
+            }
+          );
+
+          activeMicroReq = microReq;
+          microReq.setTimeout(3600000);
+          microReq.on('error', (err) => {
+            isEnded = true;
+            cleanupTemp();
+            reject(err);
+          });
+          microReq.write(postData);
+          microReq.end();
+        }),
+      () => {
+        if (activeMicroReq) {
+          try { activeMicroReq.destroy(); } catch {}
+        }
+      }
+    ).catch((err) => {
+      console.error(`[PdfQueue] Async task failed for order ${order.orderNumber}:`, err);
+    });
+
+    return res.json({
+      success: true,
+      message: 'Задача формирования PDF партии успешно добавлена в очередь',
+      orderNumber: order.orderNumber,
+      totalCount: rows.length,
+    });
+  } catch (err: any) {
+    console.error('triggerAsyncOrderPdfGeneration error:', err);
+    return res.status(500).json({ message: 'Ошибка запуска фоновой генерации: ' + err.message });
   }
 };
 

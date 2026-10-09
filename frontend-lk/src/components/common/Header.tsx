@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserProfile } from '../../types';
 import { LogOut, User, Building2, ExternalLink } from 'lucide-react';
+import { getLandingUrl } from '@shared';
 
 interface HeaderProps {
   user: UserProfile | null;
@@ -15,7 +16,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
           Личный кабинет клиента
         </h1>
         <a
-          href="http://127.0.0.1:3000"
+          href={getLandingUrl()}
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs font-semibold text-gray-500 hover:text-black flex items-center gap-1 border border-gray-200 px-2.5 py-1 rounded-md bg-gray-50"

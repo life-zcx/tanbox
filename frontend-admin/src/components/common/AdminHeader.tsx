@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserClient } from '../../types';
 import { LogOut, ShieldAlert, ExternalLink, ShieldCheck } from 'lucide-react';
+import { getLandingUrl } from '@shared';
 
 interface AdminHeaderProps {
   adminUser: UserClient | null;
@@ -21,7 +22,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ adminUser, onLogout })
 
       <div className="flex items-center gap-4">
         <a
-          href="http://127.0.0.1:3000"
+          href={getLandingUrl()}
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs font-bold text-gray-300 hover:text-white flex items-center gap-1 bg-gray-900 border border-gray-700 px-3 py-1.5 rounded-lg transition-all"
