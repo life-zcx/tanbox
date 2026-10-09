@@ -472,14 +472,15 @@ export async function createRetirement(req: AuthRequest, res: Response) {
     }
 
     const client = new MarkirovkaClient(account);
+    const parsedDocDate = documentDate ? new Date(documentDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+    const parsedDocNum = userDocNum?.trim() || `АКТ-${Date.now().toString().slice(-6)}`;
     const isMptRes = await client.sendIcomWithdrawalDocument({
-      withdrawalReason: reason,
+      withdrawalReason: reason || 'DAMAGE',
       codes: cleanCodes,
       primaryDocument: {
-        number: userDocNum,
-        date: documentDate,
+        number: parsedDocNum,
+        date: parsedDocDate,
       },
-      signature,
     });
 
     const isSuccess = isMptRes.success;

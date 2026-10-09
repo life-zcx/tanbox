@@ -1014,7 +1014,6 @@ export class MarkirovkaClient {
 
     const requestBody = {
       documentBody: base64Body,
-      signature: params.signature || '',
     };
 
     try {
@@ -1191,7 +1190,6 @@ export class MarkirovkaClient {
 
     const requestBody = {
       documentBody: base64Body,
-      signature: params.signature || '',
     };
 
     try {
@@ -1544,7 +1542,6 @@ export class MarkirovkaClient {
 
     const requestBody = {
       documentBody: base64Body,
-      signature: params.signature || '',
     };
 
     try {
@@ -1639,7 +1636,6 @@ export class MarkirovkaClient {
 
     const requestBody = {
       documentBody: base64Body,
-      signature: params.signature || '',
     };
 
     try {

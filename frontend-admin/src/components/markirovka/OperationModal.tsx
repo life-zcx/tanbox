@@ -182,7 +182,7 @@ export const OperationModal: React.FC<OperationModalProps> = ({
 
   if (!operationType) return null;
 
-  const requiresEds = ['IMPORT_NOTIFICATION', 'RETIREMENT', 'CORRECTION'].includes(operationType);
+  const requiresEds = ['IMPORT_NOTIFICATION'].includes(operationType);
 
   const getTitleAndIcon = () => {
     switch (operationType) {
