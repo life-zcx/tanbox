@@ -1,4 +1,5 @@
 import { renderHtmlToPdf } from './pdfRenderer.service';
+import { COMPANY_CONFIG } from '../config/companyConfig';
 
 export function escapeHtml(str?: string | null): string {
   if (!str) return '';
@@ -379,13 +380,13 @@ export function generateOrderActHtml(existing: any): string {
     <td style="padding-top: 4px;">Исполнитель</td>
     <td style="padding-right: 20px; padding-top: 4px;">
       <div class="underline-val">
-        Индивидуальный предприниматель "TORMAG.KZ", Республика Казахстан, г. Алматы, тел.: +7 (707) 711-16-53
+        ${escapeHtml(COMPANY_CONFIG.documents.contractorTitle)}, ${escapeHtml(COMPANY_CONFIG.legal.address)}, тел.: ${escapeHtml(COMPANY_CONFIG.documents.phone)}
       </div>
       <div class="sub-note">полное наименование, адрес, данные о средствах связи</div>
     </td>
     <td style="vertical-align: bottom; padding-bottom: 10px; text-align: center;">
       <div class="bin-box">
-        990601301525
+        ${escapeHtml(COMPANY_CONFIG.legal.iinBin)}
       </div>
     </td>
   </tr>
@@ -484,7 +485,7 @@ export function generateOrderActHtml(existing: any): string {
         <tr>
           <td style="width: 45%; border-bottom: 1px solid #000; height: 20px;"></td>
           <td style="width: 10%; text-align: center; vertical-align: bottom;">/</td>
-          <td style="width: 45%; border-bottom: 1px solid #000; text-align: center; font-weight: bold; vertical-align: bottom; font-size: 7.5pt;">ИП «TORMAG.KZ»</td>
+          <td style="width: 45%; border-bottom: 1px solid #000; text-align: center; font-weight: bold; vertical-align: bottom; font-size: 7.5pt;">${escapeHtml(COMPANY_CONFIG.legal.companyName)}</td>
         </tr>
         <tr style="font-size: 5.5pt; color: #555; text-align: center; font-style: italic;">
           <td>подпись</td>
@@ -735,26 +736,26 @@ export function generateOrderInvoiceHtml(existing: any): string {
 <table class="bank-table">
   <tr>
     <td colspan="2" style="width: 65%;">
-      АО "KASPI BANK", г. Алматы<br>
+      ${escapeHtml(COMPANY_CONFIG.legal.bank)}, г. Алматы<br>
       <span style="font-size: 7pt; color: #555;">Банк получателя</span>
     </td>
     <td style="width: 15%;">БИК</td>
-    <td style="width: 20%; font-weight: bold;">CASPKZKA</td>
+    <td style="width: 20%; font-weight: bold;">${escapeHtml(COMPANY_CONFIG.legal.bik)}</td>
   </tr>
   <tr>
     <td colspan="2"></td>
     <td>ИИК</td>
-    <td style="font-weight: bold;">KZ314652185496321458</td>
+    <td style="font-weight: bold;">${escapeHtml(COMPANY_CONFIG.legal.iik)}</td>
   </tr>
   <tr>
     <td style="width: 15%;">ИИН / БИН</td>
-    <td style="width: 50%; font-weight: bold;">990601301525</td>
+    <td style="width: 50%; font-weight: bold;">${escapeHtml(COMPANY_CONFIG.legal.iinBin)}</td>
     <td>КБе</td>
-    <td style="font-weight: bold;">19</td>
+    <td style="font-weight: bold;">${escapeHtml(COMPANY_CONFIG.legal.kbe)}</td>
   </tr>
   <tr>
     <td colspan="2">
-      ИП "TORMAG.KZ"<br>
+      ${escapeHtml(COMPANY_CONFIG.legal.companyName)}<br>
       <span style="font-size: 7pt; color: #555;">Получатель</span>
     </td>
     <td colspan="2"></td>
@@ -768,7 +769,7 @@ export function generateOrderInvoiceHtml(existing: any): string {
 <table class="parties-table">
   <tr>
     <td style="width: 90px; font-weight: bold;">Поставщик:</td>
-    <td><strong>ИП "TORMAG.KZ", ИИН 990601301525</strong>, Республика Казахстан, г. Алматы, тел.: +7 (707) 711-16-53</td>
+    <td><strong>${escapeHtml(COMPANY_CONFIG.legal.companyName)}, ИИН ${escapeHtml(COMPANY_CONFIG.legal.iinBin)}</strong>, ${escapeHtml(COMPANY_CONFIG.legal.address)}, тел.: ${escapeHtml(COMPANY_CONFIG.documents.phone)}</td>
   </tr>
   <tr>
     <td style="font-weight: bold; padding-top: 5px;">Покупатель:</td>
@@ -830,7 +831,7 @@ export function generateOrderInvoiceHtml(existing: any): string {
   <div>Исполнитель</div>
   <div style="display: flex; align-items: flex-end; gap: 20px;">
     <div style="width: 180px; border-bottom: 1px solid #000;"></div>
-    <div>/ИП «TORMAG.KZ»/</div>
+    <div>/${escapeHtml(COMPANY_CONFIG.legal.companyName)}/</div>
   </div>
 </div>
 

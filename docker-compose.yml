@@ -11,7 +11,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tanbox_user} -d ${POSTGRES_DB:-tanbox_db}"]
       interval: 5s
@@ -36,9 +36,10 @@ services:
       DATABASE_URL: "${DATABASE_URL:-postgresql://tanbox_user:tanbox_pass_2026@postgres:5432/tanbox_db?schema=public}"
       JWT_SECRET: "${JWT_SECRET:-tanbox_kz_jwt_secret_key_super_secure_2026}"
       NODE_ENV: production
+      NODE_OPTIONS: "--max-old-space-size=768"
       LABEL_GENERATOR_HOST: label-generator
       LABEL_GENERATOR_PORT: 5060
-      PDF_CONCURRENCY: ${PDF_CONCURRENCY:-2}
+      PDF_CONCURRENCY: ${PDF_CONCURRENCY:-1}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_LEADS_CHAT_ID: ${TELEGRAM_LEADS_CHAT_ID:-}
       TELEGRAM_ALERTS_CHAT_ID: ${TELEGRAM_ALERTS_CHAT_ID:-}
@@ -115,6 +116,7 @@ services:
     environment:
       PORT: 5060
       NODE_ENV: production
+      NODE_OPTIONS: "--max-old-space-size=512"
     logging:
       driver: "json-file"
       options:

@@ -22,6 +22,8 @@ import { generalApiLimiter } from './middleware/rateLimiter';
 import { telegram } from './services/telegram.service';
 import { isMaintenanceActive, getMaintenanceMessage } from './controllers/system.controller';
 
+import { env } from './config/env';
+
 dotenv.config();
 
 const app = express();
@@ -115,7 +117,7 @@ app.use((req, res, next) => {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         try {
           const token = authHeader.split(' ')[1];
-          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'tanbox_kz_jwt_secret_key_super_secure_2026') as any;
+          const decoded = jwt.verify(token, env.JWT_SECRET) as any;
           if (decoded && decoded.role === 'ADMIN') {
             return next(); // Admins bypass maintenance mode
           }

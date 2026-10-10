@@ -248,17 +248,33 @@ export const ContactsPage: React.FC = () => {
                   <Phone className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">Горячая линия (24/7)</p>
+                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">Телефон и мессенджеры</p>
                   <p className="mt-1">
                     <a href={`tel:${COMPANY_CONTACTS.phones.hotlineRaw}`} className="text-[#111827] font-bold hover:text-[#0082FB] transition-colors block">
                       {COMPANY_CONTACTS.phones.hotline}
                     </a>
                   </p>
-                  <p className="text-[#64748B] mt-0.5">
-                    <a href={`tel:${COMPANY_CONTACTS.phones.mobileRaw}`} className="hover:text-[#0082FB] transition-colors">
-                      {COMPANY_CONTACTS.phones.mobile} {COMPANY_CONTACTS.phones.mobileNote}
+                  <div className="flex items-center gap-2 mt-1 text-xs">
+                    <span className="text-[#64748B]">Звонки 24/7</span>
+                    <span className="text-gray-300">•</span>
+                    <a
+                      href={COMPANY_CONTACTS.links.whatsapp}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-[#0082FB] hover:underline"
+                    >
+                      WhatsApp
                     </a>
-                  </p>
+                    <span className="text-gray-300">•</span>
+                    <a
+                      href={COMPANY_CONTACTS.links.telegramChannel}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-[#0082FB] hover:underline"
+                    >
+                      Telegram
+                    </a>
+                  </div>
                 </div>
               </div>
 
@@ -281,8 +297,9 @@ export const ContactsPage: React.FC = () => {
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">График работы мобильных бригад</p>
-                  <p className="text-[#64748B] mt-1">{COMPANY_CONTACTS.workingHours.full}</p>
+                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">График работы</p>
+                  <p className="text-[#111827] font-semibold mt-1">{COMPANY_CONTACTS.workingHours.main}</p>
+                  <p className="text-[#64748B] text-xs mt-0.5">{COMPANY_CONTACTS.workingHours.additional}</p>
                 </div>
               </div>
             </div>

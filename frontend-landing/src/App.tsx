@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { Wrench } from 'lucide-react';
 import axios from 'axios';
 import { Header } from './components/common/Header';
 import { Footer } from './components/common/Footer';
@@ -17,6 +16,7 @@ import { TermsPage } from './pages/TermsPage';
 import { CookiePolicyPage } from './pages/CookiePolicyPage';
 import { TariffCode } from './types';
 import { getLkUrl } from './utils/navigation';
+import { LanguageProvider } from './context/LanguageContext';
 
 const ScrollToTop: React.FC = () => {
   const { pathname, hash } = useLocation();
@@ -30,7 +30,9 @@ const ScrollToTop: React.FC = () => {
   return null;
 };
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
   const [maintenance, setMaintenance] = useState<{ active: boolean; message: string } | null>(null);
 
   useEffect(() => {
@@ -84,11 +86,10 @@ export const App: React.FC = () => {
   };
 
   return (
-    <BrowserRouter>
-      <ScrollToTop />
-      <div className="min-h-screen flex flex-col justify-between bg-white text-black">
-        <Header onOpenAuth={handleOpenAuth} maintenance={maintenance?.active} />
+    <div className="min-h-screen flex flex-col justify-between bg-[#F4F6F9] text-[#111827]">
+      <Header onOpenAuth={handleOpenAuth} maintenance={maintenance?.active} />
 
+      <main className="flex-1">
         <Routes>
           <Route
             path="/"
@@ -112,13 +113,24 @@ export const App: React.FC = () => {
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/cookies" element={<CookiePolicyPage />} />
         </Routes>
+      </main>
 
-        <Footer />
-        <CookieBanner />
-        <ScrollToTopButton duration={1000} />
-      </div>
-    </BrowserRouter>
+      <Footer />
+      <CookieBanner />
+      <ScrollToTopButton duration={1000} />
+    </div>
   );
 };
-export default App;
 
+export const App: React.FC = () => {
+  return (
+    <LanguageProvider>
+      <BrowserRouter>
+        <ScrollToTop />
+        <AppContent />
+      </BrowserRouter>
+    </LanguageProvider>
+  );
+};
+
+export default App;

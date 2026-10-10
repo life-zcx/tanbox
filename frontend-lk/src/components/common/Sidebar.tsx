@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, PackagePlus, FileText, User, LogOut, ExternalLink, Phone, Mail, Send, Tag, X } from 'lucide-react';
-import { getLandingUrl } from '@shared';
+import { getLandingUrl, COMPANY_CONFIG } from '@shared';
 import { UserProfile } from '../../types';
 
 interface SidebarProps {
@@ -125,17 +125,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen = false
         <div className="bg-[#EBF5FF]/60 border border-[#0082FB]/10 rounded-2xl p-4 text-xs space-y-2">
           <p className="font-extrabold text-[#0082FB] uppercase tracking-wider text-[11px]">Служба поддержки</p>
           <div className="space-y-2 text-[#475569]">
-            <a href="tel:+77273551020" className="flex items-center gap-2.5 hover:text-[#0082FB] transition-colors font-semibold text-xs">
+            <a href={`tel:${COMPANY_CONFIG.supportLk.phoneRaw}`} className="flex items-center gap-2.5 hover:text-[#0082FB] transition-colors font-semibold text-xs">
               <Phone className="w-4 h-4 text-[#0082FB] shrink-0" />
-              <span>+7 (727) 355-10-20</span>
+              <span>{COMPANY_CONFIG.supportLk.phone}</span>
             </a>
-            <a href="mailto:support@tanbox.kz" className="flex items-center gap-2.5 hover:text-[#0082FB] transition-colors font-semibold text-xs">
+            <a href={`mailto:${COMPANY_CONFIG.supportLk.email}`} className="flex items-center gap-2.5 hover:text-[#0082FB] transition-colors font-semibold text-xs">
               <Mail className="w-4 h-4 text-[#0082FB] shrink-0" />
-              <span>support@tanbox.kz</span>
+              <span>{COMPANY_CONFIG.supportLk.email}</span>
             </a>
-            <a href="https://t.me/tanbox_support" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 hover:text-[#0082FB] transition-colors font-semibold text-xs">
+            <a href={COMPANY_CONFIG.supportLk.telegramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 hover:text-[#0082FB] transition-colors font-semibold text-xs">
               <Send className="w-4 h-4 text-[#0082FB] shrink-0" />
-              <span>@tanbox_support</span>
+              <span>{COMPANY_CONFIG.supportLk.telegram}</span>
             </a>
           </div>
         </div>

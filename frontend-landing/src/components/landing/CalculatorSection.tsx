@@ -1,14 +1,17 @@
 import React from 'react';
 import { useCalculator } from '../../hooks/useCalculator';
 import { TariffCode } from '../../types';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown } from 'lucide-react';
 
 interface CalculatorSectionProps {
   onOrderQuick: (tariff: TariffCode, count: number, price: number) => void;
   hideHeading?: boolean;
 }
 
-export const CalculatorSection: React.FC<CalculatorSectionProps> = ({ onOrderQuick, hideHeading = false }) => {
+export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
+  onOrderQuick,
+  hideHeading = false,
+}) => {
   const {
     tariffType,
     setTariffType,
@@ -86,7 +89,10 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({ onOrderQui
   const sliderProgress = Math.min(100, Math.max(0, ((itemsCount - sliderMin) / (sliderMax - sliderMin)) * 100));
 
   return (
-    <section id="calculator" className={`${hideHeading ? 'pb-12 sm:pb-16' : 'py-12 sm:py-16'} bg-[#F4F6F9]`}>
+    <section
+      id="calculator"
+      className={hideHeading ? "pb-12 sm:pb-16 bg-[#F4F6F9]" : "py-12 sm:py-16 bg-[#F4F6F9]"}
+    >
       <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Heading - strictly matching other blocks */}

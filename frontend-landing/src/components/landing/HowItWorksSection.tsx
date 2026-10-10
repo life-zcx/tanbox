@@ -1,69 +1,71 @@
 import React from 'react';
-import { FileText, Cpu, Printer, CheckCircle2 } from 'lucide-react';
+import { FileText, Cpu, Printer, CheckCircle2, Check } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const HowItWorksSection: React.FC = () => {
+  const { t } = useLanguage();
+
   const steps = [
     {
       num: '01',
-      title: 'Расчёт и параметры',
-      desc: 'Укажите категорию товара, тираж и размер этикеток в калькуляторе или передайте задачу менеджеру.',
+      title: t('hiw.step1_title'),
+      desc: t('hiw.step1_desc'),
       icon: FileText,
     },
     {
       num: '02',
-      title: 'Загрузка кодов',
-      desc: 'Прикрепите выгрузку кодов (CSV/TXT) из кабинета ИС Танба. Если кодов ещё нет — поможем выпустить их под ключ.',
+      title: t('hiw.step2_title'),
+      desc: t('hiw.step2_desc'),
       icon: Cpu,
     },
     {
       num: '03',
-      title: 'Печать и оклейка / Доставка',
-      desc: 'Производство в г. Алматы: отправляем готовые рулоны курьером в любой город РК. При заказе оклейки — наши люди на месте наносят стикеры на вашем складе.',
+      title: t('hiw.step3_title'),
+      desc: t('hiw.step3_desc'),
       icon: Printer,
     },
     {
       num: '04',
-      title: 'Контроль и документы',
-      desc: 'Проверяем считываемость 2D-сканерами, формируем официальный Акт выполненных работ (Р-1) и счёт на оплату.',
+      title: t('hiw.step4_title'),
+      desc: t('hiw.step4_desc'),
       icon: CheckCircle2,
     },
   ];
 
   return (
-    <section className="py-12 sm:py-16 bg-[#F4F6F9]">
-      <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 space-y-2">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
-            Пошаговый процесс маркировки
+    <section id="how-it-works" className="py-12 sm:py-16 bg-[#F4F6F9]">
+      <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        
+        <div className="space-y-2">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#111827] tracking-tight">
+            {t('hiw.title')}
           </h2>
-          <p className="text-sm sm:text-base text-[#64748B]">
-            Всего 4 простых шага от подачи заявки до полной готовности товара к продаже.
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {steps.map((s, idx) => {
             const Icon = s.icon;
             return (
               <div 
                 key={idx} 
-                className="bg-white rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group flex flex-col justify-between"
+                className="bg-white rounded-2xl sm:rounded-3xl p-6 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden group flex flex-col justify-between border border-gray-200/70 min-h-[170px]"
               >
-                <span className="text-3xl sm:text-4xl font-extrabold text-[#E2E8F0] absolute top-5 right-6 group-hover:text-[#CBD5E1] transition-colors">
+                <span className="text-3xl sm:text-4xl font-black text-slate-100 absolute top-4 right-5 group-hover:text-blue-50 transition-colors">
                   {s.num}
                 </span>
 
                 <div>
-                  <div className="w-12 h-12 bg-[#EBF5FF] text-[#0082FB] rounded-full flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                    <Icon className="w-6 h-6 stroke-[2]" />
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 bg-blue-50 text-[#0082FB] rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                    <Icon className="w-5 h-5 stroke-[2]" />
                   </div>
-                  <h3 className="text-base sm:text-lg font-bold text-[#111827] mb-2">{s.title}</h3>
-                  <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed">{s.desc}</p>
+                  <h3 className="text-sm sm:text-base font-bold text-[#111827] mb-1.5 leading-snug">{s.title}</h3>
+                  <p className="text-xs text-[#64748B] leading-relaxed">{s.desc}</p>
                 </div>
               </div>
             );
           })}
         </div>
+
       </div>
     </section>
   );

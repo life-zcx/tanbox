@@ -40,6 +40,46 @@ export function getDefaultBaseUrl(env: MarkirovkaEnvironment): string {
 }
 
 /**
+ * Validates and sanitizes baseUrl for Kazakhstan IS MPT / True API integration.
+ * Protects against SSRF targeting private IPs, loopback, cloud metadata, and internal containers.
+ */
+export function validateAndSanitizeBaseUrl(rawUrl?: string | null, env: MarkirovkaEnvironment = MarkirovkaEnvironment.PROD): string {
+  if (!rawUrl || !rawUrl.trim()) {
+    return getDefaultBaseUrl(env);
+  }
+  const trimmed = rawUrl.trim();
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error('Некорректный формат URL сервера маркировки (baseUrl)');
+  }
+
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error('Разрешены только протоколы https:// или http:// для сервера маркировки');
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  // Block SSRF to internal Docker / loopback / cloud metadata services
+  const blockedHosts = [
+    'localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.169.254',
+    'postgres', 'backend', 'caddy', 'label-generator',
+    'tanbox_postgres', 'tanbox_backend', 'tanbox_caddy', 'tanbox_label_generator'
+  ];
+  if (blockedHosts.includes(hostname)) {
+    throw new Error('Доступ к локальным и внутренним служебным адресам запрещен политикой безопасности');
+  }
+
+  // Block RFC1918 private IPv4 ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8)
+  if (/^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)/.test(hostname)) {
+    throw new Error('Доступ к приватным сетевым диапазонам запрещен политикой безопасности');
+  }
+
+  return `${parsed.protocol}//${parsed.host}`;
+}
+
+/**
  * Recursively sort JSON object keys alphabetically (A-Z)
  * as required by Kazakhstan xTrace ICOM REST API specification.
  */
@@ -214,7 +254,7 @@ export class MarkirovkaClient {
 
   constructor(account: MarkirovkaAccount) {
     this.account = account;
-    this.baseUrl = (account.baseUrl || getDefaultBaseUrl(account.environment)).replace(/\/+$/, '');
+    this.baseUrl = validateAndSanitizeBaseUrl(account.baseUrl, account.environment);
     this.decryptedPassword = decryptText(account.encryptedPassword);
   }
 

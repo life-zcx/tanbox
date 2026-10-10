@@ -18,7 +18,15 @@ export const env = {
     return secret;
   },
   get ENCRYPTION_SECRET(): string {
-    return process.env.ENCRYPTION_SECRET || 'tanbox_markirovka_encryption_secret_key_2026_32bytes!!';
+    const secret = process.env.ENCRYPTION_SECRET;
+    if (!secret) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('CRITICAL SECURITY ERROR: ENCRYPTION_SECRET environment variable is not defined in process.env!');
+      }
+      console.warn('⚠️ WARNING: ENCRYPTION_SECRET is not set in process.env! Using local dev fallback.');
+      return 'tanbox_markirovka_encryption_secret_key_2026_32bytes!!';
+    }
+    return secret;
   },
 };
 

@@ -57,6 +57,8 @@ export interface PdfRenderOptions {
   landscape?: boolean;
 }
 
+let renderCount = 0;
+
 export async function renderHtmlToPdf(
   html: string,
   options: PdfRenderOptions = {}
@@ -65,6 +67,21 @@ export async function renderHtmlToPdf(
   const page = await browser.newPage();
 
   try {
+    // 1. Disable JavaScript execution for static document rendering
+    await page.setJavaScriptEnabled(false);
+
+    // 2. Intercept and block unauthorized external network requests and local file:// reads
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      const url = req.url().toLowerCase();
+      // Allow inline data URLs (e.g. data:image/...) and blank pages
+      if (url.startsWith('data:') || url === 'about:blank') {
+        req.continue();
+      } else {
+        req.abort();
+      }
+    });
+
     await page.setContent(html, {
       waitUntil: 'load',
       timeout: 15000,
@@ -83,7 +100,28 @@ export async function renderHtmlToPdf(
       },
     });
 
+    renderCount++;
+    // Periodically recycle Chromium process to prevent memory fragmentation on 4GB RAM VPS
+    if (renderCount >= 50) {
+      renderCount = 0;
+      setTimeout(async () => {
+        try {
+          if (browserInstance) {
+            const oldBrowser = browserInstance;
+            browserInstance = null;
+            await oldBrowser.close();
+          }
+        } catch {}
+      }, 100);
+    }
+
     return Buffer.from(pdfBuffer);
+  } catch (err) {
+    // If page or browser crashed, reset instance so next request launches a clean Chromium
+    if (!browser.isConnected()) {
+      browserInstance = null;
+    }
+    throw err;
   } finally {
     await page.close().catch(() => {});
   }

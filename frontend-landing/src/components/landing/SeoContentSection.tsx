@@ -11,6 +11,7 @@ import {
   Cpu
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { COMPANY_CONTACTS } from '../../data/companyContacts';
 
 export const SeoContentSection: React.FC = () => {
   return (
@@ -152,7 +153,7 @@ export const SeoContentSection: React.FC = () => {
             <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-950 flex items-start gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-[#0082FB] shrink-0 mt-0.5" />
               <span>
-                <strong>Официальный документооборот:</strong> По каждой партии формируется утвержденный законодательством Республики Казахстан первичный <strong>Акт выполненных работ по Форме Р-1</strong> (Приказ Минфина РК № 562) и Счёт на оплату от <strong>ИП «TORMAG.KZ»</strong> (ИИН 990601301525, без НДС).
+                <strong>Официальный документооборот:</strong> По каждой партии формируется утвержденный законодательством Республики Казахстан первичный <strong>Акт выполненных работ по Форме Р-1</strong> (Приказ Минфина РК № 562) и Счёт на оплату от <strong>{COMPANY_CONTACTS.legal.companyName}</strong> (ИИН {COMPANY_CONTACTS.legal.iin}).
               </span>
             </div>
           </div>

@@ -1,15 +1,49 @@
-import React from 'react';
-import { ArrowRight } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import { getLkUrl } from '../../utils/navigation';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface HeroSectionProps {
   onOpenCalculator: () => void;
   onOpenAuth: () => void;
+  onScrollNext?: () => void;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onOpenAuth }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onScrollNext }) => {
+  const { lang, t } = useLanguage();
+  const [titleNumber, setTitleNumber] = useState(0);
+
+  const titles = useMemo(() => {
+    if (lang === 'kz') {
+      return ['жылдам', 'сенімді', 'мерзімінде'];
+    }
+    if (lang === 'en') {
+      return ['fast', 'reliably', 'on time'];
+    }
+    return ['быстро', 'надежно', 'в срок'];
+  }, [lang]);
+
+  useEffect(() => {
+    setTitleNumber(0);
+  }, [lang]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (titleNumber === titles.length - 1) {
+        setTitleNumber(0);
+      } else {
+        setTitleNumber(titleNumber + 1);
+      }
+    }, 2500);
+    return () => clearTimeout(timeoutId);
+  }, [titleNumber, titles]);
+
   return (
-    <section className="relative min-h-screen flex flex-col justify-center items-center overflow-hidden pt-24 pb-14 sm:pt-28 sm:pb-24 bg-[#0B0F19]">
+    <section
+      id="hero"
+      className="relative min-h-[90vh] sm:min-h-screen w-full flex flex-col justify-center items-center overflow-hidden pt-16 sm:pt-24 pb-8 sm:pb-16 bg-[#0B0F19] text-white select-none"
+    >
       {/* Background Video with Darkening */}
       <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
         <video
@@ -26,39 +60,88 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onOp
         </video>
 
         {/* Затемнение видео */}
-        <div className="absolute inset-0 bg-[#0B0F19]/70" />
+        <div className="absolute inset-0 bg-[#0B0F19]/75" />
       </div>
 
       <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 sm:space-y-8 relative z-10 my-auto">
-        <h1 className="text-3xl sm:text-5xl lg:text-7xl xl:text-[84px] font-extrabold text-white tracking-tight leading-[1.14] sm:leading-[1.08] max-w-5xl mx-auto">
-          Маркировка товаров в Казахстане <span className="text-[#0082FB] relative inline-block">под ключ</span>
-        </h1>
+        
+        {/* Main Title - Monumental & Grand scale (fills header width) */}
+        <div className="space-y-2 sm:space-y-3">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[76px] font-black text-white tracking-tight leading-[1.12] max-w-7xl mx-auto">
+            <span className="block whitespace-normal lg:whitespace-nowrap">
+              {lang === 'kz' 
+                ? 'Тауарларды цифрлық таңбалау' 
+                : lang === 'en' 
+                ? 'Digital Product Serialization' 
+                : 'Цифровая маркировка товаров'}
+            </span>
 
-        <p className="text-base sm:text-xl lg:text-2xl text-slate-100 font-medium leading-relaxed max-w-4xl mx-auto">
-          Комплексные решения для импортеров и производителей: таможенное оформление, заведение товаров в НКТ, эмиссия кодов Data Matrix в ИС Танба, высокоскоростная печать, выездная оклейка на вашем складе и SSCC-агрегация с интеграцией в 1С.
+            {/* Second line: 'под ключ' is anchored to the center line and never moves. Dynamic word rotates seamlessly */}
+            <div className="flex items-center justify-center mt-2 sm:mt-3">
+              <span className="w-1/2 text-right pr-2 sm:pr-3.5 text-white whitespace-nowrap">
+                {lang === 'kz' ? 'кілтке дейін' : lang === 'en' ? 'turnkey' : 'под ключ'}
+              </span>
+              <span className="w-1/2 text-left pl-2 sm:pr-0 pl-2 sm:pl-3.5 text-[#0082FB] drop-shadow-md">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={`${lang}-${titleNumber}`}
+                    className="inline-block font-black text-[#0082FB] whitespace-nowrap"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -16 }}
+                    transition={{ duration: 0.24, ease: 'easeOut' }}
+                  >
+                    {titles[titleNumber]}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+            </div>
+          </h1>
+        </div>
+
+        {/* Subtitle - Wide, readable, premium */}
+        <p className="text-sm sm:text-lg lg:text-xl text-slate-200/90 font-normal leading-relaxed max-w-3xl sm:max-w-4xl lg:max-w-5xl mx-auto px-2 sm:px-0">
+          {t('hero.subtitle')}
         </p>
 
+        {/* Buttons - Natural proportional width and proper rounded corners */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-2 sm:pt-4">
           <button
+            type="button"
             onClick={onOpenCalculator}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-[#0082FB] text-white text-sm sm:text-base lg:text-lg font-extrabold px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl hover:bg-[#0070DA] transition-all shadow-lg shadow-blue-500/20 active:scale-95 cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-sm sm:text-base font-bold px-7 sm:px-8 py-3.5 sm:py-4 rounded-xl shadow-lg shadow-blue-500/25 transition-all active:scale-95 cursor-pointer"
           >
-            Рассчитать стоимость (₸)
-            <ArrowRight className="w-5 h-5" />
+            <span>{lang === 'kz' ? 'Құнын есептеу' : lang === 'en' ? 'Calculate Cost' : 'Рассчитать стоимость'}</span>
+            <ArrowRight className="w-5 h-5 shrink-0" />
           </button>
 
           <a
             href={getLkUrl('/orders/new')}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-[#111827] border border-gray-200 text-sm sm:text-base lg:text-lg font-extrabold px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl hover:bg-gray-50 transition-all active:scale-95 shadow-xs"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-transparent hover:bg-white/10 text-white border border-white/40 hover:border-white/70 text-sm sm:text-base font-bold px-7 sm:px-8 py-3.5 sm:py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95"
           >
-            Оформить заявку
+            <span>{t('hero.btn_order')}</span>
           </a>
         </div>
+
       </div>
+
+      {/* Down arrow indicator to screen 2 */}
+      {onScrollNext && (
+        <div className="z-10 shrink-0 pt-4">
+          <button
+            type="button"
+            onClick={onScrollNext}
+            aria-label="Листать вниз"
+            className="text-slate-400 hover:text-white transition-colors animate-bounce p-2 cursor-pointer flex flex-col items-center gap-1 text-xs"
+          >
+            <ChevronDown className="w-6 h-6" />
+          </button>
+        </div>
+      )}
     </section>
   );
 };
 
-
+export default HeroSection;

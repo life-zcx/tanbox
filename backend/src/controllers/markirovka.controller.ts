@@ -8,6 +8,7 @@ import {
   CATEGORY_LABELS,
   CATEGORY_TO_OMS_EXTENSION,
   getDefaultBaseUrl,
+  validateAndSanitizeBaseUrl,
 } from '../services/markirovkaClient.service';
 import { logger } from '../utils/logger';
 
@@ -72,6 +73,14 @@ export async function createAccount(req: Request, res: Response) {
     }
 
     const envEnum = environment === 'PROD' ? MarkirovkaEnvironment.PROD : MarkirovkaEnvironment.TEST;
+    let sanitizedBaseUrl: string | null = null;
+    if (baseUrl && typeof baseUrl === 'string' && baseUrl.trim().length > 0) {
+      try {
+        sanitizedBaseUrl = validateAndSanitizeBaseUrl(baseUrl, envEnum);
+      } catch (validationErr: any) {
+        return res.status(400).json({ message: validationErr.message || 'Недопустимый URL сервера маркировки' });
+      }
+    }
     const encryptedPassword = encryptText(password.trim());
 
     const account = await prisma.markirovkaAccount.create({
@@ -79,7 +88,7 @@ export async function createAccount(req: Request, res: Response) {
         userId: user?.role === 'ADMIN' ? (targetUserId || null) : user?.id,
         name: name.trim(),
         environment: envEnum,
-        baseUrl: baseUrl?.trim() || null,
+        baseUrl: sanitizedBaseUrl,
         login: login.trim(),
         encryptedPassword,
         omsId: omsId?.trim() || null,
@@ -122,7 +131,17 @@ export async function updateAccount(req: Request, res: Response) {
     if (environment) {
       updateData.environment = environment === 'PROD' ? MarkirovkaEnvironment.PROD : MarkirovkaEnvironment.TEST;
     }
-    if (baseUrl !== undefined) updateData.baseUrl = baseUrl ? baseUrl.trim() : null;
+    if (baseUrl !== undefined) {
+      if (baseUrl && typeof baseUrl === 'string' && baseUrl.trim().length > 0) {
+        try {
+          updateData.baseUrl = validateAndSanitizeBaseUrl(baseUrl, updateData.environment || existing.environment);
+        } catch (validationErr: any) {
+          return res.status(400).json({ message: validationErr.message || 'Недопустимый URL сервера маркировки' });
+        }
+      } else {
+        updateData.baseUrl = null;
+      }
+    }
     if (login) updateData.login = login.trim();
     if (password && password.trim().length > 0) {
       updateData.encryptedPassword = encryptText(password.trim());
@@ -194,11 +213,20 @@ export async function testConnection(req: Request, res: Response) {
       if (!login || !password) {
         return res.status(400).json({ success: false, message: 'Укажите логин и пароль для проверки' });
       }
+      const testEnv = environment === 'PROD' ? MarkirovkaEnvironment.PROD : MarkirovkaEnvironment.TEST;
+      let sanitizedBaseUrl: string | null = null;
+      if (baseUrl && typeof baseUrl === 'string' && baseUrl.trim().length > 0) {
+        try {
+          sanitizedBaseUrl = validateAndSanitizeBaseUrl(baseUrl, testEnv);
+        } catch (validationErr: any) {
+          return res.status(400).json({ success: false, message: validationErr.message || 'Недопустимый URL сервера маркировки' });
+        }
+      }
       accountRecord = {
         id: 'temp-check',
         name: 'Тестовая проверка',
-        environment: environment === 'PROD' ? MarkirovkaEnvironment.PROD : MarkirovkaEnvironment.TEST,
-        baseUrl: baseUrl?.trim() || null,
+        environment: testEnv,
+        baseUrl: sanitizedBaseUrl,
         login: login.trim(),
         encryptedPassword: encryptText(password.trim()),
         omsId: omsId?.trim() || null,

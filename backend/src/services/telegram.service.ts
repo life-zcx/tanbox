@@ -27,6 +27,15 @@ class TelegramService {
 
   constructor() {
     this.reloadConfig();
+    // Periodic eviction of stale deduplication entries to avoid memory growth
+    setInterval(() => {
+      const cutoff = Date.now() - 30 * 60 * 1000;
+      for (const [key, val] of this.errorDeduplicationMap.entries()) {
+        if (val.lastSent < cutoff) {
+          this.errorDeduplicationMap.delete(key);
+        }
+      }
+    }, 15 * 60 * 1000).unref();
   }
 
   public reloadConfig() {

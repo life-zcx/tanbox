@@ -2,26 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, UserCheck } from 'lucide-react';
 import { getLkUrl } from '../../utils/navigation';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface HeaderProps {
   onOpenAuth: () => void;
   maintenance?: boolean;
 }
 
-const NAV_LINKS = [
-  { path: '/', label: 'Главная' },
-  { path: '/calculator', label: 'Калькулятор цен' },
-  { path: '/categories', label: 'Категории товаров' },
-  { path: '/services', label: 'Услуги маркировки' },
-  { path: '/contacts', label: 'Контакты' },
-];
-
 export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
+  const { lang, setLang, t } = useLanguage();
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const NAV_LINKS = [
+    { path: '/', label: t('nav.home') },
+    { path: '/calculator', label: t('nav.calc') },
+    { path: '/categories', label: t('nav.categories') },
+    { path: '/services', label: t('nav.services') },
+    { path: '/contacts', label: t('nav.contacts') },
+  ];
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
     handleScroll();
 
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [location.pathname]);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -64,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
         } ${
           isTransparent
             ? 'bg-transparent border-transparent shadow-none'
-            : 'bg-white/85 backdrop-blur-md border-b border-gray-200/50 shadow-xs'
+            : 'bg-white/95 backdrop-blur-md border-b border-gray-200/80 shadow-xs'
         }`}
       >
         {/* Maintenance Announcement Bar */}
@@ -102,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
                         : 'text-white/85 hover:text-white drop-shadow-sm'
                       : active
                         ? 'text-[#0082FB] font-bold'
-                        : 'text-[#64748B] hover:text-[#0082FB]'
+                        : 'text-[#334155] hover:text-[#0082FB]'
                   }`}
                 >
                   {link.label}
@@ -113,15 +115,62 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
 
           {/* Right Header Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Desktop LK Button */}
+            {/* Language Switcher Pill */}
+            <div
+              className={`flex items-center h-8 sm:h-9 p-0.5 sm:p-1 rounded-xl border text-[11px] sm:text-xs font-bold transition-all ${
+                isTransparent
+                  ? 'bg-white/10 border-white/20 text-white backdrop-blur-md'
+                  : 'bg-gray-100 border-gray-200 text-slate-700'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => setLang('kz')}
+                className={`h-full px-1.5 sm:px-2 rounded-lg transition-all cursor-pointer flex items-center justify-center ${
+                  lang === 'kz'
+                    ? 'bg-[#0082FB] text-white shadow-xs'
+                    : 'hover:text-[#0082FB] opacity-75 hover:opacity-100'
+                }`}
+              >
+                ҚАЗ
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('ru')}
+                className={`h-full px-1.5 sm:px-2 rounded-lg transition-all cursor-pointer flex items-center justify-center ${
+                  lang === 'ru'
+                    ? 'bg-[#0082FB] text-white shadow-xs'
+                    : 'hover:text-[#0082FB] opacity-75 hover:opacity-100'
+                }`}
+              >
+                РУС
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('en')}
+                className={`h-full px-1.5 sm:px-2 rounded-lg transition-all cursor-pointer flex items-center justify-center ${
+                  lang === 'en'
+                    ? 'bg-[#0082FB] text-white shadow-xs'
+                    : 'hover:text-[#0082FB] opacity-75 hover:opacity-100'
+                }`}
+              >
+                ENG
+              </button>
+            </div>
+
+            {/* Desktop LK Button (matched height, font and padding) */}
             <a
               href={getLkUrl('/dashboard')}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden md:inline-flex bg-[#0082FB] text-white font-extrabold text-xs sm:text-sm px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl hover:bg-[#0070DA] transition-all shadow-md shadow-blue-500/20 active:scale-95 items-center gap-2"
+              className={`hidden md:inline-flex items-center justify-center gap-1.5 sm:gap-2 h-8 sm:h-9 font-bold text-[11px] sm:text-xs px-3 sm:px-3.5 rounded-xl border transition-all active:scale-95 ${
+                isTransparent
+                  ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white backdrop-blur-md shadow-xs'
+                  : 'bg-gray-100 hover:bg-gray-200 text-[#111827] border-gray-200/80 shadow-2xs'
+              }`}
             >
-              <UserCheck className="w-4 h-4" />
-              <span>Перейти в кабинет</span>
+              <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>{t('nav.cabinet')}</span>
             </a>
 
             {/* Mobile Hamburger Menu Button */}
@@ -141,7 +190,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
         </div>
       </header>
 
-      {/* Fullscreen Mobile Menu (Без лишнего мусора) */}
+      {/* Fullscreen Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 w-full h-full bg-white z-[100] md:hidden flex flex-col justify-between p-6 sm:p-8 animate-in fade-in duration-150">
           {/* Top: Logo and Close Button */}
@@ -163,7 +212,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
             </button>
           </div>
 
-          {/* Navigation Links (Строгие, крупные, понятные) */}
+          {/* Navigation Links */}
           <nav className="flex-1 py-8 flex flex-col justify-center space-y-4">
             {NAV_LINKS.map((link) => {
               const active = isActive(link.path);
@@ -172,28 +221,58 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
                   key={link.path}
                   to={link.path}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`text-2xl sm:text-3xl font-extrabold tracking-tight transition-colors py-2 flex items-center justify-between ${
+                  className={`text-xl font-bold py-2 border-b border-gray-50 flex items-center justify-between ${
                     active ? 'text-[#0082FB]' : 'text-[#111827] hover:text-[#0082FB]'
                   }`}
                 >
                   <span>{link.label}</span>
-                  {active && <span className="w-2.5 h-2.5 rounded-full bg-[#0082FB]" />}
+                  {active && <span className="w-2 h-2 rounded-full bg-[#0082FB]"></span>}
                 </Link>
               );
             })}
           </nav>
 
-          {/* Bottom Action: Только Личный кабинет */}
-          <div className="pt-6 border-t border-gray-100">
+          {/* Bottom Actions */}
+          <div className="pt-6 border-t border-gray-100 space-y-4">
+            {/* Language Switcher in Mobile Drawer */}
+            <div className="flex items-center justify-center p-1 rounded-2xl bg-gray-100 border border-gray-200 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setLang('kz')}
+                className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
+                  lang === 'kz' ? 'bg-[#0082FB] text-white shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                ҚАЗАҚША
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('ru')}
+                className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
+                  lang === 'ru' ? 'bg-[#0082FB] text-white shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                РУССКИЙ
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('en')}
+                className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
+                  lang === 'en' ? 'bg-[#0082FB] text-white shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                ENGLISH
+              </button>
+            </div>
+
             <a
               href={getLkUrl('/dashboard')}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="w-full bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-base py-4 rounded-2xl flex items-center justify-center gap-2.5 transition-all shadow-md shadow-blue-500/25 active:scale-95"
+              className="w-full bg-[#0082FB] text-white font-bold py-3.5 px-6 rounded-2xl text-center flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
             >
               <UserCheck className="w-5 h-5" />
-              <span>Личный кабинет</span>
+              <span>{t('nav.cabinet')}</span>
             </a>
           </div>
         </div>
