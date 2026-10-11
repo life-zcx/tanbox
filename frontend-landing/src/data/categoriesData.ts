@@ -313,3 +313,5 @@ export const CATEGORIES_DATA: CategoryData[] = [
     ]
   }
 ];
+
+export { getLocalizedCategory, CATEGORIES_LOCALIZATION } from './categoriesLocalization';

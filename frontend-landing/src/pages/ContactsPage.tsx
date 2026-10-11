@@ -3,17 +3,36 @@ import { Link } from 'react-router-dom';
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { ContactsSection } from '../components/landing/ContactsSection';
-import { COMPANY_CONTACTS } from '../data/companyContacts';
+import { COMPANY_CONTACTS, getLocalizedCompanyContacts } from '../data/companyContacts';
 import { setPageSeo } from '../utils/seo';
+import { useLanguage } from '../context/LanguageContext';
 
 export const ContactsPage: React.FC = () => {
+  const { lang, getLocalizedPath } = useLanguage();
+  const localizedContacts = getLocalizedCompanyContacts(lang);
+
   useEffect(() => {
     window.scrollTo(0, 0);
-    setPageSeo(
-      'Контакты единого сервиса цифровой маркировки | TANBOX.KZ',
-      'Контакты TANBOX.KZ. Телефон горячей линии, онлайн-обслуживание и выездные бригады маркировки по Алматы и Казахстану.'
-    );
-  }, []);
+    if (lang === 'kz') {
+      setPageSeo(
+        'Цифрлық таңбалау бірыңғай сервисінің байланыс ақпараты | TANBOX.KZ',
+        'TANBOX.KZ байланыс мәліметтері. Жедел желі телефоны, онлайн-қызмет көрсету және Алматы мен Қазақстан бойынша көшпелі таңбалау бригадалары.',
+        { lang: 'kz', keywords: 'байланыс tanbox, таңбалау Алматы байланыс, кеңсе мекенжайы' }
+      );
+    } else if (lang === 'en') {
+      setPageSeo(
+        'Contact Digital Product Serialization Center | TANBOX.KZ',
+        'TANBOX.KZ contact information. Hotline telephone, online customer service, and onsite labeling teams in Almaty and throughout Kazakhstan.',
+        { lang: 'en', keywords: 'contact tanbox, product marking office Kazakhstan' }
+      );
+    } else {
+      setPageSeo(
+        'Контакты единого сервиса цифровой маркировки | TANBOX.KZ',
+        'Контакты TANBOX.KZ. Телефон горячей линии, онлайн-обслуживание и выездные бригады маркировки по Алматы и Казахстану.',
+        { lang: 'ru', keywords: 'контакты tanbox, маркировка контакты Алматы' }
+      );
+    }
+  }, [lang]);
   const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -86,11 +105,23 @@ export const ContactsPage: React.FC = () => {
   const validatePhone = (val: string): boolean => {
     const digitsOnly = val.replace(/\D/g, '');
     if (!val.trim()) {
-      setPhoneError('Укажите контактный номер телефона');
+      setPhoneError(
+        lang === 'kz'
+          ? 'Байланыс телефон нөмірін көрсетіңіз'
+          : lang === 'en'
+          ? 'Please enter contact phone number'
+          : 'Укажите контактный номер телефона'
+      );
       return false;
     }
     if (digitsOnly.length !== 11) {
-      setPhoneError('Номер должен содержать 11 цифр (+7 7XX XXX-XX-XX)');
+      setPhoneError(
+        lang === 'kz'
+          ? 'Нөмір 11 саннан тұруы керек (+7 7XX XXX-XX-XX)'
+          : lang === 'en'
+          ? 'Phone must contain 11 digits (+7 7XX XXX-XX-XX)'
+          : 'Номер должен содержать 11 цифр (+7 7XX XXX-XX-XX)'
+      );
       return false;
     }
     setPhoneError(null);
@@ -104,7 +135,13 @@ export const ContactsPage: React.FC = () => {
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(val.trim())) {
-      setEmailError('Некорректный e-mail (пример: info@company.kz)');
+      setEmailError(
+        lang === 'kz'
+          ? 'Қате e-mail (мысалы: info@company.kz)'
+          : lang === 'en'
+          ? 'Invalid e-mail (e.g. info@company.kz)'
+          : 'Некорректный e-mail (пример: info@company.kz)'
+      );
       return false;
     }
     setEmailError(null);
@@ -118,7 +155,13 @@ export const ContactsPage: React.FC = () => {
     }
     const digitsOnly = val.replace(/\D/g, '');
     if (digitsOnly.length !== 12 || val.trim().length !== 12) {
-      setBinError('БИН/ИИН должен состоять ровно из 12 цифр');
+      setBinError(
+        lang === 'kz'
+          ? 'БСН/ЖСН дәл 12 саннан тұруы тиіс'
+          : lang === 'en'
+          ? 'BIN/IIN must consist of exactly 12 digits'
+          : 'БИН/ИИН должен состоять ровно из 12 цифр'
+      );
       return false;
     }
     setBinError(null);
@@ -131,7 +174,13 @@ export const ContactsPage: React.FC = () => {
 
     if (cooldownSeconds > 0) {
       setSubmitted(false);
-      setError(`Вы уже отправили заявку. Пожалуйста, подождите ${cooldownSeconds} сек. перед повторной отправкой.`);
+      setError(
+        lang === 'kz'
+          ? `Сіз өтінімді жіберіп қойдыңыз. Қайта жіберу алдында ${cooldownSeconds} сек. күтіңіз.`
+          : lang === 'en'
+          ? `You have already sent a request. Please wait ${cooldownSeconds} sec. before retrying.`
+          : `Вы уже отправили заявку. Пожалуйста, подождите ${cooldownSeconds} сек. перед повторной отправкой.`
+      );
       return;
     }
 
@@ -145,7 +194,13 @@ export const ContactsPage: React.FC = () => {
     const isBinValid = validateBinIin(binIin);
 
     if (!isPhoneValid || !isEmailValid || !isBinValid) {
-      setError('Пожалуйста, проверьте правильность заполнения полей.');
+      setError(
+        lang === 'kz'
+          ? 'Өрістердің дұрыс толтырылғанын тексеріңіз.'
+          : lang === 'en'
+          ? 'Please verify that all fields are filled correctly.'
+          : 'Пожалуйста, проверьте правильность заполнения полей.'
+      );
       return;
     }
 
@@ -153,7 +208,12 @@ export const ContactsPage: React.FC = () => {
 
     const leadObject = {
       id: `lead-${Date.now()}`,
-      serviceTitle: 'Запрос с формы контактов (Консультация)',
+      serviceTitle:
+        lang === 'kz'
+          ? 'Байланыс нысанынан сұраныс (Кеңес алу)'
+          : lang === 'en'
+          ? 'Contact Form Request (Consultation)'
+          : 'Запрос с формы контактов (Консультация)',
       companyName,
       phone,
       email: email || undefined,
@@ -167,7 +227,12 @@ export const ContactsPage: React.FC = () => {
     // Post to backend REST API
     try {
       await apiClient.post('/leads', {
-        serviceTitle: 'Запрос с формы контактов (Консультация)',
+        serviceTitle:
+          lang === 'kz'
+            ? 'Байланыс нысанынан сұраныс (Кеңес алу)'
+            : lang === 'en'
+            ? 'Contact Form Request (Consultation)'
+            : 'Запрос с формы контактов (Консультация)',
         companyName,
         phone,
         email: email || undefined,
@@ -176,7 +241,13 @@ export const ContactsPage: React.FC = () => {
       });
     } catch (err: any) {
       if (err?.response?.status === 429) {
-        setError('Слишком много запросов. Пожалуйста, подождите немного.');
+        setError(
+          lang === 'kz'
+            ? 'Сұраныстар тым көп. Біраз күтіңіз.'
+            : lang === 'en'
+            ? 'Too many requests. Please wait a moment.'
+            : 'Слишком много запросов. Пожалуйста, подождите немного.'
+        );
         setLoading(false);
         return;
       }
@@ -213,24 +284,28 @@ export const ContactsPage: React.FC = () => {
 
         <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
           <h1 className="text-3xl sm:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight max-w-4xl">
-            Контакты и Реквизиты
+            {lang === 'kz' ? 'Байланыс және Деректемелер' : lang === 'en' ? 'Contacts & Details' : 'Контакты и Реквизиты'}
           </h1>
           <p className="text-base sm:text-lg text-[#64748B] max-w-3xl font-normal leading-relaxed">
-            Официальный отдел продаж и центр обслуживания клиентов ИС Танба в Республике Казахстан.
+            {lang === 'kz'
+              ? 'Қазақстан Республикасындағы ресми сату бөлімі және клиенттерге қызмет көрсету орталығы.'
+              : lang === 'en'
+              ? 'Official sales office and customer service center for digital serialization in Kazakhstan.'
+              : 'Официальный отдел продаж и центр обслуживания клиентов ИС Танба в Республике Казахстан.'}
           </p>
         </div>
       </section>
 
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
-        {/* Telegram & Email quick contact cards from tanba.telecom.kz (Image 1) */}
+        {/* Telegram & Email quick contact cards */}
         <ContactsSection showTitle={false} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Info Side */}
           <div className="lg:col-span-5 bg-white rounded-3xl p-8 shadow-sm space-y-8">
-            <h3 className="text-xl font-bold text-[#111827]">{COMPANY_CONTACTS.officeTitle}</h3>
+            <h3 className="text-xl font-bold text-[#111827]">{localizedContacts.officeTitle}</h3>
 
             <div className="space-y-6 text-sm">
               <div className="flex items-start gap-4">
@@ -238,8 +313,10 @@ export const ContactsPage: React.FC = () => {
                   <MapPin className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">Формат работы и локация</p>
-                  <p className="text-[#64748B] mt-1">{COMPANY_CONTACTS.address.full}</p>
+                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">
+                    {lang === 'kz' ? 'Жұмыс форматы және мекенжай' : lang === 'en' ? 'Location & Format' : 'Формат работы и локация'}
+                  </p>
+                  <p className="text-[#64748B] mt-1">{localizedContacts.addressFull}</p>
                 </div>
               </div>
 
@@ -248,14 +325,16 @@ export const ContactsPage: React.FC = () => {
                   <Phone className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">Телефон и мессенджеры</p>
+                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">
+                    {lang === 'kz' ? 'Телефон және мессенджерлер' : lang === 'en' ? 'Phone & Messengers' : 'Телефон и мессенджеры'}
+                  </p>
                   <p className="mt-1">
                     <a href={`tel:${COMPANY_CONTACTS.phones.hotlineRaw}`} className="text-[#111827] font-bold hover:text-[#0082FB] transition-colors block">
                       {COMPANY_CONTACTS.phones.hotline}
                     </a>
                   </p>
                   <div className="flex items-center gap-2 mt-1 text-xs">
-                    <span className="text-[#64748B]">Звонки 24/7</span>
+                    <span className="text-[#64748B]">{lang === 'kz' ? '24/7 қоңыраулар' : lang === 'en' ? '24/7 Calls' : 'Звонки 24/7'}</span>
                     <span className="text-gray-300">•</span>
                     <a
                       href={COMPANY_CONTACTS.links.whatsapp}
@@ -283,7 +362,9 @@ export const ContactsPage: React.FC = () => {
                   <Mail className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">Электронная почта</p>
+                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">
+                    {lang === 'kz' ? 'Электрондық пошта' : lang === 'en' ? 'Email' : 'Электронная почта'}
+                  </p>
                   <p className="text-[#64748B] mt-1">
                     <a href={`mailto:${COMPANY_CONTACTS.emails.info}`} className="hover:text-[#0082FB] transition-colors">
                       {COMPANY_CONTACTS.emails.displayCombined}
@@ -297,30 +378,45 @@ export const ContactsPage: React.FC = () => {
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">График работы</p>
-                  <p className="text-[#111827] font-semibold mt-1">{COMPANY_CONTACTS.workingHours.main}</p>
-                  <p className="text-[#64748B] text-xs mt-0.5">{COMPANY_CONTACTS.workingHours.additional}</p>
+                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">
+                    {lang === 'kz' ? 'Жұмыс кестесі' : lang === 'en' ? 'Working Hours' : 'График работы'}
+                  </p>
+                  <p className="text-[#111827] font-semibold mt-1">{localizedContacts.workingHoursMain}</p>
+                  <p className="text-[#64748B] text-xs mt-0.5">{localizedContacts.workingHoursAdditional}</p>
                 </div>
               </div>
             </div>
-
 
           </div>
 
           {/* Form Side */}
           <div className="lg:col-span-7 bg-white rounded-3xl p-8 shadow-sm space-y-6">
             <div>
-              <h3 className="text-xl font-bold text-[#111827]">Написать в отдел маркировки</h3>
-              <p className="text-sm text-[#64748B] mt-1">Оставьте запрос на КП или коммерческий расчет партии товара.</p>
+              <h3 className="text-xl font-bold text-[#111827]">
+                {lang === 'kz' ? 'Таңбалау бөліміне хабарласу' : lang === 'en' ? 'Contact Serialization Department' : 'Написать в отдел маркировки'}
+              </h3>
+              <p className="text-sm text-[#64748B] mt-1">
+                {lang === 'kz'
+                  ? 'Тауар партиясын есептеу немесе коммерциялық ұсыныс алу үшін өтінім қалдырыңыз.'
+                  : lang === 'en'
+                  ? 'Request a commercial proposal or cost calculation for your product batch.'
+                  : 'Оставьте запрос на КП или коммерческий расчет партии товара.'}
+              </p>
             </div>
 
             {submitted && (
               <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold text-emerald-900">Заявка успешно отправлена</p>
+                  <p className="font-bold text-emerald-900">
+                    {lang === 'kz' ? 'Өтінім сәтті жіберілді' : lang === 'en' ? 'Request successfully submitted' : 'Заявка успешно отправлена'}
+                  </p>
                   <p className="text-xs text-emerald-700 mt-0.5">
-                    Спасибо! Мы получили ваше обращение и свяжемся с вами в ближайшее время.
+                    {lang === 'kz'
+                      ? 'Рақмет! Біз сіздің өтінішіңізді алдық және жақын арада хабарласамыз.'
+                      : lang === 'en'
+                      ? 'Thank you! We have received your inquiry and will contact you shortly.'
+                      : 'Спасибо! Мы получили ваше обращение и свяжемся с вами в ближайшее время.'}
                   </p>
                 </div>
               </div>
@@ -336,7 +432,8 @@ export const ContactsPage: React.FC = () => {
               {/* Company / Name */}
               <div>
                 <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1">
-                  Наименование компании / ФИО <span className="text-red-500">*</span>
+                  {lang === 'kz' ? 'Компания атауы / Т.А.Ә.' : lang === 'en' ? 'Company Name / Full Name' : 'Наименование компании / ФИО'}{' '}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -344,7 +441,7 @@ export const ContactsPage: React.FC = () => {
                   maxLength={150}
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder='Например: ТОО "Казахстан Трейд" или Иван Иванов'
+                  placeholder={lang === 'kz' ? 'Мысалы: "Қазақстан Трейд" ЖШС немесе Арман Серікұлы' : lang === 'en' ? 'e.g. "Kazakhstan Trade" LLP or John Doe' : 'Например: ТОО "Казахстан Трейд" или Иван Иванов'}
                   className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
                 />
               </div>
@@ -352,7 +449,10 @@ export const ContactsPage: React.FC = () => {
               {/* Phone */}
               <div>
                 <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1 flex items-center justify-between">
-                  <span>Контактный телефон <span className="text-red-500">*</span></span>
+                  <span>
+                    {lang === 'kz' ? 'Байланыс телефоны' : lang === 'en' ? 'Contact Phone' : 'Контактный телефон'}{' '}
+                    <span className="text-red-500">*</span>
+                  </span>
                   {phoneError && <span className="text-red-500 text-[10px] font-normal normal-case">{phoneError}</span>}
                 </label>
                 <input
@@ -401,7 +501,7 @@ export const ContactsPage: React.FC = () => {
 
                 <div>
                   <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1 flex items-center justify-between">
-                    <span>БИН / ИИН (12 цифр)</span>
+                    <span>{lang === 'kz' ? 'БСН / ЖСН (12 сан)' : lang === 'en' ? 'BIN / IIN (12 digits)' : 'БИН / ИИН (12 цифр)'}</span>
                   </label>
                   <input
                     type="text"
@@ -425,14 +525,14 @@ export const ContactsPage: React.FC = () => {
               {/* Comment / Notes */}
               <div>
                 <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1">
-                  Комментарий / Пожелания
+                  {lang === 'kz' ? 'Пікір / Қосымша мәліметтер' : lang === 'en' ? 'Comments / Requirements' : 'Комментарий / Пожелания'}
                 </label>
                 <textarea
                   rows={3}
                   maxLength={1000}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Объем партии, сроки, адрес склада..."
+                  placeholder={lang === 'kz' ? 'Партия көлемі, мерзімі, қойма мекенжайы...' : lang === 'en' ? 'Batch volume, turnaround, warehouse address...' : 'Объем партии, сроки, адрес склада...'}
                   className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl p-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
                 />
               </div>
@@ -466,17 +566,49 @@ export const ContactsPage: React.FC = () => {
                     consentError ? 'text-red-700 font-semibold' : 'text-[#64748B]'
                   }`}
                 >
-                  Я даю согласие на сбор и обработку персональных данных в соответствии с{' '}
-                  <Link
-                    to="/privacy"
-                    target="_blank"
-                    className={`font-semibold underline underline-offset-2 ${
-                      consentError ? 'text-red-800' : 'text-[#0082FB]'
-                    }`}
-                  >
-                    Политикой конфиденциальности
-                  </Link>{' '}
-                  и Законом РК № 94-V «О персональных данных и их защите».
+                  {lang === 'kz' ? (
+                    <>
+                      Мен дербес деректерді жинауға және өңдеуге келісім беремін ({' '}
+                      <Link
+                        to={getLocalizedPath('/privacy')}
+                        target="_blank"
+                        className={`font-semibold underline underline-offset-2 ${
+                          consentError ? 'text-red-800' : 'text-[#0082FB]'
+                        }`}
+                      >
+                        Құпиялылық саясаты
+                      </Link>{' '}
+                      және ҚР № 94-V «Дербес деректер және оларды қорғау туралы» Заңына сәйкес).
+                    </>
+                  ) : lang === 'en' ? (
+                    <>
+                      I consent to the processing of personal data in accordance with the{' '}
+                      <Link
+                        to={getLocalizedPath('/privacy')}
+                        target="_blank"
+                        className={`font-semibold underline underline-offset-2 ${
+                          consentError ? 'text-red-800' : 'text-[#0082FB]'
+                        }`}
+                      >
+                        Privacy Policy
+                      </Link>{' '}
+                      and Law of RK No. 94-V.
+                    </>
+                  ) : (
+                    <>
+                      Я даю согласие на сбор и обработку персональных данных в соответствии с{' '}
+                      <Link
+                        to={getLocalizedPath('/privacy')}
+                        target="_blank"
+                        className={`font-semibold underline underline-offset-2 ${
+                          consentError ? 'text-red-800' : 'text-[#0082FB]'
+                        }`}
+                      >
+                        Политикой конфиденциальности
+                      </Link>{' '}
+                      и Законом РК № 94-V «О персональных данных и их защите».
+                    </>
+                  )}
                 </label>
               </div>
 
@@ -488,11 +620,11 @@ export const ContactsPage: React.FC = () => {
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" /> Отправка...
+                      <Loader2 className="w-4 h-4 animate-spin" /> {lang === 'kz' ? 'Жіберілуде...' : lang === 'en' ? 'Sending...' : 'Отправка...'}
                     </>
                   ) : (
                     <>
-                      Отправить заявку <ArrowRight className="w-4 h-4" />
+                      {lang === 'kz' ? 'Өтінімді жіберу' : lang === 'en' ? 'Submit request' : 'Отправить заявку'} <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </button>

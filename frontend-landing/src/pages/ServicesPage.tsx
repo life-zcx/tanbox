@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Truck, 
@@ -24,14 +24,33 @@ export interface ServiceItem {
   features: string[];
 }
 
+import { useLanguage } from '../context/LanguageContext';
+
 export const ServicesPage: React.FC = () => {
+  const { lang } = useLanguage();
+
   useEffect(() => {
     window.scrollTo(0, 0);
-    setPageSeo(
-      'Услуги маркировки товаров «под ключ» в Казахстане (ВЭД, НКТ, Оклейка) | TANBOX.KZ',
-      'Комплексные услуги цифровой маркировки в РК: таможенное оформление, регистрация номенклатуры в Национальном каталоге товаров (НКТ), генерация кодов Data Matrix, печать стикеров и интеграция с 1С.'
-    );
-  }, []);
+    if (lang === 'kz') {
+      setPageSeo(
+        'Қазақстанда тауарларды «кілтке дейін» таңбалау қызметтері (СЭҚ, ҰТК, Оклейка) | TANBOX.KZ',
+        'ҚР-да цифрлық таңбалау бойынша кешенді қызметтер: кедендік ресімдеу, Ұлттық тауарлар каталогында (ҰТК) номенклатураны тіркеу, Data Matrix кодтарын генерациялау, стикерлерді басып шығару және 1С-пен интеграция.',
+        { lang: 'kz', keywords: 'таңбалау қызметтері Қазақстан, ҰТК тіркеу, кеденнен таңбалау, Data Matrix басу' }
+      );
+    } else if (lang === 'en') {
+      setPageSeo(
+        'Turnkey Product Serialization Services in Kazakhstan (Customs, NKT, Labeling) | TANBOX.KZ',
+        'Full-scope digital product serialization in Kazakhstan: customs clearance, National Product Catalog (NKT) registration, Data Matrix issuance, industrial sticker printing, and 1C ERP sync.',
+        { lang: 'en', keywords: 'serialization services Kazakhstan, customs labeling, NKT catalog' }
+      );
+    } else {
+      setPageSeo(
+        'Услуги маркировки товаров «под ключ» в Казахстане (ВЭД, НКТ, Оклейка) | TANBOX.KZ',
+        'Комплексные услуги цифровой маркировки в РК: таможенное оформление, регистрация номенклатуры в Национальном каталоге товаров (НКТ), генерация кодов Data Matrix, печать стикеров и интеграция с 1С.',
+        { lang: 'ru', keywords: 'услуги маркировки Казахстан, маркировка под ключ, НКТ ВЭД 1С' }
+      );
+    }
+  }, [lang]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedServiceTitle, setSelectedServiceTitle] = useState('');
@@ -41,86 +60,254 @@ export const ServicesPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const services: ServiceItem[] = [
-    {
-      id: 'customs',
-      title: 'Таможенное оформление и растаможка грузов',
-      badge: 'ВЭД и Логистика',
-      desc: 'Полный комплекс услуг по очистке и таможенному декларированию грузов на границах РК. Работаем с поставками из Китая, Турции, Европы и стран ЕАЭС.',
-      icon: Truck,
-      features: [
-        'Таможенное декларирование (ГТД / ДТ)',
-        'Классификация и аудит кодов ТН ВЭД РК',
-        'Получение сертификатов и деклараций соответствия',
-        'Расчет и оптимизация таможенных пошлин и НДС',
-      ],
-    },
-    {
-      id: 'nkt',
-      title: 'Заведение товаров в НКТ (Каталог товаров)',
-      badge: 'Регистрация и Каталогизация',
-      desc: 'Внесение номенклатуры продукции и получение кодов GTIN / NTIN в Едином национальном каталоге товаров РК. Заполнение аттрибутов и прохождение модерации.',
-      icon: FileSpreadsheet,
-      features: [
-        'Регистрация и присвоение кодов GTIN / NTIN',
-        'Массовая загрузка спецификаций из 1С / Excel',
-        'Безошибочное прохождение модерации в НКТ',
-        'Корректная привязка кодов ТН ВЭД и ГСВС',
-      ],
-    },
-    {
-      id: 'datamatrix',
-      title: 'Эмиссия и нанесение кодов Data Matrix',
-      badge: 'Маркировка РК',
-      desc: 'Заказ кодов в ИС Танба, высокоскоростная печать устойчивых стикеров и их нанесение на любые виды потребительской упаковки товаров.',
-      icon: QrCode,
-      features: [
-        'Эмиссия 2D-кодов через API Национального Оператора',
-        'Печать уличных и фармацевтических термо-стикеров',
-        'Маркировка обуви, легпрома, напитков и лекарств',
-        'Контроль 100% считываемости сканерами 2D',
-      ],
-    },
-    {
-      id: 'aggregation',
-      title: 'Агрегация в короба и паллеты (SSCC)',
-      badge: 'Логистическая агрегация',
-      desc: 'Формирование и печать транспортных кодов SSCC для коробов и паллет. Упрощение приемки грузов на складах и прохождения таможенного контроля.',
-      icon: Layers,
-      features: [
-        'Генерация кодов SSCC по международным стандартам GS1',
-        'Поштучная привязка Data Matrix к групповой упаковке',
-        'Печать паллетных и коробочных ярлыков A5 / A6',
-        'Ускорение складской приемки в 10 раз',
-      ],
-    },
-    {
-      id: 'mobile-teams',
-      title: 'Выездные мобильные бригады оклейщиков (24/7)',
-      badge: 'Выезд на склад',
-      desc: 'Выезд квалифицированных бригад маркировщиков со своим оборудованием и риббонами непосредственно на ваш склад в любом регионе Казахстана.',
-      icon: Users,
-      features: [
-        'Выезд на склады Алматы, Астаны и регионов РК 24/7',
-        'Собственные промышленные принтеры и аппликаторы',
-        'Высокая скорость: до 50 000 оклеенных единиц в смену',
-        'Подписание актов выполненных работ на месте',
-      ],
-    },
-    {
-      id: 'integration',
-      title: 'Интеграция ИС Танба с 1С / ERP и Консалтинг',
-      badge: 'ИТ и Аудит',
-      desc: 'Полный настрой прослеживаемости в вашей учетной системе, обучение персонала, подготовка к проверочным мероприятиям государственных органов.',
-      icon: Cpu,
-      features: [
-        'Настройка обмена ИС Танба с 1С:Предприятие / ERP / WMS',
-        'Обучение кладовщиков и операторов работе с 2D-сканерами',
-        'Аудит процессов маркировки перед проверками',
-        'Круглосуточная техническая поддержка 24/7',
-      ],
-    },
-  ];
+  const services: ServiceItem[] = useMemo(() => {
+    if (lang === 'kz') {
+      return [
+        {
+          id: 'customs',
+          title: 'Тауарларды кедендік ресімдеу және растаможка',
+          badge: 'СЭҚ және Логистика',
+          desc: 'ҚР шекараларында жүкті кедендік декларациялау және рәсімдеудің толық кешені. Қытай, Түркия, Еуропа және ЕАЭО елдерінен тасымалдаумен жұмыс істейміз.',
+          icon: Truck,
+          features: [
+            'Кедендік декларациялау (ЖТД / ТД)',
+            'ҚР ТН ВЭД кодтарын жіктеу және аудит',
+            'Сәйкестік сертификаттары мен декларацияларын алу',
+            'Кедендік баждар мен ҚҚС-ты оңтайландыру',
+          ],
+        },
+        {
+          id: 'nkt',
+          title: 'Тауарларды ҰТК каталогына енгізу (Ұлттық каталог)',
+          badge: 'Тіркеу және Каталогтау',
+          desc: 'ҚР Бірыңғай ұлттық тауарлар каталогына (ҰТК) номенклатураны енгізу және GTIN / NTIN кодтарын алу. Атрибуттарды толтыру және модерациядан өткізу.',
+          icon: FileSpreadsheet,
+          features: [
+            'GTIN / NTIN кодтарын тіркеу және тағайындау',
+            '1С / Excel файлдарынан спецификацияларды жаппай жүктеу',
+            'ҰТК модерациясынан қатесіз өту',
+            'ТН ВЭД және ТСБК кодтарын дұрыс байланыстыру',
+          ],
+        },
+        {
+          id: 'datamatrix',
+          title: 'Data Matrix кодтарын эмиссиялау және жапсыру',
+          badge: 'ҚР Таңбалауы',
+          desc: '«Таңба» АЖ-де кодтарға тапсырыс беру, төзімді стикерлерді жоғары жылдамдықта басу және қаптаманың кез келген түріне жапсыру.',
+          icon: QrCode,
+          features: [
+            'Ұлттық оператордың API арқылы 2D-кодтарды алу',
+            'Өнеркәсіптік және фармацевтикалық термо-стикерлерді басу',
+            'Аяқ киім, жеңіл өнеркәсіп, сусындар мен дәрілерді таңбалау',
+            '2D сканерлермен оқылу сапасын 100% бақылау',
+          ],
+        },
+        {
+          id: 'aggregation',
+          title: 'Қораптар мен паллеттерге агрегациялау (SSCC)',
+          badge: 'Логистикалық агрегация',
+          desc: 'Қораптар мен паллеттер үшін көліктік SSCC кодтарын қалыптастыру және басып шығару. Қоймада қабылдауды және кедендік тексеруден өтуді жеңілдету.',
+          icon: Layers,
+          features: [
+            'GS1 халықаралық стандарттары бойынша SSCC кодтары',
+            'Data Matrix кодтарын топтық қаптамаға жекелеп бекіту',
+            'Паллеттік және қораптық A5 / A6 белгілерін басу',
+            'Қоймалық қабылдауды 10 есе жылдамдату',
+          ],
+        },
+        {
+          id: 'mobile-teams',
+          title: 'Көшпелі мобильді стикерлеушілер тобы (24/7)',
+          badge: 'Қоймаға шығу',
+          desc: 'Қазақстанның кез келген аймағындағы қоймаңызға өз жабдықтарымен және шығын материалдарымен кәсіби таңбалаушылар тобының шығуы.',
+          icon: Users,
+          features: [
+            'Алматы, Астана және ҚР аймақтарындағы қоймаларға 24/7 шығу',
+            'Жеке өндірістік принтерлер мен аппликаторлар',
+            'Жоғары жылдамдық: ауысымына 50 000 данаға дейін',
+            'Орындалған жұмыс актілерін орнында рәсімдеу',
+          ],
+        },
+        {
+          id: 'integration',
+          title: '«Таңба» АЖ жүйесін 1С / ERP-мен интеграциялау',
+          badge: 'АТ және Аудит',
+          desc: 'Есеп жүйеңізде толық прослеживаемостьты баптау, қызметкерлерді оқыту, мемлекеттік органдардың тексерулеріне дайындық.',
+          icon: Cpu,
+          features: [
+            '«Таңба» АЖ мен 1С:Кәсіпорын / ERP / WMS дерек алмасуын баптау',
+            'Қоймашылар мен операторларды 2D сканерлермен жұмыс істеуге үйрету',
+            'Тексерулер алдында таңбалау процестеріне аудит жүргізу',
+            'Тәулік бойы 24/7 техникалық қолдау',
+          ],
+        },
+      ];
+    }
+
+    if (lang === 'en') {
+      return [
+        {
+          id: 'customs',
+          title: 'Customs Clearance & Freight Brokerage',
+          badge: 'FEA & Logistics',
+          desc: 'Comprehensive customs brokerage and cargo clearance at Kazakhstan borders. Handling import flows from China, Turkey, Europe, and EAEU.',
+          icon: Truck,
+          features: [
+            'Customs declaration filing (CCD)',
+            'HS Code classification and compliance audit',
+            'Certificates and declarations of conformity',
+            'Customs duties and VAT optimization',
+          ],
+        },
+        {
+          id: 'nkt',
+          title: 'Product Cataloging in NKT (GS1 KZ)',
+          badge: 'Registration & Cataloging',
+          desc: 'Submitting SKU master data to the National Product Catalog of Kazakhstan to obtain official GTIN/NTIN codes with full attribute approval.',
+          icon: FileSpreadsheet,
+          features: [
+            'Registration and issuance of GTIN / NTIN codes',
+            'Bulk specification upload from 1C / Excel',
+            'Guaranteed moderation approval in NKT portal',
+            'Accurate HS Code and product category mapping',
+          ],
+        },
+        {
+          id: 'datamatrix',
+          title: 'Data Matrix Code Emission & Stickering',
+          badge: 'Kazakhstan Serialization',
+          desc: 'Ordering official Data Matrix pools from IS Tanba, high-speed thermal label printing, and applying stickers onto any product packaging.',
+          icon: QrCode,
+          features: [
+            '2D code emission via National Operator API',
+            'Industrial and pharma-grade thermal transfer labels',
+            'Serialization for footwear, apparel, water, and pharma',
+            '100% 2D barcode scanner readability verification',
+          ],
+        },
+        {
+          id: 'aggregation',
+          title: 'Carton & Pallet Aggregation (SSCC)',
+          badge: 'Logistics Aggregation',
+          desc: 'Generating and printing SSCC transport barcodes for cartons and pallets. Accelerating terminal intake and customs verification.',
+          icon: Layers,
+          features: [
+            'GS1 compliant SSCC code generation',
+            'Item Data Matrix association to carton hierarchy',
+            'Printing pallet and carton transport labels (A5 / A6)',
+            '10x faster warehouse receiving and customs control',
+          ],
+        },
+        {
+          id: 'mobile-teams',
+          title: 'Onsite Mobile Stickering Crews (24/7)',
+          badge: 'Warehouse Dispatch',
+          desc: 'Deploying professional stickering crews equipped with mobile thermal printers directly to your warehouse across Kazakhstan.',
+          icon: Users,
+          features: [
+            '24/7 dispatch across Almaty, Astana, and regions',
+            'Proprietary industrial roll printers & applicators',
+            'High throughput: up to 50,000 units per shift',
+            'Onsite handover documentation completion',
+          ],
+        },
+        {
+          id: 'integration',
+          title: '1C / ERP & IS Tanba System Integration',
+          badge: 'IT & Audit',
+          desc: 'Configuring automated track & trace exchange in your ERP, training personnel, and conducting regulatory compliance audits.',
+          icon: Cpu,
+          features: [
+            'Configuring IS Tanba data exchange with 1C / WMS',
+            'Training warehouse staff on 2D barcode scanners',
+            'Pre-inspection regulatory compliance audits',
+            '24/7 dedicated enterprise technical support',
+          ],
+        },
+      ];
+    }
+
+    return [
+      {
+        id: 'customs',
+        title: 'Таможенное оформление и растаможка грузов',
+        badge: 'ВЭД и Логистика',
+        desc: 'Полный комплекс услуг по очистке и таможенному декларированию грузов на границах РК. Работаем с поставками из Китая, Турции, Европы и стран ЕАЭС.',
+        icon: Truck,
+        features: [
+          'Таможенное декларирование (ГТД / ДТ)',
+          'Классификация и аудит кодов ТН ВЭД РК',
+          'Получение сертификатов и деклараций соответствия',
+          'Расчет и оптимизация таможенных пошлин и НДС',
+        ],
+      },
+      {
+        id: 'nkt',
+        title: 'Заведение товаров в НКТ (Каталог товаров)',
+        badge: 'Регистрация и Каталогизация',
+        desc: 'Внесение номенклатуры продукции и получение кодов GTIN / NTIN в Едином национальном каталоге товаров РК. Заполнение аттрибутов и прохождение модерации.',
+        icon: FileSpreadsheet,
+        features: [
+          'Регистрация и присвоение кодов GTIN / NTIN',
+          'Массовая загрузка спецификаций из 1С / Excel',
+          'Безошибочное прохождение модерации в НКТ',
+          'Корректная привязка кодов ТН ВЭД и ГСВС',
+        ],
+      },
+      {
+        id: 'datamatrix',
+        title: 'Эмиссия и нанесение кодов Data Matrix',
+        badge: 'Маркировка РК',
+        desc: 'Заказ кодов в ИС Танба, высокоскоростная печать устойчивых стикеров и их нанесение на любые виды потребительской упаковки товаров.',
+        icon: QrCode,
+        features: [
+          'Эмиссия 2D-кодов через API Национального Оператора',
+          'Печать уличных и фармацевтических термо-стикеров',
+          'Маркировка обуви, легпрома, напитков и лекарств',
+          'Контроль 100% считываемости сканерами 2D',
+        ],
+      },
+      {
+        id: 'aggregation',
+        title: 'Агрегация в короба и паллеты (SSCC)',
+        badge: 'Логистическая агрегация',
+        desc: 'Формирование и печать транспортных кодов SSCC для коробов и паллет. Упрощение приемки грузов на складах и прохождения таможенного контроля.',
+        icon: Layers,
+        features: [
+          'Генерация кодов SSCC по международным стандартам GS1',
+          'Поштучная привязка Data Matrix к групповой упаковке',
+          'Печать паллетных и коробочных ярлыков A5 / A6',
+          'Ускорение складской приемки в 10 раз',
+        ],
+      },
+      {
+        id: 'mobile-teams',
+        title: 'Выездные мобильные бригады оклейщиков (24/7)',
+        badge: 'Выезд на склад',
+        desc: 'Выезд квалифицированных бригад маркировщиков со своим оборудованием и риббонами непосредственно на ваш склад в любом регионе Казахстана.',
+        icon: Users,
+        features: [
+          'Выезд на склады Алматы, Астаны и регионов РК 24/7',
+          'Собственные промышленные принтеры и аппликаторы',
+          'Высокая скорость: до 50 000 оклеенных единиц в смену',
+          'Подписание актов выполненных работ на месте',
+        ],
+      },
+      {
+        id: 'integration',
+        title: 'Интеграция ИС Танба с 1С / ERP и Консалтинг',
+        badge: 'ИТ и Аудит',
+        desc: 'Полный настрой прослеживаемости в вашей учетной системе, обучение персонала, подготовка к проверочным мероприятиям государственных органов.',
+        icon: Cpu,
+        features: [
+          'Настройка обмена ИС Танба с 1С:Предприятие / ERP / WMS',
+          'Обучение кладовщиков и операторов работе с 2D-сканерами',
+          'Аудит процессов маркировки перед проверками',
+          'Круглосуточная техническая поддержка 24/7',
+        ],
+      },
+    ];
+  }, [lang]);
 
   return (
     <div className="bg-[#F4F6F9] min-h-screen pb-20 space-y-12">
@@ -134,10 +321,18 @@ export const ServicesPage: React.FC = () => {
 
         <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
           <h1 className="text-3xl sm:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight max-w-4xl">
-            Комплексные услуги по маркировке, растаможке и НКТ
+            {lang === 'kz'
+              ? 'Таңбалау, кедендік ресімдеу және ҰТК бойынша кешенді қызметтер'
+              : lang === 'en'
+              ? 'Turnkey Product Serialization, Customs & NKT Services'
+              : 'Комплексные услуги по маркировке, растаможке и НКТ'}
           </h1>
           <p className="text-base sm:text-lg text-[#64748B] max-w-3xl font-normal leading-relaxed">
-            Предоставляем экспертное сопровождение по любым вопросам: от растаможки грузов на границе и заведения товаров в Национальный каталог (НКТ) до выездной маркировки на вашем складе.
+            {lang === 'kz'
+              ? 'Кез келген сұрақ бойынша кәсіби қолдау көрсетеміз: шекарада жүктерді ресімдеуден және тауарларды Ұлттық каталогқа (ҰТК) енгізуден бастап қоймада таңбалауға дейін.'
+              : lang === 'en'
+              ? 'End-to-end expertise: from cross-border customs clearance and NKT catalog registration to onsite warehouse serialization.'
+              : 'Предоставляем экспертное сопровождение по любым вопросам: от растаможки грузов на границе и заведения товаров в Национальный каталог (НКТ) до выездной маркировки на вашем складе.'}
           </p>
         </div>
       </section>
@@ -182,7 +377,7 @@ export const ServicesPage: React.FC = () => {
                     onClick={() => handleOpenModal(srv.title)}
                     className="inline-flex items-center gap-2 text-xs font-extrabold text-[#0082FB] hover:text-[#0070DA] transition-colors cursor-pointer"
                   >
-                    Заказать услугу <ArrowRight className="w-3.5 h-3.5" />
+                    {lang === 'kz' ? 'Қызметке тапсырыс беру' : lang === 'en' ? 'Order service' : 'Заказать услугу'} <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
@@ -197,20 +392,28 @@ export const ServicesPage: React.FC = () => {
         <div className="bg-[#0F172A] text-white rounded-3xl p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl">
           <div className="space-y-2 max-w-2xl text-center md:text-left">
             <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              Нужен индивидуальный расчет растаможки или заведения карточек в НКТ?
+              {lang === 'kz'
+                ? 'Кедендік рәсімдеу немесе ҰТК карточкаларын енгізу бойынша жеке есептеу қажет пе?'
+                : lang === 'en'
+                ? 'Need a custom quote for customs clearance or NKT catalog registration?'
+                : 'Нужен индивидуальный расчет растаможки или заведения карточек в НКТ?'}
             </h3>
             <p className="text-sm text-slate-300">
-              Свяжитесь с нашими специалистами. Проведем бесплатный аудит вашей номенклатуры и подготовим коммерческое предложение за 15 минут.
+              {lang === 'kz'
+                ? 'Біздің мамандармен хабарласыңыз. Номенклатураңызға тегін аудит жүргізіп, 15 минутта коммерциялық ұсыныс дайындаймыз.'
+                : lang === 'en'
+                ? 'Contact our specialists. We will conduct a free SKU audit and deliver a customized commercial offer in 15 minutes.'
+                : 'Свяжитесь с нашими специалистами. Проведем бесплатный аудит вашей номенклатуры и подготовим коммерческое предложение за 15 минут.'}
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() => handleOpenModal('Другой вопрос / Комплексный аудит')}
+            onClick={() => handleOpenModal(lang === 'kz' ? 'Кешенді аудит / Басқа сұрақ' : lang === 'en' ? 'Turnkey Audit / Inquiries' : 'Другой вопрос / Комплексный аудит')}
             className="inline-flex items-center gap-2 bg-[#0082FB] text-white font-extrabold text-sm px-8 py-4 rounded-2xl hover:bg-[#0070DA] transition-all shrink-0 active:scale-95 shadow-md cursor-pointer"
           >
             <PhoneCall className="w-4 h-4" />
-            Получить консультацию
+            {lang === 'kz' ? 'Кеңес алу' : lang === 'en' ? 'Get Consultation' : 'Получить консультацию'}
           </button>
         </div>
       </section>

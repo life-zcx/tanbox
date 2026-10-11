@@ -85,33 +85,50 @@ const AppContent: React.FC = () => {
     window.location.href = getLkUrl(`/register?tariff=${tariffType}&count=${itemsCount}&price=${totalPrice}`);
   };
 
+  const renderRoutes = (prefix = '') => (
+    <>
+      <Route
+        path={prefix ? prefix : '/'}
+        element={
+          <HomePage
+            onOpenAuth={handleOpenAuth}
+            onOrderQuick={handleOpenQuickOrder}
+          />
+        }
+      />
+      <Route
+        path={`${prefix}/calculator`}
+        element={<CalculatorPage onOrderQuick={handleOpenQuickOrder} />}
+      />
+      <Route path={`${prefix}/categories`} element={<CategoriesPage />} />
+      <Route
+        path={`${prefix}/categories/:categoryId`}
+        element={<CategoryDetailPage onOrderQuick={handleOpenQuickOrder} />}
+      />
+      <Route path={`${prefix}/services`} element={<ServicesPage />} />
+      <Route path={`${prefix}/tariffs`} element={<ServicesPage />} />
+      <Route path={`${prefix}/contacts`} element={<ContactsPage />} />
+      <Route path={`${prefix}/privacy`} element={<PrivacyPolicyPage />} />
+      <Route path={`${prefix}/terms`} element={<TermsPage />} />
+      <Route path={`${prefix}/cookies`} element={<CookiePolicyPage />} />
+      <Route path={`${prefix}/cookie-policy`} element={<CookiePolicyPage />} />
+    </>
+  );
+
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#F4F6F9] text-[#111827]">
       <Header onOpenAuth={handleOpenAuth} maintenance={maintenance?.active} />
 
       <main className="flex-1">
         <Routes>
-          <Route
-            path="/"
-            element={
-              <HomePage
-                onOpenAuth={handleOpenAuth}
-                onOrderQuick={handleOpenQuickOrder}
-              />
-            }
-          />
-          <Route
-            path="/calculator"
-            element={<CalculatorPage onOrderQuick={handleOpenQuickOrder} />}
-          />
-          <Route path="/categories" element={<CategoriesPage />} />
-          <Route path="/categories/:categoryId" element={<CategoryDetailPage onOrderQuick={handleOpenQuickOrder} />} />
-          <Route path="/services" element={<ServicesPage />} />
-          <Route path="/tariffs" element={<ServicesPage />} />
-          <Route path="/contacts" element={<ContactsPage />} />
-          <Route path="/privacy" element={<PrivacyPolicyPage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/cookies" element={<CookiePolicyPage />} />
+          {/* Default (Russian) */}
+          {renderRoutes('')}
+
+          {/* Kazakh (/kz) */}
+          {renderRoutes('/kz')}
+
+          {/* English (/en) */}
+          {renderRoutes('/en')}
         </Routes>
       </main>
 
@@ -124,12 +141,17 @@ const AppContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <LanguageProvider>
-      <BrowserRouter>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <LanguageProvider>
         <ScrollToTop />
         <AppContent />
-      </BrowserRouter>
-    </LanguageProvider>
+      </LanguageProvider>
+    </BrowserRouter>
   );
 };
 

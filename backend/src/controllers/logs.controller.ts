@@ -77,8 +77,21 @@ export const getSystemLogs = async (req: AuthRequest, res: Response) => {
     const stat = await fs.promises.stat(targetPath);
     const fileSizeFormatted = `${(stat.size / 1024).toFixed(1)} KB`;
 
-    // Read file in chunks from the end if large, or read whole file
-    const content = await fs.promises.readFile(targetPath, 'utf-8');
+    // Read only the tail portion of the file (up to 2MB) to prevent Out-Of-Memory (OOM) crash
+    const MAX_TAIL_BYTES = 2 * 1024 * 1024;
+    let content = '';
+    if (stat.size <= MAX_TAIL_BYTES) {
+      content = await fs.promises.readFile(targetPath, 'utf-8');
+    } else {
+      const buffer = Buffer.alloc(MAX_TAIL_BYTES);
+      const fd = await fs.promises.open(targetPath, 'r');
+      try {
+        await fd.read(buffer, 0, MAX_TAIL_BYTES, stat.size - MAX_TAIL_BYTES);
+        content = buffer.toString('utf-8');
+      } finally {
+        await fd.close();
+      }
+    }
     let lines = content.split('\n').filter((l) => l.trim().length > 0);
 
     if (search) {

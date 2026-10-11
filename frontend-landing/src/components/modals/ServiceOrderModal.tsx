@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { X, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface ServiceOrderModalProps {
   isOpen: boolean;
@@ -10,22 +11,48 @@ interface ServiceOrderModalProps {
   initialServiceTitle?: string;
 }
 
-const SERVICE_OPTIONS = [
-  'Таможенное оформление и растаможка грузов',
-  'Заведение товаров в НКТ (Каталог товаров)',
-  'Эмиссия и нанесение кодов Data Matrix',
-  'Агрегация в короба и паллеты (SSCC)',
-  'Выездные мобильные бригады оклейщиков (24/7)',
-  'Интеграция ИС Танба с 1С / ERP и Консалтинг',
-  'Другой вопрос / Комплексный аудит',
-];
-
 export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
   isOpen,
   onClose,
-  initialServiceTitle = SERVICE_OPTIONS[0],
+  initialServiceTitle,
 }) => {
-  const [selectedService, setSelectedService] = useState(initialServiceTitle);
+  const { lang, getLocalizedPath } = useLanguage();
+
+  const serviceOptions = useMemo(() => {
+    if (lang === 'kz') {
+      return [
+        'Тауарларды кедендік ресімдеу және растаможка',
+        'Тауарларды ҰТК каталогына енгізу (Ұлттық каталог)',
+        'Data Matrix кодтарын эмиссиялау және жапсыру',
+        'Қораптар мен паллеттерге агрегациялау (SSCC)',
+        'Оклейка жасаушылардың көшпелі мобильді бригадалары (24/7)',
+        '«Таңба» АЖ-ні 1C / ERP-мен интеграциялау және Консалтинг',
+        'Кешенді аудит / Басқа сұрақ',
+      ];
+    }
+    if (lang === 'en') {
+      return [
+        'Customs Clearance and Freight Handling',
+        'National Product Catalog (NKT) Registration',
+        'Data Matrix Code Issuance and Labeling',
+        'Carton and Pallet Aggregation (SSCC)',
+        'On-Site Traveling Stickering Crews (24/7)',
+        'IS Tanba Integration with 1C / ERP & Consulting',
+        'Turnkey Audit / Inquiries',
+      ];
+    }
+    return [
+      'Таможенное оформление и растаможка грузов',
+      'Заведение товаров в НКТ (Каталог товаров)',
+      'Эмиссия и нанесение кодов Data Matrix',
+      'Агрегация в короба и паллеты (SSCC)',
+      'Выездные мобильные бригады оклейщиков (24/7)',
+      'Интеграция ИС Танба с 1С / ERP и Консалтинг',
+      'Другой вопрос / Комплексный аудит',
+    ];
+  }, [lang]);
+
+  const [selectedService, setSelectedService] = useState(initialServiceTitle || serviceOptions[0]);
   const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -67,11 +94,11 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
   const validatePhone = (val: string): boolean => {
     const digitsOnly = val.replace(/\D/g, '');
     if (!val.trim()) {
-      setPhoneError('Укажите контактный номер телефона');
+      setPhoneError(lang === 'kz' ? 'Байланыс телефон нөмірін көрсетіңіз' : lang === 'en' ? 'Enter a contact telephone number' : 'Укажите контактный номер телефона');
       return false;
     }
     if (digitsOnly.length !== 11) {
-      setPhoneError('Номер должен содержать 11 цифр (+7 7XX XXX-XX-XX)');
+      setPhoneError(lang === 'kz' ? 'Нөмір 11 цифрдан тұруы керек (+7 7XX XXX-XX-XX)' : lang === 'en' ? 'Number must contain 11 digits (+7 7XX XXX-XX-XX)' : 'Номер должен содержать 11 цифр (+7 7XX XXX-XX-XX)');
       return false;
     }
     setPhoneError(null);
@@ -85,7 +112,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(val.trim())) {
-      setEmailError('Некорректный e-mail (пример: info@company.kz)');
+      setEmailError(lang === 'kz' ? 'Қате e-mail (мысалы: info@company.kz)' : lang === 'en' ? 'Invalid e-mail (example: info@company.kz)' : 'Некорректный e-mail (пример: info@company.kz)');
       return false;
     }
     setEmailError(null);
@@ -99,7 +126,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     }
     const digitsOnly = val.replace(/\D/g, '');
     if (digitsOnly.length !== 12 || val.trim().length !== 12) {
-      setBinError('БИН/ИИН должен состоять ровно из 12 цифр');
+      setBinError(lang === 'kz' ? 'БСН/ЖСН дәл 12 цифрдан тұруы тиіс' : lang === 'en' ? 'BIN/IIN must consist of exactly 12 digits' : 'БИН/ИИН должен состоять ровно из 12 цифр');
       return false;
     }
     setBinError(null);
@@ -115,29 +142,16 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     const isBinValid = validateBinIin(binIin);
 
     if (!isPhoneValid || !isEmailValid || !isBinValid) {
-      setError('Пожалуйста, проверьте правильность заполнения полей.');
+      setError(lang === 'kz' ? 'Өрістердің дұрыс толтырылғанын тексеріңіз.' : lang === 'en' ? 'Please check the required fields.' : 'Пожалуйста, проверьте правильность заполнения полей.');
       return;
     }
 
     if (!consent) {
-      setError('Необходимо подтвердить согласие на сбор и обработку персональных данных (Закон РК № 94-V).');
+      setError(lang === 'kz' ? 'Дербес деректерді жинау мен өңдеуге келісім беру қажет (ҚР № 94-V Заңы).' : lang === 'en' ? 'Personal data processing consent is required (Law of RK No. 94-V).' : 'Необходимо подтвердить согласие на сбор и обработку персональных данных (Закон РК № 94-V).');
       return;
     }
 
     setLoading(true);
-
-    const leadObject = {
-      id: `lead-${Date.now()}`,
-      serviceTitle: selectedService,
-      companyName,
-      phone,
-      email: email || undefined,
-      binIin: binIin || undefined,
-      notes: notes || undefined,
-      status: 'NEW',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
 
     // Post to backend REST API
     try {
@@ -161,9 +175,9 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     if (initialServiceTitle) {
       setSelectedService(initialServiceTitle);
     } else {
-      setSelectedService(SERVICE_OPTIONS[0]);
+      setSelectedService(serviceOptions[0]);
     }
-  }, [initialServiceTitle, isOpen]);
+  }, [initialServiceTitle, isOpen, serviceOptions]);
 
   useEffect(() => {
     if (isOpen) {
@@ -207,7 +221,8 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
         <button
           type="button"
           onClick={handleResetAndClose}
-          className="absolute top-6 right-6 w-9 h-9 rounded-full bg-gray-100 text-gray-400 hover:text-[#111827] hover:bg-gray-200 flex items-center justify-center transition-all"
+          className="absolute top-6 right-6 w-9 h-9 rounded-full bg-gray-100 text-gray-400 hover:text-[#111827] hover:bg-gray-200 flex items-center justify-center transition-all cursor-pointer"
+          aria-label={lang === 'kz' ? 'Жабу' : lang === 'en' ? 'Close' : 'Закрыть'}
         >
           <X className="w-5 h-5" />
         </button>
@@ -220,10 +235,22 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
 
             <div className="space-y-2">
               <h3 className="text-2xl font-extrabold text-[#111827]">
-                Заявка успешно принята!
+                {lang === 'kz' ? 'Өтінім сәтті қабылданды!' : lang === 'en' ? 'Request successfully submitted!' : 'Заявка успешно принята!'}
               </h3>
               <p className="text-sm text-[#64748B] max-w-md mx-auto font-normal leading-relaxed">
-                Наш профильный специалист по услуге <span className="font-bold text-[#111827]">«{selectedService}»</span> свяжется с вами по номеру <span className="font-mono font-bold text-[#0082FB]">{phone}</span> в течение 15 минут.
+                {lang === 'kz' ? (
+                  <>
+                    Біздің <span className="font-bold text-[#111827]">«{selectedService}»</span> қызметі бойынша маманымыз сізбен <span className="font-mono font-bold text-[#0082FB]">{phone}</span> нөмірі арқылы 15 минут ішінде хабарласады.
+                  </>
+                ) : lang === 'en' ? (
+                  <>
+                    Our specialist for <span className="font-bold text-[#111827]">"{selectedService}"</span> will contact you at <span className="font-mono font-bold text-[#0082FB]">{phone}</span> within 15 minutes.
+                  </>
+                ) : (
+                  <>
+                    Наш профильный специалист по услуге <span className="font-bold text-[#111827]">«{selectedService}»</span> свяжется с вами по номеру <span className="font-mono font-bold text-[#0082FB]">{phone}</span> в течение 15 минут.
+                  </>
+                )}
               </p>
             </div>
 
@@ -231,9 +258,9 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
               <button
                 type="button"
                 onClick={handleResetAndClose}
-                className="w-full bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 rounded-xl transition-all shadow-md shadow-[#0082FB]/25 active:scale-95"
+                className="w-full bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 rounded-xl transition-all shadow-md shadow-[#0082FB]/25 active:scale-95 cursor-pointer"
               >
-                Отлично, закрыть окно
+                {lang === 'kz' ? 'Терезені жабу' : lang === 'en' ? 'Close window' : 'Отлично, закрыть окно'}
               </button>
             </div>
           </div>
@@ -241,10 +268,14 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
           <>
             <div className="space-y-1 pr-6">
               <h3 className="text-2xl font-extrabold text-[#111827] tracking-tight">
-                Заказать услугу
+                {lang === 'kz' ? 'Қызметке тапсырыс беру' : lang === 'en' ? 'Order Turnkey Service' : 'Заказать услугу'}
               </h3>
               <p className="text-xs text-[#64748B]">
-                Заполните контактные данные для первичной консультации и расчета стоимости
+                {lang === 'kz' 
+                  ? 'Алғашқы кеңес алу және құнын есептеу үшін байланыс деректерін толтырыңыз' 
+                  : lang === 'en' 
+                  ? 'Fill in contact details for consultation and cost estimation' 
+                  : 'Заполните контактные данные для первичной консультации и расчета стоимости'}
               </p>
             </div>
 
@@ -259,14 +290,14 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
               {/* Selected Service Dropdown */}
               <div>
                 <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1">
-                  Услуга
+                  {lang === 'kz' ? 'Қызмет' : lang === 'en' ? 'Service' : 'Услуга'}
                 </label>
                 <select
                   value={selectedService}
                   onChange={(e) => setSelectedService(e.target.value)}
                   className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl px-4 py-3 text-xs font-bold text-[#111827] focus:outline-none focus:border-[#0082FB] cursor-pointer"
                 >
-                  {SERVICE_OPTIONS.map((opt) => (
+                  {serviceOptions.map((opt) => (
                     <option key={opt} value={opt}>
                       {opt}
                     </option>
@@ -277,7 +308,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
               {/* Company / Name */}
               <div>
                 <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1">
-                  Наименование компании / ФИО <span className="text-red-500">*</span>
+                  {lang === 'kz' ? 'Компания атауы / Аты-жөні' : lang === 'en' ? 'Company Name / Full Name' : 'Наименование компании / ФИО'} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -285,7 +316,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
                   maxLength={150}
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder='Например: ТОО "Казахстан Трейд" или Иван Иванов'
+                  placeholder={lang === 'kz' ? 'Мысалы: "Қазақстан Трейд" ЖШС немесе Арман Серіков' : lang === 'en' ? 'E.g.: Kazakhstan Trade LLP or John Doe' : 'Например: ТОО "Казахстан Трейд" или Иван Иванов'}
                   className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
                 />
               </div>
@@ -293,7 +324,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
               {/* Phone */}
               <div>
                 <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1 flex items-center justify-between">
-                  <span>Контактный телефон <span className="text-red-500">*</span></span>
+                  <span>{lang === 'kz' ? 'Байланыс телефоны' : lang === 'en' ? 'Phone Number' : 'Контактный телефон'} <span className="text-red-500">*</span></span>
                   {phoneError && <span className="text-red-500 text-[10px] font-normal normal-case">{phoneError}</span>}
                 </label>
                 <input
@@ -342,7 +373,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
 
                 <div>
                   <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1 flex items-center justify-between">
-                    <span>БИН / ИИН (12 цифр)</span>
+                    <span>{lang === 'kz' ? 'БСН / ЖСН (12 цифр)' : lang === 'en' ? 'BIN / IIN (12 digits)' : 'БИН / ИИН (12 цифр)'}</span>
                   </label>
                   <input
                     type="text"
@@ -366,14 +397,14 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
               {/* Notes */}
               <div>
                 <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1">
-                  Комментарий / Пожелания
+                  {lang === 'kz' ? 'Пікір / Қосымша мәліметтер' : lang === 'en' ? 'Comments / Requirements' : 'Комментарий / Пожелания'}
                 </label>
                 <textarea
                   rows={2}
                   maxLength={1000}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Объем партии, сроки, адрес склада..."
+                  placeholder={lang === 'kz' ? 'Партия көлемі, мерзімі, қойма мекенжайы...' : lang === 'en' ? 'Batch volume, turnaround, warehouse address...' : 'Объем партии, сроки, адрес склада...'}
                   className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl p-3 text-xs font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
                 />
               </div>
@@ -394,26 +425,46 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
                   className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0082FB] focus:ring-[#0082FB] cursor-pointer shrink-0"
                 />
                 <label htmlFor="modal-consent" className="text-[11px] text-[#64748B] leading-relaxed cursor-pointer select-none">
-                  Я даю согласие на сбор и обработку персональных данных в соответствии с{' '}
-                  <Link to="/privacy" target="_blank" className="text-[#0082FB] hover:underline font-semibold">
-                    Политикой конфиденциальности
-                  </Link>{' '}
-                  и Законом РК № 94-V.
+                  {lang === 'kz' ? (
+                    <>
+                      Мен дербес деректерді жинауға және өңдеуге келісім беремін ({' '}
+                      <Link to={getLocalizedPath('/privacy')} target="_blank" className="text-[#0082FB] hover:underline font-semibold">
+                        Құпиялылық саясаты
+                      </Link>{' '}
+                      және ҚР № 94-V Заңына сәйкес).
+                    </>
+                  ) : lang === 'en' ? (
+                    <>
+                      I consent to the collection and processing of personal data in accordance with the{' '}
+                      <Link to={getLocalizedPath('/privacy')} target="_blank" className="text-[#0082FB] hover:underline font-semibold">
+                        Privacy Policy
+                      </Link>{' '}
+                      and Law of RK No. 94-V.
+                    </>
+                  ) : (
+                    <>
+                      Я даю согласие на сбор и обработку персональных данных в соответствии с{' '}
+                      <Link to={getLocalizedPath('/privacy')} target="_blank" className="text-[#0082FB] hover:underline font-semibold">
+                        Политикой конфиденциальности
+                      </Link>{' '}
+                      и Законом РК № 94-V.
+                    </>
+                  )}
                 </label>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 rounded-xl transition-all active:scale-95 shadow-md shadow-[#0082FB]/25 disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+                className="w-full bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 rounded-xl transition-all active:scale-95 shadow-md shadow-[#0082FB]/25 disabled:opacity-50 flex items-center justify-center gap-2 mt-2 cursor-pointer"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Обработка...
+                    <Loader2 className="w-4 h-4 animate-spin" /> {lang === 'kz' ? 'Өңделуде...' : lang === 'en' ? 'Processing...' : 'Обработка...'}
                   </>
                 ) : (
                   <>
-                    Отправить заявку <ArrowRight className="w-4 h-4" />
+                    {lang === 'kz' ? 'Өтінімді жіберу' : lang === 'en' ? 'Submit request' : 'Отправить заявку'} <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>

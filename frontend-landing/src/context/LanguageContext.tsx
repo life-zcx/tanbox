@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export type Language = 'kz' | 'ru' | 'en';
 
@@ -6,6 +7,7 @@ interface LanguageContextType {
   lang: Language;
   setLang: (lang: Language) => void;
   t: (key: string) => string;
+  getLocalizedPath: (path: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -17,6 +19,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.calc': 'Калькулятор цен',
     'nav.categories': 'Категории товаров',
     'nav.services': 'Услуги маркировки',
+    'nav.how_it_works': 'Как мы работаем',
     'nav.contacts': 'Контакты',
     'nav.cabinet': 'Перейти в кабинет',
 
@@ -33,7 +36,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'hero.title_line2_prefix': 'под ключ:',
     'hero.title_start': 'Цифровая маркировка товаров',
     'hero.title_highlight': 'под ключ',
-    'hero.subtitle': 'Берем на себя весь цикл: декларирование на границе, регистрацию в НКТ, печать кодов Data Matrix и оперативную оклейку с гарантией сроков с интеграцией в 1С.',
+    'hero.subtitle': 'Берем на себя весь цикл — от растаможки до интеграции в 1С: регистрация в НКТ, печать кодов Data Matrix и оперативная оклейка с гарантией сроков.',
     'hero.btn_calc': 'Рассчитать стоимость (₸)',
     'hero.btn_order': 'Оформить заявку',
 
@@ -113,6 +116,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.calc': 'Баға калькуляторы',
     'nav.categories': 'Тауар санаттары',
     'nav.services': 'Таңбалау қызметтері',
+    'nav.how_it_works': 'Жұмыс реті',
     'nav.contacts': 'Байланыс',
     'nav.cabinet': 'Кабинетке кіру',
 
@@ -129,7 +133,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'hero.title_line2_prefix': 'кілтке дейін:',
     'hero.title_start': 'Тауарларды цифрлық таңбалау',
     'hero.title_highlight': 'кілтке дейін',
-    'hero.subtitle': 'Толық циклді өз мойнымызға аламыз: шекарада декларациялау, ТҰК-де тіркеу, Data Matrix басып шығару және 1С-пен біріктірілген кепілді мерзімде жедел оклейка.',
+    'hero.subtitle': 'Толық циклді өз мойнымызға аламыз — кедендік ресімдеуден 1С-пен интеграцияға дейін: ТҰК-де тіркеу, Data Matrix басып шығару және кепілді мерзімде жедел оклейка.',
     'hero.btn_calc': 'Құнын есептеу (₸)',
     'hero.btn_order': 'Өтінім беру',
 
@@ -209,6 +213,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.calc': 'Pricing Calculator',
     'nav.categories': 'Product Categories',
     'nav.services': 'Services',
+    'nav.how_it_works': 'How It Works',
     'nav.contacts': 'Contacts',
     'nav.cabinet': 'Client Portal',
 
@@ -225,7 +230,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'hero.title_line2_prefix': 'Turnkey:',
     'hero.title_start': 'Digital Product Serialization',
     'hero.title_highlight': 'Turnkey',
-    'hero.subtitle': 'We handle the complete cycle: border customs clearance, National Catalog registration, Data Matrix printing, and on-time stickering integrated with 1C.',
+    'hero.subtitle': 'We handle the complete cycle — from customs clearance to 1C integration: National Catalog registration, Data Matrix printing, and on-time stickering.',
     'hero.btn_calc': 'Calculate Cost (₸)',
     'hero.btn_order': 'Submit Request',
 
@@ -301,7 +306,20 @@ export const translations: Record<Language, Record<string, string>> = {
 };
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const getLangFromPath = useCallback((pathname: string): Language => {
+    if (pathname === '/kz' || pathname.startsWith('/kz/')) return 'kz';
+    if (pathname === '/en' || pathname.startsWith('/en/')) return 'en';
+    return 'ru';
+  }, []);
+
   const [lang, setLangState] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      const fromPath = getLangFromPath(window.location.pathname);
+      if (fromPath !== 'ru') return fromPath;
+    }
     const saved = localStorage.getItem('tanbox_lang') as Language;
     if (saved && ['kz', 'ru', 'en'].includes(saved)) {
       return saved;
@@ -309,22 +327,65 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return 'ru';
   });
 
+  // Sync language when URL path changes (e.g. Back/Forward button or direct link navigation)
+  useEffect(() => {
+    const fromPath = getLangFromPath(location.pathname);
+    if (fromPath !== lang) {
+      setLangState(fromPath);
+      localStorage.setItem('tanbox_lang', fromPath);
+      document.documentElement.lang = fromPath === 'kz' ? 'kk' : fromPath;
+    }
+  }, [location.pathname, getLangFromPath, lang]);
+
   const setLang = (newLang: Language) => {
     setLangState(newLang);
     localStorage.setItem('tanbox_lang', newLang);
     document.documentElement.lang = newLang === 'kz' ? 'kk' : newLang;
+
+    // Calculate clean path without old language prefix
+    let cleanPath = location.pathname;
+    if (cleanPath === '/kz' || cleanPath === '/en') cleanPath = '/';
+    else if (cleanPath.startsWith('/kz/')) cleanPath = cleanPath.slice(3);
+    else if (cleanPath.startsWith('/en/')) cleanPath = cleanPath.slice(3);
+    if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
+
+    let targetPath = cleanPath;
+    if (newLang === 'kz') {
+      targetPath = cleanPath === '/' ? '/kz' : `/kz${cleanPath}`;
+    } else if (newLang === 'en') {
+      targetPath = cleanPath === '/' ? '/en' : `/en${cleanPath}`;
+    }
+
+    if (targetPath !== location.pathname) {
+      navigate(targetPath + location.search + location.hash);
+    }
   };
+
+  const getLocalizedPath = useCallback(
+    (path: string): string => {
+      let clean = path;
+      if (clean === '/kz' || clean === '/en') clean = '/';
+      else if (clean.startsWith('/kz/')) clean = clean.slice(3);
+      else if (clean.startsWith('/en/')) clean = clean.slice(3);
+      if (!clean.startsWith('/')) clean = '/' + clean;
+
+      if (lang === 'kz') return clean === '/' ? '/kz' : `/kz${clean}`;
+      if (lang === 'en') return clean === '/' ? '/en' : `/en${clean}`;
+      return clean;
+    },
+    [lang]
+  );
 
   useEffect(() => {
     document.documentElement.lang = lang === 'kz' ? 'kk' : lang;
   }, [lang]);
 
   const t = (key: string): string => {
-    return translations[lang][key] || translations.ru[key] || key;
+    return translations[lang]?.[key] || translations.ru[key] || key;
   };
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, getLocalizedPath }}>
       {children}
     </LanguageContext.Provider>
   );

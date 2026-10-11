@@ -99,7 +99,7 @@ interface CategoriesSectionProps {
 }
 
 export const CategoriesSection: React.FC<CategoriesSectionProps> = ({ onScrollNext }) => {
-  const { lang, t } = useLanguage();
+  const { lang, t, getLocalizedPath } = useLanguage();
 
   const categories = [
     {
@@ -178,7 +178,7 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({ onScrollNe
             return (
               <Link
                 key={cat.id}
-                to={`/categories/${cat.id}`}
+                to={getLocalizedPath(`/categories/${cat.id}`)}
                 className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group border border-gray-200/70 hover:border-blue-300 min-h-[130px] sm:min-h-[145px]"
               >
                 <div className="flex items-start justify-between">

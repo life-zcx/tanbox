@@ -146,4 +146,38 @@ export const COMPANY_CONTACTS = {
   },
 };
 
+export const getLocalizedCompanyContacts = (lang: string) => {
+  if (lang === 'kz') {
+    return {
+      officeTitle: 'TANBOX қызмет көрсету орталығы',
+      addressFull: 'Қазақстан бойынша онлайн',
+      addressShort: 'ҚР бойынша онлайн',
+      city: 'Онлайн',
+      workingHoursMain: 'Дс – Сб: 08:00 – 22:00',
+      workingHoursAdditional: '(Қоймаларға келісім бойынша 24/7 шығу)',
+      workingHoursFull: 'Дс – Сб: 08:00 – 22:00 (Қоймаларға келісім бойынша 24/7 шығу)',
+    };
+  }
+  if (lang === 'en') {
+    return {
+      officeTitle: 'TANBOX Customer Service Center',
+      addressFull: 'Online across Kazakhstan',
+      addressShort: 'Online across KZ',
+      city: 'Online',
+      workingHoursMain: 'Mon – Sat: 08:00 – 22:00',
+      workingHoursAdditional: '(24/7 warehouse dispatch upon agreement)',
+      workingHoursFull: 'Mon – Sat: 08:00 – 22:00 (24/7 warehouse dispatch upon agreement)',
+    };
+  }
+  return {
+    officeTitle: COMPANY_CONFIG.landing.officeTitle,
+    addressFull: COMPANY_CONFIG.landing.addressFull,
+    addressShort: COMPANY_CONFIG.landing.addressShort,
+    city: COMPANY_CONFIG.landing.city,
+    workingHoursMain: COMPANY_CONFIG.landing.workingHoursMain,
+    workingHoursAdditional: COMPANY_CONFIG.landing.workingHoursAdditional,
+    workingHoursFull: COMPANY_CONFIG.landing.workingHoursFull,
+  };
+};
+
 export default COMPANY_CONTACTS;

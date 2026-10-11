@@ -59,7 +59,7 @@ const proxyToLabelGenerator = (targetPath: string) => {
 };
 
 router.all('/parse-csv', proxyToLabelGenerator('/parse-csv'));
-router.all('/generate-pdf', proxyToLabelGenerator('/generate-pdf'));
+router.all('/generate-pdf', requireAdmin, proxyToLabelGenerator('/generate-pdf'));
 router.all('/preview', proxyToLabelGenerator('/preview'));
 
 export default router;

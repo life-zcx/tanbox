@@ -134,10 +134,13 @@ export const createUserTemplate = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Link the created template to the order
+    // Link the created template to the order (with user ownership check to prevent IDOR)
     if (sourceOrderId) {
       await prisma.order.updateMany({
-        where: { id: String(sourceOrderId) },
+        where: {
+          id: String(sourceOrderId),
+          ...(req.user.role === 'ADMIN' ? {} : { userId: assignedUserId }),
+        },
         data: { templateId: template.id },
       });
     }

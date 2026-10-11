@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { CATEGORIES_DATA } from '../data/categoriesData';
+import { CATEGORIES_DATA, getLocalizedCategory } from '../data/categoriesData';
 import { setPageSeo } from '../utils/seo';
+import { useLanguage } from '../context/LanguageContext';
 import { 
   Cigarette, 
   Footprints, 
@@ -42,29 +43,50 @@ interface CategoryDetailPageProps {
 }
 
 export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
+  const { lang, getLocalizedPath } = useLanguage();
   const { categoryId } = useParams<{ categoryId: string }>();
-  const category = CATEGORIES_DATA.find((c) => c.id === categoryId);
+  const rawCategory = CATEGORIES_DATA.find((c) => c.id === categoryId);
+  const category = rawCategory ? getLocalizedCategory(rawCategory, lang) : undefined;
 
   useEffect(() => {
     window.scrollTo(0, 0);
     if (category) {
-      setPageSeo(
-        `Маркировка: ${category.title} в Казахстане | TANBOX.KZ`,
-        `${category.shortDesc}. Заказ кодов Data Matrix в ИС Танба, заведение в НКТ, термопечать этикеток и складская оклейка по Республике Казахстан.`
-      );
+      if (lang === 'kz') {
+        setPageSeo(
+          `Қазақстанда ${category.shortTitle} таңбалау | Data Matrix ТМБ АЖ — TANBOX.KZ`,
+          `Қазақстан Республикасында ${category.shortTitle} тауарларын міндетті цифрлық таңбалау: ТМБ АЖ-де Data Matrix кодтарын эмиссиялау, ҰТК (GS1), жапсырмаларды басып шығару және қоймада жапсыру. ТН ВЭД: ${category.tnved}`,
+          { lang: 'kz', keywords: `${category.shortTitle} таңбалау, Data Matrix Қазақстан, ТМБ АЖ ${category.shortTitle}` }
+        );
+      } else if (lang === 'en') {
+        setPageSeo(
+          `${category.shortTitle} Serialization & Marking in Kazakhstan | TANBOX.KZ`,
+          `Mandatory Data Matrix serialization for ${category.shortTitle} in Kazakhstan. IS Tanba code generation, NKT registry, industrial label printing, and stickering. HS Code: ${category.tnved}`,
+          { lang: 'en', keywords: `${category.shortTitle} marking Kazakhstan, serialization ${category.shortTitle}` }
+        );
+      } else {
+        setPageSeo(
+          `Маркировка: ${category.title} в Казахстане | TANBOX.KZ`,
+          `${category.shortDesc}. Заказ кодов Data Matrix в ИС Танба, заведение в НКТ, термопечать этикеток и складская оклейка по Республике Казахстан. ТН ВЭД: ${category.tnved}`,
+          { lang: 'ru', keywords: `маркировка ${category.shortTitle} Казахстан, Data Matrix ${category.shortTitle}, ТН ВЭД ${category.tnved}` }
+        );
+      }
     }
-  }, [categoryId, category]);
+  }, [categoryId, category, lang]);
 
   if (!category) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4 px-6 text-center">
-        <h2 className="text-3xl font-extrabold text-black">Категория не найдена</h2>
-        <p className="text-gray-600">Запрошенная категория товаров не существует или была перемещена.</p>
+        <h2 className="text-3xl font-extrabold text-black">
+          {lang === 'kz' ? 'Санат табылмады' : lang === 'en' ? 'Category Not Found' : 'Категория не найдена'}
+        </h2>
+        <p className="text-gray-600">
+          {lang === 'kz' ? 'Сұралған тауар санаты жоқ немесе жылжытылған.' : lang === 'en' ? 'The requested category does not exist.' : 'Запрошенная категория товаров не существует или была перемещена.'}
+        </p>
         <Link
-          to="/categories"
+          to={getLocalizedPath('/categories')}
           className="inline-flex items-center gap-2 bg-[#0088B6] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#00739B] transition-all"
         >
-          <ArrowLeft className="w-4 h-4" /> Вернуться в каталог категорий
+          <ArrowLeft className="w-4 h-4" /> {lang === 'kz' ? 'Санаттар каталогына оралу' : lang === 'en' ? 'Back to categories' : 'Вернуться в каталог категорий'}
         </Link>
       </div>
     );
@@ -81,9 +103,13 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
           
           {/* Breadcrumbs */}
           <div className="flex items-center gap-2 text-xs text-[#64748B] flex-wrap font-medium">
-            <Link to="/" className="hover:text-[#0082FB] transition-colors">Главная</Link>
+            <Link to={getLocalizedPath('/')} className="hover:text-[#0082FB] transition-colors">
+              {lang === 'kz' ? 'Басты бет' : lang === 'en' ? 'Home' : 'Главная'}
+            </Link>
             <span>/</span>
-            <Link to="/categories" className="hover:text-[#0082FB] transition-colors">Категории товаров</Link>
+            <Link to={getLocalizedPath('/categories')} className="hover:text-[#0082FB] transition-colors">
+              {lang === 'kz' ? 'Тауар санаттары' : lang === 'en' ? 'Categories' : 'Категории товаров'}
+            </Link>
             <span>/</span>
             <span className="text-[#0082FB] font-bold">{category.shortTitle}</span>
           </div>
@@ -95,10 +121,12 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
               <div className="flex items-center gap-3 text-xs font-semibold text-[#64748B] flex-wrap">
                 <span className="inline-flex items-center gap-2 text-[#111827] font-bold">
                   <span className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
-                  {isActive ? 'Обязательная маркировка' : 'Внедрение 2026–2027'}
+                  {isActive
+                    ? lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory Serialization' : 'Обязательная маркировка'
+                    : lang === 'kz' ? '2026–2027 жылдары енгізу' : lang === 'en' ? 'Implementation 2026–2027' : 'Внедрение 2026–2027'}
                 </span>
                 <span className="text-gray-300">•</span>
-                <span>ТН ВЭД: <strong className="text-[#111827] font-mono font-bold">{category.tnved}</strong></span>
+                <span>{lang === 'kz' ? 'ТН ВЭД' : lang === 'en' ? 'HS Code' : 'ТН ВЭД'}: <strong className="text-[#111827] font-mono font-bold">{category.tnved}</strong></span>
                 <span className="text-gray-300">•</span>
                 <span>{category.dateFull}</span>
               </div>
@@ -116,11 +144,11 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
             {/* Quick action button */}
             <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-3">
               <Link
-                to={`/calculator?category=${category.calcCategoryCode || 'OTHER'}`}
+                to={getLocalizedPath(`/calculator?category=${category.calcCategoryCode || 'OTHER'}`)}
                 className="inline-flex items-center justify-center gap-2 bg-[#0082FB] text-white font-extrabold text-sm px-7 py-4 rounded-2xl hover:bg-[#0070DA] transition-all active:scale-95 shadow-md"
               >
                 <Calculator className="w-4 h-4" />
-                Рассчитать стоимость
+                {lang === 'kz' ? 'Құнын есептеу' : lang === 'en' ? 'Calculate Cost' : 'Рассчитать стоимость'}
               </Link>
             </div>
 
@@ -144,8 +172,12 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
                     <Layers className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-[#111827]">График и этапы вступления в силу</h3>
-                    <p className="text-xs text-[#64748B]">Поэтапный календарь согласно нормативным актам МТИ РК</p>
+                    <h3 className="text-xl font-bold text-[#111827]">
+                      {lang === 'kz' ? 'Күшіне ену кестесі мен кезеңдері' : lang === 'en' ? 'Implementation Schedule & Stages' : 'График и этапы вступления в силу'}
+                    </h3>
+                    <p className="text-xs text-[#64748B]">
+                      {lang === 'kz' ? 'ҚР СИМ нормативтік актілеріне сәйкес кезеңдік күнтізбе' : lang === 'en' ? 'Phased calendar according to regulatory acts of MTI RK' : 'Поэтапный календарь согласно нормативным актам МТИ РК'}
+                    </p>
                   </div>
                 </div>
 
@@ -171,7 +203,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
             {/* Process Steps */}
             <div className="space-y-5">
               <h3 className="text-xl sm:text-2xl font-bold text-[#111827] tracking-tight">
-                Как происходят операции маркировки TANBOX
+                {lang === 'kz' ? 'TANBOX таңбалау операциялары қалай жүргізіледі' : lang === 'en' ? 'How TANBOX Serialization Operations Work' : 'Как происходят операции маркировки TANBOX'}
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -195,7 +227,9 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
 
             {/* Key Features List */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
-              <h3 className="text-xl font-bold text-[#111827]">Ключевые возможности платформы TANBOX</h3>
+              <h3 className="text-xl font-bold text-[#111827]">
+                {lang === 'kz' ? 'TANBOX платформасының негізгі мүмкіндіктері' : lang === 'en' ? 'Key Features of TANBOX Platform' : 'Ключевые возможности платформы TANBOX'}
+              </h3>
               <ul className="space-y-3">
                 {category.keyFeatures.map((feat, idx) => (
                   <li key={idx} className="flex items-start gap-3 text-sm text-[#111827] font-medium">
@@ -211,7 +245,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
               <div className="space-y-4 pt-2">
                 <h3 className="text-xl sm:text-2xl font-bold text-[#111827] flex items-center gap-2">
                   <HelpCircle className="w-6 h-6 text-[#0082FB]" />
-                  Часто задаваемые вопросы
+                  {lang === 'kz' ? 'Жиі қойылатын сұрақтар' : lang === 'en' ? 'Frequently Asked Questions' : 'Часто задаваемые вопросы'}
                 </h3>
                 <div className="space-y-3">
                   {category.faq.map((f, idx) => (
@@ -232,19 +266,22 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
             {/* Other Categories List */}
             <div className="bg-white rounded-3xl p-6 space-y-4 shadow-sm">
               <h4 className="text-xs font-bold text-[#111827] uppercase tracking-wider">
-                Другие категории товаров
+                {lang === 'kz' ? 'Басқа тауар санаттары' : lang === 'en' ? 'Other Product Categories' : 'Другие категории товаров'}
               </h4>
               <div className="space-y-1.5">
-                {CATEGORIES_DATA.filter((c) => c.id !== category.id).map((other) => (
-                  <Link
-                    key={other.id}
-                    to={`/categories/${other.id}`}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-[#F8FAFC] transition-all text-xs text-[#111827] font-bold group"
-                  >
-                    <span className="group-hover:text-[#0082FB] transition-colors">{other.title}</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#0082FB] group-hover:translate-x-0.5 transition-all shrink-0" />
-                  </Link>
-                ))}
+                {CATEGORIES_DATA.filter((c) => c.id !== category.id).map((other) => {
+                  const locOther = getLocalizedCategory(other, lang);
+                  return (
+                    <Link
+                      key={other.id}
+                      to={getLocalizedPath(`/categories/${other.id}`)}
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-[#F8FAFC] transition-all text-xs text-[#111827] font-bold group"
+                    >
+                      <span className="group-hover:text-[#0082FB] transition-colors">{locOther.title}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-[#64748B] group-hover:text-[#0082FB] group-hover:translate-x-0.5 transition-all shrink-0" />
+                    </Link>
+                  );
+                })}
               </div>
             </div>
 

@@ -133,7 +133,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
           <button
             type="button"
             onClick={onScrollNext}
-            aria-label="Листать вниз"
+            aria-label={lang === 'kz' ? 'Төмен жылжу' : lang === 'en' ? 'Scroll down' : 'Листать вниз'}
             className="text-slate-400 hover:text-white transition-colors animate-bounce p-2 cursor-pointer flex flex-col items-center gap-1 text-xs"
           >
             <ChevronDown className="w-6 h-6" />

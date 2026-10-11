@@ -45,7 +45,7 @@ const isAllowedOrigin = (origin?: string): boolean => {
   try {
     const parsed = new URL(origin);
     const host = parsed.hostname;
-    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) return true;
+    if (host === 'localhost' || host === '127.0.0.1' || host === 'tanbox.local' || host.endsWith('.tanbox.local')) return true;
     if (/^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(host)) return true;
     if (host === 'tanbox.kz' || host.endsWith('.tanbox.kz')) return true;
     if (process.env.ALLOWED_ORIGINS) {

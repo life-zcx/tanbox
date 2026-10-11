@@ -37,16 +37,22 @@ export async function createDatabaseBackup(): Promise<BackupItem> {
     PGPASSWORD: dbPassword,
   };
 
-  let command = `pg_dump -h ${dbHost} -U ${dbUser} -d ${dbName} -f "${targetPath}"`;
+  // Validate identifiers to prevent shell command injection
+  const safeIdentifier = (val: string) => val.replace(/[^a-zA-Z0-9_\-]/g, '');
+  const safeUser = safeIdentifier(dbUser);
+  const safeName = safeIdentifier(dbName);
+  const safeHost = safeIdentifier(dbHost);
+
+  let command = `pg_dump -h ${safeHost} -U ${safeUser} -d ${safeName} -f "${targetPath}"`;
   if (process.platform === 'win32') {
-    command = `docker exec -e PGPASSWORD=${dbPassword} tanbox_postgres pg_dump -U ${dbUser} -d ${dbName} > "${targetPath}"`;
+    command = `docker exec tanbox_postgres pg_dump -U ${safeUser} -d ${safeName} > "${targetPath}"`;
   }
 
   try {
     await execPromise(command, { env: envWithPgPass });
   } catch (cmdErr: any) {
     logger.warn(`Primary pg_dump command failed (${cmdErr.message}), trying fallback...`);
-    await execPromise(`docker exec -e PGPASSWORD=${dbPassword} tanbox_postgres pg_dump -U ${dbUser} -d ${dbName} > "${targetPath}"`, { env: envWithPgPass });
+    await execPromise(`docker exec tanbox_postgres pg_dump -U ${safeUser} -d ${safeName} > "${targetPath}"`, { env: envWithPgPass });
   }
 
   const stat = await fs.promises.stat(targetPath);

@@ -5,7 +5,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: "${POSTGRES_USER:-tanbox_user}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-tanbox_pass_2026}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD must be defined in .env}"
       POSTGRES_DB: "${POSTGRES_DB:-tanbox_db}"
     command: postgres -c log_min_duration_statement=500 -c log_statement=ddl
     volumes:
@@ -33,8 +33,9 @@ services:
     restart: always
     environment:
       PORT: 5050
-      DATABASE_URL: "${DATABASE_URL:-postgresql://tanbox_user:tanbox_pass_2026@postgres:5432/tanbox_db?schema=public}"
-      JWT_SECRET: "${JWT_SECRET:-tanbox_kz_jwt_secret_key_super_secure_2026}"
+      DATABASE_URL: "${DATABASE_URL:?Error: DATABASE_URL must be defined in .env}"
+      JWT_SECRET: "${JWT_SECRET:?Error: JWT_SECRET must be defined in .env}"
+      ENCRYPTION_SECRET: "${ENCRYPTION_SECRET:?Error: ENCRYPTION_SECRET must be defined in .env}"
       NODE_ENV: production
       NODE_OPTIONS: "--max-old-space-size=768"
       LABEL_GENERATOR_HOST: label-generator

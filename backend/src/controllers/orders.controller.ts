@@ -2315,8 +2315,16 @@ export const downloadSingleItemPdf = async (req: AuthRequest, res: Response) => 
       return res.status(403).json({ message: 'Нет доступа к этому заказу' });
     }
 
+    const idx = parseInt(String(itemIndex), 10);
+    if (isNaN(idx) || idx < 1) {
+      return res.status(400).json({ message: 'Некорректный номер этикетки' });
+    }
+
     const isSample = req.query.sample === 'true' || req.query.sample === '1';
-    if (req.user.role !== 'ADMIN' && !isSample) {
+
+    // Free calibration sample without payment is strictly restricted to label #1 only.
+    // Labels 2..N strictly require order payment and administrator print permission.
+    if (req.user.role !== 'ADMIN' && (!isSample || idx !== 1)) {
       const hasDesignService = Array.isArray(existing.extraServices) && existing.extraServices.includes('STICKER_LAYOUT_DESIGN');
       if (hasDesignService && existing.stickerApprovalStatus !== 'APPROVED') {
         return res.status(403).json({
@@ -2327,14 +2335,9 @@ export const downloadSingleItemPdf = async (req: AuthRequest, res: Response) => 
       const isPrintAllowed = (existing as any).printAllowed === true || (existing as any).paymentStatus === 'PAID';
       if (!isPrintAllowed) {
         return res.status(403).json({
-          message: 'Печать заблокирована: ожидается подтверждение оплаты и разрешение администратора.',
+          message: 'Печать заблокирована: данный заказ ещё не оплачен. Для калибровки принтера доступен только образец №1 (?sample=true).',
         });
       }
-    }
-
-    const idx = parseInt(String(itemIndex), 10);
-    if (isNaN(idx) || idx < 1) {
-      return res.status(400).json({ message: 'Некорректный номер этикетки' });
     }
 
     const item = await prisma.orderCodeItem.findUnique({

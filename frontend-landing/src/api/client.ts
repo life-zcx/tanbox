@@ -24,7 +24,7 @@ apiClient.interceptors.response.use(
 
     console.error(`[Landing API Error] [${status}] ${url}:`, error.response?.data || message);
 
-    if (url && !url.includes('/logs/frontend')) {
+    if (status !== 503 && url && !url.includes('/logs/frontend')) {
       fetch(`${getApiUrl()}/logs/frontend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

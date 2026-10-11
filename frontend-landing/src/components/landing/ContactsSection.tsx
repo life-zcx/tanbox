@@ -1,12 +1,15 @@
 import React from 'react';
 import { Send, Mail } from 'lucide-react';
 import { COMPANY_CONTACTS } from '../../data/companyContacts';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface ContactsSectionProps {
   showTitle?: boolean;
 }
 
 export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = true }) => {
+  const { lang } = useLanguage();
+
   return (
     <section className={showTitle ? "py-12 sm:py-16 bg-[#F4F6F9]" : "w-full"}>
       <div className={showTitle ? "max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8" : "w-full"}>
@@ -15,7 +18,7 @@ export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = tr
         {showTitle && (
           <div className="mb-8">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
-              Контакты
+              {lang === 'kz' ? 'Байланыс' : lang === 'en' ? 'Contacts' : 'Контакты'}
             </h2>
           </div>
         )}
@@ -47,7 +50,11 @@ export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = tr
                 Telegram
               </h3>
               <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed font-normal">
-                Подписывайтесь на наш Telegram-канал, чтобы быть в курсе всех новостей и обновлений.
+                {lang === 'kz' 
+                  ? 'Барлық жаңалықтар мен заңнамалық жаңартулардан хабардар болу үшін Telegram-арнамызға жазылыңыз.' 
+                  : lang === 'en' 
+                  ? 'Subscribe to our official Telegram channel for regulatory news and platform updates.' 
+                  : 'Подписывайтесь на наш Telegram-канал, чтобы быть в курсе всех новостей и обновлений.'}
               </p>
             </div>
 
@@ -59,7 +66,7 @@ export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = tr
                 rel="noopener noreferrer"
                 className="text-sm font-semibold text-[#0082FB] hover:text-[#0060C7] transition-colors inline-flex items-center gap-1"
               >
-                Подробнее
+                {lang === 'kz' ? 'Толығырақ' : lang === 'en' ? 'Learn more' : 'Подробнее'}
               </a>
             </div>
 
@@ -93,10 +100,10 @@ export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = tr
             {/* Left Content */}
             <div className="relative z-10 max-w-[60%] sm:max-w-[65%] space-y-2">
               <h3 className="text-lg sm:text-xl font-bold text-[#111827]">
-                Электронная почта
+                {lang === 'kz' ? 'Электрондық пошта' : lang === 'en' ? 'Email' : 'Электронная почта'}
               </h3>
               <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed font-normal">
-                Свяжитесь с нами по адресу: <br className="hidden sm:inline"/>
+                {lang === 'kz' ? 'Бізбен келесі мекенжай бойынша байланысыңыз:' : lang === 'en' ? 'Reach us directly via:' : 'Свяжитесь с нами по адресу:'} <br className="hidden sm:inline"/>
                 <span className="font-semibold text-[#111827]">{COMPANY_CONTACTS.emails.info}</span>
               </p>
             </div>
@@ -107,7 +114,7 @@ export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = tr
                 href={`mailto:${COMPANY_CONTACTS.emails.info}`}
                 className="text-sm font-semibold text-[#0082FB] hover:text-[#0060C7] transition-colors inline-flex items-center gap-1"
               >
-                Подробнее
+                {lang === 'kz' ? 'Хат жазу' : lang === 'en' ? 'Send email' : 'Написать нам'}
               </a>
             </div>
 

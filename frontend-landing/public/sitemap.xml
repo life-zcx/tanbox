@@ -1,118 +1,417 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Главная страница -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- ==================== 1. ГЛАВНАЯ СТРАНИЦА ==================== -->
   <url>
     <loc>https://tanbox.kz/</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
-  <!-- Каталог всех категорий -->
   <url>
-    <loc>https://tanbox.kz/categories</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <loc>https://tanbox.kz/kz</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.98</priority>
   </url>
-  <!-- Калькулятор стоимости маркировки -->
+  <url>
+    <loc>https://tanbox.kz/en</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- ==================== 2. КАЛЬКУЛЯТОР ==================== -->
   <url>
     <loc>https://tanbox.kz/calculator</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/calculator" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/calculator" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/calculator" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
-  <!-- Услуги под ключ -->
   <url>
-    <loc>https://tanbox.kz/services</loc>
-    <lastmod>2026-10-04</lastmod>
+    <loc>https://tanbox.kz/kz/calculator</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/calculator" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/calculator" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/calculator" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/en/calculator</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/calculator" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/calculator" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/calculator" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/calculator" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+
+  <!-- ==================== 3. КАТАЛОГ КАТЕГОРИЙ ==================== -->
+  <url>
+    <loc>https://tanbox.kz/categories</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.90</priority>
   </url>
-  <!-- Контакты -->
+  <url>
+    <loc>https://tanbox.kz/kz/categories</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/en/categories</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+
+  <!-- ==================== 4. УСЛУГИ ПОД КЛЮЧ ==================== -->
+  <url>
+    <loc>https://tanbox.kz/services</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/services" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/services" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/services" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/services" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/kz/services</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/services" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/services" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/services" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/services" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/en/services</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/services" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/services" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/services" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/services" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+
+  <!-- ==================== 5. КОНТАКТЫ ==================== -->
   <url>
     <loc>https://tanbox.kz/contacts</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/contacts" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/contacts" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/contacts" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/contacts" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.80</priority>
   </url>
-  <!-- Основные категории товаров -->
+  <url>
+    <loc>https://tanbox.kz/kz/contacts</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/contacts" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/contacts" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/contacts" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/contacts" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/en/contacts</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/contacts" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/contacts" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/contacts" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/contacts" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.70</priority>
+  </url>
+
+  <!-- ==================== 6. КАТЕГОРИИ: ОБУВЬ (SHOES) ==================== -->
   <url>
     <loc>https://tanbox.kz/categories/shoes</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/shoes" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/shoes" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/shoes" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/shoes" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
+    <priority>0.88</priority>
   </url>
+  <url>
+    <loc>https://tanbox.kz/kz/categories/shoes</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/shoes" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/shoes" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/shoes" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/shoes" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+
+  <!-- ==================== 7. КАТЕГОРИИ: ТАБАК (TOBACCO) ==================== -->
   <url>
     <loc>https://tanbox.kz/categories/tobacco</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/tobacco" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/tobacco" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/tobacco" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/tobacco" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
+  <url>
+    <loc>https://tanbox.kz/kz/categories/tobacco</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/tobacco" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/tobacco" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/tobacco" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/tobacco" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- ==================== 8. КАТЕГОРИИ: ЛЕКАРСТВА (PHARMA) ==================== -->
   <url>
     <loc>https://tanbox.kz/categories/pharma</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/pharma" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/pharma" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/pharma" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/pharma" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
+    <priority>0.88</priority>
   </url>
+  <url>
+    <loc>https://tanbox.kz/kz/categories/pharma</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/pharma" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/pharma" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/pharma" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/pharma" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+
+  <!-- ==================== 9. КАТЕГОРИИ: ВОДА И НАПИТКИ (WATER) ==================== -->
   <url>
     <loc>https://tanbox.kz/categories/water</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/water" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/water" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/water" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/water" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
+  <url>
+    <loc>https://tanbox.kz/kz/categories/water</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/water" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/water" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/water" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/water" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- ==================== 10. КАТЕГОРИИ: ТЕКСТИЛЬ (TEXTILE) ==================== -->
   <url>
     <loc>https://tanbox.kz/categories/textile</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/textile" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/textile" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/textile" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/textile" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://tanbox.kz/categories/oils</loc>
-    <lastmod>2026-10-04</lastmod>
+    <loc>https://tanbox.kz/kz/categories/textile</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/textile" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/textile" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/textile" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/textile" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.85</priority>
   </url>
+
+  <!-- ==================== 11. КАТЕГОРИИ: МОТОРНЫЕ МАСЛА (OILS) ==================== -->
+  <url>
+    <loc>https://tanbox.kz/categories/oils</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/oils" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/oils" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/oils" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/oils" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/kz/categories/oils</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/oils" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/oils" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/oils" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/oils" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+
+  <!-- ==================== 12. КАТЕГОРИИ: ПИВО (BEER) ==================== -->
   <url>
     <loc>https://tanbox.kz/categories/beer</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/beer" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/beer" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/beer" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/beer" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.80</priority>
   </url>
+  <url>
+    <loc>https://tanbox.kz/kz/categories/beer</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/beer" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/beer" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/beer" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/beer" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+
+  <!-- ==================== 13. КАТЕГОРИИ: БАД (BAD) ==================== -->
   <url>
     <loc>https://tanbox.kz/categories/bad</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/bad" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/bad" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/bad" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/bad" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.80</priority>
   </url>
+  <url>
+    <loc>https://tanbox.kz/kz/categories/bad</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/bad" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/bad" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/bad" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/bad" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+
+  <!-- ==================== 14. КАТЕГОРИИ: ЮВЕЛИРНЫЕ (JEWELRY) ==================== -->
   <url>
     <loc>https://tanbox.kz/categories/jewelry</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/jewelry" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/jewelry" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/jewelry" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/jewelry" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.80</priority>
   </url>
+  <url>
+    <loc>https://tanbox.kz/kz/categories/jewelry</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/jewelry" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/jewelry" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/jewelry" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/jewelry" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+
+  <!-- ==================== 15. КАТЕГОРИИ: САЙГАЧЬИ РОГА (SAIGA) ==================== -->
   <url>
     <loc>https://tanbox.kz/categories/saiga</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/saiga" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/saiga" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/saiga" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/saiga" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.70</priority>
   </url>
-  <!-- Юридические страницы -->
+  <url>
+    <loc>https://tanbox.kz/kz/categories/saiga</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/categories/saiga" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/categories/saiga" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/categories/saiga" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/categories/saiga" />
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.70</priority>
+  </url>
+
+  <!-- ==================== 16. ЮРИДИЧЕСКИЕ СТРАНИЦЫ ==================== -->
   <url>
     <loc>https://tanbox.kz/terms</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/terms" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/terms" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/terms" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/terms" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.50</priority>
   </url>
   <url>
     <loc>https://tanbox.kz/privacy</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/privacy" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/privacy" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/privacy" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/privacy" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.50</priority>
   </url>
   <url>
     <loc>https://tanbox.kz/cookie-policy</loc>
-    <lastmod>2026-10-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/cookie-policy" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/cookie-policy" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/cookie-policy" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/cookie-policy" />
+    <lastmod>2026-10-11</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.50</priority>
   </url>
+
 </urlset>

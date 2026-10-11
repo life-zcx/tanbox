@@ -86,6 +86,7 @@ nano .env
 В файле `.env` укажите ваши боевые параметры:
 * `POSTGRES_PASSWORD` — сложный пароль к базе данных (придумайте надежный).
 * `JWT_SECRET` — сгенерируйте случайный ключ командой `openssl rand -hex 32`.
+* `ENCRYPTION_SECRET` — сгенерируйте ключ шифрования для учетных записей ИС МПТ (минимум 32 символа, например `openssl rand -hex 16`).
 * `INITIAL_ADMIN_PASSWORD` — стартовый пароль для входа супер-администратора `admin@tanbox.kz`.
 * `TELEGRAM_BOT_TOKEN`, `TELEGRAM_LEADS_CHAT_ID`, `TELEGRAM_ALERTS_CHAT_ID` — токен вашего Telegram-бота для лидов и уведомлений.
 

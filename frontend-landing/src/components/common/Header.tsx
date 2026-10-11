@@ -115,9 +115,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
 
           {/* Right Header Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Language Switcher Pill */}
+            {/* Language Switcher Pill (Desktop only, mobile has it in drawer) */}
             <div
-              className={`flex items-center h-8 sm:h-9 p-0.5 sm:p-1 rounded-xl border text-[11px] sm:text-xs font-bold transition-all ${
+              className={`hidden md:flex items-center h-8 sm:h-9 p-0.5 sm:p-1 rounded-xl border text-[11px] sm:text-xs font-bold transition-all ${
                 isTransparent
                   ? 'bg-white/10 border-white/20 text-white backdrop-blur-md'
                   : 'bg-gray-100 border-gray-200 text-slate-700'
@@ -190,14 +190,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
         </div>
       </header>
 
-      {/* Fullscreen Mobile Menu */}
+      {/* Fullscreen Sleek Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 w-full h-full bg-white z-[100] md:hidden flex flex-col justify-between p-6 sm:p-8 animate-in fade-in duration-150">
-          {/* Top: Logo and Close Button */}
-          <div className="flex items-center justify-between pb-6 border-b border-gray-100">
-            <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>
+        <div className="fixed inset-0 w-full h-full bg-[#0F1E36] z-[9999] md:hidden flex flex-col justify-between p-6 sm:p-8 text-white select-none animate-in fade-in duration-200">
+          {/* Top row: Logo on left, X on right */}
+          <div className="flex items-center justify-between pb-5 border-b border-white/10">
+            <Link
+              to={lang === 'ru' ? '/' : `/${lang}`}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2 group"
+            >
               <img
-                src="/tanbox-dark.svg"
+                src="/tanbox-white.svg"
                 alt="tanbox.kz"
                 className="h-6 sm:h-7 w-auto"
               />
@@ -205,74 +209,124 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(false)}
-              aria-label="Закрыть меню"
-              className="w-10 h-10 rounded-2xl bg-gray-100 hover:bg-gray-200 text-[#111827] flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+              aria-label={lang === 'kz' ? 'Мәзірді жабу' : lang === 'en' ? 'Close menu' : 'Закрыть меню'}
+              className="p-1.5 text-white/80 hover:text-white transition-colors cursor-pointer focus:outline-none"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6 stroke-[2]" />
             </button>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="flex-1 py-8 flex flex-col justify-center space-y-4">
-            {NAV_LINKS.map((link) => {
-              const active = isActive(link.path);
-              return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`text-xl font-bold py-2 border-b border-gray-50 flex items-center justify-between ${
-                    active ? 'text-[#0082FB]' : 'text-[#111827] hover:text-[#0082FB]'
-                  }`}
-                >
-                  <span>{link.label}</span>
-                  {active && <span className="w-2 h-2 rounded-full bg-[#0082FB]"></span>}
-                </Link>
-              );
-            })}
+          {/* Navigation links - centered with generous breathing room */}
+          <nav className="flex-1 my-auto flex flex-col items-center justify-center space-y-6 text-center py-6">
+            <Link
+              to={lang === 'ru' ? '/' : `/${lang}`}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`text-lg sm:text-xl tracking-wide transition-colors ${
+                location.pathname === '/' || location.pathname === `/${lang}`
+                  ? 'text-[#0082FB] font-bold'
+                  : 'text-slate-100 hover:text-[#0082FB] font-medium'
+              }`}
+            >
+              {t('nav.home')}
+            </Link>
+
+            <Link
+              to={lang === 'ru' ? '/calculator' : `/${lang}/calculator`}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`text-lg sm:text-xl tracking-wide transition-colors ${
+                location.pathname.includes('/calculator')
+                  ? 'text-[#0082FB] font-bold'
+                  : 'text-slate-100 hover:text-[#0082FB] font-medium'
+              }`}
+            >
+              {t('nav.calc')}
+            </Link>
+
+            <Link
+              to={lang === 'ru' ? '/categories' : `/${lang}/categories`}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`text-lg sm:text-xl tracking-wide transition-colors ${
+                location.pathname.includes('/categories')
+                  ? 'text-[#0082FB] font-bold'
+                  : 'text-slate-100 hover:text-[#0082FB] font-medium'
+              }`}
+            >
+              {t('nav.categories')}
+            </Link>
+
+            <Link
+              to={lang === 'ru' ? '/services' : `/${lang}/services`}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`text-lg sm:text-xl tracking-wide transition-colors ${
+                location.pathname.includes('/services')
+                  ? 'text-[#0082FB] font-bold'
+                  : 'text-slate-100 hover:text-[#0082FB] font-medium'
+              }`}
+            >
+              {t('nav.services')}
+            </Link>
+
+            <Link
+              to={lang === 'ru' ? '/contacts' : `/${lang}/contacts`}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`text-lg sm:text-xl tracking-wide transition-colors ${
+                location.pathname.includes('/contacts')
+                  ? 'text-[#0082FB] font-bold'
+                  : 'text-slate-100 hover:text-[#0082FB] font-medium'
+              }`}
+            >
+              {t('nav.contacts')}
+            </Link>
           </nav>
 
-          {/* Bottom Actions */}
-          <div className="pt-6 border-t border-gray-100 space-y-4">
-            {/* Language Switcher in Mobile Drawer */}
-            <div className="flex items-center justify-center p-1 rounded-2xl bg-gray-100 border border-gray-200 text-xs font-bold">
+          {/* Bottom section: KZ RU EN + LK button */}
+          <div className="space-y-5 pt-5 border-t border-white/10 max-w-sm w-full mx-auto">
+            {/* Language switcher KZ RU EN */}
+            <div className="flex items-center justify-center gap-8 text-sm sm:text-base tracking-wider font-semibold">
               <button
                 type="button"
                 onClick={() => setLang('kz')}
-                className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
-                  lang === 'kz' ? 'bg-[#0082FB] text-white shadow-xs' : 'text-slate-600'
+                className={`transition-colors cursor-pointer ${
+                  lang === 'kz'
+                    ? 'text-[#0082FB] font-extrabold'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
-                ҚАЗАҚША
+                KZ
               </button>
               <button
                 type="button"
                 onClick={() => setLang('ru')}
-                className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
-                  lang === 'ru' ? 'bg-[#0082FB] text-white shadow-xs' : 'text-slate-600'
+                className={`transition-colors cursor-pointer ${
+                  lang === 'ru'
+                    ? 'text-[#0082FB] font-extrabold'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
-                РУССКИЙ
+                RU
               </button>
               <button
                 type="button"
                 onClick={() => setLang('en')}
-                className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
-                  lang === 'en' ? 'bg-[#0082FB] text-white shadow-xs' : 'text-slate-600'
+                className={`transition-colors cursor-pointer ${
+                  lang === 'en'
+                    ? 'text-[#0082FB] font-extrabold'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
-                ENGLISH
+                EN
               </button>
             </div>
 
+            {/* Cabinet Button */}
             <a
               href={getLkUrl('/dashboard')}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full bg-[#0082FB] text-white font-bold py-3.5 px-6 rounded-2xl text-center flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
+              className="w-full bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs sm:text-sm font-semibold py-3 px-4 rounded-xl text-center flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95 transition-all"
             >
-              <UserCheck className="w-5 h-5" />
-              <span>{t('nav.cabinet')}</span>
+              <UserCheck className="w-4 h-4 shrink-0" />
+              <span className="truncate">{t('nav.cabinet')}</span>
             </a>
           </div>
         </div>

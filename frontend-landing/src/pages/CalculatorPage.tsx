@@ -3,18 +3,37 @@ import { CalculatorSection } from '../components/landing/CalculatorSection';
 import { TariffCode } from '../types';
 import { setPageSeo } from '../utils/seo';
 
+import { useLanguage } from '../context/LanguageContext';
+
 interface CalculatorPageProps {
   onOrderQuick: (tariff: TariffCode, count: number, price: number) => void;
 }
 
 export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onOrderQuick }) => {
+  const { lang } = useLanguage();
+
   useEffect(() => {
     window.scrollTo(0, 0);
-    setPageSeo(
-      'Калькулятор стоимости маркировки товаров в Казахстане (₸) | TANBOX.KZ',
-      'Онлайн-калькулятор расчета стоимости обязательной маркировки товаров Data Matrix в Республике Казахстан. Тарифы на эмиссию кодов в ИС Танба, печать этикеток и выездную оклейку на складе.'
-    );
-  }, []);
+    if (lang === 'kz') {
+      setPageSeo(
+        'Тауарларды таңбалау құнын есептеу калькуляторы (₸) | TANBOX.KZ',
+        'Қазақстанда тауарларды Data Matrix бойынша цифрлық таңбалау құнын онлайн есептеу калькуляторы. ТМБ АЖ-де кодтарды эмиссиялау, термопечать және қоймада оклейка тарифтері.',
+        { lang: 'kz', keywords: 'таңбалау бағасы калькулятор, Data Matrix бағасы, ТМБ АЖ кодтары бағасы' }
+      );
+    } else if (lang === 'en') {
+      setPageSeo(
+        'Product Serialization Cost Calculator (₸) in Kazakhstan | TANBOX.KZ',
+        'Online pricing calculator for mandatory Data Matrix product marking in Kazakhstan. Calculate code issuance, label printing, and onsite stickering fees.',
+        { lang: 'en', keywords: 'marking calculator Kazakhstan, serialization price, Data Matrix cost' }
+      );
+    } else {
+      setPageSeo(
+        'Калькулятор стоимости маркировки товаров в Казахстане (₸) | TANBOX.KZ',
+        'Онлайн-калькулятор расчета стоимости обязательной маркировки товаров Data Matrix в Республике Казахстан. Тарифы на эмиссию кодов в ИС Танба, печать этикеток и выездную оклейку на складе.',
+        { lang: 'ru', keywords: 'калькулятор маркировки Казахстан, стоимость маркировки, цена Data Matrix' }
+      );
+    }
+  }, [lang]);
 
   return (
     <div className="bg-[#F4F6F9] min-h-screen pb-16 space-y-8">
@@ -27,10 +46,18 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onOrderQuick }) 
 
         <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
           <h1 className="text-3xl sm:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight max-w-4xl">
-            Калькулятор стоимости маркировки (₸)
+            {lang === 'kz' 
+              ? 'Тауарларды таңбалау құнын есептеу (₸)' 
+              : lang === 'en' 
+              ? 'Product Marking Cost Calculator (₸)' 
+              : 'Калькулятор стоимости маркировки (₸)'}
           </h1>
           <p className="text-base sm:text-lg text-[#64748B] max-w-3xl font-normal leading-relaxed">
-            Рассчитайте точную стоимость эмиссии Data Matrix кодов, печати стикеров и работы выездных оклейщиков в РК.
+            {lang === 'kz'
+              ? 'Қазақстанда Data Matrix кодтарын шығару, стикерлерді басып шығару және қоймаға оклейка жасаудың нақты құнын есептеңіз.'
+              : lang === 'en'
+              ? 'Calculate the exact turnkey cost of Data Matrix code issuance, industrial label printing, and onsite stickering in Kazakhstan.'
+              : 'Рассчитайте точную стоимость эмиссии Data Matrix кодов, печати стикеров и работы выездных оклейщиков в РК.'}
           </p>
         </div>
       </section>

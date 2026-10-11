@@ -1,7 +1,11 @@
 User-agent: *
 
-# Разрешено для поисковых систем (публичные страницы)
+# Разрешено для поисковых систем (публичные страницы на всех языках)
 Allow: /
+Allow: /kz
+Allow: /kz/*
+Allow: /en
+Allow: /en/*
 Allow: /calculator
 Allow: /services
 Allow: /categories

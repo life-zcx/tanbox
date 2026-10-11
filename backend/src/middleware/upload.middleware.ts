@@ -2,24 +2,15 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-const uploadsBaseDir = path.resolve(process.cwd(), 'uploads/orders');
+const uploadsTempDir = path.resolve(process.cwd(), 'uploads/temp');
 
-if (!fs.existsSync(uploadsBaseDir)) {
-  fs.mkdirSync(uploadsBaseDir, { recursive: true });
+if (!fs.existsSync(uploadsTempDir)) {
+  fs.mkdirSync(uploadsTempDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const rawId = req.params.id || 'temp';
-    const cleanOrderId = rawId.replace(/[^a-zA-Z0-9_\-]/g, '_');
-    const targetDir = path.resolve(uploadsBaseDir, cleanOrderId);
-    if (!targetDir.startsWith(uploadsBaseDir)) {
-      return cb(new Error('Недопустимый путь к заказу'), uploadsBaseDir);
-    }
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
-    }
-    cb(null, targetDir);
+    cb(null, uploadsTempDir);
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);

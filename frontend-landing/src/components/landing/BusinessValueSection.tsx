@@ -1,9 +1,8 @@
 import React from 'react';
-import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface BusinessValueSectionProps {
-  onScrollToCalculator: () => void;
+  onScrollToCalculator?: () => void;
 }
 
 export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
@@ -124,9 +123,9 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
         : 'Организуем маркировку под ключ в любой точке РК. Масштабируем команду под вашу партию, чтобы товар вышел в продажу день в день.',
     },
     {
-      title: lang === 'kz' ? 'НКТ каталогы және эмиссия под ключ' : lang === 'en' ? 'Cataloging & Automated Emission' : 'Каталог НКТ и эмиссия без вашего участия',
+      title: lang === 'kz' ? 'ҰТК каталогы және эмиссия кілтке дейін' : lang === 'en' ? 'Cataloging & Automated Emission' : 'Каталог НКТ и эмиссия без вашего участия',
       desc: lang === 'kz' 
-        ? 'Номенклатураны НКТ-ға өзіміз тіркейміз, GTIN аламыз және «Таңба» АЖ-дан кодтар пулын шығарамыз.' 
+        ? 'Номенклатураны ҰТК-ға өзіміз тіркейміз, GTIN аламыз және «Таңба» АЖ-дан кодтар пулын шығарамыз.' 
         : lang === 'en' 
         ? 'We register cards in the National Catalog, obtain GTINs, and manage the full code issuance cycle in IS Tanba.' 
         : 'Сами заводим номенклатуру в НКТ, получаем GTIN и заказываем официальные пулы кодов в системе ИС Танба.',
@@ -280,34 +279,6 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
                 </p>
               </div>
             ))}
-          </div>
-
-          {/* Bottom Action Card */}
-          <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-gray-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm font-bold text-[#111827]">
-                <ShieldCheck className="w-4 h-4 text-[#0082FB]" />
-                <span>
-                  {lang === 'kz' ? 'Ресми ҚР келісімшарты және толық құжаттар' : lang === 'en' ? 'Official Kazakhstan Contract & SLA' : 'Официальный договор РК и полная юридическая гарантия'}
-                </span>
-              </div>
-              <p className="text-xs text-[#64748B]">
-                {lang === 'kz'
-                  ? 'Барлық жабылатын бухгалтерлік құжаттар мен ЭШФ ұсынылады. Бүкіл Қазақстан бойынша қызмет көрсетеміз.'
-                  : lang === 'en'
-                  ? 'Complete closing accounting documentation and electronic invoices (ESF) provided. Nationwide coverage across Kazakhstan.'
-                  : 'Предоставляем полный комплект закрывающих бухгалтерских документов и выписку ЭСФ. Работаем по всему Казахстану.'}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={onScrollToCalculator}
-              className="inline-flex items-center justify-center gap-2.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-sm font-extrabold px-7 py-3.5 rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer shrink-0 self-start md:self-auto"
-            >
-              <span>{t('hero.btn_calc')}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
           </div>
 
         </div>

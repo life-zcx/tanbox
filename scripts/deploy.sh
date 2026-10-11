@@ -11,10 +11,12 @@ echo "🚀 [TANBOX] Начинаем боевой деплой..."
 if [ ! -f ".env" ]; then
     echo "⚠️ Файл .env не найден! Создаю базовый .env из .env.example..."
     cp .env.example .env
-    # Генерация случайного безопасного JWT секрета
+    # Генерация случайного безопасного JWT секрета и ключа шифрования
     RANDOM_JWT=$(openssl rand -hex 32 2>/dev/null || cat /proc/sys/kernel/random/uuid | tr -d '-')
-    sed -i "s|tanbox_kz_jwt_secret_key_super_secure_2026|$RANDOM_JWT|g" .env
-    echo "✅ Файл .env успешно создан со случайным JWT_SECRET."
+    RANDOM_ENC=$(openssl rand -hex 16 2>/dev/null || cat /proc/sys/kernel/random/uuid | tr -d '-')
+    sed -i "s|replace_with_strong_random_jwt_secret_openssl_rand_hex_64|$RANDOM_JWT|g" .env
+    sed -i "s|replace_with_strong_random_encryption_secret_minimum_32_chars|$RANDOM_ENC|g" .env
+    echo "✅ Файл .env успешно создан со случайными JWT_SECRET и ENCRYPTION_SECRET."
 fi
 
 # 2. Сборка оптимизированных продакшн-контейнеров
@@ -23,7 +25,7 @@ docker compose build
 
 # 3. Синхронизация структуры БД и сидинг
 echo "🗄️ [TANBOX] Проверка и синхронизация базы данных..."
-docker compose run --rm backend npx prisma db push --accept-data-loss
+docker compose run --rm backend sh -c "npx prisma migrate deploy || npx prisma db push --skip-generate"
 docker compose run --rm backend npx tsx prisma/seed.ts
 
 # 4. Запуск всех сервисов в фоновом режиме
