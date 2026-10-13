@@ -8,6 +8,7 @@ interface TariffHelpModalProps {
   onClose: () => void;
   onSelectTariff?: (tariff: TariffType) => void;
   currentTariff?: TariffType | null;
+  allowDigital?: boolean;
 }
 
 export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
@@ -15,6 +16,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
   onClose,
   onSelectTariff,
   currentTariff,
+  allowDigital = true,
 }) => {
   // Lock body scroll and listen for Escape key while modal is open
   useEffect(() => {
@@ -101,6 +103,8 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
     },
   ];
 
+  const displayedTariffs = allowDigital ? tariffs : tariffs.filter((t) => t.type !== 'DIGITAL');
+
   const comparisonRows = [
     { label: 'Проверка кодов на дубликаты', digital: true, print: true, standard: true, pro: true },
     { label: 'Генерация готовых макетов Data Matrix', digital: true, print: true, standard: true, pro: true },
@@ -152,8 +156,8 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {/* Scrollable Body with Clean Sleek Scrollbar */}
         <div className="flex-1 overflow-y-auto px-5 sm:px-7 pt-5 pb-7 space-y-5 custom-scrollbar">
           {/* Tariffs Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {tariffs.map((t) => {
+          <div className={`grid grid-cols-1 ${displayedTariffs.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
+            {displayedTariffs.map((t) => {
               const Icon = t.icon;
               const isSelected = currentTariff === t.type;
               return (
@@ -242,7 +246,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
                 <thead>
                   <tr className="bg-white border-b border-gray-100 text-[11px] font-bold text-[#64748B]">
                     <th className="py-2 px-4">Услуга / этап</th>
-                    <th className="py-2 px-3 text-center">Цифровой</th>
+                    {allowDigital && <th className="py-2 px-3 text-center">Цифровой</th>}
                     <th className="py-2 px-3 text-center">Печатный</th>
                     <th className="py-2 px-3 text-center">Стандарт</th>
                     <th className="py-2 px-3 text-center">PRO Склад</th>
@@ -252,13 +256,15 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
                   {comparisonRows.map((row, i) => (
                     <tr key={i} className="hover:bg-gray-50/60">
                       <td className="py-2 px-4 font-medium text-[#111827]">{row.label}</td>
-                      <td className="py-2 px-3 text-center">
-                        {row.digital ? (
-                          <Check className="w-4 h-4 text-emerald-600 mx-auto" />
-                        ) : (
-                          <Minus className="w-4 h-4 text-gray-300 mx-auto" />
-                        )}
-                      </td>
+                      {allowDigital && (
+                        <td className="py-2 px-3 text-center">
+                          {row.digital ? (
+                            <Check className="w-4 h-4 text-emerald-600 mx-auto" />
+                          ) : (
+                            <Minus className="w-4 h-4 text-gray-300 mx-auto" />
+                          )}
+                        </td>
+                      )}
                       <td className="py-2 px-3 text-center">
                         {row.print ? (
                           <Check className="w-4 h-4 text-emerald-600 mx-auto" />

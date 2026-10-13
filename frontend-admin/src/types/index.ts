@@ -49,6 +49,19 @@ export interface UserDetail extends UserClient {
 
 export type AdminUser = UserClient;
 
+export interface OrderPositionItem {
+  id?: string;
+  orderId?: string;
+  index: number;
+  name: string;
+  article?: string | null;
+  size?: string | null;
+  color?: string | null;
+  gtin?: string | null;
+  quantity: number;
+  customData?: any;
+}
+
 export interface OrderAdminItem {
   id: string;
   orderNumber: string;
@@ -74,6 +87,7 @@ export interface OrderAdminItem {
   paymentStatus?: string;
   notes?: string;
   createdAt: string;
+  positions?: OrderPositionItem[];
   user?: {
     companyName: string;
     binIin: string;

@@ -23,6 +23,19 @@ export interface UserProfile {
   createdAt: string;
 }
 
+export interface OrderPositionItem {
+  id?: string;
+  orderId?: string;
+  index: number;
+  name: string;
+  article?: string | null;
+  size?: string | null;
+  color?: string | null;
+  gtin?: string | null;
+  quantity: number;
+  customData?: any;
+}
+
 export interface OrderItem {
   id: string;
   orderNumber: string;
@@ -49,6 +62,7 @@ export interface OrderItem {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  positions?: OrderPositionItem[];
   user?: {
     companyName: string;
     binIin: string;

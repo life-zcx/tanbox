@@ -118,7 +118,7 @@ export async function renderHtmlToPdf(
     return Buffer.from(pdfBuffer);
   } catch (err) {
     // If page or browser crashed, reset instance so next request launches a clean Chromium
-    if (!browser.isConnected()) {
+    if (!browser.connected) {
       browserInstance = null;
     }
     throw err;

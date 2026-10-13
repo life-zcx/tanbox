@@ -63,6 +63,9 @@ async function findOrderByIdOrNumber(identifier: string) {
           phone: true,
         },
       },
+      positions: {
+        orderBy: { index: 'asc' },
+      },
       markirovkaOrders: {
         include: {
           account: {
@@ -94,9 +97,18 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
 
-    const { category, tariffType, itemsCount, extraServices, ssccNeeded, notes } = req.body;
+    const { category, tariffType, itemsCount, extraServices, ssccNeeded, notes, positions, items } = req.body;
+    const rawPositions = Array.isArray(positions) && positions.length > 0 ? positions : (Array.isArray(items) && items.length > 0 ? items : []);
 
-    if (!category || !tariffType || !itemsCount) {
+    let countNum = parseInt(itemsCount, 10);
+    if (rawPositions.length > 0) {
+      const computedSum = rawPositions.reduce((acc: number, p: any) => acc + (Math.max(1, parseInt(p.quantity, 10) || 1)), 0);
+      if (computedSum > 0) {
+        countNum = computedSum;
+      }
+    }
+
+    if (!category || !tariffType || (!countNum && !itemsCount)) {
       return res.status(400).json({ message: 'Заполните обязательные поля заказа' });
     }
 
@@ -108,7 +120,6 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Недопустимый тариф' });
     }
 
-    const countNum = parseInt(itemsCount, 10);
     if (isNaN(countNum) || countNum <= 0 || countNum > 10000000) {
       return res.status(400).json({ message: 'Количество должно быть положительным целым числом до 10 000 000' });
     }
@@ -117,14 +128,24 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     if (typeof req.body.warehouseAddress === 'string' && req.body.warehouseAddress.trim().length > 0) {
       extractedAddress = req.body.warehouseAddress.trim();
     } else if (typeof notes === 'string') {
-      const match = notes.match(/Адрес склада[:\s]*([^\n\r]+)/i);
+      const match = notes.match(/(?:Адрес склада|Адрес доставки)[:\s]*([^\n\r]+)/i);
       if (match) {
         extractedAddress = match[1].trim();
       }
     }
 
-    if (!extractedAddress && !(typeof notes === 'string' && /Адрес склада/i.test(notes))) {
-      return res.status(400).json({ message: 'Пожалуйста, укажите адрес склада в РК' });
+    if (tariffType === 'DIGITAL') {
+      if (!extractedAddress) {
+        extractedAddress = 'Электронная выгрузка в ЛК';
+      }
+    } else {
+      if (!extractedAddress && !(typeof notes === 'string' && /(?:Адрес склада|Адрес доставки)/i.test(notes))) {
+        return res.status(400).json({
+          message: tariffType === 'PRINT'
+            ? 'Пожалуйста, укажите адрес доставки рулонов'
+            : 'Пожалуйста, укажите адрес склада в РК',
+        });
+      }
     }
 
     // Authoritative server-side price calculation (tamper-proof)
@@ -255,27 +276,122 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       throw new Error('Не удалось сгенерировать уникальный номер заказа, попробуйте еще раз');
     }
 
+    // Save order positions (multi-item / multi-SKU specification)
+    if (rawPositions.length > 0) {
+      await prisma.orderPosition.createMany({
+        data: rawPositions.map((p: any, idx: number) => ({
+          orderId: newOrder.id,
+          index: idx + 1,
+          name: String(p.name || `Позиция ${idx + 1}`).trim(),
+          article: p.article ? String(p.article).trim() : null,
+          size: p.size ? String(p.size).trim() : null,
+          color: p.color ? String(p.color).trim() : null,
+          gtin: p.gtin ? String(p.gtin).trim() : null,
+          quantity: Math.max(1, parseInt(p.quantity, 10) || 1),
+          customData: p.customData || null,
+        })),
+      });
+
+      newOrder.positions = await prisma.orderPosition.findMany({
+        where: { orderId: newOrder.id },
+        orderBy: { index: 'asc' },
+      });
+    }
+
     // Process turnkey automatic Markirovka emission if requested
     const { markirovkaMode, markirovkaAccountId, markirovkaGtin } = req.body;
     let createdMarkirovkaOrder: any = null;
 
-    if (markirovkaMode === 'EMISSION' && markirovkaAccountId && markirovkaGtin) {
+    const gtinPositions = rawPositions.filter((p: any) => p.gtin && String(p.gtin).trim().length >= 8);
+
+    if (markirovkaMode === 'EMISSION' && markirovkaAccountId && (gtinPositions.length > 0 || markirovkaGtin)) {
       try {
         const markAccount = await prisma.markirovkaAccount.findUnique({
           where: { id: String(markirovkaAccountId) },
         });
 
         if (markAccount) {
-          createdMarkirovkaOrder = await prisma.markirovkaOrder.create({
-            data: {
-              accountId: markAccount.id,
-              orderId: newOrder.id,
-              category: category as OrderCategory,
-              gtin: String(markirovkaGtin).trim(),
-              quantityRequested: countNum,
-              status: 'PENDING',
-            },
-          });
+          const client = new MarkirovkaClient(markAccount);
+
+          if (gtinPositions.length > 0) {
+            // Multi-position emission per GTIN
+            const allFetchedCodes: string[] = [];
+            for (const item of gtinPositions) {
+              const itemGtin = String(item.gtin).trim();
+              const itemQty = Math.max(1, parseInt(item.quantity, 10) || 1);
+              try {
+                const subMarkOrder = await prisma.markirovkaOrder.create({
+                  data: {
+                    accountId: markAccount.id,
+                    orderId: newOrder.id,
+                    category: category as OrderCategory,
+                    gtin: itemGtin,
+                    quantityRequested: itemQty,
+                    status: 'PENDING',
+                  },
+                });
+
+                const emission = await client.createEmissionOrder({
+                  category: category as OrderCategory,
+                  gtin: itemGtin,
+                  quantity: itemQty,
+                  serialNumberType: 'OPERATOR',
+                });
+
+                await prisma.markirovkaOrder.update({
+                  where: { id: subMarkOrder.id },
+                  data: {
+                    externalOrderId: emission.orderId,
+                    status: 'FETCHING',
+                  },
+                });
+
+                const pollRes = await client.pollAndFetchCodes(
+                  emission.orderId,
+                  itemGtin,
+                  itemQty,
+                  8000,
+                  category as OrderCategory
+                );
+
+                if (pollRes.codes && pollRes.codes.length > 0) {
+                  await prisma.markirovkaOrder.update({
+                    where: { id: subMarkOrder.id },
+                    data: {
+                      codes: pollRes.codes,
+                      quantityReceived: pollRes.codes.length,
+                      status: 'COMPLETED',
+                    },
+                  });
+                  allFetchedCodes.push(...pollRes.codes);
+                }
+              } catch (subErr: any) {
+                console.error(`[Markirovka Auto-Emission] Error for GTIN ${itemGtin}:`, subErr.message);
+              }
+            }
+
+            if (allFetchedCodes.length > 0) {
+              const attachRes = await attachCodesToOrder(
+                newOrder.id,
+                allFetchedCodes,
+                gtinPositions[0].gtin ? String(gtinPositions[0].gtin).trim() : null,
+                'markirovka_emission'
+              );
+              newOrder.codesFileUrl = attachRes.relativeUrl;
+              newOrder.codesFileName = `markirovka_emission_${newOrder.orderNumber}.csv`;
+            }
+          } else if (markirovkaGtin) {
+            // Single fallback emission
+            createdMarkirovkaOrder = await prisma.markirovkaOrder.create({
+              data: {
+                accountId: markAccount.id,
+                orderId: newOrder.id,
+                category: category as OrderCategory,
+                gtin: String(markirovkaGtin).trim(),
+                quantityRequested: countNum,
+                status: 'PENDING',
+              },
+            });
 
           // Dispatch emission to IS MPT asynchronously/synchronously
           try {
@@ -343,10 +459,11 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
             });
           }
         }
-      } catch (markErr: any) {
-        console.error('[Markirovka Auto-Emission] Error setting up markirovka order:', markErr);
       }
+    } catch (markErr: any) {
+      console.error('[Markirovka Auto-Emission] Error setting up markirovka order:', markErr);
     }
+  }
 
     // Dispatch Telegram notification to Leads & Orders group
     telegram.sendNewOrderNotification({
@@ -398,6 +515,9 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
             email: true,
             phone: true,
           },
+        },
+        positions: {
+          orderBy: { index: 'asc' },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -948,6 +1068,32 @@ export const uploadOrderCodesFile = async (req: AuthRequest, res: Response) => {
 
       // Reindex client orders to guarantee unbroken numbering sequence across all orders
       await reindexClientOrders(existing.userId);
+
+      // If order has no positions, auto-create them from uploaded codes grouped by GTIN
+      const currentPosCount = await prisma.orderPosition.count({ where: { orderId: existing.id } });
+      if (currentPosCount === 0) {
+        const gtinGroups = new Map<string, number>();
+        for (const item of items) {
+          const g = item.gtin || 'UNKNOWN';
+          gtinGroups.set(g, (gtinGroups.get(g) || 0) + 1);
+        }
+        let pIdx = 1;
+        const autoPositions = [];
+        const baseName = req.file.originalname ? req.file.originalname.replace(/\.[^/.]+$/, '') : 'Товар';
+        for (const [gtin, qty] of gtinGroups.entries()) {
+          autoPositions.push({
+            orderId: existing.id,
+            index: pIdx,
+            name: gtinGroups.size === 1 ? baseName : `${baseName} (Позиция ${pIdx})`,
+            gtin: gtin !== 'UNKNOWN' ? gtin : null,
+            quantity: qty,
+          });
+          pIdx++;
+        }
+        if (autoPositions.length > 0) {
+          await prisma.orderPosition.createMany({ data: autoPositions });
+        }
+      }
     } catch (dbErr) {
       console.warn('Failed to populate OrderCodeItem on upload:', dbErr);
     }
@@ -1034,6 +1180,25 @@ export const checkCodesFile = async (req: AuthRequest, res: Response) => {
     const alreadyInDbCount = existingDbCodesSet.size;
     const validNewCodesCount = Math.max(0, uniqueCodes.length - alreadyInDbCount);
 
+    let detectedGtin: string | null = null;
+    let sampleCode: string | null = null;
+    let hasCryptoTail = false;
+
+    for (const c of uniqueCodes) {
+      const clean = c.replace(/^\uFEFF/, '').replace(/[\u0000-\u001F\u007F-\u009F"']/g, '').trim();
+      if (!sampleCode && clean.length >= 10) {
+        sampleCode = clean.length > 55 ? clean.substring(0, 52) + '...' : clean;
+      }
+      if (!detectedGtin) {
+        const m = clean.match(/(?:01|\(01\))(\d{14})/) || clean.match(/(?:^|[^\d])01(\d{14})/) || clean.match(/\b(\d{14})\b/);
+        if (m) detectedGtin = m[1];
+      }
+      if (!hasCryptoTail && (/91[a-zA-Z0-9]{4}/.test(clean) || /92[a-zA-Z0-9]/.test(clean))) {
+        hasCryptoTail = true;
+      }
+      if (detectedGtin && sampleCode && hasCryptoTail) break;
+    }
+
     let message = '';
     if (alreadyInDbCount > 0 || internalDupesCount > 0) {
       const parts: string[] = [];
@@ -1050,6 +1215,10 @@ export const checkCodesFile = async (req: AuthRequest, res: Response) => {
       internalDuplicatesCount: internalDupesCount,
       alreadyInDbCount,
       validNewCodesCount,
+      detectedGtin,
+      sampleCode,
+      hasCryptoTail,
+      formatStandard: 'GS1 DataMatrix (РК / ИС Танба)',
       message,
     });
   } catch (error: any) {

@@ -12,16 +12,16 @@ export function parseCodesFile(raw: string): { headers: string[]; rows: Record<s
   if (lines.length === 0) return { headers: [], rows: [] };
 
   const isMarkingCode = (str: string): boolean => {
-    const clean = str.replace(/^["']|["']$/g, '').trim();
-    return /^01\d{14}/.test(clean);
+    const clean = str.replace(/^\uFEFF/, '').replace(/[\u0000-\u001F\u007F-\u009F"']/g, '').trim();
+    return /(?:^|[^\d])(?:01|\(01\))\d{14}/.test(clean) || /^01\d{14}/.test(clean);
   };
 
   const stripOuterQuotes = (val: string): string => {
-    let s = val.trim();
+    let s = val.replace(/^\uFEFF/, '').trim();
     if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
       if (s.length >= 2) s = s.slice(1, -1);
     }
-    return s.trim();
+    return s.replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, '').trim();
   };
 
   const parseCsvTokens = (line: string, delimiter: string): string[] => {

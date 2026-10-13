@@ -30,6 +30,7 @@ import {
   Lock,
   Receipt,
   Loader2,
+  Boxes,
 } from 'lucide-react';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
 import RollSplitModal from '../components/modals/RollSplitModal';
@@ -981,6 +982,86 @@ export const OrderDetailPage: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            {/* Positions Table if order has multiple items */}
+            {order.positions && order.positions.length > 0 && (
+              <div className="pt-4 border-t border-gray-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Boxes className="w-4 h-4 text-[#0082FB]" />
+                    <span className="text-xs font-extrabold text-[#111827] uppercase tracking-wider">
+                      Спецификация позиций партии (SKU)
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#0082FB] border border-blue-200/80">
+                    {order.positions.length} поз.
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-gray-200/80 bg-white">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-500 font-bold uppercase text-[10px] tracking-wider">
+                        <th className="py-2 px-3 w-8 text-center">№</th>
+                        <th className="py-2 px-3">Наименование</th>
+                        <th className="py-2 px-3">Артикул</th>
+                        <th className="py-2 px-3">Размер</th>
+                        <th className="py-2 px-3">Цвет</th>
+                        <th className="py-2 px-3">GTIN</th>
+                        <th className="py-2 px-3 text-right">Тираж</th>
+                        <th className="py-2 px-3 text-right">Доля</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {order.positions.map((pos, idx) => {
+                        const pct = order.itemsCount > 0 ? Math.round((pos.quantity / order.itemsCount) * 100) : 0;
+                        return (
+                          <tr key={pos.id || idx} className="hover:bg-gray-50/50">
+                            <td className="py-2 px-3 text-center text-gray-400 font-bold text-[11px]">
+                              {pos.index || idx + 1}
+                            </td>
+                            <td className="py-2 px-3 font-semibold text-gray-900">
+                              {pos.name}
+                            </td>
+                            <td className="py-2 px-3 text-gray-600 font-medium">
+                              {pos.article || '—'}
+                            </td>
+                            <td className="py-2 px-3 text-gray-600">
+                              {pos.size || '—'}
+                            </td>
+                            <td className="py-2 px-3 text-gray-600">
+                              {pos.color || '—'}
+                            </td>
+                            <td className="py-2 px-3 font-mono text-[11px] text-gray-700">
+                              {pos.gtin || '—'}
+                            </td>
+                            <td className="py-2 px-3 text-right font-bold text-gray-900">
+                              {pos.quantity.toLocaleString()} шт.
+                            </td>
+                            <td className="py-2 px-3 text-right text-gray-400 font-medium text-[11px]">
+                              {pct}%
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-50/90 font-bold border-t border-gray-200 text-gray-900 text-[11px]">
+                        <td colSpan={6} className="py-2.5 px-3 text-right">
+                          Итого:
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-[#0082FB] font-black">
+                          {order.itemsCount.toLocaleString()} шт.
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-gray-500 font-semibold">
+                          100%
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Extra Options */}
             <div className="pt-2 border-t border-gray-100">

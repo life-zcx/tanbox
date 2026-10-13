@@ -112,6 +112,7 @@ model Order {
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
+  positions             OrderPosition[]
   codeItems             OrderCodeItem[]
   markirovkaOrders      MarkirovkaOrder[]
   markirovkaReports     MarkirovkaUtilisationReport[]
@@ -119,6 +120,25 @@ model Order {
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+}
+
+model OrderPosition {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  index       Int      @default(1)
+  name        String   // Наименование товара / модели
+  article     String?  // Артикул
+  size        String?  // Размер
+  color       String?  // Цвет
+  gtin        String?  // GTIN / Штрихкод (14 цифр)
+  quantity    Int      @default(1) // Количество кодов для данной позиции
+  customData  Json?    // Дополнительные параметры (состав, бренд, страна и т.д.)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([gtin])
 }
 
 model OrderCodeItem {

@@ -5,6 +5,40 @@ import { env } from '../config/env';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { Role } from '@prisma/client';
 
+const formatTariff = (t: any, isAdmin: boolean) => ({
+  id: t.id,
+  code: t.code,
+  name: t.name,
+  description: t.description,
+  fitFor: t.fitFor,
+  priceRetail: Number(t.priceRetail) || 0,
+  priceWholesale: Number(t.priceWholesale) || 0,
+  priceLargeWholesale: Number(t.priceLargeWholesale) || 0,
+  priceMin: Number(t.priceMin) || 0,
+  priceMax: Number(t.priceMax) || 0,
+  ...(isAdmin
+    ? {
+        costEstimate: Number(t.costEstimate) || 0,
+        marginEst: t.marginEst || '',
+      }
+    : {}),
+  createdAt: t.createdAt,
+  updatedAt: t.updatedAt,
+});
+
+const formatPricingSettings = (s: any) => ({
+  id: s.id,
+  key: s.key,
+  ssccPrice: Number(s.ssccPrice) || 0,
+  stickerLayoutPrice: Number(s.stickerLayoutPrice) || 0,
+  urgentPercent: Number(s.urgentPercent) || 0,
+  expressDeliveryPrice: Number(s.expressDeliveryPrice) || 0,
+  volumeTier1: Math.floor(Number(s.volumeTier1) || 20000),
+  volumeTier2: Math.floor(Number(s.volumeTier2) || 100000),
+  createdAt: s.createdAt,
+  updatedAt: s.updatedAt,
+});
+
 export const getTariffs = async (req: Request, res: Response) => {
   try {
     const rawTariffs = await prisma.tariff.findMany({
@@ -44,12 +78,10 @@ export const getTariffs = async (req: Request, res: Response) => {
       }
     }
 
-    // Sanitize tariffs for non-admins to prevent confidential pricing & margin disclosure
-    const tariffs = isAdmin
-      ? rawTariffs
-      : rawTariffs.map(({ costEstimate, marginEst, ...publicData }) => publicData);
-
-    return res.json({ tariffs, pricingSettings });
+    return res.json({
+      tariffs: rawTariffs.map((t) => formatTariff(t, isAdmin)),
+      pricingSettings: formatPricingSettings(pricingSettings),
+    });
   } catch (error: any) {
     console.error('Error fetching tariffs:', error);
     return res.status(500).json({ message: 'Ошибка при получении тарифов' });
@@ -68,12 +100,12 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
         const pRetail = Math.max(0.1, Number(t.priceRetail) || 0);
         const pWholesale = Math.max(0.1, Number(t.priceWholesale) || pRetail);
         const pLarge = Math.max(0.1, Number(t.priceLargeWholesale) || pWholesale);
-        const cEstimate = Math.max(0, Number(t.costEstimate || 0));
+        const cEstimate = Math.max(0, Number(t.costEstimate) || 0);
 
         await prisma.tariff.update({
           where: { code: t.code },
           data: {
-            name: typeof t.name === 'string' ? t.name : undefined,
+            name: typeof t.name === 'string' && t.name.trim() ? t.name : undefined,
             description: typeof t.description === 'string' ? t.description : undefined,
             fitFor: typeof t.fitFor === 'string' ? t.fitFor : undefined,
             priceRetail: pRetail,
@@ -82,7 +114,7 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
             costEstimate: cEstimate,
             priceMin: Math.min(pLarge, pWholesale, pRetail),
             priceMax: Math.max(pLarge, pWholesale, pRetail),
-            marginEst: typeof t.marginEst === 'string' ? t.marginEst : '',
+            marginEst: typeof t.marginEst === 'string' ? t.marginEst : undefined,
           },
         });
       }
@@ -90,10 +122,10 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
 
     // Update global pricing settings with bounds validation
     if (pricingSettings) {
-      const safeSscc = Math.max(0, Number(pricingSettings.ssccPrice) || 5);
-      const safeLayout = Math.max(0, Number(pricingSettings.stickerLayoutPrice) || 5000);
-      const safeUrgent = Math.min(200, Math.max(0, Number(pricingSettings.urgentPercent) || 20));
-      const safeExpress = Math.max(0, Number(pricingSettings.expressDeliveryPrice) || 15000);
+      const safeSscc = Math.max(0, Number(pricingSettings.ssccPrice) ?? 5);
+      const safeLayout = Math.max(0, Number(pricingSettings.stickerLayoutPrice) ?? 5000);
+      const safeUrgent = Math.min(200, Math.max(0, Number(pricingSettings.urgentPercent) ?? 20));
+      const safeExpress = Math.max(0, Number(pricingSettings.expressDeliveryPrice) ?? 15000);
       const safeTier1 = Math.max(100, Math.floor(Number(pricingSettings.volumeTier1) || 20000));
       const safeTier2 = Math.max(safeTier1 + 100, Math.floor(Number(pricingSettings.volumeTier2) || 100000));
 
@@ -124,11 +156,11 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
 
     return res.json({
       message: 'Тарифы и настройки цен успешно обновлены',
-      tariffs: updatedTariffs,
-      pricingSettings: updatedSettings,
+      tariffs: updatedTariffs.map((t) => formatTariff(t, true)),
+      pricingSettings: updatedSettings ? formatPricingSettings(updatedSettings) : null,
     });
   } catch (error: any) {
     console.error('Error updating tariffs:', error);
-    return res.status(500).json({ message: 'Ошибка при сохранении тарифов' });
+    return res.status(500).json({ message: 'Ошибка при сохранении тарифов: ' + (error.message || 'Внутренняя ошибка') });
   }
 };

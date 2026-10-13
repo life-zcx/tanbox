@@ -8,6 +8,8 @@ import { AdminOrdersPage } from './pages/AdminOrdersPage';
 import { AdminLeadsPage } from './pages/AdminLeadsPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AdminTariffsPage } from './pages/AdminTariffsPage';
+import { AdminPriceBuilderPage } from './pages/AdminPriceBuilderPage';
+import { AdminInvoicesPage } from './pages/AdminInvoicesPage';
 import { AdminLabelDesignerPage } from './pages/AdminLabelDesignerPage';
 import { AdminLabelsRegistryPage } from './pages/AdminLabelsRegistryPage';
 import { AdminOrderDetailPage } from './pages/AdminOrderDetailPage';
@@ -164,6 +166,27 @@ export const App: React.FC = () => {
               </ProtectedAdminLayout>
             }
           />
+
+          <Route
+            path="/price-builder"
+            element={
+              <ProtectedAdminLayout>
+                <AdminPriceBuilderPage />
+              </ProtectedAdminLayout>
+            }
+          />
+          <Route path="/price-lists" element={<Navigate to="/price-builder" replace />} />
+          <Route path="/prices" element={<Navigate to="/price-builder" replace />} />
+
+          <Route
+            path="/invoices"
+            element={
+              <ProtectedAdminLayout>
+                <AdminInvoicesPage />
+              </ProtectedAdminLayout>
+            }
+          />
+          <Route path="/invoice" element={<Navigate to="/invoices" replace />} />
 
           <Route
             path="/system"
