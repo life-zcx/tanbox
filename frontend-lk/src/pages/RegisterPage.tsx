@@ -290,7 +290,7 @@ export const RegisterPage: React.FC = () => {
                     if (errors.companyName) validateCompanyName(e.target.value);
                   }}
                   onBlur={(e) => validateCompanyName(e.target.value)}
-                  placeholder='ТОО "Казахстан Трейд"'
+                  placeholder="Введите наименование организации"
                   className={`w-full bg-[#F4F6F9] border rounded-xl pl-9 pr-3.5 py-2.5 text-xs font-semibold text-[#111827] focus:outline-none transition-colors ${
                     errors.companyName ? 'border-red-500 focus:border-red-500' : 'border-gray-200/80 focus:border-[#0082FB]'
                   }`}
@@ -323,7 +323,7 @@ export const RegisterPage: React.FC = () => {
                     if (errors.binIin) validateBinIin(cleaned);
                   }}
                   onBlur={(e) => validateBinIin(e.target.value)}
-                  placeholder="980412354890"
+                  placeholder="Введите БИН / ИИН"
                   className={`w-full bg-[#F4F6F9] border rounded-xl pl-9 pr-3.5 py-2.5 text-xs font-semibold text-[#111827] focus:outline-none transition-colors ${
                     errors.binIin ? 'border-red-500 focus:border-red-500' : 'border-gray-200/80 focus:border-[#0082FB]'
                   }`}
@@ -354,7 +354,7 @@ export const RegisterPage: React.FC = () => {
                     if (errors.phone) validatePhone(formatted);
                   }}
                   onBlur={(e) => validatePhone(e.target.value)}
-                  placeholder="+7 (701) 555-12-34"
+                  placeholder="Введите номер телефона"
                   className={`w-full bg-[#F4F6F9] border rounded-xl pl-9 pr-3.5 py-2.5 text-xs font-semibold text-[#111827] focus:outline-none transition-colors ${
                     errors.phone ? 'border-red-500 focus:border-red-500' : 'border-gray-200/80 focus:border-[#0082FB]'
                   }`}
@@ -379,7 +379,7 @@ export const RegisterPage: React.FC = () => {
                     if (errors.email) validateEmail(e.target.value);
                   }}
                   onBlur={(e) => validateEmail(e.target.value)}
-                  placeholder="company@domain.kz"
+                  placeholder="Введите e-mail"
                   className={`w-full bg-[#F4F6F9] border rounded-xl pl-9 pr-3.5 py-2.5 text-xs font-semibold text-[#111827] focus:outline-none transition-colors ${
                     errors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-200/80 focus:border-[#0082FB]'
                   }`}

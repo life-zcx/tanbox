@@ -107,7 +107,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   <input
                     type="text"
                     required
-                    placeholder={lang === 'kz' ? '"Қазақстан Маркет" ЖШС' : lang === 'en' ? '"Kazakhstan Market" LLP' : 'ТОО "Казахстан Маркет"'}
+                    placeholder={lang === 'kz' ? 'Ұйым атауын енгізіңіз' : lang === 'en' ? 'Enter organization name' : 'Введите наименование организации'}
                     value={formData.companyName}
                     onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                     className="w-full bg-gray-50 border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 text-sm font-semibold text-black focus:outline-none focus:border-[#0082FB]"
@@ -125,7 +125,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     type="text"
                     required
                     maxLength={12}
-                    placeholder="980412354890"
+                    placeholder={lang === 'kz' ? 'БСН / ЖСН енгізіңіз' : lang === 'en' ? 'Enter BIN / IIN' : 'Введите БИН / ИИН'}
                     value={formData.binIin}
                     onChange={(e) => setFormData({ ...formData, binIin: e.target.value.replace(/\D/g, '') })}
                     className="w-full bg-gray-50 border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 text-sm font-semibold text-black focus:outline-none focus:border-[#0082FB]"
@@ -142,7 +142,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   <input
                     type="tel"
                     required
-                    placeholder="+7 701 555 1234"
+                    placeholder={lang === 'kz' ? 'Телефон нөмірін енгізіңіз' : lang === 'en' ? 'Enter phone number' : 'Введите номер телефона'}
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full bg-gray-50 border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 text-sm font-semibold text-black focus:outline-none focus:border-[#0082FB]"
@@ -161,7 +161,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <input
                 type="email"
                 required
-                placeholder="info@company.kz"
+                placeholder={lang === 'kz' ? 'E-mail енгізіңіз' : lang === 'en' ? 'Enter e-mail' : 'Введите e-mail'}
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full bg-gray-50 border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 text-sm font-semibold text-black focus:outline-none focus:border-[#0082FB]"

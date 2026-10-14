@@ -51,7 +51,7 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center p-4">
       <div className="bg-white border border-gray-100 rounded-3xl shadow-xl max-w-md w-full p-8 space-y-6">
-        
+
         <div className="text-center space-y-2">
           <img src="/tanbox-dark.svg" alt="tanbox" className="h-8 w-auto mx-auto mb-2" />
           <h2 className="text-2xl font-extrabold text-[#111827] tracking-tight">Добро пожаловать</h2>
@@ -75,7 +75,7 @@ export const LoginPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="client@tanbox.kz"
+                placeholder="Введите e-mail"
                 className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-10 pr-4 py-3 text-sm font-semibold text-[#111827] focus:outline-none focus:border-[#0082FB]"
               />
             </div>

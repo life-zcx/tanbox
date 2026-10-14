@@ -194,7 +194,7 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder={lang === 'kz' ? '"Қазақстан Трейдинг" ЖШС' : lang === 'en' ? '"Kazakhstan Trading" LLP' : 'ТОО "Казахстан Трейдинг"'}
+                  placeholder={lang === 'kz' ? 'Ұйым атауын енгізіңіз' : lang === 'en' ? 'Enter company name' : 'Введите наименование организации'}
                   value={form.companyName}
                   onChange={(e) => setForm({ ...form, companyName: e.target.value })}
                   className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-black focus:outline-none focus:border-[#0082FB]"
@@ -209,7 +209,7 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
                   type="text"
                   required
                   maxLength={12}
-                  placeholder="980412354890"
+                  placeholder={lang === 'kz' ? 'БСН / ЖСН енгізіңіз' : lang === 'en' ? 'Enter BIN / IIN' : 'Введите БИН / ИИН'}
                   value={form.binIin}
                   onChange={(e) => setForm({ ...form, binIin: e.target.value.replace(/\D/g, '') })}
                   className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-black focus:outline-none focus:border-[#0082FB]"
@@ -223,7 +223,7 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
                 <input
                   type="tel"
                   required
-                  placeholder="+7 (701) 000-0000"
+                  placeholder={lang === 'kz' ? 'Телефон нөмірін енгізіңіз' : lang === 'en' ? 'Enter phone number' : 'Введите номер телефона'}
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-black focus:outline-none focus:border-[#0082FB]"
