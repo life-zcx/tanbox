@@ -26,6 +26,8 @@ export const calculatePrice = async (req: Request, res: Response) => {
       ssccNeeded: Boolean(ssccNeeded),
     });
 
+    const isUrgent = Array.isArray(extraServices) && extraServices.includes('URGENT_PROCESSING');
+
     // Return sanitized public result without confidential costEstimate/unitMargin
     return res.json({
       tariffType,
@@ -33,6 +35,15 @@ export const calculatePrice = async (req: Request, res: Response) => {
       unitPrice: pricing.unitPrice,
       totalPrice: pricing.totalPrice,
       estDays: pricing.estDays,
+      estimatedDays: pricing.estDays,
+      estimatedMarginTotal: 0,
+      consumableCostPerItem: 0,
+      breakdown: {
+        baseUnitPrice: pricing.details.unitBasePrice,
+        unitAdditions: pricing.details.unitAdditions,
+        flatAdditions: pricing.details.flatAdditions,
+        isUrgent,
+      },
       details: {
         unitBasePrice: pricing.details.unitBasePrice,
         unitAdditions: pricing.details.unitAdditions,

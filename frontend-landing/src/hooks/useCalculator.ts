@@ -1,53 +1,55 @@
 import { useState, useEffect } from 'react';
-import { TariffCode, CalculationResult } from '../types';
+import { TariffCode, CalculationResult, TariffItem, PricingSettings } from '../types';
 import { apiClient } from '../api/client';
 
 export const computeInstantPrice = (
   tariffType: TariffCode,
   itemsCount: number,
   extraServices: string[],
-  ssccNeeded: boolean
+  ssccNeeded: boolean,
+  dbTariffs?: TariffItem[],
+  dbSettings?: PricingSettings | null
 ): CalculationResult => {
-  let basePriceMin = 10;
-  let basePriceMax = 15;
+  const found = dbTariffs?.find((t) => t.code === tariffType);
+  const tier1 = dbSettings?.volumeTier1 ?? 20000;
+  const tier2 = dbSettings?.volumeTier2 ?? 100000;
 
-  switch (tariffType) {
-    case 'DIGITAL':
-      basePriceMin = 10;
-      basePriceMax = 15;
-      break;
-    case 'PRINT':
-      basePriceMin = 25;
-      basePriceMax = 35;
-      break;
-    case 'STANDARD':
-      basePriceMin = 50;
-      basePriceMax = 65;
-      break;
-    case 'PRO':
-      basePriceMin = 90;
-      basePriceMax = 120;
-      break;
+  // Fallbacks if not yet loaded from DB
+  const fallbackPrices: Record<string, { retail: number; wholesale: number; large: number }> = {
+    DIGITAL: { retail: 15, wholesale: 12, large: 10 },
+    PRINT: { retail: 35, wholesale: 30, large: 25 },
+    STANDARD: { retail: 65, wholesale: 55, large: 50 },
+    PRO: { retail: 120, wholesale: 105, large: 90 },
+  };
+
+  const f = fallbackPrices[tariffType] || fallbackPrices.STANDARD;
+  const priceRetail = found?.priceRetail ?? f.retail;
+  const priceWholesale = found?.priceWholesale ?? f.wholesale;
+  const priceLargeWholesale = found?.priceLargeWholesale ?? f.large;
+
+  let unitPrice = priceRetail;
+  if (itemsCount > tier2) {
+    unitPrice = priceLargeWholesale;
+  } else if (itemsCount > tier1) {
+    unitPrice = priceWholesale;
   }
 
-  let unitPrice = basePriceMax;
-  if (itemsCount > 100000) {
-    unitPrice = basePriceMin;
-  } else if (itemsCount > 20000) {
-    unitPrice = Math.round((basePriceMin + basePriceMax) / 2);
-  }
+  const ssccPrice = dbSettings?.ssccPrice ?? 5;
+  const stickerLayoutPrice = dbSettings?.stickerLayoutPrice ?? 5000;
+  const expressDeliveryPrice = dbSettings?.expressDeliveryPrice ?? 15000;
+  const urgentPercent = dbSettings?.urgentPercent ?? 20;
 
   let flatAdditions = 0;
   let unitAdditions = 0;
 
   if (ssccNeeded || extraServices.includes('SSCC_AGGREGATION')) {
-    unitAdditions += 5;
+    unitAdditions += ssccPrice;
   }
   if (extraServices.includes('STICKER_LAYOUT_DESIGN')) {
-    flatAdditions += 5000;
+    flatAdditions += stickerLayoutPrice;
   }
   if (extraServices.includes('EXPRESS_DELIVERY')) {
-    flatAdditions += 15000;
+    flatAdditions += expressDeliveryPrice;
   }
 
   const finalUnitPrice = unitPrice + unitAdditions;
@@ -55,7 +57,7 @@ export const computeInstantPrice = (
 
   const isUrgent = extraServices.includes('URGENT_PROCESSING');
   if (isUrgent) {
-    totalPrice *= 1.2;
+    totalPrice *= 1 + urgentPercent / 100;
   }
   totalPrice = Math.round(totalPrice);
 
@@ -86,16 +88,41 @@ export const useCalculator = () => {
   const [itemsCount, setItemsCount] = useState<number>(10000);
   const [ssccNeeded, setSsccNeeded] = useState<boolean>(false);
   const [extraServices, setExtraServices] = useState<string[]>([]);
+  const [dbTariffs, setDbTariffs] = useState<TariffItem[]>([]);
+  const [dbPricingSettings, setDbPricingSettings] = useState<PricingSettings | null>(null);
   const [result, setResult] = useState<CalculationResult>(() =>
     computeInstantPrice('STANDARD', 10000, [], false)
   );
   const [loading, setLoading] = useState<boolean>(false);
 
+  // Load active tariffs & settings from DB on mount
   useEffect(() => {
-    // Instant local calculation for 0ms lag
-    setResult(computeInstantPrice(tariffType, itemsCount, extraServices, ssccNeeded));
+    let active = true;
+    apiClient
+      .get('/tariffs')
+      .then((res) => {
+        if (!active) return;
+        if (res.data?.tariffs && Array.isArray(res.data.tariffs)) {
+          setDbTariffs(res.data.tariffs);
+        }
+        if (res.data?.pricingSettings) {
+          setDbPricingSettings(res.data.pricingSettings);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load tariffs from server:', err);
+      });
 
-    // Optional background sync with backend
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Instant local calculation with current DB tariffs
+    setResult(computeInstantPrice(tariffType, itemsCount, extraServices, ssccNeeded, dbTariffs, dbPricingSettings));
+
+    // Authoritative backend calculation
     let isCancelled = false;
     apiClient
       .post('/calculator/calculate', {
@@ -106,7 +133,16 @@ export const useCalculator = () => {
       })
       .then((res) => {
         if (!isCancelled && res.data) {
-          setResult(res.data);
+          setResult({
+            ...res.data,
+            estimatedDays: res.data.estimatedDays ?? res.data.estDays ?? 1,
+            breakdown: res.data.breakdown ?? {
+              baseUnitPrice: res.data.details?.unitBasePrice ?? res.data.unitPrice,
+              unitAdditions: res.data.details?.unitAdditions ?? 0,
+              flatAdditions: res.data.details?.flatAdditions ?? 0,
+              isUrgent: extraServices.includes('URGENT_PROCESSING'),
+            },
+          });
         }
       })
       .catch(() => {
@@ -116,7 +152,7 @@ export const useCalculator = () => {
     return () => {
       isCancelled = true;
     };
-  }, [tariffType, itemsCount, ssccNeeded, extraServices]);
+  }, [tariffType, itemsCount, ssccNeeded, extraServices, dbTariffs, dbPricingSettings]);
 
   const toggleExtraService = (serviceCode: string) => {
     setExtraServices((prev) =>
@@ -137,5 +173,7 @@ export const useCalculator = () => {
     toggleExtraService,
     result,
     loading,
+    dbTariffs,
+    dbPricingSettings,
   };
 };

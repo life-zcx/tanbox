@@ -25,9 +25,19 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
     extraServices,
     toggleExtraService,
     result,
+    dbTariffs,
+    dbPricingSettings,
   } = useCalculator();
 
   const [isTariffModalOpen, setIsTariffModalOpen] = useState(false);
+
+  const getTariffPriceFrom = (code: TariffCode, fallback: number) => {
+    const found = dbTariffs?.find((t) => t.code === code);
+    const minPrice = found?.priceLargeWholesale ?? found?.priceMin ?? fallback;
+    if (lang === 'kz') return `${minPrice} ₸ / данадан`;
+    if (lang === 'en') return `from ${minPrice} ₸ / pcs`;
+    return `от ${minPrice} ₸ / шт.`;
+  };
 
   const tariffsList = useMemo(() => {
     if (lang === 'kz') {
@@ -36,7 +46,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'DIGITAL' as TariffCode,
           name: 'Сандық',
           desc: 'Тек Data Matrix кодтарының эмиссиясы',
-          priceFrom: '10 ₸ / данадан',
+          priceFrom: getTariffPriceFrom('DIGITAL', 10),
           includes: [
             '«Таңба» АЖ-де кодтардың эмиссиясы',
             'Дайын макеттерді жүктеу (PDF / Excel)',
@@ -47,7 +57,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'PRINT' as TariffCode,
           name: 'Баспа',
           desc: 'Жапсырма рулондарын басып шығару',
-          priceFrom: '25 ₸ / данадан',
+          priceFrom: getTariffPriceFrom('PRINT', 25),
           includes: [
             'Data Matrix кодтарының эмиссиясы',
             'Рулондарды термотрансферлік баспа',
@@ -58,7 +68,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'STANDARD' as TariffCode,
           name: 'Стандарт',
           desc: 'Басып шығару және кілтке дейін оклейка',
-          priceFrom: '50 ₸ / данадан',
+          priceFrom: getTariffPriceFrom('STANDARD', 50),
           includes: [
             'Эмиссия + стикерлерді басып шығару',
             'Стикерлеушілер тобының қоймаға шығуы',
@@ -70,7 +80,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'PRO' as TariffCode,
           name: 'PRO Қойма',
           desc: 'Оклейка және қораптарға агрегациялау (SSCC)',
-          priceFrom: '90 ₸ / данадан',
+          priceFrom: getTariffPriceFrom('PRO', 90),
           includes: [
             '«Стандарт» тарифіндегі барлық қызметтер',
             'Қораптарды ашу және артикулдарды тексеру',
@@ -87,7 +97,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'DIGITAL' as TariffCode,
           name: 'Digital',
           desc: 'Data Matrix code emission only',
-          priceFrom: 'from 10 ₸ / pcs',
+          priceFrom: getTariffPriceFrom('DIGITAL', 10),
           includes: [
             'Code emission in IS Tanba',
             'Ready layout export (PDF / Excel)',
@@ -98,7 +108,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'PRINT' as TariffCode,
           name: 'Print',
           desc: 'Industrial roll printing',
-          priceFrom: 'from 25 ₸ / pcs',
+          priceFrom: getTariffPriceFrom('PRINT', 25),
           includes: [
             'Data Matrix code generation',
             'Thermal transfer roll printing',
@@ -109,7 +119,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'STANDARD' as TariffCode,
           name: 'Standard',
           desc: 'Turnkey printing & stickering',
-          priceFrom: 'from 50 ₸ / pcs',
+          priceFrom: getTariffPriceFrom('STANDARD', 50),
           includes: [
             'Emission + roll sticker printing',
             'Onsite stickering crew dispatch',
@@ -121,7 +131,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'PRO' as TariffCode,
           name: 'PRO Warehouse',
           desc: 'Unboxing, labeling & SSCC aggregation',
-          priceFrom: 'from 90 ₸ / pcs',
+          priceFrom: getTariffPriceFrom('PRO', 90),
           includes: [
             'Everything included in Standard',
             'Unpacking boxes & SKU cross-checking',
@@ -137,7 +147,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         code: 'DIGITAL' as TariffCode,
         name: 'Цифровой',
         desc: 'Только эмиссия кодов Data Matrix',
-        priceFrom: 'от 10 ₸ / шт.',
+        priceFrom: getTariffPriceFrom('DIGITAL', 10),
         includes: [
           'Эмиссия кодов в ИС Танба',
           'Выгрузка готовых макетов (PDF / Excel)',
@@ -148,7 +158,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         code: 'PRINT' as TariffCode,
         name: 'Печатный',
         desc: 'Печать рулонов стикеров',
-        priceFrom: 'от 25 ₸ / шт.',
+        priceFrom: getTariffPriceFrom('PRINT', 25),
         includes: [
           'Эмиссия кодов DataMatrix',
           'Термотрансферная печать рулонов',
@@ -159,7 +169,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         code: 'STANDARD' as TariffCode,
         name: 'Стандарт',
         desc: 'Печать и оклейка под ключ',
-        priceFrom: 'от 50 ₸ / шт.',
+        priceFrom: getTariffPriceFrom('STANDARD', 50),
         includes: [
           'Эмиссия + печать стикеров',
           'Выезд бригады стикеровщиков на склад',
@@ -171,7 +181,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         code: 'PRO' as TariffCode,
         name: 'PRO Склад',
         desc: 'Оклейка и агрегация в короба (SSCC)',
-        priceFrom: 'от 90 ₸ / шт.',
+        priceFrom: getTariffPriceFrom('PRO', 90),
         includes: [
           'Всё, что входит в тариф «Стандарт»',
           'Вскрытие коробок и сверка артикулов',
@@ -180,7 +190,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         ],
       },
     ];
-  }, [lang]);
+  }, [lang, dbTariffs]);
 
   const presets = [1000, 5000, 10000, 25000, 50000, 100000];
 
@@ -390,7 +400,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   </span>
                 </div>
                 <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-2">
-                  +5 ₸/{lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт'}
+                  +{dbPricingSettings?.ssccPrice ?? 5} ₸/{lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт'}
                 </span>
               </label>
 
@@ -418,7 +428,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   </span>
                 </div>
                 <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-2">
-                  +5 000 ₸
+                  +{(dbPricingSettings?.stickerLayoutPrice ?? 5000).toLocaleString()} ₸
                 </span>
               </label>
 
@@ -446,7 +456,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   </span>
                 </div>
                 <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-2">
-                  +20%
+                  +{dbPricingSettings?.urgentPercent ?? 20}%
                 </span>
               </label>
 
@@ -474,7 +484,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   </span>
                 </div>
                 <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-2">
-                  +15 000 ₸
+                  +{(dbPricingSettings?.expressDeliveryPrice ?? 15000).toLocaleString()} ₸
                 </span>
               </label>
 
@@ -539,6 +549,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         isOpen={isTariffModalOpen}
         onClose={() => setIsTariffModalOpen(false)}
         onSelectTariff={(code) => setTariffType(code)}
+        dbTariffs={dbTariffs}
       />
     </section>
   );

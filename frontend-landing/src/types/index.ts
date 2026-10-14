@@ -9,6 +9,18 @@ export interface TariffItem {
   marginEst: string;
   priceMin: number;
   priceMax: number;
+  priceRetail?: number;
+  priceWholesale?: number;
+  priceLargeWholesale?: number;
+}
+
+export interface PricingSettings {
+  ssccPrice: number;
+  stickerLayoutPrice: number;
+  urgentPercent: number;
+  expressDeliveryPrice: number;
+  volumeTier1: number;
+  volumeTier2: number;
 }
 
 export interface CalculationResult {

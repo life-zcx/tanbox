@@ -2,19 +2,30 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, CheckCircle2, ShieldCheck, Cpu, Printer, Users, Layers, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { TariffItem } from '../../types';
 
 interface TariffHelpModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectTariff?: (tariffCode: 'DIGITAL' | 'PRINT' | 'STANDARD' | 'PRO') => void;
+  dbTariffs?: TariffItem[];
 }
 
 export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
   isOpen,
   onClose,
   onSelectTariff,
+  dbTariffs,
 }) => {
   const { lang } = useLanguage();
+
+  const getTariffPrice = (code: string, fallback: number) => {
+    const found = dbTariffs?.find((t) => t.code === code);
+    const minPrice = found?.priceLargeWholesale ?? found?.priceMin ?? fallback;
+    if (lang === 'kz') return `${minPrice} ₸ / данадан`;
+    if (lang === 'en') return `from ${minPrice} ₸ / pcs`;
+    return `от ${minPrice} ₸ / шт.`;
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -39,7 +50,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'DIGITAL' as const,
           badge: 'Только коды',
-          price: 'от 10 ₸ / шт.',
+          price: getTariffPrice('DIGITAL', 10),
           name: 'Тариф «Цифровой»',
           target: 'Для кого: У вас есть собственный промышленный термотрансферный принтер, качественные расходники и штатные сотрудники для нанесения.',
           weDoTitle: 'Что делает TANBOX:',
@@ -57,7 +68,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'PRINT' as const,
           badge: 'Печать рулонов',
-          price: 'от 25 ₸ / шт.',
+          price: getTariffPrice('PRINT', 25),
           name: 'Тариф «Печатный»',
           target: 'Для кого: Есть сотрудники на складе для оклейки, но нет промышленного принтера высокого разрешения и верификатора считываемости.',
           weDoTitle: 'Что делает TANBOX:',
@@ -75,7 +86,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'STANDARD' as const,
           badge: 'Под ключ без вскрытия',
-          price: 'от 50 ₸ / шт.',
+          price: getTariffPrice('STANDARD', 50),
           name: 'Тариф «Стандарт»',
           target: 'Для кого: Импортеры и производители моно-партий в стандартных заводских коробках, которым нужно быстро замаркировать партию без отвлечения своих сотрудников.',
           weDoTitle: 'Что делает TANBOX:',
@@ -93,7 +104,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'PRO' as const,
           badge: 'Полный цикл + SSCC',
-          price: 'от 90 ₸ / шт.',
+          price: getTariffPrice('PRO', 90),
           name: 'Тариф «PRO Склад»',
           target: 'Для кого: Сборные грузы (разные размеры, цвета, артикулы), одежда, обувь, поставки для торговых сетей и дистрибьюторов с агрегацией.',
           weDoTitle: 'Что делает TANBOX:',
@@ -120,7 +131,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'DIGITAL' as const,
           badge: 'Тек кодтар',
-          price: '10 ₸ / данадан',
+          price: getTariffPrice('DIGITAL', 10),
           name: '«Сандық» тарифі',
           target: 'Кімге арналған: Жеке термотрансферлік принтеріңіз, сапалы риббондарыңыз және жапсыратын штаттағы қызметкерлеріңіз бар кезде.',
           weDoTitle: 'TANBOX не істейді:',
@@ -138,7 +149,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'PRINT' as const,
           badge: 'Рулондарды басу',
-          price: '25 ₸ / данадан',
+          price: getTariffPrice('PRINT', 25),
           name: '«Баспа» тарифі',
           target: 'Кімге арналған: Қоймада жапсыратын қызметкерлер бар, бірақ өндірістік жоғары сапалы принтер мен сканер-верификатор жоқ болғанда.',
           weDoTitle: 'TANBOX не істейді:',
@@ -156,7 +167,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'STANDARD' as const,
           badge: 'Ашпай кілтке дейін',
-          price: '50 ₸ / данадан',
+          price: getTariffPrice('STANDARD', 50),
           name: '«Стандарт» тарифі',
           target: 'Кімге арналған: Стандартты зауыттық қораптардағы моно-партиялары бар импорттаушыларға өз қызметкерлерін бөлмей жылдам оклейка жасау қажет болғанда.',
           weDoTitle: 'TANBOX не істейді:',
@@ -174,7 +185,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'PRO' as const,
           badge: 'Толық цикл + SSCC',
-          price: '90 ₸ / данадан',
+          price: getTariffPrice('PRO', 90),
           name: '«PRO Қойма» тарифі',
           target: 'Кімге арналған: Құрама жүктер (әр түрлі өлшемдер, түстер, артикулдар), киім, аяқ киім, сауда желілері мен дистрибьюторларға арналған күрделі партиялар.',
           weDoTitle: 'TANBOX не істейді:',
@@ -201,7 +212,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'DIGITAL' as const,
           badge: 'Codes Only',
-          price: 'from 10 ₸ / pcs',
+          price: getTariffPrice('DIGITAL', 10),
           name: 'Digital Tariff',
           target: 'Best for: Importers who own high-volume thermal transfer printers and have warehouse personnel to apply labels.',
           weDoTitle: 'What TANBOX delivers:',
@@ -219,7 +230,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'PRINT' as const,
           badge: 'Roll Printing',
-          price: 'from 25 ₸ / pcs',
+          price: getTariffPrice('PRINT', 25),
           name: 'Print Tariff',
           target: 'Best for: Businesses with warehouse hands available for stickering, but lacking industrial 300/600 dpi printers and grading scanners.',
           weDoTitle: 'What TANBOX delivers:',
@@ -237,7 +248,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'STANDARD' as const,
           badge: 'Turnkey Without Unboxing',
-          price: 'from 50 ₸ / pcs',
+          price: getTariffPrice('STANDARD', 50),
           name: 'Standard Tariff',
           target: 'Best for: Importers with uniform mono-batches in standard factory cartons needing fast turnaround without diverting staff.',
           weDoTitle: 'What TANBOX delivers:',
@@ -255,7 +266,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         {
           code: 'PRO' as const,
           badge: 'Full Cycle + SSCC',
-          price: 'from 90 ₸ / pcs',
+          price: getTariffPrice('PRO', 90),
           name: 'PRO Warehouse Tariff',
           target: 'Best for: Mixed multi-SKU freight (varied sizes, colors, brands), apparel, footwear, and shipments for retail chains or distributors.',
           weDoTitle: 'What TANBOX delivers:',
