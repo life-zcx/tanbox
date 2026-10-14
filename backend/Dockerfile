@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 RUN apk add --no-cache openssl libc6-compat
 
@@ -14,7 +14,7 @@ COPY . .
 RUN npm run build
 
 # Production Runtime
-FROM node:20-alpine
+FROM node:22-alpine
 
 RUN apk add --no-cache openssl libc6-compat postgresql-client chromium nss freetype harfbuzz ca-certificates ttf-freefont font-noto dumb-init
 
