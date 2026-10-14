@@ -8,6 +8,7 @@ interface LanguageContextType {
   setLang: (lang: Language) => void;
   t: (key: string) => string;
   getLocalizedPath: (path: string) => string;
+  isSwitchingLang: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -308,6 +309,7 @@ export const translations: Record<Language, Record<string, string>> = {
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isSwitchingLang, setIsSwitchingLang] = useState(false);
 
   const getLangFromPath = useCallback((pathname: string): Language => {
     if (pathname === '/kz' || pathname.startsWith('/kz/')) return 'kz';
@@ -327,35 +329,26 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return 'ru';
   });
 
-  // Sync language on browser Back/Forward navigation (popstate)
-  useEffect(() => {
-    const handlePopState = () => {
-      const fromPath = getLangFromPath(window.location.pathname);
-      setLangState(fromPath);
-      localStorage.setItem('tanbox_lang', fromPath);
-      document.documentElement.lang = fromPath === 'kz' ? 'kk' : fromPath;
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [getLangFromPath]);
-
-  // Sync language when React Router location.pathname changes via link navigation
+  // Sync language when React Router location.pathname changes (e.g. back/forward or direct link)
   useEffect(() => {
     const fromPath = getLangFromPath(location.pathname);
-    if (fromPath !== lang) {
-      setLangState(fromPath);
-      localStorage.setItem('tanbox_lang', fromPath);
-      document.documentElement.lang = fromPath === 'kz' ? 'kk' : fromPath;
-    }
-  }, [location.pathname, getLangFromPath, lang]);
+    setLangState(fromPath);
+    localStorage.setItem('tanbox_lang', fromPath);
+    document.documentElement.lang = fromPath === 'kz' ? 'kk' : fromPath;
+  }, [location.pathname, getLangFromPath]);
 
   const setLang = (newLang: Language) => {
+    if (newLang === lang) return;
+
+    // Show loading screen with logo (exactly as in LK)
+    setIsSwitchingLang(true);
+
     setLangState(newLang);
     localStorage.setItem('tanbox_lang', newLang);
     document.documentElement.lang = newLang === 'kz' ? 'kk' : newLang;
 
     // Calculate clean path without old language prefix
-    let cleanPath = window.location.pathname;
+    let cleanPath = location.pathname;
     if (cleanPath === '/kz' || cleanPath === '/en') cleanPath = '/';
     else if (cleanPath.startsWith('/kz/')) cleanPath = cleanPath.slice(3);
     else if (cleanPath.startsWith('/en/')) cleanPath = cleanPath.slice(3);
@@ -368,10 +361,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       targetPath = cleanPath === '/' ? '/en' : `/en${cleanPath}`;
     }
 
-    // Seamlessly update browser URL bar without triggering React Router route unmount / video reload / scroll jerk
-    if (targetPath !== window.location.pathname) {
-      window.history.replaceState(null, '', targetPath + window.location.search + window.location.hash);
+    if (targetPath !== location.pathname) {
+      navigate(targetPath + location.search + location.hash);
     }
+
+    // Hide loading screen after transition completes
+    setTimeout(() => {
+      setIsSwitchingLang(false);
+    }, 350);
   };
 
   const getLocalizedPath = useCallback(
@@ -398,7 +395,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t, getLocalizedPath }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, getLocalizedPath, isSwitchingLang }}>
+      {isSwitchingLang && (
+        <div className="fixed inset-0 z-[99999] bg-white flex flex-col items-center justify-center p-4">
+          <div className="flex flex-col items-center space-y-4">
+            <img src="/tanbox-dark.svg" alt="tanbox" className="h-8 w-auto animate-pulse" />
+            <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+      )}
       {children}
     </LanguageContext.Provider>
   );
