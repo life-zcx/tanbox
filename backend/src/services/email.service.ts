@@ -9,6 +9,8 @@ const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const ALLOW_SELF_SIGNED = process.env.ALLOW_SELF_SIGNED_SMTP !== 'false';
 
+const SMTP_SECURE = process.env.SMTP_SECURE !== undefined ? process.env.SMTP_SECURE === 'true' : (SMTP_PORT === 465 || SMTP_PORT === 2465);
+
 const getTransporter = () => {
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     return null;
@@ -16,7 +18,7 @@ const getTransporter = () => {
   return nodemailer.createTransport({
     host: SMTP_HOST,
     port: SMTP_PORT,
-    secure: SMTP_PORT === 465,
+    secure: SMTP_SECURE,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
