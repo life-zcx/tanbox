@@ -185,7 +185,7 @@ export const CATEGORIES_LOCALIZATION: Record<'kz' | 'en', Record<string, Localiz
       keyFeatures: [
         'Банкаларды, сашелерді және қораптарды жекелей стикерлеу',
         'Айналымға енгізу кезінде МТК деректерінің сәйкестігін тексеру',
-        'Дәріханалар мен маркетплейстер нарығын сұр импорттан қорғау',
+        'Дәріханалар мен сауда желілері нарығын сұр импорттан қорғау',
       ],
       processSteps: [
         { step: '01', title: 'МТК тексеру', desc: '«Таңба» АЖ-де МТК куәлігін тауар карточкаларына байлау' },
@@ -429,7 +429,7 @@ export const CATEGORIES_LOCALIZATION: Record<'kz' | 'en', Record<string, Localiz
       keyFeatures: [
         'Item-level labeling on bottles, blister packs, and sachets',
         'Mandatory SGR certificate validation upon turnover release',
-        'Protection of pharmacies and marketplaces from counterfeit trade',
+        'Protection of pharmacies and retail chains from counterfeit trade',
       ],
       processSteps: [
         { step: '01', title: 'SGR Verification', desc: 'Linking SGR certificate numbers to product cards in IS Tanba' },

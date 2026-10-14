@@ -32,7 +32,7 @@ export const FaqSection: React.FC = () => {
       a: 'Да, в рамках тарифов «Стандарт» и «PRO Склад». В Алматы бригада выезжает напрямую со своим мобильным оборудованием. В других регионах Казахстана оклейка согласовывается с выездом наших специалистов на ваш складской комплекс.',
     },
     {
-      q: 'Подходят ли этикетки для торговых сетей и маркетплейсов (Wildberries, Ozon, Magnum)?',
+      q: 'Подходят ли этикетки для торговых сетей?',
       a: 'Да, на 100%. Мы печатаем этикетки промышленным термотрансферным способом со стойкой красящей лентой (resin/wax-resin), которая устойчива к трению и перепадам температур. На стикере размещаются Data Matrix, линейный штрихкод, знак ЕАС и все обязательные реквизиты согласно стандартам и техрегламентам.',
     },
     {
@@ -71,7 +71,7 @@ export const FaqSection: React.FC = () => {
       a: 'Иә, «Стандарт» және «PRO Склад» тарифтері бойынша мамандарымыз мобильді жабдықпен қоймаңызға шығып, тауарларды таңбалайды.',
     },
     {
-      q: 'Жапсырмалар сауда желілері мен маркетплейстерге (Wildberries, Ozon, Magnum) сәйкес келе ме?',
+      q: 'Жапсырмалар сауда желілеріне сәйкес келе ме?',
       a: 'Иә, 100%. Жапсырмаларда Data Matrix, штрихкод, EAC белгісі және барлық міндетті деректемелер стандартқа сай орналасады.',
     },
     {
@@ -110,7 +110,7 @@ export const FaqSection: React.FC = () => {
       a: 'Yes, under our "Standard" and "PRO Warehouse" tiers. In Almaty, our crew operates with mobile industrial equipment. Across other regions of Kazakhstan, onsite stickering is scheduled based on batch volume.',
     },
     {
-      q: 'Are your labels compliant with retail chains and marketplaces (Wildberries, Ozon, Magnum)?',
+      q: 'Are your labels compliant with retail chains?',
       a: 'Yes, 100%. We print with durable thermal transfer resin/wax-resin ribbons resistant to abrasion and temperature changes. Labels include Data Matrix, barcode, EAC mark, and all mandatory legal attributes.',
     },
     {

@@ -1833,7 +1833,7 @@ export const CreateOrderPage: React.FC = () => {
                         Заказать разработку нового макета
                       </span>
                       <span className="text-[11px] text-[#64748B] block mt-0.5">
-                        Дизайнер подготовит макет под требования маркетплейса
+                        Дизайнер подготовит макет под ваши требования и стандарты маркировки
                       </span>
                     </div>
                   </div>
@@ -1952,7 +1952,7 @@ export const CreateOrderPage: React.FC = () => {
                         rows={2}
                         value={labelExtraDetails}
                         onChange={(e) => setLabelExtraDetails(e.target.value)}
-                        placeholder="Укажите реквизиты производителя/импортера в РК, знаки ухода, логотип или особые требования маркетплейса..."
+                        placeholder="Укажите реквизиты производителя/импортера в РК, знаки ухода, логотип или особые требования к этикетке..."
                         className="w-full text-xs bg-white border border-gray-200/90 rounded-xl p-2.5 text-[#111827] focus:outline-none focus:border-[#0082FB] resize-none"
                       />
                     </div>
@@ -2005,7 +2005,7 @@ export const CreateOrderPage: React.FC = () => {
                         Разработка макета стикера
                       </span>
                       <span className="text-[11px] text-[#64748B]">
-                        Дизайн этикетки под требования маркетплейсов. Сохранится в библиотеку для повторных заказов!
+                        Дизайн этикетки под требования ваших стандартов. Сохранится в библиотеку для повторных заказов!
                       </span>
                     </div>
                   </div>
@@ -2093,7 +2093,7 @@ export const CreateOrderPage: React.FC = () => {
                         rows={2}
                         value={labelExtraDetails}
                         onChange={(e) => setLabelExtraDetails(e.target.value)}
-                        placeholder="Укажите реквизиты производителя/импортера в РК, знаки ухода, логотип или особые требования маркетплейса..."
+                        placeholder="Укажите реквизиты производителя/импортера в РК, знаки ухода, логотип или особые требования к этикетке..."
                         className="w-full text-xs bg-white border border-gray-200/90 rounded-xl p-2.5 text-[#111827] focus:outline-none focus:border-[#0082FB] resize-none"
                       />
                     </div>

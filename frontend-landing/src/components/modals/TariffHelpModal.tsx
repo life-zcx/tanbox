@@ -95,7 +95,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
           badge: 'Полный цикл + SSCC',
           price: 'от 90 ₸ / шт.',
           name: 'Тариф «PRO Склад»',
-          target: 'Для кого: Сборные грузы (разные размеры, цвета, артикулы), одежда, обувь, поставки для маркетплейсов (Wildberries, Ozon) и торговых сетей с агрегацией.',
+          target: 'Для кого: Сборные грузы (разные размеры, цвета, артикулы), одежда, обувь, поставки для торговых сетей и дистрибьюторов с агрегацией.',
           weDoTitle: 'Что делает TANBOX:',
           weDo: [
             'Всё, что входит в «Стандарт» (эмиссия + печать + выездная оклейка)',
@@ -176,7 +176,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
           badge: 'Толық цикл + SSCC',
           price: '90 ₸ / данадан',
           name: '«PRO Қойма» тарифі',
-          target: 'Кімге арналған: Құрама жүктер (әр түрлі өлшемдер, түстер, артикулдар), киім, аяқ киім, маркетплейстер (Wildberries, Ozon) мен сауда желілеріне арналған күрделі партиялар.',
+          target: 'Кімге арналған: Құрама жүктер (әр түрлі өлшемдер, түстер, артикулдар), киім, аяқ киім, сауда желілері мен дистрибьюторларға арналған күрделі партиялар.',
           weDoTitle: 'TANBOX не істейді:',
           weDo: [
             '«Стандарт» тарифіне кіретін барлық қызметтер (эмиссия + баспа + оклейка)',
@@ -257,7 +257,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
           badge: 'Full Cycle + SSCC',
           price: 'from 90 ₸ / pcs',
           name: 'PRO Warehouse Tariff',
-          target: 'Best for: Mixed multi-SKU freight (varied sizes, colors, brands), apparel, footwear, and shipments for retail chains or marketplaces (Wildberries, Ozon, Magnum).',
+          target: 'Best for: Mixed multi-SKU freight (varied sizes, colors, brands), apparel, footwear, and shipments for retail chains or distributors.',
           weDoTitle: 'What TANBOX delivers:',
           weDo: [
             'Everything included in Standard (issuance + printing + onsite crew)',

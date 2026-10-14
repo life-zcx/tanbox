@@ -25,8 +25,9 @@ echo "==========================================================================
 # 1. Обновление пакетов
 echo "📦 [1/6] Обновление системных репозиториев..."
 export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
 apt-get update -qq
-apt-get upgrade -y -qq
+apt-get upgrade -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
 
 # 2. Установка необходимых базовых утилит
 echo "🛠️ [2/6] Установка базовых утилит (git, curl, ufw, fail2ban, htop, jq)..."
