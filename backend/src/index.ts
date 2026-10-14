@@ -80,8 +80,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Apply general API rate limiting
 app.use('/api/', generalApiLimiter);
 
-// Request logging middleware
+// Request logging middleware (health checks are excluded to keep logs clean)
 app.use((req, res, next) => {
+  if (req.path === '/api/health' || req.originalUrl === '/api/health') {
+    return next();
+  }
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
