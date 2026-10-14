@@ -327,7 +327,19 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return 'ru';
   });
 
-  // Sync language when URL path changes (e.g. Back/Forward button or direct link navigation)
+  // Sync language on browser Back/Forward navigation (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const fromPath = getLangFromPath(window.location.pathname);
+      setLangState(fromPath);
+      localStorage.setItem('tanbox_lang', fromPath);
+      document.documentElement.lang = fromPath === 'kz' ? 'kk' : fromPath;
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [getLangFromPath]);
+
+  // Sync language when React Router location.pathname changes via link navigation
   useEffect(() => {
     const fromPath = getLangFromPath(location.pathname);
     if (fromPath !== lang) {
@@ -343,7 +355,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     document.documentElement.lang = newLang === 'kz' ? 'kk' : newLang;
 
     // Calculate clean path without old language prefix
-    let cleanPath = location.pathname;
+    let cleanPath = window.location.pathname;
     if (cleanPath === '/kz' || cleanPath === '/en') cleanPath = '/';
     else if (cleanPath.startsWith('/kz/')) cleanPath = cleanPath.slice(3);
     else if (cleanPath.startsWith('/en/')) cleanPath = cleanPath.slice(3);
@@ -356,8 +368,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       targetPath = cleanPath === '/' ? '/en' : `/en${cleanPath}`;
     }
 
-    if (targetPath !== location.pathname) {
-      navigate(targetPath + location.search + location.hash);
+    // Seamlessly update browser URL bar without triggering React Router route unmount / video reload / scroll jerk
+    if (targetPath !== window.location.pathname) {
+      window.history.replaceState(null, '', targetPath + window.location.search + window.location.hash);
     }
   };
 
