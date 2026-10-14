@@ -64,13 +64,6 @@ admin.tanbox.kz {
     handle /api/* {
         reverse_proxy backend:5050
     }
-    handle_path /netdata* {
-        reverse_proxy netdata:19999 {
-            header_up Host {http.reverse_proxy.upstream.host}
-            header_down -X-Frame-Options
-            header_down X-Frame-Options "SAMEORIGIN"
-        }
-    }
     handle {
         reverse_proxy frontend-admin:3002
     }
@@ -92,13 +85,6 @@ api.tanbox.kz {
 
     handle /api/* {
         reverse_proxy backend:5050
-    }
-    handle_path /netdata* {
-        reverse_proxy netdata:19999 {
-            header_up Host {http.reverse_proxy.upstream.host}
-            header_down -X-Frame-Options
-            header_down X-Frame-Options "SAMEORIGIN"
-        }
     }
     handle {
         reverse_proxy frontend-landing:3000
@@ -123,13 +109,6 @@ http://admin.tanbox.local {
 
     handle /api/* {
         reverse_proxy backend:5050
-    }
-    handle_path /netdata* {
-        reverse_proxy netdata:19999 {
-            header_up Host {http.reverse_proxy.upstream.host}
-            header_down -X-Frame-Options
-            header_down X-Frame-Options "SAMEORIGIN"
-        }
     }
     handle {
         reverse_proxy frontend-admin:3002
