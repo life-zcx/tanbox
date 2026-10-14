@@ -43,8 +43,14 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Forward critical errors to backend logger (avoiding infinite loops if logging endpoint itself fails)
-    if (url && !url.includes('/logs/frontend')) {
+    // Only report critical server errors (5xx) or real network failures (ignoring 4xx client validation errors and /health)
+    const isCritical =
+      url &&
+      !url.includes('/logs/frontend') &&
+      !url.includes('/health') &&
+      (typeof status === 'number' ? status >= 500 : status === 'NETWORK_ERROR');
+
+    if (isCritical) {
       fetch(`${getApiUrl()}/logs/frontend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

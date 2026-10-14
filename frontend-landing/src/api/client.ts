@@ -24,7 +24,15 @@ apiClient.interceptors.response.use(
 
     console.error(`[Landing API Error] [${status}] ${url}:`, error.response?.data || message);
 
-    if (status !== 503 && url && !url.includes('/logs/frontend')) {
+    // Only report critical server errors (5xx) or real network failures (ignoring 4xx client validation errors and /health)
+    const isCritical =
+      status !== 503 &&
+      url &&
+      !url.includes('/logs/frontend') &&
+      !url.includes('/health') &&
+      (typeof status === 'number' ? status >= 500 : status === 'NETWORK_ERROR');
+
+    if (isCritical) {
       fetch(`${getApiUrl()}/logs/frontend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

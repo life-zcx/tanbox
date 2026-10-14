@@ -34,7 +34,12 @@ export const handleFrontendLogs = (req: Request, res: Response) => {
       userAgent: cleanUserAgent || req.headers['user-agent'],
     });
 
-    if (cleanLevel === 'error') {
+    // Telegram alerts should ONLY fire for critical 5xx server failures or unhandled crashes.
+    // Client errors (400, 401, 403, 404, 409, 422, 429) and health check blips are excluded to prevent alert spam.
+    const isClientError = /\[(400|401|402|403|404|409|422|429)\]/.test(cleanMessage);
+    const isHealthCheck = cleanMessage.includes('/health');
+
+    if (cleanLevel === 'error' && !isClientError && !isHealthCheck) {
       telegram.sendFrontendTelemetryAlert({
         message: cleanMessage,
         url: cleanUrl,
