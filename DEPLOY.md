@@ -168,7 +168,17 @@ bash scripts/backup-db.sh
 ```
 Архив сохранится в `/opt/tanbox/backups/tanbox_db_backup_ГГГГММДД_ЧЧММСС.sql.gz`.
 
+### Безопасные миграции базы данных (Zero-Data-Loss):
+Все изменения схемы БД происходят безопасно и аддитивно:
+1. При каждом запуске `bash scripts/deploy.sh` автоматически создается резервная копия (`.sql.gz`) перед любыми действиями.
+2. Применяются проверенные идемпотентные SQL-скрипты из `backend/prisma/migrations/` (`CREATE TABLE IF NOT EXISTS`, `DO $$ EXCEPTION WHEN duplicate_object`). Существующие таблицы и данные клиентов никогда не удаляются и не перезаписываются.
+3. Если требуется применить миграцию вручную без перезапуска сервисов:
+   ```bash
+   docker exec -i tanbox_postgres psql -U tanbox_user -d tanbox_db < backend/prisma/migrations/20261014120000_add_invoices_table/migration.sql
+   ```
+
 ### Перезапуск сервисов:
 ```bash
 docker compose restart
 ```
+

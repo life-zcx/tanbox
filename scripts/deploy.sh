@@ -40,8 +40,26 @@ echo "✅ Конфигурация .env проверена и готова."
 echo "🔨 [TANBOX] Сборка продакшн Docker-контейнеров..."
 docker compose build
 
-# 3. Синхронизация структуры БД и сидинг
-echo "🗄️ [TANBOX] Проверка и синхронизация базы данных..."
+# 2.5 Автоматический бэкап базы данных перед любыми изменениями схемы
+if docker ps | grep -q "tanbox_postgres"; then
+    echo "💾 [TANBOX] Создание резервной копии базы данных перед миграцией..."
+    bash scripts/backup-db.sh || {
+        echo "❌ Ошибка создания бэкапа! Деплой остановлен для защиты данных."
+        exit 1
+    }
+fi
+
+# 3. Применение безопасных SQL-миграций и синхронизация
+echo "🗄️ [TANBOX] Применение безопасных SQL-миграций (zero-data-loss)..."
+if docker ps | grep -q "tanbox_postgres"; then
+    for mig in backend/prisma/migrations/*/migration.sql; do
+        if [ -f "$mig" ]; then
+            echo "   -> Применяю миграцию: $(basename $(dirname "$mig"))"
+            docker exec -i tanbox_postgres psql -U "${POSTGRES_USER:-tanbox_user}" -d "${POSTGRES_DB:-tanbox_db}" < "$mig"
+        fi
+    done
+fi
+
 docker compose run --rm backend npx prisma db push --skip-generate
 docker compose run --rm backend node dist/seed.js
 
