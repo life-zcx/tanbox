@@ -42,7 +42,7 @@ docker compose build
 
 # 3. Синхронизация структуры БД и сидинг
 echo "🗄️ [TANBOX] Проверка и синхронизация базы данных..."
-docker compose run --rm backend sh -c "npx prisma migrate deploy || npx prisma db push --skip-generate"
+docker compose run --rm backend npx prisma db push --skip-generate
 docker compose run --rm backend node dist/seed.js
 
 # 4. Запуск всех сервисов в фоновом режиме
