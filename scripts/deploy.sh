@@ -36,6 +36,11 @@ fi
 
 echo "✅ Конфигурация .env проверена и готова."
 
+# Экспортируем переменные из .env в текущий шелл (для POSTGRES_USER, POSTGRES_DB и др.)
+set -a
+[ -f .env ] && . .env
+set +a
+
 # 2. Сборка оптимизированных продакшн-контейнеров
 echo "🔨 [TANBOX] Сборка продакшн Docker-контейнеров..."
 docker compose build
