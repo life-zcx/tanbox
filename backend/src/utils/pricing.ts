@@ -101,7 +101,8 @@ export async function computeOrderPricing(params: CalculationParams): Promise<Pr
     urgentAddition = Math.round(productionSubtotal * (urgentPercent / 100));
   }
 
-  const finalUnitPrice = Math.round(unitBasePrice + (hasSeparateSscc ? ssccPricePerItem : 0));
+  const rawUnitPrice = unitBasePrice + (hasSeparateSscc ? ssccPricePerItem : 0);
+  const finalUnitPrice = Number(rawUnitPrice.toFixed(2));
   const totalPrice = Math.round(productionSubtotal + flatAdditions + urgentAddition);
 
   // Estimated execution time

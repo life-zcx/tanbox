@@ -52,11 +52,11 @@ export const computeInstantPrice = (
     flatAdditions += expressDeliveryPrice;
   }
 
-  const finalUnitPrice = unitPrice + unitAdditions;
-  let totalPrice = finalUnitPrice * itemsCount + flatAdditions;
+  const finalUnitPrice = Number((unitPrice + unitAdditions).toFixed(2));
+  let totalPrice = itemsCount > 0 ? (finalUnitPrice * itemsCount + flatAdditions) : 0;
 
   const isUrgent = extraServices.includes('URGENT_PROCESSING');
-  if (isUrgent) {
+  if (isUrgent && itemsCount > 0) {
     totalPrice *= 1 + urgentPercent / 100;
   }
   totalPrice = Math.round(totalPrice);
@@ -85,13 +85,13 @@ export const computeInstantPrice = (
 
 export const useCalculator = () => {
   const [tariffType, setTariffType] = useState<TariffCode>('STANDARD');
-  const [itemsCount, setItemsCount] = useState<number>(10000);
+  const [itemsCount, setItemsCount] = useState<number>(0);
   const [ssccNeeded, setSsccNeeded] = useState<boolean>(false);
   const [extraServices, setExtraServices] = useState<string[]>([]);
   const [dbTariffs, setDbTariffs] = useState<TariffItem[]>([]);
   const [dbPricingSettings, setDbPricingSettings] = useState<PricingSettings | null>(null);
   const [result, setResult] = useState<CalculationResult>(() =>
-    computeInstantPrice('STANDARD', 10000, [], false)
+    computeInstantPrice('STANDARD', 0, [], false)
   );
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -121,6 +121,10 @@ export const useCalculator = () => {
   useEffect(() => {
     // Instant local calculation with current DB tariffs
     setResult(computeInstantPrice(tariffType, itemsCount, extraServices, ssccNeeded, dbTariffs, dbPricingSettings));
+
+    if (itemsCount <= 0) {
+      return;
+    }
 
     // Authoritative backend calculation
     let isCancelled = false;

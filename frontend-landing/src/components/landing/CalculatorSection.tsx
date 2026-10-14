@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useCalculator } from '../../hooks/useCalculator';
 import { TariffCode } from '../../types';
-import { ArrowRight, Check, ChevronDown, HelpCircle } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, HelpCircle, X } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { TariffHelpModal } from '../modals/TariffHelpModal';
 
@@ -30,6 +30,16 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
   } = useCalculator();
 
   const [isTariffModalOpen, setIsTariffModalOpen] = useState(false);
+  const [inputValue, setInputValue] = useState<string>(itemsCount > 0 ? itemsCount.toLocaleString('ru-RU') : '');
+
+  // Keep input display in sync when itemsCount changes externally (e.g. presets)
+  useEffect(() => {
+    if (itemsCount === 0) {
+      setInputValue('');
+    } else {
+      setInputValue(itemsCount.toLocaleString('ru-RU'));
+    }
+  }, [itemsCount]);
 
   const getTariffPriceFrom = (code: TariffCode, fallback: number) => {
     const found = dbTariffs?.find((t) => t.code === code);
@@ -196,11 +206,6 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
 
   const selectedTariff = tariffsList.find((t) => t.code === tariffType) || tariffsList[2];
 
-  // Dynamic slider track fill percentage
-  const sliderMin = 1;
-  const sliderMax = 200000;
-  const sliderProgress = Math.min(100, Math.max(0, ((itemsCount - sliderMin) / (sliderMax - sliderMin)) * 100));
-
   return (
     <section
       id="calculator"
@@ -303,68 +308,84 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
 
           {/* 2. Quantity & Presets */}
           <div className="space-y-4 pt-4 border-t border-gray-100">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
-                {lang === 'kz' ? '2. Тауарлар саны' : lang === 'en' ? '2. Items Quantity' : '2. Количество товаров'}
-              </label>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <label htmlFor="calculator-quantity" className="text-xs font-bold text-[#111827] uppercase tracking-wider block">
+                  {lang === 'kz' ? '2. Тауарлар саны' : lang === 'en' ? '2. Items Quantity' : '2. Количество товаров'}
+                </label>
+                <span className="text-xs text-[#64748B]">
+                  {lang === 'kz'
+                    ? 'Таңбалау қажет өнімдер көлемін енгізіңіз немесе дайын нұсқаны таңдаңыз'
+                    : lang === 'en'
+                    ? 'Enter item volume or choose a quick preset'
+                    : 'Укажите объем продукции или выберите готовую партию'}
+                </span>
+              </div>
 
-              <div className="flex items-center gap-2 bg-[#F4F6F9] border border-gray-200 rounded-xl px-3 py-1.5">
+              {/* Clean B2B numeric input */}
+              <div className="relative w-full sm:w-80">
                 <input
+                  id="calculator-quantity"
                   type="text"
                   inputMode="numeric"
-                  maxLength={7}
-                  value={itemsCount === 0 ? '' : itemsCount}
+                  placeholder={lang === 'kz' ? 'Мысалы: 5 000' : lang === 'en' ? 'e.g. 5,000' : 'Например: 5 000'}
+                  value={inputValue}
                   onChange={(e) => {
                     const raw = e.target.value.replace(/\D/g, '');
-                    const val = parseInt(raw) || 0;
-                    setItemsCount(Math.min(1000000, val));
-                  }}
-                  onBlur={() => {
-                    if (!itemsCount || itemsCount < 1) {
-                      setItemsCount(1);
+                    if (!raw) {
+                      setInputValue('');
+                      setItemsCount(0);
+                    } else {
+                      const num = Math.min(10000000, parseInt(raw, 10));
+                      setInputValue(num.toLocaleString('ru-RU'));
+                      setItemsCount(num);
                     }
                   }}
-                  className="w-24 text-right text-sm font-black text-[#111827] bg-transparent focus:outline-none"
+                  className="w-full bg-[#F8FAFC] hover:bg-white focus:bg-white border border-gray-200 focus:border-[#0082FB] focus:ring-4 focus:ring-[#0082FB]/10 rounded-xl px-4 py-3 text-base sm:text-lg font-bold text-[#111827] transition-all outline-none pr-20"
                 />
-                <span className="text-xs font-bold text-[#64748B]">
-                  {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}
-                </span>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                  {itemsCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInputValue('');
+                        setItemsCount(0);
+                      }}
+                      title={lang === 'kz' ? 'Тазалау' : lang === 'en' ? 'Clear' : 'Очистить'}
+                      className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition-colors cursor-pointer mr-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <span className="text-xs font-bold text-[#64748B] uppercase select-none">
+                    {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Slider */}
-            <input
-              type="range"
-              min={sliderMin}
-              max={sliderMax}
-              step={500}
-              value={itemsCount}
-              onChange={(e) => setItemsCount(parseInt(e.target.value) || sliderMin)}
-              style={{
-                background: `linear-gradient(to right, #0082FB 0%, #0082FB ${sliderProgress}%, #E2E8F0 ${sliderProgress}%, #E2E8F0 100%)`,
-              }}
-              className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#0082FB]"
-            />
-
             {/* Quick Presets */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-semibold text-[#64748B]">
+            <div className="flex items-center gap-2 flex-wrap pt-0.5">
+              <span className="text-xs font-semibold text-[#64748B]">
                 {lang === 'kz' ? 'Жылдам таңдау:' : lang === 'en' ? 'Quick select:' : 'Быстрый выбор:'}
               </span>
-              {presets.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setItemsCount(preset)}
-                  className={`text-xs font-bold px-3 py-1 rounded-xl transition-all ${
-                    itemsCount === preset
-                      ? 'bg-[#0082FB] text-white'
-                      : 'bg-[#F0F4F8] hover:bg-[#E2E8F0] text-[#111827]'
-                  }`}
-                >
-                  {preset.toLocaleString()} {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}
-                </button>
-              ))}
+              {presets.map((preset) => {
+                const isSelected = itemsCount === preset;
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setItemsCount(preset)}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer border ${
+                      isSelected
+                        ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-sm shadow-blue-500/20'
+                        : 'bg-[#F0F4F8] hover:bg-[#E2E8F0] text-[#334155] border-transparent'
+                    }`}
+                  >
+                    {preset.toLocaleString('ru-RU')} {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -498,11 +519,25 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
             <div className="space-y-1.5">
               <div className="text-xs text-[#64748B]">
                 {lang === 'kz' ? 'Тариф:' : lang === 'en' ? 'Tariff:' : 'Тариф:'}{' '}
-                <strong className="text-[#111827]">{selectedTariff.name}</strong> •{' '}
-                {lang === 'kz' ? 'Көлемі:' : lang === 'en' ? 'Volume:' : 'Объем:'}{' '}
-                <strong className="text-[#111827]">{itemsCount.toLocaleString()} {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}</strong> •{' '}
-                {lang === 'kz' ? 'Бағасы:' : lang === 'en' ? 'Unit Price:' : 'Цена:'}{' '}
-                <strong className="text-[#111827]">{result.unitPrice} ₸ / {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}</strong>
+                <strong className="text-[#111827]">{selectedTariff.name}</strong>
+                {itemsCount > 0 ? (
+                  <>
+                    {' • '}
+                    {lang === 'kz' ? 'Көлемі:' : lang === 'en' ? 'Volume:' : 'Объем:'}{' '}
+                    <strong className="text-[#111827]">{itemsCount.toLocaleString('ru-RU')} {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}</strong> •{' '}
+                    {lang === 'kz' ? 'Бағасы:' : lang === 'en' ? 'Unit Price:' : 'Цена:'}{' '}
+                    <strong className="text-[#111827]">
+                      {result.unitPrice >= 1 ? result.unitPrice.toLocaleString('ru-RU') : result.unitPrice} ₸ / {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}
+                    </strong>
+                  </>
+                ) : (
+                  <>
+                    {' • '}
+                    <span className="text-[#64748B]">
+                      {lang === 'kz' ? 'Бағасы:' : lang === 'en' ? 'Price:' : 'Цена:'} <strong className="text-[#111827]">{selectedTariff.priceFrom}</strong>
+                    </span>
+                  </>
+                )}
               </div>
 
               <div className="flex items-baseline gap-2">
@@ -510,23 +545,36 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   {lang === 'kz' ? 'Алдын ала есептелген құны:' : lang === 'en' ? 'Estimated Total Price:' : 'Предварительная стоимость:'}
                 </span>
                 <span className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight">
-                  {result.totalPrice.toLocaleString()} ₸
+                  {itemsCount > 0 ? `${result.totalPrice.toLocaleString('ru-RU')} ₸` : '— ₸'}
                 </span>
               </div>
 
               <p className="text-[11px] text-[#64748B]">
-                {lang === 'kz'
-                  ? '* Есептеу алдын ала сипатта. Түпкілікті құны партия сипаттамасын келіскен кезде бекітіледі.'
-                  : lang === 'en'
-                  ? '* Preliminary estimate. Final invoice is generated upon batch specification review.'
-                  : '* Расчет является предварительным. Окончательная стоимость формируется при согласовании партии.'}
+                {itemsCount === 0
+                  ? (lang === 'kz'
+                      ? '* Құнын есептеу үшін тауар санын енгізіңіз немесе жылдам таңдаудан басыңыз.'
+                      : lang === 'en'
+                      ? '* Enter item quantity or pick a quick preset to calculate cost.'
+                      : '* Укажите количество товаров или выберите готовую партию для точного расчета.')
+                  : (lang === 'kz'
+                      ? '* Есептеу алдын ала сипатта. Түпкілікті құны партия сипаттамасын келіскен кезде бекітіледі.'
+                      : lang === 'en'
+                      ? '* Preliminary estimate. Final invoice is generated upon batch specification review.'
+                      : '* Расчет является предварительным. Окончательная стоимость формируется при согласовании партии.')}
               </p>
             </div>
 
             {/* Right: Order Button */}
             <button
               type="button"
-              onClick={() => onOrderQuick(tariffType, itemsCount, result.totalPrice)}
+              onClick={() => {
+                if (itemsCount <= 0) {
+                  const input = document.getElementById('calculator-quantity');
+                  input?.focus();
+                  return;
+                }
+                onOrderQuick(tariffType, itemsCount, result.totalPrice);
+              }}
               className="bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 px-7 rounded-xl transition-all active:scale-95 shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 shrink-0 cursor-pointer self-start md:self-auto"
             >
               <span>
