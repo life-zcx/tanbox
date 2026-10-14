@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useOrders } from '../hooks/useOrders';
 import { useAuth } from '../hooks/useAuth';
-import { FileText, Cpu, CheckCircle2, ArrowRight } from 'lucide-react';
+import { FileText, Cpu, CheckCircle2, ArrowRight, Wallet } from 'lucide-react';
 import { StatusBadge, PageHeader } from '@shared';
 import { getCategoryLabel } from '../data/categories';
 
@@ -12,7 +12,10 @@ export const DashboardPage: React.FC = () => {
 
   const totalOrders = orders.length;
   const activeOrders = orders.filter((o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED').length;
-  const totalCodesCount = orders.reduce((acc, o) => acc + o.itemsCount, 0);
+  const totalCodesCount = orders.reduce((acc, o) => acc + (Number(o.itemsCount) || 0), 0);
+  const totalAmount = orders
+    .filter((o) => o.status !== 'CANCELLED')
+    .reduce((acc, o) => acc + (Number(o.totalPrice) || 0), 0);
 
   return (
     <div className="space-y-8">
@@ -30,7 +33,7 @@ export const DashboardPage: React.FC = () => {
       />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Всего заказов</span>
@@ -53,7 +56,17 @@ export const DashboardPage: React.FC = () => {
             <Cpu className="w-4 h-4 text-gray-400" />
           </div>
           <p className="text-2xl font-extrabold text-[#111827]">
-            {totalCodesCount.toLocaleString()} <span className="text-xs font-semibold text-[#64748B]">шт.</span>
+            {totalCodesCount.toLocaleString('ru-RU')} <span className="text-xs font-semibold text-[#64748B]">шт.</span>
+          </p>
+        </div>
+
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Сумма заказов</span>
+            <Wallet className="w-4 h-4 text-gray-400" />
+          </div>
+          <p className="text-2xl font-extrabold text-[#111827]">
+            {totalAmount.toLocaleString('ru-RU')} <span className="text-xs font-semibold text-[#64748B]">₸</span>
           </p>
         </div>
       </div>
