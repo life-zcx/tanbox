@@ -10,7 +10,7 @@ async function main() {
   const isProd = process.env.NODE_ENV === 'production';
   const initialAdminPass = process.env.INITIAL_ADMIN_PASSWORD;
 
-  if (isProd && (!initialAdminPass || initialAdminPass === 'Admin_Tanbox_2026!Secure')) {
+  if (isProd && (!initialAdminPass || initialAdminPass === 'Admin_Tanbox_2026!Secure' || initialAdminPass.startsWith('replace_with_'))) {
     throw new Error(
       'CRITICAL SECURITY ERROR: Cannot seed production database without specifying a secure INITIAL_ADMIN_PASSWORD in environment!'
     );

@@ -47,7 +47,7 @@ const isAllowedOrigin = (origin?: string): boolean => {
     const host = parsed.hostname;
     if (host === 'localhost' || host === '127.0.0.1' || host === 'tanbox.local' || host.endsWith('.tanbox.local')) return true;
     if (/^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(host)) return true;
-    if (host === 'tanbox.kz' || host.endsWith('.tanbox.kz')) return true;
+    if (host === 'tanbox.kz' || host.endsWith('.tanbox.kz') || host === '185.200.86.23') return true;
     if (process.env.ALLOWED_ORIGINS) {
       const allowed = process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
       if (allowed.includes(origin) || allowed.includes(host)) return true;

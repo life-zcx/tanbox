@@ -7,17 +7,34 @@ set -e
 
 echo "🚀 [TANBOX] Начинаем боевой деплой..."
 
-# 1. Проверка наличия .env файла
+# 1. Проверка и автоматическая настройка .env файла
 if [ ! -f ".env" ]; then
-    echo "⚠️ Файл .env не найден! Создаю базовый .env из .env.example..."
+    echo "⚠️ Файл .env не найден! Создаю рабочий .env из .env.example..."
     cp .env.example .env
-    # Генерация случайного безопасного JWT секрета и ключа шифрования
-    RANDOM_JWT=$(openssl rand -hex 32 2>/dev/null || cat /proc/sys/kernel/random/uuid | tr -d '-')
-    RANDOM_ENC=$(openssl rand -hex 16 2>/dev/null || cat /proc/sys/kernel/random/uuid | tr -d '-')
-    sed -i "s|replace_with_strong_random_jwt_secret_openssl_rand_hex_64|$RANDOM_JWT|g" .env
-    sed -i "s|replace_with_strong_random_encryption_secret_minimum_32_chars|$RANDOM_ENC|g" .env
-    echo "✅ Файл .env успешно создан со случайными JWT_SECRET и ENCRYPTION_SECRET."
 fi
+
+# Генерация и подстановка случайных безопасных ключей, если остались шаблоны
+if grep -q "replace_with_strong_random_jwt_secret_openssl_rand_hex_64" .env; then
+    RANDOM_JWT=$(openssl rand -hex 32 2>/dev/null || cat /proc/sys/kernel/random/uuid | tr -d '-')
+    sed -i "s|replace_with_strong_random_jwt_secret_openssl_rand_hex_64|$RANDOM_JWT|g" .env
+fi
+
+if grep -q "replace_with_strong_random_encryption_secret_minimum_32_chars" .env; then
+    RANDOM_ENC=$(openssl rand -hex 16 2>/dev/null || cat /proc/sys/kernel/random/uuid | tr -d '-')
+    sed -i "s|replace_with_strong_random_encryption_secret_minimum_32_chars|$RANDOM_ENC|g" .env
+fi
+
+if grep -q "replace_with_strong_password_minimum_24_chars" .env; then
+    RANDOM_PG_PASS=$(openssl rand -hex 16 2>/dev/null || tr -dc 'A-Za-z0-9_!@#' </dev/urandom | head -c 24)
+    sed -i "s|replace_with_strong_password_minimum_24_chars|$RANDOM_PG_PASS|g" .env
+fi
+
+if grep -q "replace_with_initial_admin_password_here" .env; then
+    RANDOM_ADMIN_PASS=$(openssl rand -base64 12 2>/dev/null || tr -dc 'A-Za-z0-9_!' </dev/urandom | head -c 16)
+    sed -i "s|replace_with_initial_admin_password_here|$RANDOM_ADMIN_PASS|g" .env
+fi
+
+echo "✅ Конфигурация .env проверена и готова."
 
 # 2. Сборка оптимизированных продакшн-контейнеров
 echo "🔨 [TANBOX] Сборка продакшн Docker-контейнеров..."
@@ -36,15 +53,22 @@ docker compose up -d
 echo "🧹 [TANBOX] Очистка кэша старых слоев Docker..."
 docker image prune -f > /dev/null 2>&1 || true
 
-# 6. Статус запущенных сервисов
+# 6. Чтение учетных данных админа из .env
+ADMIN_PASS=$(grep '^INITIAL_ADMIN_PASSWORD=' .env | cut -d '=' -f2- || echo "(указан в .env)")
+
+# 7. Статус запущенных сервисов
 echo "=============================================================================="
-echo "🎉 Продакшн успешно запущен и работает!"
+echo "🎉 Продакшн TANBOX успешно запущен и работает!"
 echo "=============================================================================="
 docker compose ps
 
 echo ""
-echo "🌐 Главная:            https://tanbox.kz"
+echo "🌐 Главная:            https://tanbox.kz  (или http://185.200.86.23)"
 echo "🌐 Личный кабинет:     https://lk.tanbox.kz"
 echo "🌐 Панель админа:      https://admin.tanbox.kz"
 echo "🌐 API Healthcheck:    https://api.tanbox.kz/api/health"
+echo "=============================================================================="
+echo "🔑 Учетные данные супер-администратора (сохранены в .env):"
+echo "   Email:  admin@tanbox.kz"
+echo "   Пароль: $ADMIN_PASS"
 echo "=============================================================================="

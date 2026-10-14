@@ -6,7 +6,18 @@
 
 set -e
 
-BACKUP_DIR="${BACKUP_DIR:-./backups}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Load environment variables from .env if present
+if [ -f "$PROJECT_DIR/.env" ]; then
+    set -a
+    # Source .env ignoring comments and blank lines safely
+    eval $(grep -v '^#' "$PROJECT_DIR/.env" | grep -v '^$' | sed -e 's/^/export /') 2>/dev/null || true
+    set +a
+fi
+
+BACKUP_DIR="${BACKUP_DIR:-$PROJECT_DIR/backups}"
 mkdir -p "$BACKUP_DIR"
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
