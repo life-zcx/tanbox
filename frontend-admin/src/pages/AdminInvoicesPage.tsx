@@ -273,19 +273,98 @@ export const AdminInvoicesPage: React.FC = () => {
         };
       });
 
-      // Also load manually created invoices from localStorage
+      // Load invoices directly from PostgreSQL DB via API
+      let dbInvoices: InvoiceRecord[] = [];
+      try {
+        const invRes = await apiClient.get('/api/invoices');
+        const list = invRes.data?.invoices || (Array.isArray(invRes.data) ? invRes.data : []);
+        dbInvoices = list.map((inv: any) => ({
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          date: inv.date ? new Date(inv.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+          dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().slice(0, 10) : undefined,
+          orderId: inv.orderId || undefined,
+          orderNumber: inv.orderNumber || undefined,
+          customerName: inv.customerName || inv.user?.companyName || 'Заказчик',
+          customerBinIin: inv.customerBinIin || inv.user?.binIin || '—',
+          customerAddress: inv.customerAddress || 'г. Алматы',
+          customerPhone: inv.customerPhone || inv.user?.phone || '',
+          items: (inv.items || []).map((it: any) => ({
+            id: it.id,
+            name: it.name,
+            qty: Number(it.quantity || 1),
+            unit: it.unit || 'шт',
+            price: Number(it.price || 0),
+            sum: Number(it.totalPrice || 0),
+          })),
+          totalAmount: Number(inv.totalAmount || 0),
+          status: inv.status || 'PENDING',
+          createdAt: inv.createdAt || new Date().toISOString(),
+        }));
+      } catch (err) {
+        console.warn('Failed to load DB invoices:', err);
+      }
+
+      // Check for legacy localStorage custom invoices and auto-migrate them to DB
       const localSaved = localStorage.getItem('tanbox_custom_invoices');
-      let customInvoices: InvoiceRecord[] = [];
       if (localSaved) {
         try {
-          customInvoices = JSON.parse(localSaved);
+          const localCustom = JSON.parse(localSaved);
+          if (Array.isArray(localCustom) && localCustom.length > 0) {
+            for (const item of localCustom) {
+              const exists = dbInvoices.some((d) => d.invoiceNumber === item.invoiceNumber);
+              if (!exists) {
+                try {
+                  const created = await apiClient.post('/api/invoices', {
+                    invoiceNumber: item.invoiceNumber,
+                    date: item.date,
+                    customerName: item.customerName,
+                    customerBinIin: item.customerBinIin,
+                    customerAddress: item.customerAddress,
+                    customerPhone: item.customerPhone,
+                    status: item.status,
+                    items: item.items?.map((it: any) => ({
+                      name: it.name,
+                      quantity: it.qty,
+                      unit: it.unit,
+                      price: it.price,
+                      totalPrice: it.sum,
+                    })),
+                  });
+                  if (created.data) {
+                    dbInvoices.unshift({
+                      id: created.data.id,
+                      invoiceNumber: created.data.invoiceNumber,
+                      date: item.date,
+                      customerName: item.customerName,
+                      customerBinIin: item.customerBinIin,
+                      customerAddress: item.customerAddress,
+                      customerPhone: item.customerPhone,
+                      items: item.items,
+                      totalAmount: item.totalAmount,
+                      status: item.status,
+                      createdAt: item.createdAt,
+                    });
+                  }
+                } catch (migErr) {
+                  console.warn('Migration item failed:', migErr);
+                }
+              }
+            }
+            localStorage.removeItem('tanbox_custom_invoices');
+          }
         } catch (e) {
-          console.warn('Failed to parse local custom invoices:', e);
+          console.warn('Failed to migrate local custom invoices:', e);
         }
       }
 
+      // Filter out orderInvoices that already have a real DB invoice to avoid duplicates
+      const nonDuplicatedOrderInvoices = orderInvoices.filter(
+        (ordInv) => !dbInvoices.some((dbInv) => dbInv.orderId === ordInv.orderId || dbInv.orderNumber === ordInv.orderNumber)
+      );
+
       // Combine both lists
-      const combined = [...customInvoices, ...orderInvoices].sort((a, b) =>
+      const combined = [...dbInvoices, ...nonDuplicatedOrderInvoices].sort((a, b) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
 
@@ -383,79 +462,87 @@ export const AdminInvoicesPage: React.FC = () => {
 
   const totalCreateSum = createLines.reduce((acc, l) => acc + (l.sum || 0), 0);
 
-  const handleSaveInvoice = () => {
-    const newRecord: InvoiceRecord = {
-      id: `custom_inv_${Date.now()}`,
-      invoiceNumber: invoiceNumberInput.trim() || `СЧ-${Date.now()}`,
-      date: invoiceDateInput,
-      customerName: customCustomerName.trim() || 'Покупатель',
-      customerBinIin: customCustomerBin.trim() || '—',
-      customerAddress: customCustomerAddress.trim() || 'г. Алматы',
-      customerPhone: customCustomerPhone.trim() || '',
-      items: createLines,
-      totalAmount: totalCreateSum,
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-    };
+  const handleSaveInvoice = async () => {
+    try {
+      const payload = {
+        invoiceNumber: invoiceNumberInput.trim() || undefined,
+        date: invoiceDateInput,
+        userId: selectedUserId || undefined,
+        customerName: customCustomerName.trim() || 'Покупатель',
+        customerBinIin: customCustomerBin.trim() || '—',
+        customerAddress: customCustomerAddress.trim() || 'г. Алматы',
+        customerPhone: customCustomerPhone.trim() || undefined,
+        items: createLines.map((l) => ({
+          name: l.name,
+          quantity: l.qty,
+          unit: l.unit,
+          price: l.price,
+          totalPrice: l.sum,
+        })),
+        status: 'PENDING',
+      };
 
-    // Save to local storage
-    const currentCustomStr = localStorage.getItem('tanbox_custom_invoices');
-    let currentCustom: InvoiceRecord[] = [];
-    if (currentCustomStr) {
-      try {
-        currentCustom = JSON.parse(currentCustomStr);
-      } catch (e) {
-        console.warn(e);
-      }
+      const res = await apiClient.post('/api/invoices', payload);
+      const created = res.data;
+
+      const newRecord: InvoiceRecord = {
+        id: created.id,
+        invoiceNumber: created.invoiceNumber,
+        date: created.date ? new Date(created.date).toISOString().slice(0, 10) : invoiceDateInput,
+        customerName: created.customerName,
+        customerBinIin: created.customerBinIin,
+        customerAddress: created.customerAddress,
+        customerPhone: created.customerPhone || '',
+        items: (created.items || []).map((it: any) => ({
+          id: it.id,
+          name: it.name,
+          qty: Number(it.quantity || 1),
+          unit: it.unit || 'шт',
+          price: Number(it.price || 0),
+          sum: Number(it.totalPrice || 0),
+        })),
+        totalAmount: Number(created.totalAmount || totalCreateSum),
+        status: created.status || 'PENDING',
+        createdAt: created.createdAt || new Date().toISOString(),
+      };
+
+      // Update state
+      setInvoices((prev) => [newRecord, ...prev]);
+      setIsCreateModalOpen(false);
+
+      // Immediately open for view / print
+      setActiveViewInvoice(newRecord);
+    } catch (err: any) {
+      console.error('Failed to save invoice to DB:', err);
+      alert(err.response?.data?.message || 'Ошибка сохранения счета в базе данных');
     }
-    const updatedCustom = [newRecord, ...currentCustom];
-    localStorage.setItem('tanbox_custom_invoices', JSON.stringify(updatedCustom));
-
-    // Update state
-    setInvoices((prev) => [newRecord, ...prev]);
-    setIsCreateModalOpen(false);
-
-    // Immediately open for view / print
-    setActiveViewInvoice(newRecord);
   };
 
-  const handleSetStatus = (inv: InvoiceRecord, nextStatus: 'PENDING' | 'PAID' | 'CANCELLED') => {
+  const handleSetStatus = async (inv: InvoiceRecord, nextStatus: 'PENDING' | 'PAID' | 'CANCELLED') => {
     const updatedList = invoices.map((item) =>
       item.id === inv.id ? { ...item, status: nextStatus } : item
     );
     setInvoices(updatedList);
 
-    // If it's a custom invoice, update in localStorage
-    if (inv.id.startsWith('custom_inv_')) {
-      const currentCustomStr = localStorage.getItem('tanbox_custom_invoices');
-      if (currentCustomStr) {
-        try {
-          const list: InvoiceRecord[] = JSON.parse(currentCustomStr);
-          const updated = list.map((item) =>
-            item.id === inv.id ? { ...item, status: nextStatus } : item
-          );
-          localStorage.setItem('tanbox_custom_invoices', JSON.stringify(updated));
-        } catch (e) {
-          console.warn(e);
-        }
+    // If it's a real DB invoice, update in PostgreSQL
+    if (!inv.id.startsWith('order_inv_')) {
+      try {
+        await apiClient.patch(`/api/invoices/${inv.id}/status`, { status: nextStatus });
+      } catch (e) {
+        console.warn('Failed to update invoice status in DB:', e);
       }
     }
   };
 
-  const handleDeleteInvoice = (invId: string) => {
-    if (!window.confirm('Удалить счет на оплату из реестра?')) return;
+  const handleDeleteInvoice = async (invId: string) => {
+    if (!window.confirm('Удалить счет на оплату из реестра базы данных?')) return;
     setInvoices((prev) => prev.filter((i) => i.id !== invId));
 
-    if (invId.startsWith('custom_inv_')) {
-      const currentCustomStr = localStorage.getItem('tanbox_custom_invoices');
-      if (currentCustomStr) {
-        try {
-          const list: InvoiceRecord[] = JSON.parse(currentCustomStr);
-          const updated = list.filter((item) => item.id !== invId);
-          localStorage.setItem('tanbox_custom_invoices', JSON.stringify(updated));
-        } catch (e) {
-          console.warn(e);
-        }
+    if (!invId.startsWith('order_inv_')) {
+      try {
+        await apiClient.delete(`/api/invoices/${invId}`);
+      } catch (e) {
+        console.warn('Failed to delete invoice from DB:', e);
       }
     }
   };

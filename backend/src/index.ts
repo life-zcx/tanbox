@@ -17,6 +17,7 @@ import userTemplatesRoutes from './routes/userTemplates.routes';
 import labelsRoutes from './routes/labels.routes';
 import systemRoutes from './routes/system.routes';
 import markirovkaRoutes from './routes/markirovka.routes';
+import invoicesRoutes from './routes/invoices.routes';
 import { logger } from './utils/logger';
 import { generalApiLimiter } from './middleware/rateLimiter';
 import { telegram } from './services/telegram.service';
@@ -147,6 +148,7 @@ app.use('/api/user-templates', userTemplatesRoutes);
 app.use('/api/labels', labelsRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/markirovka', markirovkaRoutes);
+app.use('/api/invoices', invoicesRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

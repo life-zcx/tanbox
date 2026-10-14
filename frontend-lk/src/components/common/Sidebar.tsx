@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PackagePlus, FileText, User, LogOut, ExternalLink, Phone, Mail, Send, Tag, X } from 'lucide-react';
+import { LayoutDashboard, PackagePlus, FileText, Receipt, User, LogOut, ExternalLink, Phone, Mail, Send, Tag, X } from 'lucide-react';
 import { getLandingUrl, COMPANY_CONFIG } from '@shared';
 import { UserProfile } from '../../types';
 
@@ -18,6 +18,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen = false
     { to: '/dashboard', label: 'Обзор и Статистика', icon: LayoutDashboard },
     { to: '/orders/new', label: 'Создать заказ', icon: PackagePlus },
     { to: '/orders', label: 'Мои заказы', icon: FileText },
+    { to: '/invoices', label: 'Счета на оплату', icon: Receipt },
     { to: '/labels', label: 'Реестр этикеток', icon: Tag },
     { to: '/profile', label: 'Профиль компании', icon: User },
   ];

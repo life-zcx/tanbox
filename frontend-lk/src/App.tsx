@@ -10,6 +10,7 @@ import { OrdersPage } from './pages/OrdersPage';
 import { CreateOrderPage } from './pages/CreateOrderPage';
 import { OrderDetailPage } from './pages/OrderDetailPage';
 import { LabelsRegistryPage } from './pages/LabelsRegistryPage';
+import { InvoicesPage } from './pages/InvoicesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { MaintenanceScreen } from './components/common/MaintenanceScreen';
 import { apiClient } from './api/client';
@@ -246,6 +247,15 @@ const LkRouter: React.FC = () => {
           element={
             <ProtectedLayout>
               <LabelsRegistryPage />
+            </ProtectedLayout>
+          }
+        />
+
+        <Route
+          path="/invoices"
+          element={
+            <ProtectedLayout>
+              <InvoicesPage />
             </ProtectedLayout>
           }
         />

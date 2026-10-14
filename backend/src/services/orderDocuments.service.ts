@@ -848,3 +848,174 @@ export async function renderOrderInvoicePdf(existing: any): Promise<Buffer> {
   const html = generateOrderInvoiceHtml(existing);
   return renderHtmlToPdf(html, { landscape: false });
 }
+
+export function generateCustomInvoiceHtml(invoice: any): string {
+  const invDate = invoice.date ? new Date(invoice.date) : new Date();
+  const dateFormatted = invDate.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
+  const invoiceNumber = invoice.invoiceNumber || 'б/н';
+  
+  const customerName = invoice.customerName || invoice.user?.companyName || 'Заказчик';
+  const customerBin = invoice.customerBinIin || invoice.user?.binIin || '—';
+  const customerAddress = invoice.customerAddress || 'г. Алматы';
+  const customerPhone = invoice.customerPhone || invoice.user?.phone || '';
+
+  const items = Array.isArray(invoice.items) ? invoice.items : [];
+  const lines = items.map((it: any) => ({
+    name: it.name,
+    unit: it.unit || 'шт.',
+    qty: Number(it.quantity ?? it.qty ?? 1),
+    price: Number(it.price ?? 0),
+    sum: Number(it.totalPrice ?? it.sum ?? (Number(it.quantity ?? it.qty ?? 1) * Number(it.price ?? 0))),
+  }));
+
+  const totalSum = lines.reduce((acc: number, l: any) => acc + l.sum, 0) || Number(invoice.totalAmount || 0);
+  const amountInWords = numberToWordsTenge(totalSum);
+
+  const formatMoney = (n: number) => n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const formatQty = (n: number) => n.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+  return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Счет на оплату № ${escapeHtml(invoiceNumber)}</title>
+<style>
+  @page { size: A4 portrait; margin: 15mm 15mm 15mm 15mm; }
+  body { font-family: 'Liberation Sans', 'DejaVu Sans', Arial, sans-serif; font-size: 8pt; line-height: 1.25; color: #000; margin: 0; padding: 0; }
+  .warning-box { border: 1px solid #777; padding: 4px 6px; font-size: 6.8pt; color: #333; margin-bottom: 12px; line-height: 1.2; }
+  .bank-table { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 14px; font-size: 8pt; }
+  .bank-table td { border: 1px solid #000; padding: 3px 5px; vertical-align: top; }
+  .doc-title { font-size: 13pt; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 10px; }
+  .parties-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 8.5pt; }
+  .parties-table td { padding: 2px 0; vertical-align: top; }
+  .items-table { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 8px; font-size: 8pt; }
+  .items-table th, .items-table td { border: 1px solid #000; padding: 4px 5px; }
+  .items-table th { background-color: #f2f2f2; font-weight: bold; text-align: center; }
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+  .text-left { text-align: left; }
+  .totals-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8.5pt; }
+  .totals-table td { padding: 2px 4px; }
+  .summary-text { font-size: 8.5pt; margin-bottom: 14px; line-height: 1.4; }
+  .divider-line { border-top: 2px solid #000; margin-bottom: 16px; }
+  .signatures-row { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-top: 15px; }
+</style>
+</head>
+<body>
+
+<div class="warning-box">
+  Внимание! Оплата данного счета означает согласие с условиями поставки товара и оказания услуг маркировки.<br>
+  Уведомление об оплате обязательно, в противном случае не гарантируется сохранение сроков и условий выполнения заказа.
+</div>
+
+<table class="bank-table">
+  <tr>
+    <td colspan="2" style="width: 65%;">
+      ${escapeHtml(COMPANY_CONFIG.legal.bank)}, г. Алматы<br>
+      <span style="font-size: 7pt; color: #555;">Банк получателя</span>
+    </td>
+    <td style="width: 15%;">БИК</td>
+    <td style="width: 20%; font-weight: bold;">${escapeHtml(COMPANY_CONFIG.legal.bik)}</td>
+  </tr>
+  <tr>
+    <td colspan="2"></td>
+    <td>ИИК</td>
+    <td style="font-weight: bold;">${escapeHtml(COMPANY_CONFIG.legal.iik)}</td>
+  </tr>
+  <tr>
+    <td style="width: 15%;">ИИН / БИН</td>
+    <td style="width: 50%; font-weight: bold;">${escapeHtml(COMPANY_CONFIG.legal.iinBin)}</td>
+    <td>КБе</td>
+    <td style="font-weight: bold;">${escapeHtml(COMPANY_CONFIG.legal.kbe)}</td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      ${escapeHtml(COMPANY_CONFIG.legal.companyName)}<br>
+      <span style="font-size: 7pt; color: #555;">Получатель</span>
+    </td>
+    <td colspan="2"></td>
+  </tr>
+</table>
+
+<div class="doc-title">
+  Счет на оплату № ${escapeHtml(invoiceNumber)} от ${escapeHtml(dateFormatted)} г.
+</div>
+
+<table class="parties-table">
+  <tr>
+    <td style="width: 90px; font-weight: bold;">Поставщик:</td>
+    <td><strong>${escapeHtml(COMPANY_CONFIG.legal.companyName)}, ИИН ${escapeHtml(COMPANY_CONFIG.legal.iinBin)}</strong>, ${escapeHtml(COMPANY_CONFIG.legal.address)}, тел.: ${escapeHtml(COMPANY_CONFIG.documents.phone)}</td>
+  </tr>
+  <tr>
+    <td style="font-weight: bold; padding-top: 5px;">Покупатель:</td>
+    <td style="padding-top: 5px;"><strong>${escapeHtml(customerName)}, БИН/ИИН ${escapeHtml(customerBin)}</strong>, ${escapeHtml(customerAddress)}${customerPhone ? `, тел.: ${escapeHtml(customerPhone)}` : ''}</td>
+  </tr>
+  <tr>
+    <td style="font-weight: bold; padding-top: 5px;">Договор:</td>
+    <td style="padding-top: 5px;">${invoice.orderNumber ? `Публичный договор-оферта (Заказ № ${escapeHtml(invoice.orderNumber)}) от ${escapeHtml(dateFormatted)} г.` : `Публичный договор-оферта от ${escapeHtml(dateFormatted)} г.`}</td>
+  </tr>
+</table>
+
+<table class="items-table">
+  <thead>
+    <tr>
+      <th style="width: 30px;">№</th>
+      <th>Товары (работы, услуги)</th>
+      <th style="width: 70px;">Кол-во</th>
+      <th style="width: 45px;">Ед.</th>
+      <th style="width: 90px;">Цена, ₸</th>
+      <th style="width: 105px;">Сумма, ₸</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${lines
+      .map(
+        (it: any, idx: number) => `
+    <tr>
+      <td class="text-center">${idx + 1}</td>
+      <td class="text-left">${escapeHtml(it.name)}</td>
+      <td class="text-right">${formatQty(it.qty)}</td>
+      <td class="text-center">${escapeHtml(it.unit)}</td>
+      <td class="text-right">${formatMoney(it.price)}</td>
+      <td class="text-right" style="font-weight: bold;">${formatMoney(it.sum)}</td>
+    </tr>`
+      )
+      .join('')}
+  </tbody>
+</table>
+
+<table class="totals-table">
+  <tr>
+    <td style="text-align: right; font-weight: bold; width: 85%;">Итого:</td>
+    <td style="text-align: right; font-weight: bold; width: 15%;">${formatMoney(totalSum)}</td>
+  </tr>
+  <tr>
+    <td style="text-align: right; font-weight: bold;">В том числе НДС:</td>
+    <td style="text-align: right; font-weight: bold;">Без НДС</td>
+  </tr>
+</table>
+
+<div class="summary-text">
+  <div>Всего наименований ${lines.length}, на сумму ${formatMoney(totalSum)} теңге</div>
+  <div><strong>Всего к оплате: ${escapeHtml(amountInWords)}</strong></div>
+</div>
+
+<div class="divider-line"></div>
+
+<div class="signatures-row">
+  <div>Исполнитель</div>
+  <div style="display: flex; align-items: flex-end; gap: 20px;">
+    <div style="width: 180px; border-bottom: 1px solid #000;"></div>
+    <div>/${escapeHtml(COMPANY_CONFIG.legal.companyName)}/</div>
+  </div>
+</div>
+
+</body>
+</html>`;
+}
+
+export async function renderCustomInvoicePdf(invoice: any): Promise<Buffer> {
+  const html = generateCustomInvoiceHtml(invoice);
+  return renderHtmlToPdf(html, { landscape: false });
+}
+
