@@ -57,7 +57,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'bv.t1.item2_title': 'Беспрепятственный сбыт по РК',
     'bv.t1.item2_desc': 'Легальная поставка в любые оптовые базы, торговые центры и розничные сети Казахстана без юридических барьеров.',
     'bv.t1.item3_title': 'Точный складской учет',
-    'bv.t1.item3_desc': 'Поштучный учет каждой единицы продукции, коробов и паллет с синхронизацией кодов в системе электронных счетов-фактур (ЭСФ).',
+    'bv.t1.item3_desc': 'Поштучный учет каждой единицы продукции, коробов и паллет с привязкой кодов в ИС Танба.',
 
     // Tab 2 content
     'bv.t2.header': 'Цена ошибок: что бизнес теряет при попытке маркировать своими силами',
@@ -81,7 +81,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'bv.t3.item3_title': 'Быстрая оклейка без простоя склада по всему Казахстану',
     'bv.t3.item3_desc': 'Организуем маркировку под ключ в любой точке РК. Масштабируем команду под вашу партию, чтобы товар вышел в продажу день в день.',
     'bv.t3.item4_title': 'SSCC-агрегация и ввод в оборот',
-    'bv.t3.item4_desc': 'Агрегируем штуки в короба и паллеты, вводим коды в оборот в ИС Танба, предоставляем полный комплект закрывающих документов и ЭСФ.',
+    'bv.t3.item4_desc': 'Агрегируем штуки в короба и паллеты, вводим коды в оборот в ИС Танба, предоставляем полный комплект закрывающих документов.',
 
     // Categories
     'cat.badge': 'РЕГЛАМЕНТИРОВАННЫЕ ОТРАСЛИ',
@@ -154,7 +154,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'bv.t1.item2_title': 'ҚР бойынша кедергісіз сату',
     'bv.t1.item2_desc': 'Қазақстанның кез келген көтерме базаларына, сауда орталықтары мен бөлшек сауда желілеріне заңды түрде жеткізу.',
     'bv.t1.item3_title': 'Дәл қоймалық есеп',
-    'bv.t1.item3_desc': 'Электрондық шот-фактуралар (ЭШФ) жүйесімен синхрондала отырып, әрбір өнім, қорап және паллет бірлігін нақты есепке алу.',
+    'bv.t1.item3_desc': '«Таңба» АЖ жүйесімен байланыстыра отырып, әрбір өнім, қорап және паллет бірлігін нақты есепке алу.',
 
     // Tab 2 content
     'bv.t2.header': 'Қателіктер бағасы: тауарды өз бетінше қолмен таңбалаудың нақты қауіптері',
@@ -178,7 +178,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'bv.t3.item3_title': 'Қазақстан бойынша қойма тоқтаусыз жедел оклейка',
     'bv.t3.item3_desc': 'ҚР кез келген нүктесінде кілтке дейін таңбалау ұйымдастырамыз. Тауар дәл уақытында сатылымға шығуы үшін команданы партияңыздың көлеміне қарай кеңейтеміз.',
     'bv.t3.item4_title': 'SSCC агрегациясы және айналымға енгізу',
-    'bv.t3.item4_desc': 'Тауарларды қораптар мен паллеттерге біріктіреміз, айналымға енгіземіз, барлық жабылатын құжаттарды және ЭШФ ұсынамыз.',
+    'bv.t3.item4_desc': 'Тауарларды қораптар мен паллеттерге біріктіреміз, айналымға енгіземіз және барлық ресми жабылатын құжаттарды ұсынамыз.',
 
     // Categories
     'cat.badge': 'МІНДЕТТІ САЛАЛАР',
@@ -251,7 +251,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'bv.t1.item2_title': 'Unrestricted Distribution in KZ',
     'bv.t1.item2_desc': 'Legally supply all retail chains, distributors, and wholesale hubs across Kazakhstan with zero administrative roadblocks.',
     'bv.t1.item3_title': 'Precise Item-Level Inventory',
-    'bv.t1.item3_desc': 'Item-level, carton, and pallet visibility synchronized directly with the national electronic invoicing (ESF) system.',
+    'bv.t1.item3_desc': 'Item-level, carton, and pallet visibility synchronized directly with the IS Tanba state system.',
 
     // Tab 2 content
     'bv.t2.header': 'The Real Cost of Mistakes: What Businesses Lose Doing It In-House',
@@ -275,7 +275,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'bv.t3.item3_title': 'Fast On-Site Labeling Without Warehouse Downtime Across KZ',
     'bv.t3.item3_desc': 'Turnkey serialization anywhere in Kazakhstan. We scale our crew to match your batch size so your goods hit shelves on schedule.',
     'bv.t3.item4_title': 'SSCC Aggregation & Turnover Release',
-    'bv.t3.item4_desc': 'We aggregate items into cartons and pallets, register turnover release in IS Tanba, and issue official closing accounting documents and e-invoices.',
+    'bv.t3.item4_desc': 'We aggregate items into cartons and pallets, register turnover release in IS Tanba, and issue official closing accounting documents.',
 
     // Categories
     'cat.badge': 'REGULATED INDUSTRIES',

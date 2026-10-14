@@ -3,6 +3,12 @@
 
 <head>
   <!-- Google tag (gtag.js) -->
+  <script>
+    // Отключаем сбор данных аналитики вне боевого домена tanbox.kz
+    if (window.location.hostname !== 'tanbox.kz' && window.location.hostname !== 'www.tanbox.kz') {
+      window['ga-disable-G-GB7511BWTN'] = true;
+    }
+  </script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-GB7511BWTN"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -43,6 +49,11 @@
   <meta property="og:description"
     content="Полный цикл обязательной маркировки товаров Data Matrix в Казахстане: эмиссия в ИС Танба, карточки в НКТ, печать рулонов и выездная оклейка на складе Заказчика." />
   <meta property="og:image" content="https://tanbox.kz/og-image.jpg" />
+  <meta property="og:image:secure_url" content="https://tanbox.kz/og-image.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="TANBOX.KZ — Сервис цифровой маркировки товаров в Республике Казахстан" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />

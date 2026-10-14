@@ -50,7 +50,7 @@ export const COMPANY_CONFIG = {
     whatsappUrl: 'https://wa.me/77077111653',
 
     // Телеграм-канал сервиса
-    telegramChannel: 'https://t.me/tanbox_kz',
+    telegramChannel: 'https://t.me/tanboxkz',
 
     // Почта для общих вопросов
     emailInfo: 'info@tanbox.kz',

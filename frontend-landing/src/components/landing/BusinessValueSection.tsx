@@ -98,13 +98,13 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
         : 'Поштучная оклейка тысяч товаров отвлекает штатных сотрудников от прямых обязанностей. Ошибки в артикулах, размерах или пересортица требуют повторной перемаркировки всей партии.',
     },
     {
-      title: lang === 'kz' ? 'Сауда желілері мен ЭШФ талаптары' : lang === 'en' ? 'Retail Partner & Electronic Invoicing Demands' : 'Требования торговых сетей и ЭСФ',
+      title: lang === 'kz' ? 'Сауда желілері мен қоймалар талаптары' : lang === 'en' ? 'Retail & Warehouse Acceptance Demands' : 'Требования торговых сетей и складов',
       stat: lang === 'kz' ? 'Қабылдау бақылауы' : lang === 'en' ? 'Quality Grading' : 'Контроль приемки',
       desc: lang === 'kz' 
-        ? 'Ірі дистрибьюторлар мен сауда желілері Data Matrix оқылу сапасын қатаң тексереді және ЭШФ сәйкессіздігі кезінде тауарды қабылдамайды.' 
+        ? 'Ірі дистрибьюторлар мен маркетплейстер Data Matrix оқылу сапасын қатаң тексереді. Стикер бүлінген немесе артикул шатасқан жағдайда тауар қабылданбай, кері қайтарылады.' 
         : lang === 'en' 
-        ? 'Retail chains and distributors enforce strict barcode readability standards and reject goods with electronic invoice discrepancies.' 
-        : 'Крупные сети и дистрибьюторы строго контролируют качество считывания кодов и требуют идеальной синхронизации в электронных счетах-фактурах.',
+        ? 'Retail chains and marketplaces enforce strict Data Matrix barcode readability standards. Damaged stickers or SKU mismatches result in batch rejection.' 
+        : 'Крупные сети, дистрибьюторы и маркетплейсы строго проверяют считываемость Data Matrix 2D-сканерами. При браке стикера или пересортице партию возвращают поставщику.',
     },
   ];
 
