@@ -1,9 +1,10 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Terminal, Database, Send, HardDrive, ListOrdered } from 'lucide-react';
+import { Terminal, Database, Send, HardDrive, ListOrdered, Activity } from 'lucide-react';
 
 export const SystemNav: React.FC = () => {
   const links = [
+    { to: '/system/netdata', label: 'Мониторинг сервера (Netdata)', icon: Activity },
     { to: '/system/logs', label: 'Системные логи', icon: Terminal },
     { to: '/system/backups', label: 'БД & Бэкапы', icon: Database },
     { to: '/system/telegram', label: 'Telegram мониторинг', icon: Send },

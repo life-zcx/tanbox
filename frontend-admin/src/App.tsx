@@ -21,6 +21,7 @@ import { AdminSystemBackupsPage } from './pages/system/AdminSystemBackupsPage';
 import { AdminSystemTelegramPage } from './pages/system/AdminSystemTelegramPage';
 import { AdminSystemStoragePage } from './pages/system/AdminSystemStoragePage';
 import { AdminSystemPdfQueuePage } from './pages/system/AdminSystemPdfQueuePage';
+import { AdminSystemNetdataPage } from './pages/system/AdminSystemNetdataPage';
 import { AdminMarkirovkaAccountsPage } from './pages/AdminMarkirovkaAccountsPage';
 import { AdminMarkirovkaNktPage } from './pages/AdminMarkirovkaNktPage';
 import { AdminMarkirovkaOrdersPage } from './pages/AdminMarkirovkaOrdersPage';
@@ -197,7 +198,8 @@ export const App: React.FC = () => {
               </ProtectedAdminLayout>
             }
           >
-            <Route index element={<Navigate to="/system/logs" replace />} />
+            <Route index element={<Navigate to="/system/netdata" replace />} />
+            <Route path="netdata" element={<AdminSystemNetdataPage />} />
             <Route path="logs" element={<AdminSystemLogsPage />} />
             <Route path="backups" element={<AdminSystemBackupsPage />} />
             <Route path="telegram" element={<AdminSystemTelegramPage />} />
