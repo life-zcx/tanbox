@@ -20,19 +20,21 @@ import { LanguageProvider } from './context/LanguageContext';
 
 const ScrollToTop: React.FC = () => {
   const { pathname, hash } = useLocation();
+  const prevCleanPath = React.useRef<string>('');
 
   useEffect(() => {
-    if (!hash) {
+    // Normalize path by stripping /kz or /en prefix so switching language on the same page doesn't reset scroll
+    const cleanPath = pathname.replace(/^\/(kz|en)(\/|$)/, '/').replace(/\/$/, '') || '/';
+    if (!hash && prevCleanPath.current !== cleanPath) {
       window.scrollTo(0, 0);
     }
+    prevCleanPath.current = cleanPath;
   }, [pathname, hash]);
 
   return null;
 };
 
 const AppContent: React.FC = () => {
-  const location = useLocation();
-  const isHomePage = location.pathname === '/';
   const [maintenance, setMaintenance] = useState<{ active: boolean; message: string } | null>(null);
 
   useEffect(() => {

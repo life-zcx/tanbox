@@ -11,8 +11,11 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
   const location = useLocation();
-  const isHomePage = location.pathname === '/';
-  const { lang, setLang, t } = useLanguage();
+  const { lang, setLang, t, getLocalizedPath } = useLanguage();
+
+  // Normalize path without language prefix: '/', '/kz', '/en' all map to '/'
+  const cleanPath = location.pathname.replace(/^\/(kz|en)(\/|$)/, '/').replace(/\/$/, '') || '/';
+  const isHomePage = cleanPath === '/';
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -53,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => cleanPath === path;
 
   // On home page and not scrolled: transparent header over hero video
   const isTransparent = isHomePage && !isScrolled;
@@ -81,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
 
         <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between transition-all duration-300">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to={getLocalizedPath('/')} className="flex items-center gap-3 group">
             <img
               src={isTransparent ? '/tanbox-white.svg' : '/tanbox-dark.svg'}
               alt="tanbox.kz"
@@ -96,7 +99,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
               return (
                 <Link
                   key={link.path}
-                  to={link.path}
+                  to={getLocalizedPath(link.path)}
                   className={`text-sm font-semibold transition-colors ${
                     isTransparent
                       ? active
@@ -196,7 +199,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
           {/* Top row: Logo on left, X on right */}
           <div className="flex items-center justify-between pb-5 border-b border-white/10">
             <Link
-              to={lang === 'ru' ? '/' : `/${lang}`}
+              to={getLocalizedPath('/')}
               onClick={() => setIsMobileMenuOpen(false)}
               className="flex items-center gap-2 group"
             >
@@ -219,10 +222,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
           {/* Navigation links - centered with generous breathing room */}
           <nav className="flex-1 my-auto flex flex-col items-center justify-center space-y-6 text-center py-6">
             <Link
-              to={lang === 'ru' ? '/' : `/${lang}`}
+              to={getLocalizedPath('/')}
               onClick={() => setIsMobileMenuOpen(false)}
               className={`text-lg sm:text-xl tracking-wide transition-colors ${
-                location.pathname === '/' || location.pathname === `/${lang}`
+                isHomePage
                   ? 'text-[#0082FB] font-bold'
                   : 'text-slate-100 hover:text-[#0082FB] font-medium'
               }`}
@@ -231,10 +234,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
             </Link>
 
             <Link
-              to={lang === 'ru' ? '/calculator' : `/${lang}/calculator`}
+              to={getLocalizedPath('/calculator')}
               onClick={() => setIsMobileMenuOpen(false)}
               className={`text-lg sm:text-xl tracking-wide transition-colors ${
-                location.pathname.includes('/calculator')
+                cleanPath === '/calculator'
                   ? 'text-[#0082FB] font-bold'
                   : 'text-slate-100 hover:text-[#0082FB] font-medium'
               }`}
@@ -243,10 +246,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
             </Link>
 
             <Link
-              to={lang === 'ru' ? '/categories' : `/${lang}/categories`}
+              to={getLocalizedPath('/categories')}
               onClick={() => setIsMobileMenuOpen(false)}
               className={`text-lg sm:text-xl tracking-wide transition-colors ${
-                location.pathname.includes('/categories')
+                cleanPath.startsWith('/categories')
                   ? 'text-[#0082FB] font-bold'
                   : 'text-slate-100 hover:text-[#0082FB] font-medium'
               }`}
@@ -255,10 +258,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
             </Link>
 
             <Link
-              to={lang === 'ru' ? '/services' : `/${lang}/services`}
+              to={getLocalizedPath('/services')}
               onClick={() => setIsMobileMenuOpen(false)}
               className={`text-lg sm:text-xl tracking-wide transition-colors ${
-                location.pathname.includes('/services')
+                cleanPath.startsWith('/services') || cleanPath.startsWith('/tariffs')
                   ? 'text-[#0082FB] font-bold'
                   : 'text-slate-100 hover:text-[#0082FB] font-medium'
               }`}
@@ -267,10 +270,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
             </Link>
 
             <Link
-              to={lang === 'ru' ? '/contacts' : `/${lang}/contacts`}
+              to={getLocalizedPath('/contacts')}
               onClick={() => setIsMobileMenuOpen(false)}
               className={`text-lg sm:text-xl tracking-wide transition-colors ${
-                location.pathname.includes('/contacts')
+                cleanPath === '/contacts'
                   ? 'text-[#0082FB] font-bold'
                   : 'text-slate-100 hover:text-[#0082FB] font-medium'
               }`}
