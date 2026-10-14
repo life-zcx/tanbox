@@ -15,6 +15,7 @@ import {
   ArrowRight,
   ExternalLink,
   History,
+  Database,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@shared';
@@ -58,6 +59,10 @@ export const AdminMarkirovkaAccountsPage: React.FC = () => {
   const [isModalTesting, setIsModalTesting] = useState(false);
   const [isModalSaving, setIsModalSaving] = useState(false);
 
+  // NKT status
+  const [nktEnabled, setNktEnabled] = useState<boolean>(true);
+  const [togglingNkt, setTogglingNkt] = useState<boolean>(false);
+
   // Toast
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -66,9 +71,38 @@ export const AdminMarkirovkaAccountsPage: React.FC = () => {
     setTimeout(() => setToast(null), 5000);
   };
 
+  const fetchNktStatus = async () => {
+    try {
+      const res = await apiClient.get('/markirovka/nkt-settings');
+      if (res.data?.settings) {
+        setNktEnabled(Boolean(res.data.settings.enabled));
+      }
+    } catch {}
+  };
+
+  const handleQuickToggleNkt = async () => {
+    const nextState = !nktEnabled;
+    setTogglingNkt(true);
+    try {
+      await apiClient.put('/markirovka/nkt-settings', { enabled: nextState });
+      setNktEnabled(nextState);
+      showToast(
+        nextState
+          ? 'Поиск по Национальному Каталогу (НКТ) ВКЛЮЧЕН'
+          : 'Поиск по Национальному Каталогу (НКТ) ВЫКЛЮЧЕН',
+        'success'
+      );
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Ошибка переключения статуса НКТ', 'error');
+    } finally {
+      setTogglingNkt(false);
+    }
+  };
+
   const fetchAccounts = async () => {
     try {
       setLoading(true);
+      fetchNktStatus();
       const res = await apiClient.get('/markirovka/accounts');
       setAccounts(res.data.accounts || []);
     } catch (err: any) {
@@ -268,6 +302,64 @@ export const AdminMarkirovkaAccountsPage: React.FC = () => {
 
       {/* Navigation Tabs */}
       <MarkirovkaNav />
+
+      {/* NKT Fast Status & Toggle Banner */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div
+            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+              nktEnabled ? 'bg-blue-50 text-[#0082FB]' : 'bg-gray-100 text-gray-400'
+            }`}
+          >
+            <Database className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-extrabold text-gray-900">
+                Национальный Каталог Товаров (НКТ)
+              </span>
+              <span
+                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                  nktEnabled
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {nktEnabled ? 'Поиск активен' : 'Отключен'}
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500">
+              {nktEnabled
+                ? 'Запросы в nationalcatalog.kz по GTIN включены для всех заказов и клиентов'
+                : 'Поиск по базе НКТ временно приостановлен в настройках платформы'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <Link
+            to="/markirovka/nkt"
+            className="text-xs font-bold text-[#0082FB] hover:underline"
+          >
+            Настройки API & Тест
+          </Link>
+          <button
+            type="button"
+            onClick={handleQuickToggleNkt}
+            disabled={togglingNkt}
+            title={nktEnabled ? 'Отключить поиск по НКТ' : 'Включить поиск по НКТ'}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
+              nktEnabled ? 'bg-[#0082FB]' : 'bg-gray-300'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                nktEnabled ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
 
       {/* Accounts Grid */}
       <div>

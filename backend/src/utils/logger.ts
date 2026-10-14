@@ -131,8 +131,5 @@ export const logger = {
     const logLine = `[${time}] [FRONTEND-${safeLevel}] ${safeMsg}${safeMeta}\n`;
     process.stdout.write(logLine);
     frontendStream.write(logLine);
-    if (level.toLowerCase() === 'error') {
-      errorStream.write(logLine);
-    }
   },
 };

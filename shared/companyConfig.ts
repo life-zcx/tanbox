@@ -119,8 +119,8 @@ export const COMPANY_CONFIG: CompanyConfig = {
     title: 'Служба поддержки',
 
     // Телефон техподдержки ЛК
-    phone: '+7 (727) 355-10-20',
-    phoneRaw: '+77273551020',
+    phone: '+7 (707) 711-16-53',
+    phoneRaw: '+77077111653',
 
     // Email техподдержки ЛК
     email: 'support@tanbox.kz',

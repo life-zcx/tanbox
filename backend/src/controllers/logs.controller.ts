@@ -99,6 +99,11 @@ export const getSystemLogs = async (req: AuthRequest, res: Response) => {
     }
     let lines = content.split('\n').filter((l) => l.trim().length > 0);
 
+    // Keep error.log strictly for backend server errors
+    if (type === 'error') {
+      lines = lines.filter((l) => !l.includes('[FRONTEND-'));
+    }
+
     if (search) {
       lines = lines.filter((l) => l.toLowerCase().includes(search));
     }

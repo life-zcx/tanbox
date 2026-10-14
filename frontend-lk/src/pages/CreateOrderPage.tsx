@@ -35,6 +35,7 @@ import {
   Plus,
   Trash2,
   FileSpreadsheet,
+  RefreshCw,
 } from 'lucide-react';
 
 import { CategoryStickerSpecs, getCategoryStickerSpecs } from '../data/categoryStickerSpecs';
@@ -221,6 +222,45 @@ export const CreateOrderPage: React.FC = () => {
     }
   }, [markirovkaMode, positionsMode, totalPositionsCount]);
 
+  const [loadingNktMap, setLoadingNktMap] = useState<Record<string, boolean>>({});
+
+  const handleFetchNkt = async (posId: string, gtinToFetch?: string) => {
+    const targetPos = positions.find((p) => p.id === posId);
+    const gtin = (gtinToFetch || targetPos?.gtin || '').trim();
+    if (!gtin || gtin.length < 8) return;
+
+    setLoadingNktMap((prev) => ({ ...prev, [posId]: true }));
+    try {
+      const res = await apiClient.get('/markirovka/products/search-by-gtin', {
+        params: { gtin, category: category || undefined },
+      });
+      if (res.data?.success && res.data?.product) {
+        const prod = res.data.product;
+        setPositions((prev) =>
+          prev.map((item) => {
+            if (item.id !== posId) return item;
+            return {
+              ...item,
+              name: prod.name || item.name,
+              article: prod.article || item.article,
+              size: prod.size || item.size,
+              color: prod.color || item.color,
+            };
+          })
+        );
+        // Also auto-update sticker preview fields if this is first position
+        if (posId === positions[0]?.id) {
+          if (prod.name) setLabelProductName(prod.name);
+          if (prod.article) setLabelArticle(prod.article);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch NKT for GTIN:', gtin, e);
+    } finally {
+      setLoadingNktMap((prev) => ({ ...prev, [posId]: false }));
+    }
+  };
+
   const handlePositionChange = (id: string, field: keyof FormPositionItem, value: any) => {
     setPositions((prev) => {
       const next = prev.map((item) => {
@@ -229,7 +269,11 @@ export const CreateOrderPage: React.FC = () => {
           return { ...item, quantity: Math.max(0, parseInt(value, 10) || 0) };
         }
         if (field === 'gtin') {
-          return { ...item, gtin: String(value).replace(/\D/g, '').slice(0, 14) };
+          const cleanVal = String(value).replace(/\D/g, '').slice(0, 14);
+          if (cleanVal.length === 14) {
+            setTimeout(() => handleFetchNkt(id, cleanVal), 150);
+          }
+          return { ...item, gtin: cleanVal };
         }
         return { ...item, [field]: value };
       });
@@ -1560,9 +1604,22 @@ export const CreateOrderPage: React.FC = () => {
                       className="flex items-end gap-3"
                     >
                       <div className="flex-1">
-                        <label className="block text-[11px] font-medium text-gray-600 mb-1">
-                          GTIN (14 цифр)
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[11px] font-medium text-gray-600">
+                            GTIN (14 цифр)
+                          </label>
+                          {pos.gtin && pos.gtin.length >= 8 && (
+                            <button
+                              type="button"
+                              onClick={() => handleFetchNkt(pos.id)}
+                              disabled={loadingNktMap[pos.id]}
+                              className="text-[11px] font-bold text-[#0082FB] hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                            >
+                              <RefreshCw className={`w-3 h-3 ${loadingNktMap[pos.id] ? 'animate-spin' : ''}`} />
+                              <span>{loadingNktMap[pos.id] ? 'Загрузка...' : 'Подтянуть из НКТ'}</span>
+                            </button>
+                          )}
+                        </div>
                         <input
                           type="text"
                           maxLength={14}
@@ -1574,6 +1631,15 @@ export const CreateOrderPage: React.FC = () => {
                           placeholder="05055107433614"
                           className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs font-mono text-gray-900 bg-white focus:outline-none focus:border-[#0082FB]"
                         />
+                        {pos.name && !pos.name.startsWith('Позиция ') && (
+                          <div className="mt-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200/80 rounded-lg text-[11px] text-emerald-900 flex items-center gap-1.5 font-medium">
+                            <span className="font-bold text-emerald-600">✓ НКТ:</span>
+                            <span className="truncate">{pos.name}</span>
+                            {pos.article && <span className="text-emerald-700 font-mono">({pos.article})</span>}
+                            {pos.size && <span className="text-emerald-700">р.{pos.size}</span>}
+                            {pos.color && <span className="text-emerald-700">цв.{pos.color}</span>}
+                          </div>
+                        )}
                       </div>
 
                       <div className="w-36 sm:w-44">

@@ -8,6 +8,10 @@ import {
   cleanPdfCache,
   toggleMaintenanceMode,
   testTelegramAlert,
+  getTelegramOverview,
+  sendTelegramCustomMessage,
+  sendTelegramDailyReport,
+  sendTelegramServerReport,
 } from '../controllers/system.controller';
 import { authenticateJWT, requireAdmin } from '../middleware/auth.middleware';
 
@@ -24,5 +28,11 @@ router.get('/storage', getStorageAnalysis);
 router.post('/storage/clean-cache', cleanPdfCache);
 router.post('/maintenance', toggleMaintenanceMode);
 router.post('/telegram/test', testTelegramAlert);
+
+// Telegram Messenger & Dispatcher
+router.get('/telegram/overview', getTelegramOverview);
+router.post('/telegram/send-message', sendTelegramCustomMessage);
+router.post('/telegram/send-daily-report', sendTelegramDailyReport);
+router.post('/telegram/send-server-report', sendTelegramServerReport);
 
 export default router;

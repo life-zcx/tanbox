@@ -24,3 +24,11 @@ logs/
 *.log
 uploads/
 
+# Backups & Database dumps (sensitive data)
+backups/
+*.sql
+*.sql.gz
+
+# Local storage & runtime settings
+storage/
+backend/storage/

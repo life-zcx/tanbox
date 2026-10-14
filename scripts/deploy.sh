@@ -60,12 +60,12 @@ if docker ps | grep -q "tanbox_postgres"; then
     for mig in backend/prisma/migrations/*/migration.sql; do
         if [ -f "$mig" ]; then
             echo "   -> Применяю миграцию: $(basename $(dirname "$mig"))"
-            docker exec -i tanbox_postgres psql -U "${POSTGRES_USER:-tanbox_user}" -d "${POSTGRES_DB:-tanbox_db}" < "$mig"
+            docker exec -i tanbox_postgres psql -U "${POSTGRES_USER:-tanbox_user}" -d "${POSTGRES_DB:-tanbox_db}" < "$mig" || true
         fi
     done
 fi
 
-docker compose run --rm backend npx prisma db push --skip-generate
+docker compose run --rm backend sh -c "npx prisma migrate deploy || npx prisma db push --skip-generate"
 docker compose run --rm backend node dist/seed.js
 
 # 4. Запуск всех сервисов в фоновом режиме

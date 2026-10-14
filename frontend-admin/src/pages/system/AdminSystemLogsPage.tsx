@@ -99,7 +99,7 @@ export const AdminSystemLogsPage: React.FC = () => {
               logType === 'error' ? 'bg-white text-rose-600 shadow-2xs font-extrabold' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            Ошибки (error.log)
+            Бэкенд (error.log)
           </button>
           <button
             type="button"
@@ -117,7 +117,7 @@ export const AdminSystemLogsPage: React.FC = () => {
               logType === 'frontend' ? 'bg-white text-amber-600 shadow-2xs font-extrabold' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            Браузер (frontend.log)
+            Фронтенд (frontend.log)
           </button>
         </div>
 

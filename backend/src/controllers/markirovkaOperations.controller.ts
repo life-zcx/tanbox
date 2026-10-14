@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../config/db';
 import { MarkirovkaOperationType, MarkirovkaOperationStatus } from '@prisma/client';
 import { MarkirovkaClient, CATEGORY_TO_OMS_EXTENSION, generateValidSscc18, normalizeSscc18, extractIdentificationCode } from '../services/markirovkaClient.service';
+import { resolveNktProduct } from '../services/nktCatalog.service';
 import { logger } from '../utils/logger';
 
 /**
@@ -886,41 +887,33 @@ export async function createReturnToTurnover(req: AuthRequest, res: Response) {
  */
 export async function getProductByGtin(req: AuthRequest, res: Response) {
   try {
-    const { gtin, accountId, productGroup } = req.query;
+    const { gtin, productGroup, category } = req.query;
     if (!gtin) {
       return res.status(400).json({ message: 'Необходимо указать GTIN товара' });
     }
 
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: String(accountId) } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
-    }
+    const cleanGtin = String(gtin).replace(/\D/g, '').padStart(14, '0');
+    const targetCategory = (category || productGroup || '') as string;
+    const userId = req.user?.id;
 
-    if (!account) {
-      return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден' });
-    }
+    const product = await resolveNktProduct(cleanGtin, targetCategory, userId);
 
-    const client = new MarkirovkaClient(account);
-    const result = await client.searchProductByGtin(String(gtin), productGroup ? String(productGroup) : undefined);
-
-    if (!result.success || !result.product) {
+    if (!product) {
       return res.status(404).json({
         success: false,
-        gtin: String(gtin),
+        gtin: cleanGtin,
         message: 'Товар с указанным GTIN не найден в Национальном Каталоге (НКТ)',
       });
     }
 
     return res.json({
       success: true,
-      gtin: String(gtin),
-      product: result.product,
+      gtin: cleanGtin,
+      product,
     });
   } catch (err: any) {
     logger.error('Error searching product by GTIN:', err);
-    return res.status(500).json({ message: err.message || 'Ошибка поиска товара в каталоге ИС МПТ' });
+    return res.status(500).json({ message: err.message || 'Ошибка поиска товара в каталоге НКТ' });
   }
 }
 

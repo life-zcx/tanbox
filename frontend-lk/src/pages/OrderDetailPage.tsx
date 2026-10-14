@@ -142,7 +142,83 @@ export const OrderDetailPage: React.FC = () => {
   const [printingSample, setPrintingSample] = useState<boolean>(false);
   const [codesSuccessMsg, setCodesSuccessMsg] = useState<string | null>(null);
   const [isCodesDragOver, setIsCodesDragOver] = useState<boolean>(false);
+  const [isSyncingNkt, setIsSyncingNkt] = useState<boolean>(false);
   const codesFileInputRef = useRef<HTMLInputElement>(null);
+  const autoSyncedNktOrderRef = useRef<string | null>(null);
+
+  const isPositionDataFilled = (pos: any) => {
+    if (!pos) return false;
+    const name = (pos.name || '').trim();
+    const isPlaceholder =
+      !name ||
+      name.toLowerCase().startsWith('markirovka_emission_') ||
+      name.toLowerCase().startsWith('товар (') ||
+      name.toLowerCase() === 'товар' ||
+      name.toLowerCase() === 'позиция';
+
+    const hasDetails = Boolean(
+      pos.article ||
+      pos.size ||
+      pos.color ||
+      pos.customData?.brand ||
+      pos.customData?.syncedFromNktAt
+    );
+
+    return !isPlaceholder && hasDetails;
+  };
+
+  const handleSyncNkt = async () => {
+    if (!order) return;
+
+    // Check if data is already present
+    const positions = order.positions || [];
+    const hasPositions = positions.length > 0;
+    const allPositionsFilled = hasPositions && positions.every(isPositionDataFilled);
+
+    // If data is already filled, do not send redundant request
+    if (allPositionsFilled) {
+      alert('Данные по всем позициям уже загружены из НКТ и актуальны.');
+      return;
+    }
+
+    setIsSyncingNkt(true);
+    try {
+      const res = await apiClient.post(`/orders/${order.id}/sync-nkt`, { force: true });
+      if (res.data?.order) {
+        setOrder(res.data.order);
+      } else {
+        const refetched = await apiClient.get(`/orders/${order.id}`);
+        if (refetched.data) setOrder(refetched.data);
+      }
+      alert(res.data?.message || 'Данные позиций проверены в Национальном Каталоге (НКТ).');
+    } catch (err: any) {
+      console.error('Failed to sync NKT:', err);
+      alert(err.response?.data?.message || 'Не удалось загрузить данные из НКТ');
+    } finally {
+      setIsSyncingNkt(false);
+    }
+  };
+
+  // If order positions have missing data, automatically fetch from NKT once; if already present, do not send
+  useEffect(() => {
+    if (!order || !order.positions || order.positions.length === 0) return;
+    if (autoSyncedNktOrderRef.current === order.id) return;
+
+    const hasMissingData = order.positions.some((p) => !isPositionDataFilled(p));
+    if (!hasMissingData) return;
+
+    autoSyncedNktOrderRef.current = order.id;
+    apiClient
+      .post(`/orders/${order.id}/sync-nkt`)
+      .then((res) => {
+        if (res.data?.order) {
+          setOrder(res.data.order);
+        }
+      })
+      .catch((err) => {
+        console.warn('[Auto NKT Sync] Warning:', err);
+      });
+  }, [order?.id, order?.positions]);
 
   // Roll splitting modal state
   const [showRollModal, setShowRollModal] = useState<boolean>(false);
@@ -993,9 +1069,17 @@ export const OrderDetailPage: React.FC = () => {
                       Спецификация позиций партии (SKU)
                     </span>
                   </div>
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#0082FB] border border-blue-200/80">
-                    {order.positions.length} поз.
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSyncNkt}
+                      disabled={isSyncingNkt}
+                      title="Обновить данные из НКТ"
+                      className="p-1.5 rounded-lg border border-gray-200 hover:border-blue-300 bg-white hover:bg-blue-50 text-[#0082FB] transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isSyncingNkt ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto rounded-xl border border-gray-200/80 bg-white">

@@ -1,10 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { ShieldCheck, Package, FileCheck2, History } from 'lucide-react';
+import { ShieldCheck, Package, FileCheck2, History, Database } from 'lucide-react';
 
 export const MarkirovkaNav: React.FC = () => {
   const links = [
     { to: '/markirovka/accounts', label: 'Подключенные аккаунты', icon: ShieldCheck },
+    { to: '/markirovka/nkt', label: 'Нац. Каталог (НКТ)', icon: Database },
     { to: '/markirovka/orders', label: 'Заказ кодов (Эмиссия)', icon: Package },
     { to: '/markirovka/utilisation', label: 'Отчет о нанесении (Утилизация)', icon: FileCheck2 },
     { to: '/markirovka/activity', label: 'Журнал операций', icon: History },

@@ -4,19 +4,14 @@ import { apiClient } from '../api/client';
 import {
   Receipt,
   Download,
-  Eye,
+  Printer,
   Search,
   Filter,
   CheckCircle,
   Clock,
   XCircle,
-  FileText,
-  Building,
-  CreditCard,
   ChevronDown,
   RefreshCw,
-  ExternalLink,
-  X,
 } from 'lucide-react';
 
 interface InvoiceItem {
@@ -51,8 +46,8 @@ export const InvoicesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeModalInvoice, setActiveModalInvoice] = useState<InvoiceRecord | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [printingId, setPrintingId] = useState<string | null>(null);
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -91,6 +86,44 @@ export const InvoicesPage: React.FC = () => {
       alert('Не удалось скачать PDF счета');
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handlePrintPdf = async (inv: InvoiceRecord) => {
+    setPrintingId(inv.id);
+    try {
+      const res = await apiClient.get(`/invoices/${inv.id}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.src = blobUrl;
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } catch (e) {
+            console.error('Print iframe error:', e);
+            window.open(blobUrl, '_blank');
+          }
+        }, 200);
+      };
+    } catch (err) {
+      console.error('Failed to print invoice PDF:', err);
+      alert('Не удалось распечатать счет');
+    } finally {
+      setPrintingId(null);
     }
   };
 
@@ -301,21 +334,23 @@ export const InvoicesPage: React.FC = () => {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => setActiveModalInvoice(inv)}
-                          title="Просмотреть счет"
-                          className="p-2 rounded-xl text-[#64748B] hover:text-[#0082FB] hover:bg-blue-50 transition-colors cursor-pointer"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => handleDownloadPdf(inv)}
-                          disabled={downloadingId === inv.id}
+                          disabled={downloadingId === inv.id || printingId === inv.id}
                           title="Скачать PDF счета"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
                         >
                           <Download className="w-3.5 h-3.5" />
-                          <span>PDF</span>
+                          <span>Скачать PDF</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePrintPdf(inv)}
+                          disabled={downloadingId === inv.id || printingId === inv.id}
+                          title="Распечатать счет"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-[#111827] rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-[#64748B]" />
+                          <span>Распечатать</span>
                         </button>
                       </div>
                     </td>
@@ -326,146 +361,6 @@ export const InvoicesPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Invoice Detail Modal */}
-      {activeModalInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6 shadow-2xl border border-gray-100">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center">
-                  <Receipt className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-[#111827]">
-                    Счет {activeModalInvoice.invoiceNumber}
-                  </h3>
-                  <p className="text-xs text-[#64748B]">
-                    от {new Date(activeModalInvoice.date).toLocaleDateString('ru-RU')} г.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveModalInvoice(null)}
-                className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-black flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Payer & Status info */}
-            <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-2xl text-xs">
-              <div>
-                <span className="text-[#64748B] font-medium block">Плательщик:</span>
-                <span className="font-extrabold text-[#111827] block text-sm">
-                  {activeModalInvoice.customerName}
-                </span>
-                <span className="text-[#64748B] font-mono">
-                  БИН/ИИН: {activeModalInvoice.customerBinIin}
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-[#64748B] font-medium block">Статус:</span>
-                <span className="inline-block mt-1 font-bold">
-                  {activeModalInvoice.status === 'PAID' ? (
-                    <span className="text-emerald-600">✓ Оплачен</span>
-                  ) : activeModalInvoice.status === 'CANCELLED' ? (
-                    <span className="text-gray-500">Аннулирован</span>
-                  ) : (
-                    <span className="text-amber-600">Ожидает оплаты</span>
-                  )}
-                </span>
-                {activeModalInvoice.orderNumber && (
-                  <div className="text-[11px] text-[#64748B] mt-1 font-mono">
-                    Заказ: {activeModalInvoice.orderNumber}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Items Table */}
-            <div>
-              <h4 className="text-xs font-extrabold text-[#111827] uppercase mb-2">
-                Позиции счета
-              </h4>
-              <div className="border border-gray-100 rounded-xl overflow-hidden text-xs">
-                <table className="w-full text-left">
-                  <thead className="bg-gray-50 text-[#64748B] font-bold">
-                    <tr>
-                      <th className="py-2 px-3">Услуга / Товар</th>
-                      <th className="py-2 px-3 text-center">Кол-во</th>
-                      <th className="py-2 px-3 text-right">Цена</th>
-                      <th className="py-2 px-3 text-right">Сумма</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium">
-                    {activeModalInvoice.items.map((it, idx) => (
-                      <tr key={idx}>
-                        <td className="py-2 px-3">{it.name}</td>
-                        <td className="py-2 px-3 text-center">
-                          {it.quantity} {it.unit}
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          {Number(it.price).toLocaleString('ru-RU')} ₸
-                        </td>
-                        <td className="py-2 px-3 text-right font-bold text-[#111827]">
-                          {Number(it.totalPrice).toLocaleString('ru-RU')} ₸
-                        </td>
-                      </tr>
-                    ))}
-                    <tr className="bg-gray-50/70 font-extrabold">
-                      <td colSpan={3} className="py-2.5 px-3 text-right">
-                        ИТОГО К ОПЛАТЕ:
-                      </td>
-                      <td className="py-2.5 px-3 text-right text-sm text-[#0082FB]">
-                        {Number(activeModalInvoice.totalAmount).toLocaleString('ru-RU')} ₸
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Bank details for payment */}
-            <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 text-xs space-y-1.5">
-              <div className="flex items-center gap-1.5 font-bold text-[#0082FB] mb-1">
-                <CreditCard className="w-4 h-4" />
-                <span>Банковские реквизиты для безналичной оплаты (РК)</span>
-              </div>
-              <p className="text-gray-700">
-                <strong>Получатель:</strong> ТОО "TANBOX MARKING SOLUTIONS" / ИП
-              </p>
-              <p className="text-gray-700">
-                <strong>ИИК:</strong> KZ000000000000000000 (АО "Kaspi Bank" / АО "Народный Банк Казахстана")
-              </p>
-              <p className="text-gray-700">
-                <strong>БИК:</strong> CASPKZKA, <strong>КБе:</strong> 17, <strong>Назначение платежа:</strong> Оплата по счету № {activeModalInvoice.invoiceNumber}
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setActiveModalInvoice(null)}
-                className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-              >
-                Закрыть
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDownloadPdf(activeModalInvoice)}
-                disabled={downloadingId === activeModalInvoice.id}
-                className="inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50"
-              >
-                <Download className="w-4 h-4" />
-                <span>Скачать официальный PDF</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -922,6 +922,82 @@ class TelegramService {
 
     await this.sendRaw(this.alertsChatId, msg);
   }
+
+  /**
+   * Отправка произвольного сообщения в любую группу или канал с кнопками
+   */
+  public async sendDirectMessage(params: {
+    chatId: string;
+    text: string;
+    buttonText?: string;
+    buttonUrl?: string;
+  }): Promise<{ success: boolean; message: string; messageId?: number }> {
+    if (!this.botToken) {
+      return { success: false, message: 'TELEGRAM_BOT_TOKEN не задан в переменных окружения' };
+    }
+    if (!params.chatId || !params.chatId.trim()) {
+      return { success: false, message: 'Укажите ID целевого чата или @username канала' };
+    }
+    if (!params.text || !params.text.trim()) {
+      return { success: false, message: 'Текст сообщения не может быть пустым' };
+    }
+
+    const keyboard =
+      params.buttonText && params.buttonUrl
+        ? {
+            inline_keyboard: [
+              [
+                {
+                  text: params.buttonText.trim(),
+                  url: params.buttonUrl.trim(),
+                },
+              ],
+            ],
+          }
+        : undefined;
+
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: params.chatId.trim(),
+          text: params.text.trim(),
+          parse_mode: 'HTML',
+          disable_web_page_preview: false,
+          reply_markup: keyboard,
+        }),
+      });
+
+      const data: any = await res.json();
+      if (data?.ok) {
+        return {
+          success: true,
+          message: 'Сообщение успешно отправлено в Telegram!',
+          messageId: data.result?.message_id,
+        };
+      } else {
+        return {
+          success: false,
+          message: `Ошибка Telegram API: ${data?.description || 'Неизвестная ошибка'}`,
+        };
+      }
+    } catch (err: any) {
+      return {
+        success: false,
+        message: `Ошибка отправки в Telegram: ${err.message}`,
+      };
+    }
+  }
+
+  public getChannelConfig() {
+    return {
+      botConfigured: Boolean(this.botToken),
+      leadsChatId: this.leadsChatId || '-5222464755',
+      alertsChatId: this.alertsChatId || '-5378607898',
+    };
+  }
 }
 
 export const telegram = new TelegramService();
+

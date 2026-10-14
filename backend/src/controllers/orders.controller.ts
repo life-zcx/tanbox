@@ -21,6 +21,9 @@ import { getDefaultStickerLayout } from '../utils/stickerLayout.utils';
 import { telegram } from '../services/telegram.service';
 import { MarkirovkaClient } from '../services/markirovkaClient.service';
 import { logger } from '../utils/logger';
+import { syncOrderInvoices } from './invoices.controller';
+import { syncOrderPositionsFromNkt, resolveNktProduct } from '../services/nktCatalog.service';
+import { getNktSettings } from '../services/nktSettings.service';
 export { getDefaultStickerLayout };
 
 function isSafeUrl(url?: string | null): boolean {
@@ -298,6 +301,9 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Automatically generate invoice record in DB for client order
+    syncOrderInvoices(newOrder.userId).catch(() => {});
+
     // Process turnkey automatic Markirovka emission if requested
     const { markirovkaMode, markirovkaAccountId, markirovkaGtin } = req.body;
     let createdMarkirovkaOrder: any = null;
@@ -311,6 +317,11 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         });
 
         if (markAccount) {
+          // Check ownership if caller is not an admin
+          if (req.user.role !== 'ADMIN' && markAccount.userId !== req.user.id) {
+            return res.status(403).json({ message: 'Доступ к указанному аккаунту маркировки запрещен' });
+          }
+
           const client = new MarkirovkaClient(markAccount);
 
           if (gtinPositions.length > 0) {
@@ -649,6 +660,13 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
           : {}),
       },
     });
+
+    if (paymentStatus) {
+      prisma.invoice.updateMany({
+        where: { orderId: existing.id },
+        data: { status: paymentStatus === 'PAID' ? 'PAID' : (paymentStatus === 'REFUNDED' ? 'CANCELLED' : 'PENDING') },
+      }).catch(() => {});
+    }
 
     return res.json({
       message: 'Статус заказа обновлен',
@@ -1855,16 +1873,41 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
         orderBy: { index: 'asc' },
         select: { index: true, code: true, gtin: true, serial: true },
       });
-      rows = dbItems.map((it) => ({
-        code: it.code,
-        barcode: orderBarcode || it.gtin || '',
-        index: String(it.index),
-        number: String(it.index),
-        total: String(dbCount),
-        gtin: it.gtin || '',
-        serial: it.serial || '',
-        orderNumber: existing.orderNumber,
-      }));
+      const orderPositions = await prisma.orderPosition.findMany({
+        where: { orderId: existing.id },
+      });
+      const posMap = new Map<string, any>();
+      for (const p of orderPositions) {
+        if (p.gtin) posMap.set(p.gtin.trim(), p);
+      }
+      const defaultPos = orderPositions[0];
+
+      rows = dbItems.map((it) => {
+        const itemGtin = (it.gtin || '').trim();
+        const pos = posMap.get(itemGtin) || defaultPos;
+        const custom = (pos?.customData as any) || {};
+
+        return {
+          code: it.code,
+          barcode: orderBarcode || it.gtin || '',
+          index: String(it.index),
+          number: String(it.index),
+          total: String(dbCount),
+          gtin: it.gtin || '',
+          serial: it.serial || '',
+          orderNumber: existing.orderNumber,
+          productName: pos?.name || '',
+          name: pos?.name || '',
+          article: pos?.article || '',
+          size: pos?.size || '',
+          color: pos?.color || '',
+          brand: custom.brand || existing.user?.companyName || '',
+          country: custom.country || '',
+          producer: custom.producer || '',
+          tnved: custom.tnved || '',
+          composition: custom.composition || '',
+        };
+      });
     } else if (existing.codesFileUrl) {
       const csvPath = path.resolve(process.cwd(), '.' + existing.codesFileUrl);
       if (fs.existsSync(csvPath)) {
@@ -3298,6 +3341,55 @@ export const updateOrderStickeringEstimate = async (req: AuthRequest, res: Respo
     return res.status(500).json({ message: 'Ошибка при сохранении сметы' });
   }
 };
+
+/**
+ * Synchronize all SKU positions of an order with Kazakhstan National Catalog (НКТ)
+ */
+export const syncOrderNkt = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    const { id } = req.params;
+    const existing = await prisma.order.findUnique({
+      where: { id },
+      select: { id: true, userId: true },
+    });
+    if (!existing) return res.status(404).json({ message: 'Заказ не найден' });
+    if (req.user.role !== 'ADMIN' && existing.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Доступ запрещен' });
+    }
+
+    const nktSettings = getNktSettings();
+    if (!nktSettings.enabled) {
+      return res.status(400).json({
+        success: false,
+        disabled: true,
+        message: 'Поиск и синхронизация с Национальным Каталогом (НКТ) временно отключены в настройках платформы.',
+      });
+    }
+
+    const force = Boolean(req.body?.force || req.query?.force === 'true');
+    const { order: updated, updatedCount, notFoundGtins } = await syncOrderPositionsFromNkt(existing.id, force);
+
+    let message = 'Данные позиций успешно синхронизированы из НКТ';
+    if (updatedCount === 0 && notFoundGtins.length > 0) {
+      message = `Товар с GTIN ${notFoundGtins.join(', ')} не найден в Национальном Каталоге (НКТ). Проверьте корректность штрихкода.`;
+    } else if (updatedCount > 0) {
+      message = `Успешно обновлено позиций из НКТ: ${updatedCount}`;
+    }
+
+    return res.json({
+      success: true,
+      message,
+      updatedCount,
+      notFoundGtins,
+      order: updated,
+    });
+  } catch (err: any) {
+    logger.error('Error syncing order from NKT:', err);
+    return res.status(500).json({ message: err.message || 'Ошибка синхронизации с НКТ' });
+  }
+};
+
 
 
 

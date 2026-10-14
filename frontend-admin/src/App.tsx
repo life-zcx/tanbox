@@ -22,6 +22,7 @@ import { AdminSystemTelegramPage } from './pages/system/AdminSystemTelegramPage'
 import { AdminSystemStoragePage } from './pages/system/AdminSystemStoragePage';
 import { AdminSystemPdfQueuePage } from './pages/system/AdminSystemPdfQueuePage';
 import { AdminMarkirovkaAccountsPage } from './pages/AdminMarkirovkaAccountsPage';
+import { AdminMarkirovkaNktPage } from './pages/AdminMarkirovkaNktPage';
 import { AdminMarkirovkaOrdersPage } from './pages/AdminMarkirovkaOrdersPage';
 import { AdminMarkirovkaUtilisationPage } from './pages/AdminMarkirovkaUtilisationPage';
 import { AdminMarkirovkaActivityPage } from './pages/AdminMarkirovkaActivityPage';
@@ -218,6 +219,14 @@ export const App: React.FC = () => {
             element={
               <ProtectedAdminLayout>
                 <AdminMarkirovkaAccountsPage />
+              </ProtectedAdminLayout>
+            }
+          />
+          <Route
+            path="/markirovka/nkt"
+            element={
+              <ProtectedAdminLayout>
+                <AdminMarkirovkaNktPage />
               </ProtectedAdminLayout>
             }
           />

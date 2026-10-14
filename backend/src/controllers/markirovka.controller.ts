@@ -11,6 +11,7 @@ import {
   validateAndSanitizeBaseUrl,
 } from '../services/markirovkaClient.service';
 import { logger } from '../utils/logger';
+import { getNktSettings, saveNktSettings, testNktApiConnection } from '../services/nktSettings.service';
 
 export async function getAccounts(req: Request, res: Response) {
   try {
@@ -452,13 +453,50 @@ export async function generateLabelsPdf(req: Request, res: Response) {
     const { codes, gtin, orderId, templateType = '58x40' } = req.body;
     let codesList: string[] = Array.isArray(codes) ? codes : [];
 
+    const user = (req as any).user;
+
     if (codesList.length === 0 && orderId) {
-      const markOrder = await prisma.markirovkaOrder.findUnique({ where: { id: String(orderId) } });
+      const cleanOrderId = String(orderId).trim();
+
+      // Authorization guard: non-admin users can only generate labels for their own orders
+      if (user?.role !== 'ADMIN') {
+        const userOrder = await prisma.order.findFirst({
+          where: {
+            OR: [{ id: cleanOrderId }, { orderNumber: cleanOrderId }],
+            userId: user?.id,
+          },
+          select: { id: true },
+        });
+
+        const userMarkOrder = !userOrder
+          ? await prisma.markirovkaOrder.findFirst({
+              where: {
+                id: cleanOrderId,
+                account: { userId: user?.id },
+              },
+              select: { id: true },
+            })
+          : null;
+
+        if (!userOrder && !userMarkOrder) {
+          return res.status(403).json({ message: 'Доступ к кодам данного заказа запрещен' });
+        }
+      }
+
+      const markOrder = await prisma.markirovkaOrder.findUnique({ where: { id: cleanOrderId } });
       if (markOrder?.codes && Array.isArray(markOrder.codes)) {
         codesList = markOrder.codes as string[];
       } else {
+        const orderRecord = await prisma.order.findFirst({
+          where: {
+            OR: [{ id: cleanOrderId }, { orderNumber: cleanOrderId }],
+          },
+          select: { id: true },
+        });
+        const resolvedId = orderRecord?.id || cleanOrderId;
+
         const codeItems = await prisma.orderCodeItem.findMany({
-          where: { orderId: String(orderId) },
+          where: { orderId: resolvedId },
           orderBy: { index: 'asc' },
           select: { code: true },
         });
@@ -546,4 +584,61 @@ export async function generateLabelsPdf(req: Request, res: Response) {
     return res.status(500).json({ message: error.message || 'Ошибка генерации PDF этикеток' });
   }
 }
+
+/**
+ * Get current National Catalog (НКТ) system settings
+ */
+export async function getNktSettingsHandler(req: Request, res: Response) {
+  try {
+    const settings = getNktSettings();
+    return res.json({
+      success: true,
+      settings,
+    });
+  } catch (err: any) {
+    logger.error('Failed to get NKT settings:', err);
+    return res.status(500).json({ message: 'Ошибка получения настроек НКТ' });
+  }
+}
+
+/**
+ * Update National Catalog (НКТ) system settings (enable/disable, apiKey, baseUrl)
+ */
+export async function updateNktSettingsHandler(req: Request, res: Response) {
+  try {
+    const user = (req as any).user;
+    const { enabled, apiKey, baseUrl } = req.body;
+    const updated = saveNktSettings(
+      {
+        enabled: typeof enabled === 'boolean' ? enabled : undefined,
+        apiKey: typeof apiKey === 'string' ? apiKey : undefined,
+        baseUrl: typeof baseUrl === 'string' ? baseUrl : undefined,
+      },
+      user?.email || 'admin'
+    );
+    return res.json({
+      success: true,
+      message: `Настройки Национального Каталога успешно сохранены. Поиск товаров: ${updated.enabled ? 'ВКЛЮЧЕН' : 'ОТКЛЮЧЕН'}.`,
+      settings: updated,
+    });
+  } catch (err: any) {
+    logger.error('Failed to update NKT settings:', err);
+    return res.status(500).json({ message: 'Ошибка обновления настроек НКТ' });
+  }
+}
+
+/**
+ * Test live connection to National Catalog API
+ */
+export async function testNktConnectionHandler(req: Request, res: Response) {
+  try {
+    const { apiKey, gtin } = req.body;
+    const result = await testNktApiConnection(apiKey, gtin);
+    return res.json(result);
+  } catch (err: any) {
+    logger.error('Failed to test NKT connection:', err);
+    return res.status(500).json({ success: false, message: err.message || 'Ошибка тестирования связи с НКТ' });
+  }
+}
+
 

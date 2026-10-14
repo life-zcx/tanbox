@@ -6,6 +6,106 @@ import { renderCustomInvoicePdf, generateCustomInvoiceHtml } from '../services/o
 import { logger } from '../utils/logger';
 
 /**
+ * Auto-synchronizes orders with Invoice records.
+ * If an order doesn't have an Invoice yet, it creates one so that clients see invoices for all their orders.
+ */
+export async function syncOrderInvoices(userId?: string) {
+  try {
+    const orders = await prisma.order.findMany({
+      where: {
+        ...(userId ? { userId } : {}),
+      },
+      include: {
+        user: true,
+        invoices: true,
+      },
+    });
+
+    for (const order of orders) {
+      if (order.invoices.length === 0) {
+        const numPart = String(order.orderNumber).replace(/\D/g, '') || '0001';
+        const invoiceNumber = `СЧ-${numPart.padStart(4, '0')}`;
+
+        // Ensure uniqueness
+        const existingByNum = await prisma.invoice.findFirst({
+          where: { invoiceNumber },
+        });
+        const finalNumber = existingByNum ? `СЧ-${order.orderNumber}` : invoiceNumber;
+
+        const tariffLabel = order.tariffType === 'DIGITAL'
+          ? 'Цифровой'
+          : order.tariffType === 'PRINT'
+          ? 'Печать'
+          : order.tariffType === 'STANDARD'
+          ? 'Стандарт'
+          : order.tariffType === 'PRO'
+          ? 'Про'
+          : order.tariffType;
+
+        const itemTitle = `Услуги маркировки и генерации кодов Data Matrix (${order.category}) — Тариф «${tariffLabel}»`;
+
+        const invoiceStatus: InvoiceStatus =
+          order.paymentStatus === 'PAID'
+            ? 'PAID'
+            : order.status === 'CANCELLED'
+            ? 'CANCELLED'
+            : 'PENDING';
+
+        await prisma.invoice.create({
+          data: {
+            invoiceNumber: finalNumber,
+            date: order.createdAt,
+            status: invoiceStatus,
+            userId: order.userId,
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            customerName: order.user?.companyName || 'Клиент',
+            customerBinIin: order.user?.binIin || '—',
+            customerAddress: order.warehouseAddress || 'г. Алматы',
+            customerPhone: order.user?.phone || null,
+            totalAmount: order.totalPrice,
+            notes: order.notes || null,
+            items: {
+              create: [
+                {
+                  index: 1,
+                  name: itemTitle,
+                  unit: 'шт.',
+                  quantity: order.itemsCount,
+                  price: order.pricePerItem,
+                  totalPrice: order.totalPrice,
+                },
+              ],
+            },
+          },
+        });
+      } else {
+        // Sync invoice status with order paymentStatus if changed
+        const primaryInvoice = order.invoices[0];
+        const targetStatus: InvoiceStatus =
+          order.paymentStatus === 'PAID'
+            ? 'PAID'
+            : order.status === 'CANCELLED'
+            ? 'CANCELLED'
+            : primaryInvoice.status;
+
+        if (primaryInvoice.status !== targetStatus || Number(primaryInvoice.totalAmount) !== Number(order.totalPrice)) {
+          await prisma.invoice.update({
+            where: { id: primaryInvoice.id },
+            data: {
+              status: targetStatus,
+              totalAmount: order.totalPrice,
+            },
+          });
+        }
+      }
+    }
+  } catch (syncErr) {
+    logger.warn(`Failed to auto-sync order invoices: ${syncErr}`);
+  }
+}
+
+/**
  * GET /api/invoices
  * Lists invoices. Admins get all (with filters); Clients get only their own.
  */
@@ -15,6 +115,9 @@ export async function getInvoices(req: AuthRequest, res: Response) {
     if (!user) {
       return res.status(401).json({ message: 'Не авторизован' });
     }
+
+    // Auto-sync missing invoices for user's orders before returning
+    await syncOrderInvoices(user.role === 'ADMIN' ? undefined : user.id);
 
     const { status, search, limit = '100', offset = '0' } = req.query as {
       status?: string;
@@ -183,16 +286,8 @@ export async function createInvoice(req: AuthRequest, res: Response) {
     // Generate sequence number if not provided
     let invoiceNumber = (providedNumber || '').trim();
     if (!invoiceNumber) {
-      const currentYear = new Date().getFullYear();
-      const countThisYear = await prisma.invoice.count({
-        where: {
-          date: {
-            gte: new Date(`${currentYear}-01-01`),
-            lte: new Date(`${currentYear}-12-31T23:59:59.999Z`),
-          },
-        },
-      });
-      invoiceNumber = `СЧ-${currentYear}-${String(countThisYear + 1).padStart(4, '0')}`;
+      const totalCount = await prisma.invoice.count();
+      invoiceNumber = `СЧ-${String(totalCount + 1).padStart(4, '0')}`;
     }
 
     // Calculate item totals

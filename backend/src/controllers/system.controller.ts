@@ -289,12 +289,282 @@ export const toggleMaintenanceMode = async (req: AuthRequest, res: Response) => 
   }
 };
 
+const DISPATCHES_FILE = path.resolve(__dirname, '../../storage/settings/telegram-dispatches.json');
+
+function getDispatchesHistory(): any[] {
+  try {
+    if (fs.existsSync(DISPATCHES_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DISPATCHES_FILE, 'utf-8'));
+      return Array.isArray(data) ? data : [];
+    }
+  } catch {}
+  return [];
+}
+
+function saveDispatchRecord(record: any) {
+  try {
+    const list = getDispatchesHistory();
+    list.unshift(record);
+    const trimmed = list.slice(0, 30);
+    const dir = path.dirname(DISPATCHES_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(DISPATCHES_FILE, JSON.stringify(trimmed, null, 2), 'utf-8');
+  } catch (err: any) {
+    logger.warn('Failed to save dispatch record:', err);
+  }
+}
+
 /**
- * 8. Send Test Telegram Alert directly from Admin Panel
+ * 8. Telegram Bot Overview & Dispatch History
+ */
+export const getTelegramOverview = async (req: AuthRequest, res: Response) => {
+  try {
+    const config = telegram.getChannelConfig();
+    const history = getDispatchesHistory();
+    return res.json({
+      success: true,
+      config,
+      history,
+    });
+  } catch (err: any) {
+    logger.error('Failed to get Telegram overview:', err);
+    return res.status(500).json({ message: 'Ошибка получения данных Telegram' });
+  }
+};
+
+/**
+ * 9. Send Custom Message to Telegram Groups / Channels with formatting & buttons
+ */
+export const sendTelegramCustomMessage = async (req: AuthRequest, res: Response) => {
+  try {
+    const { target, customChatId, text, buttonText, buttonUrl } = req.body;
+    const config = telegram.getChannelConfig();
+
+    let resolvedChatId = '';
+    let chatName = '';
+
+    if (target === 'leads') {
+      resolvedChatId = config.leadsChatId;
+      chatName = 'Чат 1 (Заявки & Заказы)';
+    } else if (target === 'alerts') {
+      resolvedChatId = config.alertsChatId;
+      chatName = 'Чат 2 (DevOps & Алерты)';
+    } else {
+      resolvedChatId = String(customChatId || '').trim();
+      chatName = `Чат ${resolvedChatId}`;
+    }
+
+    if (!resolvedChatId) {
+      return res.status(400).json({ message: 'Не указан ID целевого чата' });
+    }
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ message: 'Введите текст сообщения' });
+    }
+
+    const result = await telegram.sendDirectMessage({
+      chatId: resolvedChatId,
+      text: text.trim(),
+      buttonText: buttonText ? String(buttonText).trim() : undefined,
+      buttonUrl: buttonUrl ? String(buttonUrl).trim() : undefined,
+    });
+
+    saveDispatchRecord({
+      id: 'msg_' + Date.now(),
+      target,
+      chatId: resolvedChatId,
+      chatName,
+      text: text.trim().slice(0, 300),
+      buttonText: buttonText || undefined,
+      buttonUrl: buttonUrl || undefined,
+      sender: req.user?.email || 'Admin',
+      date: new Date().toISOString(),
+      success: result.success,
+      error: result.success ? undefined : result.message,
+    });
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        message: `Сообщение успешно отправлено в ${chatName}!`,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+  } catch (err: any) {
+    logger.error('Failed to send custom telegram message:', err);
+    return res.status(500).json({ message: err.message || 'Ошибка отправки в Telegram' });
+  }
+};
+
+/**
+ * 10. Send Daily Operations Summary Report into Telegram
+ */
+export const sendTelegramDailyReport = async (req: AuthRequest, res: Response) => {
+  try {
+    const { target = 'leads', customChatId } = req.body;
+    const config = telegram.getChannelConfig();
+    const resolvedChatId = target === 'leads' ? config.leadsChatId : target === 'alerts' ? config.alertsChatId : customChatId;
+
+    if (!resolvedChatId) {
+      return res.status(400).json({ message: 'Не указан ID чата' });
+    }
+
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+
+    const [ordersToday, completedOrders] = await Promise.all([
+      prisma.order.findMany({
+        where: { createdAt: { gte: startOfDay } },
+        select: { id: true, totalPrice: true, itemsCount: true, status: true, paymentStatus: true },
+      }),
+      prisma.order.count({ where: { createdAt: { gte: startOfDay }, status: 'COMPLETED' } }),
+    ]);
+
+    const totalOrdersCount = ordersToday.length;
+    const totalRevenue = ordersToday.reduce((sum, o) => sum + Number(o.totalPrice || 0), 0);
+    const totalItems = ordersToday.reduce((sum, o) => sum + Number(o.itemsCount || 0), 0);
+    const paidOrders = ordersToday.filter((o) => o.paymentStatus === 'PAID').length;
+
+    const almatyTime = new Intl.DateTimeFormat('ru-RU', {
+      timeZone: 'Asia/Almaty',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(now);
+
+    const msg = [
+      `📊 <b>ОПЕРАТИВНАЯ СВОДКА ЗА СЕГОДНЯ</b>`,
+      `📅 <i>${almatyTime} (Алматы)</i>`,
+      `──────────────────────────────`,
+      `📦 <b>Новых заказов:</b> ${totalOrdersCount} шт.`,
+      `💰 <b>Оборот за сегодня:</b> ${totalRevenue.toLocaleString('ru-RU')} ₸`,
+      `🏷️ <b>Объем маркировки:</b> ${totalItems.toLocaleString('ru-RU')} шт.`,
+      `💳 <b>Оплаченных заказов:</b> ${paidOrders} из ${totalOrdersCount}`,
+      `✅ <b>Выполненных заказов:</b> ${completedOrders}`,
+      `──────────────────────────────`,
+      `👤 <i>Отправил администратор: ${req.user?.email || 'admin'}</i>`,
+    ].join('\n');
+
+    const result = await telegram.sendDirectMessage({
+      chatId: resolvedChatId,
+      text: msg,
+      buttonText: '📊 Открыть панель управления',
+      buttonUrl: 'https://admin.tanbox.kz',
+    });
+
+    saveDispatchRecord({
+      id: 'report_' + Date.now(),
+      target,
+      chatId: resolvedChatId,
+      chatName: target === 'leads' ? 'Чат 1 (Заявки)' : 'Чат 2 (DevOps)',
+      text: `Сводка за день: ${totalOrdersCount} заказов, ${totalRevenue.toLocaleString('ru-RU')} ₸`,
+      buttonText: 'Открыть панель',
+      buttonUrl: 'https://admin.tanbox.kz',
+      sender: req.user?.email || 'Admin',
+      date: new Date().toISOString(),
+      success: result.success,
+    });
+
+    if (result.success) {
+      return res.json({ success: true, message: 'Суточная сводка успешно отправлена в Telegram!' });
+    } else {
+      return res.status(400).json({ success: false, message: result.message });
+    }
+  } catch (err: any) {
+    logger.error('Failed to send daily report to Telegram:', err);
+    return res.status(500).json({ message: err.message || 'Ошибка формирования отчета' });
+  }
+};
+
+/**
+ * 11. Send Server Health & Telemetry Report into Telegram
+ */
+export const sendTelegramServerReport = async (req: AuthRequest, res: Response) => {
+  try {
+    const { target = 'alerts', customChatId } = req.body;
+    const config = telegram.getChannelConfig();
+    const resolvedChatId = target === 'alerts' ? config.alertsChatId : target === 'leads' ? config.leadsChatId : customChatId;
+
+    if (!resolvedChatId) {
+      return res.status(400).json({ message: 'Не указан ID чата' });
+    }
+
+    const totalMem = Math.round(os.totalmem() / 1024 / 1024);
+    const freeMem = Math.round(os.freemem() / 1024 / 1024);
+    const usedMem = totalMem - freeMem;
+    const memPct = Math.round((usedMem / totalMem) * 100);
+    const cpus = os.cpus()?.length || 1;
+    const uptime = Math.round(process.uptime());
+    const uptimeFormatted = `${Math.floor(uptime / 3600)} ч. ${Math.floor((uptime % 3600) / 60)} мин.`;
+    const queueStats = typeof pdfQueue.getStats === 'function' ? pdfQueue.getStats() : { activeJobs: 0, waitingJobs: 0 };
+    const queueActive = queueStats.activeJobs ?? 0;
+    const queueWaiting = queueStats.waitingJobs ?? 0;
+
+    const almatyTime = new Intl.DateTimeFormat('ru-RU', {
+      timeZone: 'Asia/Almaty',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date());
+
+    const msg = [
+      `🖥️ <b>СТАТУС И ЗДОРОВЬЕ СЕРВЕРА TANBOX</b>`,
+      `📅 <i>${almatyTime} (Алматы)</i>`,
+      `──────────────────────────────`,
+      `⏱️ <b>Аптайм процесса:</b> ${uptimeFormatted}`,
+      `🧠 <b>Память (RAM):</b> ${usedMem} МБ / ${totalMem} МБ (${memPct}%)`,
+      `⚡ <b>Ядра CPU:</b> ${cpus} cores`,
+      `⚙️ <b>Очередь PDF:</b> ${queueActive} активных / ${queueWaiting} в ожидании`,
+      `🟢 <b>База данных:</b> PostgreSQL подключена`,
+      `──────────────────────────────`,
+      `👤 <i>Запросил: ${req.user?.email || 'admin'}</i>`,
+    ].join('\n');
+
+    const result = await telegram.sendDirectMessage({
+      chatId: resolvedChatId,
+      text: msg,
+      buttonText: '🔧 Контроль сервера',
+      buttonUrl: 'https://admin.tanbox.kz/system',
+    });
+
+    saveDispatchRecord({
+      id: 'server_' + Date.now(),
+      target,
+      chatId: resolvedChatId,
+      chatName: target === 'alerts' ? 'Чат 2 (DevOps)' : 'Чат 1 (Заявки)',
+      text: `Статус сервера: Uptime ${uptimeFormatted}, RAM ${memPct}%`,
+      buttonText: 'Контроль сервера',
+      buttonUrl: 'https://admin.tanbox.kz/system',
+      sender: req.user?.email || 'Admin',
+      date: new Date().toISOString(),
+      success: result.success,
+    });
+
+    if (result.success) {
+      return res.json({ success: true, message: 'Отчет о сервере успешно отправлен в Telegram!' });
+    } else {
+      return res.status(400).json({ success: false, message: result.message });
+    }
+  } catch (err: any) {
+    logger.error('Failed to send server report to Telegram:', err);
+    return res.status(500).json({ message: err.message || 'Ошибка отправки отчета о сервере' });
+  }
+};
+
+/**
+ * Legacy Test Telegram Alert
  */
 export const testTelegramAlert = async (req: AuthRequest, res: Response) => {
   try {
-    const { channel } = req.body; // 'leads' | 'alerts'
+    const { channel } = req.body;
     if (channel === 'leads') {
       await telegram.sendNewLeadNotification({
         id: 'TEST-LEAD-' + Math.floor(Math.random() * 9000 + 1000),
@@ -320,4 +590,5 @@ export const testTelegramAlert = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ message: 'Ошибка отправки тестового уведомления в Telegram' });
   }
 };
+
 

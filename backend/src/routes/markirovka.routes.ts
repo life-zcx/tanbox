@@ -10,6 +10,9 @@ import {
   sandboxUtilisation,
   getRecentActivity,
   generateLabelsPdf,
+  getNktSettingsHandler,
+  updateNktSettingsHandler,
+  testNktConnectionHandler,
 } from '../controllers/markirovka.controller';
 import {
   getOperations,
@@ -41,7 +44,10 @@ router.delete('/accounts/:id', deleteAccount);
 router.post('/test-connection', testConnection);
 router.post('/generate-labels-pdf', generateLabelsPdf);
 
-// Party & National Catalog lookups
+// Party & National Catalog lookups & settings
+router.get('/nkt-settings', getNktSettingsHandler);
+router.put('/nkt-settings', requireAdmin, updateNktSettingsHandler);
+router.post('/nkt-test', requireAdmin, testNktConnectionHandler);
 router.get('/party/status', checkPartyStatus);
 router.get('/products/search-by-gtin', getProductByGtin);
 

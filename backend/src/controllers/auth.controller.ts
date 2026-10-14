@@ -5,12 +5,28 @@ import crypto from 'crypto';
 import { prisma } from '../config/db';
 import { env } from '../config/env';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { sendVerificationOtpEmail } from '../services/email.service';
+import { sendVerificationOtpEmail, sendPasswordResetOtpEmail } from '../services/email.service';
 import { logger } from '../utils/logger';
 
 // In-memory rate limiting / anti-abuse store
 const memoryCooldowns = new Map<string, number>();
 const memoryAttempts = new Map<string, number>();
+
+// Periodic cleanup: evict stale cooldowns/attempts and expired DB codes (every 10 minutes)
+setInterval(async () => {
+  const cutoff = Date.now() - 15 * 60 * 1000;
+  for (const [key, timestamp] of memoryCooldowns.entries()) {
+    if (timestamp < cutoff) {
+      memoryCooldowns.delete(key);
+      memoryAttempts.delete(key);
+    }
+  }
+  try {
+    await prisma.verificationCode.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+  } catch {}
+}, 10 * 60 * 1000);
 
 /**
  * STEP 1: Validate registration data, generate 6-digit OTP code, and send verification email
@@ -390,4 +406,136 @@ export const updateMe = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ message: 'Ошибка обновления профиля' });
   }
 };
+
+/**
+ * STEP 1 FORGOT PASSWORD: Send 6-digit OTP to user's verified email
+ */
+export const sendForgotPasswordCode = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Укажите email' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
+    if (!user) {
+      // Return success response to prevent email enumeration
+      return res.json({
+        success: true,
+        message: 'Если учетная запись с таким email существует, код для сброса пароля отправлен на почту.',
+        cooldownSeconds: 60,
+      });
+    }
+
+    const now = Date.now();
+    const lastSent = memoryCooldowns.get(cleanEmail);
+    if (lastSent && now - lastSent < 60 * 1000) {
+      const waitSec = Math.ceil((60 * 1000 - (now - lastSent)) / 1000);
+      return res.status(429).json({
+        message: `Код подтверждения уже был отправлен. Подождите ${waitSec} сек.`,
+        cooldownRemaining: waitSec,
+      });
+    }
+
+    const code = crypto.randomInt(100000, 999999).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+    await prisma.verificationCode.create({
+      data: {
+        email: cleanEmail,
+        code,
+        expiresAt,
+      },
+    });
+
+    memoryAttempts.delete(cleanEmail);
+    memoryCooldowns.set(cleanEmail, now);
+
+    await sendPasswordResetOtpEmail(cleanEmail, code);
+
+    return res.json({
+      success: true,
+      message: `Код для восстановления пароля отправлен на ${cleanEmail}`,
+      expiresInMinutes: 10,
+      cooldownSeconds: 60,
+    });
+  } catch (error: any) {
+    logger.error('sendForgotPasswordCode error:', error);
+    return res.status(500).json({ message: 'Ошибка при отправке кода сброса пароля' });
+  }
+};
+
+/**
+ * STEP 2 FORGOT PASSWORD: Validate OTP and set new password
+ */
+export const resetPasswordWithCode = async (req: Request, res: Response) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ message: 'Email, код подтверждения и новый пароль обязательны' });
+    }
+
+    if (String(newPassword).length < 8) {
+      return res.status(400).json({ message: 'Новый пароль должен содержать минимум 8 символов' });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const cleanCode = String(code).trim();
+
+    const attempts = memoryAttempts.get(cleanEmail) || 0;
+    if (attempts >= 5) {
+      await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+      memoryAttempts.delete(cleanEmail);
+      return res.status(429).json({
+        message: 'Превышено максимальное число неверных попыток. Код аннулирован. Запросите новый код.',
+      });
+    }
+
+    const tokenRecord = await prisma.verificationCode.findFirst({
+      where: { email: cleanEmail, code: cleanCode },
+    });
+
+    if (!tokenRecord) {
+      memoryAttempts.set(cleanEmail, attempts + 1);
+      const remaining = 5 - (attempts + 1);
+      return res.status(400).json({
+        message: `Неверный код подтверждения. Осталось попыток: ${remaining}`,
+      });
+    }
+
+    if (new Date() > tokenRecord.expiresAt) {
+      await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+      return res.status(400).json({
+        message: 'Срок действия кода подтверждения истек (10 минут). Запросите новый код.',
+      });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+
+    const hashedPassword = await bcrypt.hash(String(newPassword).trim(), 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+    memoryAttempts.delete(cleanEmail);
+    memoryCooldowns.delete(cleanEmail);
+
+    return res.json({
+      success: true,
+      message: 'Пароль успешно изменен. Теперь вы можете войти в систему с новым паролем.',
+    });
+  } catch (error: any) {
+    logger.error('resetPasswordWithCode error:', error);
+    return res.status(500).json({ message: 'Ошибка сервера при сбросе пароля' });
+  }
+};
+
 

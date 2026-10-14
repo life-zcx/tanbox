@@ -27,10 +27,20 @@ export async function createDatabaseBackup(): Promise<BackupItem> {
   const fileName = `tanbox_backup_${timestamp}.sql`;
   const targetPath = path.join(backupsDir, fileName);
 
-  const dbUser = process.env.POSTGRES_USER || 'tanbox_user';
-  const dbPassword = process.env.POSTGRES_PASSWORD || 'tanbox_pass_2026';
-  const dbName = process.env.POSTGRES_DB || 'tanbox_db';
-  const dbHost = process.env.POSTGRES_HOST || 'postgres';
+  let dbUser = process.env.POSTGRES_USER || 'tanbox_user';
+  let dbPassword = process.env.POSTGRES_PASSWORD || '';
+  let dbName = process.env.POSTGRES_DB || 'tanbox_db';
+  let dbHost = process.env.POSTGRES_HOST || 'postgres';
+
+  if (!dbPassword && process.env.DATABASE_URL) {
+    try {
+      const parsedUrl = new URL(process.env.DATABASE_URL);
+      if (parsedUrl.username) dbUser = parsedUrl.username;
+      if (parsedUrl.password) dbPassword = decodeURIComponent(parsedUrl.password);
+      if (parsedUrl.pathname) dbName = parsedUrl.pathname.replace(/^\//, '');
+      if (parsedUrl.hostname) dbHost = parsedUrl.hostname;
+    } catch {}
+  }
 
   const envWithPgPass = {
     ...process.env,
@@ -51,8 +61,17 @@ export async function createDatabaseBackup(): Promise<BackupItem> {
   try {
     await execPromise(command, { env: envWithPgPass });
   } catch (cmdErr: any) {
-    logger.warn(`Primary pg_dump command failed (${cmdErr.message}), trying fallback...`);
-    await execPromise(`docker exec tanbox_postgres pg_dump -U ${safeUser} -d ${safeName} > "${targetPath}"`, { env: envWithPgPass });
+    // Only attempt docker exec fallback if not already on win32 and if primary command was direct pg_dump
+    if (process.platform !== 'win32') {
+      try {
+        logger.warn(`Primary pg_dump command failed (${cmdErr.message}), trying docker exec fallback...`);
+        await execPromise(`docker exec tanbox_postgres pg_dump -U ${safeUser} -d ${safeName} > "${targetPath}"`, { env: envWithPgPass });
+      } catch (fallbackErr: any) {
+        throw new Error(`Ошибка создания дампа БД: ${cmdErr.message}`);
+      }
+    } else {
+      throw cmdErr;
+    }
   }
 
   const stat = await fs.promises.stat(targetPath);
