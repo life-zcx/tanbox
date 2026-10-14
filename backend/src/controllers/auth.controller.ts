@@ -1,11 +1,21 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { prisma } from '../config/db';
 import { env } from '../config/env';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { sendVerificationOtpEmail } from '../services/email.service';
+import { logger } from '../utils/logger';
 
-export const register = async (req: Request, res: Response) => {
+// In-memory rate limiting / anti-abuse store
+const memoryCooldowns = new Map<string, number>();
+const memoryAttempts = new Map<string, number>();
+
+/**
+ * STEP 1: Validate registration data, generate 6-digit OTP code, and send verification email
+ */
+export const sendRegisterCode = async (req: Request, res: Response) => {
   try {
     const { email, password, companyName, binIin, phone, consent } = req.body;
 
@@ -17,6 +27,11 @@ export const register = async (req: Request, res: Response) => {
 
     if (!email || !password || !companyName || !binIin || !phone) {
       return res.status(400).json({ message: 'Все поля обязательны для заполнения' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Укажите корректный адрес электронной почты' });
     }
 
     if (password.length < 8) {
@@ -36,7 +51,7 @@ export const register = async (req: Request, res: Response) => {
     const cleanEmail = email.trim().toLowerCase();
     const phoneLast10 = phoneDigits.slice(-10);
 
-    // Безопасная проверка на существование учетной записи по email, БИН/ИИН или телефону
+    // Check if user already exists by email, BIN or phone
     const existing = await prisma.user.findFirst({
       where: {
         OR: [
@@ -68,6 +83,125 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
+    // Anti-spam 60-second cooldown per email
+    const now = Date.now();
+    const lastSent = memoryCooldowns.get(cleanEmail);
+    if (lastSent && now - lastSent < 60 * 1000) {
+      const waitSec = Math.ceil((60 * 1000 - (now - lastSent)) / 1000);
+      return res.status(429).json({
+        message: `Код подтверждения уже был отправлен. Пожалуйста, подождите ${waitSec} сек. перед повторной отправкой.`,
+        cooldownRemaining: waitSec,
+      });
+    }
+
+    // Generate cryptographic 6-digit code
+    const code = crypto.randomInt(100000, 999999).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store in database
+    await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+    await prisma.verificationCode.create({
+      data: {
+        email: cleanEmail,
+        code,
+        expiresAt,
+      },
+    });
+
+    // Reset attempt counter on fresh code
+    memoryAttempts.delete(cleanEmail);
+    memoryCooldowns.set(cleanEmail, now);
+
+    // Send email via SMTP
+    await sendVerificationOtpEmail(cleanEmail, code);
+
+    return res.json({
+      success: true,
+      message: `Код подтверждения успешно отправлен на ${cleanEmail}`,
+      expiresInMinutes: 10,
+      cooldownSeconds: 60,
+    });
+  } catch (error: any) {
+    logger.error('sendRegisterCode error:', error);
+    return res.status(500).json({ message: 'Ошибка при отправке кода подтверждения на почту' });
+  }
+};
+
+/**
+ * STEP 2: Verify 6-digit OTP code and create User account
+ */
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { email, password, companyName, binIin, phone, consent, code } = req.body;
+
+    if (consent === false) {
+      return res.status(400).json({
+        message: 'Регистрация невозможна без согласия на сбор и обработку персональных данных (Закон РК № 94-V)',
+      });
+    }
+
+    if (!email || !password || !companyName || !binIin || !phone) {
+      return res.status(400).json({ message: 'Все поля обязательны для заполнения' });
+    }
+
+    if (!code) {
+      return res.status(400).json({ message: 'Пожалуйста, введите 6-значный код подтверждения из письма' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = String(code).trim();
+
+    // 1. Check anti-bruteforce attempts
+    const attempts = memoryAttempts.get(cleanEmail) || 0;
+    if (attempts >= 5) {
+      await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+      memoryAttempts.delete(cleanEmail);
+      return res.status(429).json({
+        message: 'Превышено максимальное число неверных попыток. Код аннулирован. Запросите новый код.',
+      });
+    }
+
+    // 2. Validate OTP code in DB
+    const tokenRecord = await prisma.verificationCode.findFirst({
+      where: { email: cleanEmail, code: cleanCode },
+    });
+
+    if (!tokenRecord) {
+      memoryAttempts.set(cleanEmail, attempts + 1);
+      const remaining = 5 - (attempts + 1);
+      return res.status(400).json({
+        message: `Неверный код подтверждения. Осталось попыток: ${remaining}`,
+      });
+    }
+
+    // 3. Check expiration
+    if (new Date() > tokenRecord.expiresAt) {
+      await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+      return res.status(400).json({
+        message: 'Срок действия кода подтверждения истек (10 минут). Пожалуйста, запросите новый код.',
+      });
+    }
+
+    const binDigits = binIin.replace(/\D/g, '');
+    const phoneDigits = phone.replace(/\D/g, '');
+
+    // Check unique constraints one more time
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: { equals: cleanEmail, mode: 'insensitive' } },
+          { binIin: binDigits },
+        ],
+      },
+    });
+
+    if (existing) {
+      await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+      return res.status(409).json({
+        message: 'Пользователь или организация с такими данными уже зарегистрирована. Выполните вход.',
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await prisma.user.create({
@@ -80,6 +214,11 @@ export const register = async (req: Request, res: Response) => {
         role: 'CLIENT',
       },
     });
+
+    // Cleanup used verification code and counters
+    await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+    memoryAttempts.delete(cleanEmail);
+    memoryCooldowns.delete(cleanEmail);
 
     const token = jwt.sign(
       {
@@ -94,7 +233,7 @@ export const register = async (req: Request, res: Response) => {
     );
 
     return res.status(201).json({
-      message: 'Регистрация прошла успешно',
+      message: 'Регистрация успешно завершена',
       token,
       user: {
         id: newUser.id,
@@ -106,7 +245,7 @@ export const register = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error('Register error:', error);
+    logger.error('Register error:', error);
     return res.status(500).json({ message: 'Ошибка сервера при регистрации' });
   }
 };

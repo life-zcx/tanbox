@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Building2, Phone, Hash, AlertCircle, Eye, EyeOff, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Building2, Phone, Hash, AlertCircle, Eye, EyeOff, CheckCircle2, XCircle, ArrowRight, ArrowLeft, RefreshCw, KeyRound, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { apiClient } from '../api/client';
 
 export const RegisterPage: React.FC = () => {
   const { user, loading: authLoading, register } = useAuth();
@@ -12,6 +13,12 @@ export const RegisterPage: React.FC = () => {
       navigate('/dashboard', { replace: true });
     }
   }, [user, authLoading, navigate]);
+
+  const [step, setStep] = useState<'FORM' | 'OTP'>('FORM');
+  const [otpCode, setOtpCode] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+  const [otpSuccessMsg, setOtpSuccessMsg] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     companyName: '',
@@ -39,6 +46,15 @@ export const RegisterPage: React.FC = () => {
 
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Countdown timer for resending OTP
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   if (authLoading) {
     return (
@@ -181,10 +197,11 @@ export const RegisterPage: React.FC = () => {
     return true;
   };
 
-  // --- Form Submit ---
-  const handleSubmit = async (e: React.FormEvent) => {
+  // --- Step 1 Submit: Send OTP Email ---
+  const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError(null);
+    setOtpSuccessMsg(null);
 
     const isCompanyValid = validateCompanyName(form.companyName);
     const isBinValid = validateBinIin(form.binIin);
@@ -209,7 +226,7 @@ export const RegisterPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await register({
+      await apiClient.post('/auth/send-register-code', {
         companyName: form.companyName.trim(),
         binIin: form.binIin.trim(),
         phone: form.phone.trim(),
@@ -217,10 +234,13 @@ export const RegisterPage: React.FC = () => {
         password: form.password,
         consent: true,
       });
-      navigate('/dashboard');
+      setStep('OTP');
+      setCooldown(60);
+      setOtpCode('');
+      setGeneralError(null);
     } catch (err: any) {
       const respData = err.response?.data;
-      const msg = respData?.message || 'Ошибка регистрации организации';
+      const msg = respData?.message || 'Ошибка отправки кода подтверждения';
       setGeneralError(msg);
 
       if (respData?.code === 'BIN_EXISTS') {
@@ -235,41 +255,100 @@ export const RegisterPage: React.FC = () => {
     }
   };
 
+  // --- Resend OTP Code ---
+  const handleResendCode = async () => {
+    if (cooldown > 0 || resending) return;
+    setResending(true);
+    setGeneralError(null);
+    setOtpSuccessMsg(null);
+    try {
+      await apiClient.post('/auth/send-register-code', {
+        companyName: form.companyName.trim(),
+        binIin: form.binIin.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        consent: true,
+      });
+      setCooldown(60);
+      setOtpSuccessMsg('Новый код отправлен на вашу почту');
+    } catch (err: any) {
+      const respData = err.response?.data;
+      setGeneralError(respData?.message || 'Не удалось повторно отправить код');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // --- Step 2 Submit: Verify OTP & Complete Registration ---
+  const handleVerifyOtp = async (codeToVerify?: string) => {
+    const code = (codeToVerify ?? otpCode).trim();
+    if (!code || code.length !== 6) {
+      setGeneralError('Введите 6-значный код подтверждения');
+      return;
+    }
+
+    setLoading(true);
+    setGeneralError(null);
+    try {
+      await register({
+        companyName: form.companyName.trim(),
+        binIin: form.binIin.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        consent: true,
+        code,
+      });
+      navigate('/dashboard');
+    } catch (err: any) {
+      const respData = err.response?.data;
+      const msg = respData?.message || 'Ошибка подтверждения кода';
+      setGeneralError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white border border-gray-100 rounded-3xl shadow-xl max-w-2xl w-full p-5 sm:p-7 space-y-4">
+      <div className={`bg-white border border-gray-100 rounded-3xl shadow-xl w-full p-5 sm:p-7 space-y-4 transition-all duration-200 ${
+        step === 'OTP' ? 'max-w-md' : 'max-w-2xl'
+      }`}>
         
-        {/* Header */}
-        <div className="text-center space-y-1">
-          <img src="/tanbox-dark.svg" alt="tanbox" className="h-7 w-auto mx-auto mb-1" />
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight">Регистрация компании</h2>
-          <p className="text-xs text-[#64748B]">Введите данные вашей организации для создания аккаунта</p>
-        </div>
-
-        {/* General Error Alert */}
-        {generalError && (
-          <div className="bg-[#F4F6F9] border border-gray-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-150">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-white border border-gray-200/80 text-[#0082FB] flex items-center justify-center shrink-0 shadow-2xs">
-                <AlertCircle className="w-4 h-4 text-[#0082FB]" />
-              </div>
-              <p className="text-xs font-bold text-[#111827] leading-snug">
-                {generalError}
-              </p>
+        {step === 'FORM' ? (
+          <>
+            {/* Header */}
+            <div className="text-center space-y-1">
+              <img src="/tanbox-dark.svg" alt="tanbox" className="h-7 w-auto mx-auto mb-1" />
+              <h2 className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight">Регистрация компании</h2>
+              <p className="text-xs text-[#64748B]">Введите данные вашей организации для создания аккаунта</p>
             </div>
-            {(generalError.includes('зарегистрирован') || generalError.includes('вход')) && (
-              <Link
-                to="/login"
-                className="inline-flex items-center justify-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all active:scale-95 shrink-0 shadow-xs cursor-pointer"
-              >
-                <span>Войти в аккаунт</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            )}
-          </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-3.5" noValidate>
+            {/* General Error Alert */}
+            {generalError && (
+              <div className="bg-[#F4F6F9] border border-gray-200/90 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-150">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-white border border-gray-200/80 text-[#0082FB] flex items-center justify-center shrink-0 shadow-2xs">
+                    <AlertCircle className="w-4 h-4 text-[#0082FB]" />
+                  </div>
+                  <p className="text-xs font-bold text-[#111827] leading-snug">
+                    {generalError}
+                  </p>
+                </div>
+                {(generalError.includes('зарегистрирован') || generalError.includes('вход')) && (
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center justify-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all active:scale-95 shrink-0 shadow-xs cursor-pointer"
+                  >
+                    <span>Войти в аккаунт</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                )}
+              </div>
+            )}
+
+            <form onSubmit={handleSendCode} className="space-y-3.5" noValidate>
           
           {/* 2-Column Grid for fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
@@ -562,9 +641,19 @@ export const RegisterPage: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs sm:text-sm py-3 rounded-xl transition-all active:scale-95 shadow-md shadow-[#0082FB]/25 disabled:opacity-50 cursor-pointer"
+            className="w-full bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs sm:text-sm py-3 rounded-xl transition-all active:scale-95 shadow-md shadow-[#0082FB]/25 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
           >
-            {loading ? 'Создание аккаунта...' : 'Зарегистрировать компанию'}
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Отправка кода на e-mail...</span>
+              </>
+            ) : (
+              <>
+                <span>Зарегистрировать компанию</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 
@@ -573,6 +662,134 @@ export const RegisterPage: React.FC = () => {
             Уже есть аккаунт? Войти в кабинет
           </Link>
         </div>
+      </>
+    ) : (
+      /* STEP 2: OTP Verification Screen */
+      <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        {/* Header with Official Logo */}
+        <div className="text-center space-y-1">
+          <img src="/tanbox-dark.svg" alt="tanbox" className="h-7 w-auto mx-auto mb-2" />
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight">Подтверждение почты</h2>
+          <p className="text-xs text-[#64748B]">
+            Мы отправили 6-значный код подтверждения на e-mail:
+          </p>
+          <div className="text-xs font-bold text-[#111827] bg-[#F4F6F9] px-3 py-1 rounded-lg inline-block border border-gray-200/80 mt-0.5">
+            {form.email}
+          </div>
+          <p className="text-[11px] text-[#64748B] pt-1">
+            Если письмо не пришло во входящие, пожалуйста, проверьте папку <strong>«Спам»</strong>.
+          </p>
+        </div>
+
+        {/* Success Message Banner */}
+        {otpSuccessMsg && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-2.5 text-xs font-semibold text-emerald-800 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{otpSuccessMsg}</span>
+          </div>
+        )}
+
+        {/* General Error Banner */}
+        {generalError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2.5 text-xs font-semibold text-red-800 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+            <span>{generalError}</span>
+          </div>
+        )}
+
+        {/* OTP Form */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleVerifyOtp();
+          }}
+          className="space-y-3.5 pt-1"
+          noValidate
+        >
+          <div>
+            <label className="text-[11px] font-extrabold text-[#111827] uppercase tracking-wider block mb-1.5 text-center">
+              Код подтверждения (6 цифр) <span className="text-red-500">*</span>
+            </label>
+            <div className="relative max-w-xs mx-auto">
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setOtpCode(val);
+                  setGeneralError(null);
+                  if (val.length === 6) {
+                    handleVerifyOtp(val);
+                  }
+                }}
+                placeholder="••••••"
+                className="w-full text-center font-mono tracking-[0.4em] text-2xl font-bold text-[#111827] bg-[#F4F6F9] border border-gray-200/90 rounded-xl py-2.5 focus:outline-none focus:border-[#0082FB] transition-colors"
+              />
+            </div>
+            <p className="text-[11px] text-[#64748B] text-center mt-1.5">
+              Срок действия кода — 10 минут
+            </p>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading || otpCode.trim().length !== 6}
+            className="w-full bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs sm:text-sm py-3 rounded-xl transition-all active:scale-95 shadow-md shadow-[#0082FB]/25 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Проверка кода...</span>
+              </>
+            ) : (
+              <span>Подтвердить код</span>
+            )}
+          </button>
+        </form>
+
+        {/* Actions: Resend & Edit Form */}
+        <div className="space-y-3 pt-3 text-center border-t border-gray-100">
+          <div>
+            {cooldown > 0 ? (
+              <p className="text-xs text-[#64748B]">
+                Отправить код повторно можно через{' '}
+                <span className="font-bold text-[#111827] font-mono">00:{cooldown.toString().padStart(2, '0')}</span>
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={handleResendCode}
+                disabled={resending}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0082FB] hover:text-[#0070DA] hover:underline cursor-pointer transition-colors"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
+                <span>{resending ? 'Отправка...' : 'Отправить код повторно'}</span>
+              </button>
+            )}
+          </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  setStep('FORM');
+                  setGeneralError(null);
+                  setOtpSuccessMsg(null);
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#64748B] hover:text-[#111827] cursor-pointer transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Изменить данные или e-mail</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>
