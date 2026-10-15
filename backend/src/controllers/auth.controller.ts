@@ -268,7 +268,7 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password, code } = req.body;
+    const { email, password, code, isAdminPanel } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Укажите email и пароль' });
@@ -285,8 +285,9 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Неверный email или пароль' });
     }
 
-    // Two-Factor Authentication (2FA via Email OTP) for ADMIN role
-    if (user.role === 'ADMIN') {
+    // Two-Factor Authentication (2FA via Email OTP) for ADMIN role when entering Admin Panel
+    const isFromAdminPanel = isAdminPanel === true || req.headers['x-client-app'] === 'admin';
+    if (user.role === 'ADMIN' && isFromAdminPanel) {
       const now = Date.now();
       const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '—';
 

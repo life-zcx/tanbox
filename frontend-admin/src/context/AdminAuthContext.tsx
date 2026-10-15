@@ -42,7 +42,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const loginAdmin = async (email: string, password: string, code?: string) => {
-    const res = await apiClient.post('/auth/login', { email, password, code });
+    const res = await apiClient.post('/auth/login', { email, password, code, isAdminPanel: true });
     if (res.data.requireOtp) {
       return res.data;
     }
