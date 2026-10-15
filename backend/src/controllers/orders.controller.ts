@@ -1951,6 +1951,16 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // Safe memory ceiling: Single monolithic PDF generation is strictly capped at 2,000 labels.
+    if (!isSample && !isRoll && rows.length > 2000) {
+      return res.status(400).json({
+        message: `Генерация всей партии единым файлом ограничена до 2 000 этикеток (в заказе ${rows.length.toLocaleString()} шт.). Пожалуйста, скачивайте файл по рулонам (кнопка «Скачать по рулонам»).`,
+        isBatchOverLimit: true,
+        maxLimit: 2000,
+        totalItems: rows.length,
+      });
+    }
+
     // For large PDF rendering tasks (up to 150,000+ codes), extend socket timeout to 60 minutes
     req.setTimeout(3600000);
     res.setTimeout(3600000);
@@ -3072,6 +3082,16 @@ export const triggerAsyncOrderPdfGeneration = async (req: AuthRequest, res: Resp
     if (rows.length === 0) {
       return res.status(400).json({
         message: 'Невозможно запустить генерацию: к данному заказу ещё не прикреплены коды маркировки Data Matrix.',
+      });
+    }
+
+    // Safe memory ceiling: Single monolithic PDF generation is strictly capped at 2,000 labels.
+    if (rows.length > 2000) {
+      return res.status(400).json({
+        message: `Генерация единым PDF-файлом ограничена до 2 000 этикеток (в заказе ${rows.length.toLocaleString()} шт.). Пожалуйста, используйте выгрузку по рулонам (кнопка «Скачать по рулонам»).`,
+        isBatchOverLimit: true,
+        maxLimit: 2000,
+        totalItems: rows.length,
       });
     }
 

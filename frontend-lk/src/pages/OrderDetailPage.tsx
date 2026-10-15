@@ -692,6 +692,10 @@ export const OrderDetailPage: React.FC = () => {
       return;
     }
     if (!pdfStatus?.hasFullPdf) {
+      if (order.itemsCount > 2000) {
+        setShowRollModal(true);
+        return;
+      }
       handleTriggerAsyncGeneration();
       return;
     }
@@ -735,6 +739,11 @@ export const OrderDetailPage: React.FC = () => {
     if (!order) return;
     if (!canPrintBatch) {
       alert(printBlockReason || 'Печать партии заблокирована.');
+      return;
+    }
+    if (order.itemsCount > 2000) {
+      alert(`Генерация единым файлом ограничена до 2 000 этикеток (в заказе ${order.itemsCount.toLocaleString()} шт.). Пожалуйста, используйте выгрузку по рулонам.`);
+      setShowRollModal(true);
       return;
     }
     setTriggeringAsync(true);
@@ -1720,16 +1729,18 @@ export const OrderDetailPage: React.FC = () => {
                         type="button"
                         onClick={() => setShowRollModal(true)}
                         className={`inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 ${canPrintBatch
-                            ? 'bg-white hover:bg-gray-100 text-[#111827] border border-gray-200 cursor-pointer'
+                            ? order.itemsCount > 2000
+                              ? 'bg-[#0082FB] hover:bg-[#0070DA] text-white cursor-pointer active:scale-95'
+                              : 'bg-white hover:bg-gray-100 text-[#111827] border border-gray-200 cursor-pointer'
                             : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-pointer'
                           }`}
                         title={canPrintBatch ? 'Разбить тираж на рулоны (по 500, 1000 или 2000 этикеток) для термопринтера' : printBlockReason}
                       >
-                        <Layers className={`w-3.5 h-3.5 ${canPrintBatch ? 'text-[#0082FB]' : 'text-slate-400'}`} />
-                        Скачать по рулонам
+                        <Layers className={`w-3.5 h-3.5 ${order.itemsCount > 2000 && canPrintBatch ? 'text-white' : canPrintBatch ? 'text-[#0082FB]' : 'text-slate-400'}`} />
+                        Скачать по рулонам {order.itemsCount > 2000 ? '(по 1 000 шт.)' : ''}
                       </button>
 
-                      {!pdfStatus?.hasFullPdf && !pdfStatus?.isGenerating && order.itemsCount >= 1000 && (
+                      {!pdfStatus?.hasFullPdf && !pdfStatus?.isGenerating && order.itemsCount >= 1000 && order.itemsCount <= 2000 && (
                         <button
                           type="button"
                           onClick={handleTriggerAsyncGeneration}
@@ -1742,31 +1753,35 @@ export const OrderDetailPage: React.FC = () => {
                         </button>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={handleDownloadPdf}
-                        disabled={downloadingPdf || pdfStatus?.isGenerating || !canPrintBatch}
-                        className={`inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 ${canPrintBatch && !downloadingPdf && !pdfStatus?.isGenerating
-                            ? 'bg-[#0082FB] hover:bg-[#0070DA] text-white cursor-pointer active:scale-95'
-                            : (downloadingPdf || pdfStatus?.isGenerating)
-                              ? 'bg-blue-600 text-white opacity-95 cursor-wait'
-                              : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                          }`}
-                        title={canPrintBatch ? 'Скачать итоговый PDF для принтера' : printBlockReason}
-                      >
-                        {downloadingPdf || pdfStatus?.isGenerating ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : canPrintBatch ? (
-                          <Download className="w-3.5 h-3.5" />
-                        ) : (
-                          <Lock className="w-3.5 h-3.5 text-slate-400" />
-                        )}
-                        {downloadingPdf || pdfStatus?.isGenerating
-                          ? `Генерация (${pdfStatus?.activeJob?.elapsedSec ?? 0} сек)...`
-                          : canPrintBatch
-                            ? (pdfStatus?.fullPdfSizeMb ? `Скачать все (${pdfStatus.fullPdfSizeMb} МБ)` : 'Скачать все (PDF)')
-                            : 'Печать заблокирована'}
-                      </button>
+                      {(order.itemsCount <= 2000 || pdfStatus?.hasFullPdf) && (
+                        <button
+                          type="button"
+                          onClick={handleDownloadPdf}
+                          disabled={downloadingPdf || pdfStatus?.isGenerating || !canPrintBatch}
+                          className={`inline-flex items-center justify-center gap-1.5 h-9 font-bold text-xs px-3.5 rounded-xl transition-all shadow-xs shrink-0 ${canPrintBatch && !downloadingPdf && !pdfStatus?.isGenerating
+                              ? order.itemsCount > 2000
+                                ? 'bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 cursor-pointer'
+                                : 'bg-[#0082FB] hover:bg-[#0070DA] text-white cursor-pointer active:scale-95'
+                              : (downloadingPdf || pdfStatus?.isGenerating)
+                                ? 'bg-blue-600 text-white opacity-95 cursor-wait'
+                                : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                            }`}
+                          title={canPrintBatch ? 'Скачать итоговый PDF для принтера' : printBlockReason}
+                        >
+                          {downloadingPdf || pdfStatus?.isGenerating ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : canPrintBatch ? (
+                            <Download className="w-3.5 h-3.5" />
+                          ) : (
+                            <Lock className="w-3.5 h-3.5 text-slate-400" />
+                          )}
+                          {downloadingPdf || pdfStatus?.isGenerating
+                            ? `Генерация (${pdfStatus?.activeJob?.elapsedSec ?? 0} сек)...`
+                            : canPrintBatch
+                              ? (pdfStatus?.fullPdfSizeMb ? `Скачать все (${pdfStatus.fullPdfSizeMb} МБ)` : 'Скачать все (PDF)')
+                              : 'Печать заблокирована'}
+                        </button>
+                      )}
                     </div>
                   </div>
 

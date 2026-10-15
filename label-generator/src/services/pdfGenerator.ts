@@ -252,6 +252,12 @@ export class LabelPdfGenerator {
       allowPageAddition = false;
 
       await this.renderLabelElements(doc, template.elements, row, hasCustomFonts, heightPt, widthPt);
+
+      if (i > 0 && i % 500 === 0 && typeof (global as any).gc === 'function') {
+        try {
+          (global as any).gc();
+        } catch {}
+      }
     }
 
     if (onProgress) {
@@ -264,6 +270,12 @@ export class LabelPdfGenerator {
     this.qrCache.clear();
     allowPageAddition = true;
     doc.end();
+
+    if (typeof (global as any).gc === 'function') {
+      try {
+        (global as any).gc();
+      } catch {}
+    }
   }
 
   private async renderLabelElements(

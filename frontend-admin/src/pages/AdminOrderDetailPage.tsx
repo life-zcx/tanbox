@@ -777,6 +777,11 @@ export const AdminOrderDetailPage: React.FC = () => {
   // Generate roll PDF batch automatically from designer layout
   const handleGeneratePdfFromDesigner = async () => {
     if (!order) return;
+    if (order.itemsCount > 2000) {
+      alert(`Генерация единым файлом ограничена до 2 000 этикеток (в заказе ${order.itemsCount.toLocaleString()} шт.). Пожалуйста, используйте выгрузку по рулонам.`);
+      setShowRollModal(true);
+      return;
+    }
     setGeneratingPdf(true);
     try {
       const dbLayout = (order as any).stickerLayout;
@@ -2307,10 +2312,10 @@ export const AdminOrderDetailPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowRollModal(true)}
-                    className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
+                    className="inline-flex items-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
                     title="Разбить партию на рулоны (по 500, 1000 или 2000 этикеток)"
                   >
-                    <Layers className="w-3.5 h-3.5 text-[#0082FB]" />
+                    <Layers className="w-3.5 h-3.5" />
                     Скачать по рулонам
                   </button>
                   <button
@@ -2320,15 +2325,17 @@ export const AdminOrderDetailPage: React.FC = () => {
                   >
                     <Download className="w-3.5 h-3.5" /> Скачать PDF
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleGeneratePdfFromDesigner}
-                    disabled={generatingPdf || pdfStatus?.isGenerating}
-                    className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${(generatingPdf || pdfStatus?.isGenerating) ? 'animate-spin' : ''}`} />
-                    {(generatingPdf || pdfStatus?.isGenerating) ? 'Генерация...' : 'Перегенерировать'}
-                  </button>
+                  {order.itemsCount <= 2000 && (
+                    <button
+                      type="button"
+                      onClick={handleGeneratePdfFromDesigner}
+                      disabled={generatingPdf || pdfStatus?.isGenerating}
+                      className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${(generatingPdf || pdfStatus?.isGenerating) ? 'animate-spin' : ''}`} />
+                      {(generatingPdf || pdfStatus?.isGenerating) ? 'Генерация...' : 'Перегенерировать'}
+                    </button>
+                  )}
                 </div>
               </div>
             ) : !pdfStatus?.isGenerating && !generatingPdf && (
@@ -2339,23 +2346,36 @@ export const AdminOrderDetailPage: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-[#111827]">
-                    Файл этикеток ещё не сформирован
+                    {order.itemsCount > 2000 ? 'Печать партии доступна по рулонам' : 'Файл этикеток ещё не сформирован'}
                   </h4>
                   <p className="text-[11px] text-[#64748B] mt-1 max-w-md mx-auto leading-relaxed">
-                    Нажмите кнопку ниже, чтобы автоматически сгенерировать готовый PDF файл для печати {order.itemsCount.toLocaleString()} этикеток с кодами Data Matrix на основе макета из конструктора.
+                    {order.itemsCount > 2000
+                      ? `Партия содержит ${order.itemsCount.toLocaleString()} шт. В соответствии со стандартами термопринтеров и для защиты ресурсов сервера выгрузка выполняется по рулонам (по 1 000 шт.).`
+                      : `Нажмите кнопку ниже, чтобы автоматически сгенерировать готовый PDF файл для печати ${order.itemsCount.toLocaleString()} этикеток с кодами Data Matrix на основе макета.`}
                   </p>
                 </div>
 
                 <div className="pt-2 flex flex-wrap justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleGeneratePdfFromDesigner}
-                    disabled={generatingPdf || pdfStatus?.isGenerating}
-                    className="inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
-                  >
-                    <Printer className="w-4 h-4" />
-                    {(generatingPdf || pdfStatus?.isGenerating) ? 'Генерация файла партии...' : `Сгенерировать PDF партии (${order.itemsCount.toLocaleString()} шт.)`}
-                  </button>
+                  {order.itemsCount > 2000 ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowRollModal(true)}
+                      className="inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+                    >
+                      <Layers className="w-4 h-4" />
+                      Скачать по рулонам (по 1 000 шт.)
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleGeneratePdfFromDesigner}
+                      disabled={generatingPdf || pdfStatus?.isGenerating}
+                      className="inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                    >
+                      <Printer className="w-4 h-4" />
+                      {(generatingPdf || pdfStatus?.isGenerating) ? 'Генерация файла партии...' : `Сгенерировать PDF партии (${order.itemsCount.toLocaleString()} шт.)`}
+                    </button>
+                  )}
 
                   <Link
                     to={`/label-designer?orderId=${order.id}`}
