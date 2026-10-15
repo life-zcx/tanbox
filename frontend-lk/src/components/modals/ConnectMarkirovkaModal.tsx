@@ -14,11 +14,21 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const isDevOrTest = typeof window !== 'undefined' && (
+    Boolean(import.meta.env.DEV) ||
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname.includes('dev') ||
+    window.location.hostname.includes('test') ||
+    window.location.hostname.includes('stage') ||
+    window.location.hostname.endsWith('.local')
+  );
+
   const [name, setName] = useState('');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [environment, setEnvironment] = useState<'TEST' | 'PROD'>('PROD');
+  const [environment, setEnvironment] = useState<'TEST' | 'PROD'>(isDevOrTest ? 'TEST' : 'PROD');
 
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -176,35 +186,37 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">
-              Контур интеграции
-            </label>
-            <div className="grid grid-cols-2 gap-1.5 bg-gray-100 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setEnvironment('PROD')}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
-                  environment === 'PROD'
-                    ? 'bg-white text-[#111827] shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800'
-                }`}
-              >
-                Боевой (markirovka.kz)
-              </button>
-              <button
-                type="button"
-                onClick={() => setEnvironment('TEST')}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
-                  environment === 'TEST'
-                    ? 'bg-white text-[#111827] shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800'
-                }`}
-              >
-                Тестовый (песочница)
-              </button>
+          {isDevOrTest && (
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                Контур интеграции
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 bg-gray-100 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setEnvironment('PROD')}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                    environment === 'PROD'
+                      ? 'bg-white text-[#111827] shadow-xs'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  Боевой (markirovka.kz)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEnvironment('TEST')}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                    environment === 'TEST'
+                      ? 'bg-white text-[#111827] shadow-xs'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  Тестовый (песочница)
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1.5">
