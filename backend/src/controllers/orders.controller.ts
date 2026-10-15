@@ -1587,7 +1587,7 @@ export const submitOrderUtilisationReport = async (req: AuthRequest, res: Respon
     if (codeItems && codeItems.length > 0) {
       codes = codeItems.map((c) => c.code);
     } else if (order.codesFileUrl) {
-      const filePath = path.resolve(order.codesFileUrl);
+      const filePath = path.resolve(process.cwd(), '.' + order.codesFileUrl);
       if (fs.existsSync(filePath)) {
         const parsed = await parseCodesFile(filePath);
         codes = parsed.rows.map((r) => r.code || Object.values(r)[0]).filter(Boolean);

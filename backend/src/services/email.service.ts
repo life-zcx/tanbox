@@ -77,13 +77,9 @@ export const sendEmail = async ({ to, subject, html, attachments }: SendEmailOpt
 export const sendVerificationOtpEmail = async (to: string, code: string): Promise<void> => {
   const cleanEmail = to.trim().toLowerCase();
   
-  // Terminal log for dev inspection
-  console.log(`\n============================================================`);
-  console.log(`🔑 [TANBOX REGISTRATION OTP]`);
-  console.log(`   Email: ${cleanEmail}`);
-  console.log(`   Code:  ${code}`);
-  console.log(`   Time:  ${new Date().toISOString()}`);
-  console.log(`============================================================\n`);
+  if (process.env.NODE_ENV === 'development') {
+    logger.info(`[AUTH] Verification OTP email dispatched for ${cleanEmail}`);
+  }
 
   // Official logo attachment
   const logoPath = path.resolve(__dirname, '../assets/tanbox-logo.png');
@@ -161,12 +157,9 @@ export const sendVerificationOtpEmail = async (to: string, code: string): Promis
 export const sendPasswordResetOtpEmail = async (to: string, code: string): Promise<void> => {
   const cleanEmail = to.trim().toLowerCase();
 
-  console.log(`\n============================================================`);
-  console.log(`🔑 [TANBOX PASSWORD RESET OTP]`);
-  console.log(`   Email: ${cleanEmail}`);
-  console.log(`   Code:  ${code}`);
-  console.log(`   Time:  ${new Date().toISOString()}`);
-  console.log(`============================================================\n`);
+  if (process.env.NODE_ENV === 'development') {
+    logger.info(`[AUTH] Password reset OTP email dispatched for ${cleanEmail}`);
+  }
 
   const logoPath = path.resolve(__dirname, '../assets/tanbox-logo.png');
   const hasLogo = fs.existsSync(logoPath);

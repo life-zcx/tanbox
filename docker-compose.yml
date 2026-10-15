@@ -57,6 +57,7 @@ services:
     volumes:
       - tanbox_uploads:/app/uploads
       - tanbox_logs:/app/logs
+      - tanbox_backups:/app/backups
     logging:
       driver: "json-file"
       options:
@@ -163,6 +164,7 @@ volumes:
   pgdata:
   tanbox_uploads:
   tanbox_logs:
+  tanbox_backups:
   caddy_data:
   caddy_config:
   caddy_logs:

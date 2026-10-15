@@ -41,7 +41,7 @@ router.use(authenticateJWT);
 router.post('/check-codes', orderCodesUpload.single('file'), checkCodesFile);
 router.post('/', createOrder);
 router.get('/', getOrders);
-router.get('/queue/status', getPdfQueueStatus);
+router.get('/queue/status', requireAdmin, getPdfQueueStatus);
 router.post('/queue/concurrency', requireAdmin, updatePdfQueueConcurrency);
 router.delete('/queue/jobs/:id', requireAdmin, cancelPdfQueueJob);
 router.delete('/queue/clear', requireAdmin, clearPdfQueue);

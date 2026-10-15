@@ -26,6 +26,7 @@ uploads/
 
 # Backups & Database dumps (sensitive data)
 backups/
+backend/backups/
 *.sql
 *.sql.gz
 

@@ -25,7 +25,7 @@ if grep -q "replace_with_strong_random_encryption_secret_minimum_32_chars" .env;
 fi
 
 if grep -q "replace_with_strong_password_minimum_24_chars" .env; then
-    RANDOM_PG_PASS=$(openssl rand -hex 16 2>/dev/null || tr -dc 'A-Za-z0-9_!@#' </dev/urandom | head -c 24)
+    RANDOM_PG_PASS=$(openssl rand -hex 16 2>/dev/null || tr -dc 'A-Za-z0-9_' </dev/urandom | head -c 24)
     sed -i "s|replace_with_strong_password_minimum_24_chars|$RANDOM_PG_PASS|g" .env
 fi
 

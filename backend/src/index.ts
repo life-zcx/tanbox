@@ -158,6 +158,15 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   if (err?.message === 'CORS access blocked by policy') {
     return res.status(403).json({ message: 'Доступ запрещён политикой CORS' });
   }
+
+  // Handle client-side Multer upload errors gracefully without triggering 500 & Telegram DevOps alerts
+  if (err?.name === 'MulterError' || (typeof err?.message === 'string' && err.message.includes('Разрешены только'))) {
+    const message = err.code === 'LIMIT_FILE_SIZE'
+      ? 'Превышен максимальный размер файла (до 50 МБ)'
+      : (err.message || 'Ошибка валидации загружаемого файла');
+    return res.status(400).json({ message });
+  }
+
   logger.error(`Unhandled Error on ${req.method} ${req.url}:`, err);
 
   // Dispatch alert to DevOps Telegram group

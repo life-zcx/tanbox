@@ -257,7 +257,15 @@ class TelegramService {
       return;
     }
 
+    const isDevOpsChat = Boolean(this.alertsChatId && chatId === this.alertsChatId);
+    const isSpecificAdmin = Boolean(this.isAuthorizedUser(chatId, fromId) && chatId !== this.leadsChatId);
+    const canRunSystemCommands = isDevOpsChat || isSpecificAdmin;
+
     if (command === '/server' || command === '/stats') {
+      if (!canRunSystemCommands) {
+        await this.sendRaw(chatId, `⛔ <b>Доступ ограничен</b>\nКоманда ${command} доступна исключительно в техническом DevOps-чате TANBOX.`);
+        return;
+      }
       try {
         const memUsage = process.memoryUsage();
         const totalMem = os.totalmem();
@@ -326,6 +334,10 @@ class TelegramService {
         await this.sendRaw(chatId, `❌ Не удалось получить телеметрию сервера: ${this.escapeHtml(err.message)}`);
       }
     } else if (command === '/backup') {
+      if (!canRunSystemCommands) {
+        await this.sendRaw(chatId, `⛔ <b>Доступ ограничен</b>\nКоманда /backup доступна исключительно в техническом DevOps-чате TANBOX.`);
+        return;
+      }
       try {
         await this.sendRaw(chatId, `⏳ <b>Создаю свежий дамп базы данных TANBOX...</b>\n<i>Пожалуйста, подождите несколько секунд.</i>`);
         const backup = await createDatabaseBackup();
@@ -401,6 +413,10 @@ class TelegramService {
         await this.sendRaw(chatId, `❌ Ошибка формирования сводки: ${this.escapeHtml(err.message)}`);
       }
     } else if (command === '/errors') {
+      if (!canRunSystemCommands) {
+        await this.sendRaw(chatId, `⛔ <b>Доступ ограничен</b>\nКоманда /errors доступна исключительно в техническом DevOps-чате TANBOX.`);
+        return;
+      }
       try {
         const errorLogPath = path.resolve(process.cwd(), 'logs/error.log');
         if (!fs.existsSync(errorLogPath)) {

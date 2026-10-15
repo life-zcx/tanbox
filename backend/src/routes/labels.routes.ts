@@ -61,5 +61,8 @@ const proxyToLabelGenerator = (targetPath: string) => {
 router.all('/parse-csv', proxyToLabelGenerator('/parse-csv'));
 router.all('/generate-pdf', requireAdmin, proxyToLabelGenerator('/generate-pdf'));
 router.all('/preview', proxyToLabelGenerator('/preview'));
+router.get('/progress/:trackId', (req, res) => {
+  return proxyToLabelGenerator(`/progress/${encodeURIComponent(req.params.trackId)}`)(req, res);
+});
 
 export default router;

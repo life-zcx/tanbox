@@ -30,7 +30,7 @@ if ! docker ps | grep -q "tanbox_postgres"; then
     exit 1
 fi
 
-docker exec -t tanbox_postgres pg_dump -U "${POSTGRES_USER:-tanbox_user}" "${POSTGRES_DB:-tanbox_db}" | gzip > "$FILENAME"
+docker exec -i tanbox_postgres pg_dump -U "${POSTGRES_USER:-tanbox_user}" "${POSTGRES_DB:-tanbox_db}" | gzip > "$FILENAME"
 
 echo "✅ Backup successfully created at: $FILENAME"
 echo "📊 Backup file size: $(du -h "$FILENAME" | cut -f1)"
