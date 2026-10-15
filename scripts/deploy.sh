@@ -84,7 +84,12 @@ BACKUP_SCRIPT="$PROJECT_DIR/scripts/backup-db.sh"
 if [ -f "$BACKUP_SCRIPT" ]; then
     chmod +x "$BACKUP_SCRIPT"
     CRON_CMD="0 3 * * * cd $PROJECT_DIR && bash scripts/backup-db.sh >> /var/log/tanbox-backup.log 2>&1"
-    (crontab -l 2>/dev/null | grep -v "backup-db.sh" ; echo "$CRON_CMD") | crontab -
+    EXISTING_CRON=$(crontab -l 2>/dev/null | grep -v "backup-db.sh" || true)
+    if [ -n "$EXISTING_CRON" ]; then
+        printf "%s\n%s\n" "$EXISTING_CRON" "$CRON_CMD" | crontab -
+    else
+        echo "$CRON_CMD" | crontab -
+    fi
     echo "⏰ [TANBOX] Ежедневный ночной бэкап БД (03:00) зарегистрирован в crontab."
 fi
 
