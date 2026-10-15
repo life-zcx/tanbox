@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { prisma } from '../config/db';
 import { env } from '../config/env';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { sendVerificationOtpEmail, sendPasswordResetOtpEmail } from '../services/email.service';
+import { sendVerificationOtpEmail, sendPasswordResetOtpEmail, sendAdminLoginOtpEmail } from '../services/email.service';
 import { logger } from '../utils/logger';
 
 // In-memory rate limiting / anti-abuse store
@@ -268,7 +268,7 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, code } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Укажите email и пароль' });
@@ -283,6 +283,89 @@ export const login = async (req: Request, res: Response) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Неверный email или пароль' });
+    }
+
+    // Two-Factor Authentication (2FA via Email OTP) for ADMIN role
+    if (user.role === 'ADMIN') {
+      const now = Date.now();
+      const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '—';
+
+      // STEP 1: If OTP code was not yet supplied, generate code and send email
+      if (!code) {
+        const lastSent = memoryCooldowns.get(`admin_otp_${cleanEmail}`);
+        if (lastSent && now - lastSent < 60 * 1000) {
+          const waitSec = Math.ceil((60 * 1000 - (now - lastSent)) / 1000);
+          return res.status(200).json({
+            requireOtp: true,
+            email: cleanEmail,
+            message: `Код подтверждения уже отправлен. Подождите ${waitSec} сек. перед повторной отправкой.`,
+            cooldownRemaining: waitSec,
+          });
+        }
+
+        const otpCode = crypto.randomInt(100000, 999999).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+        await prisma.verificationCode.create({
+          data: {
+            email: cleanEmail,
+            code: otpCode,
+            expiresAt,
+          },
+        });
+
+        memoryCooldowns.set(`admin_otp_${cleanEmail}`, now);
+        memoryAttempts.delete(`admin_otp_${cleanEmail}`);
+
+        await sendAdminLoginOtpEmail(cleanEmail, otpCode, { ip });
+
+        return res.status(200).json({
+          requireOtp: true,
+          email: cleanEmail,
+          message: `Код подтверждения отправлен на почту ${cleanEmail}`,
+          cooldownRemaining: 60,
+        });
+      }
+
+      // STEP 2: Verify supplied OTP code
+      const cleanCode = String(code).trim().replace(/\D/g, '');
+      const attemptsKey = `admin_otp_${cleanEmail}`;
+      const currentAttempts = (memoryAttempts.get(attemptsKey) || 0) + 1;
+      memoryAttempts.set(attemptsKey, currentAttempts);
+
+      if (currentAttempts > 5) {
+        await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+        memoryCooldowns.delete(`admin_otp_${cleanEmail}`);
+        memoryAttempts.delete(attemptsKey);
+        return res.status(429).json({
+          message: 'Слишком много неверных попыток ввода кода. Пожалуйста, начните вход заново.',
+        });
+      }
+
+      const storedCode = await prisma.verificationCode.findFirst({
+        where: { email: cleanEmail },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!storedCode || storedCode.code !== cleanCode) {
+        const remaining = 5 - currentAttempts;
+        return res.status(400).json({
+          message: `Неверный код подтверждения из письма. Осталось попыток: ${remaining > 0 ? remaining : 0}`,
+        });
+      }
+
+      if (new Date() > storedCode.expiresAt) {
+        await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+        return res.status(400).json({
+          message: 'Срок действия кода подтверждения истек (10 минут). Запросите новый код.',
+        });
+      }
+
+      // OTP verified successfully
+      await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+      memoryAttempts.delete(attemptsKey);
+      memoryCooldowns.delete(`admin_otp_${cleanEmail}`);
     }
 
     const token = jwt.sign(
@@ -310,7 +393,7 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     return res.status(500).json({ message: 'Ошибка сервера при авторизации' });
   }
 };

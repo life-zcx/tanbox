@@ -5,7 +5,7 @@ import { apiClient } from '../api/client';
 interface AdminAuthContextType {
   adminUser: UserClient | null;
   loading: boolean;
-  loginAdmin: (email: string, password: string) => Promise<any>;
+  loginAdmin: (email: string, password: string, code?: string) => Promise<any>;
   logoutAdmin: () => void;
 }
 
@@ -41,9 +41,12 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     fetchMe();
   }, []);
 
-  const loginAdmin = async (email: string, password: string) => {
-    const res = await apiClient.post('/auth/login', { email, password });
-    if (res.data.user.role !== 'ADMIN') {
+  const loginAdmin = async (email: string, password: string, code?: string) => {
+    const res = await apiClient.post('/auth/login', { email, password, code });
+    if (res.data.requireOtp) {
+      return res.data;
+    }
+    if (res.data.user?.role !== 'ADMIN') {
       throw new Error('Учётная запись не имеет прав администратора');
     }
     localStorage.setItem('tanbox_admin_token', res.data.token);
