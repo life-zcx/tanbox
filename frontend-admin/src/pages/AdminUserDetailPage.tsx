@@ -24,11 +24,14 @@ import {
   RefreshCw,
   X,
   Lock,
+  Unlock,
+  AlertTriangle,
   Layers,
   Clock,
 } from 'lucide-react';
 import { UserDetail } from '../types';
 import { apiClient } from '../api/client';
+import { useAdminAuth } from '../hooks/useAdminAuth';
 import { StatusBadge } from '@shared';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
 import { formatPhoneNumber, isValidPhoneNumber, getPhoneDigitsCount } from '../utils/phone';
@@ -36,6 +39,7 @@ import { formatPhoneNumber, isValidPhoneNumber, getPhoneDigitsCount } from '../u
 export const AdminUserDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { adminUser } = useAdminAuth();
 
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'templates'>('profile');
   const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
@@ -64,6 +68,59 @@ export const AdminUserDetailPage: React.FC = () => {
 
   // Copy ID feedback
   const [copiedId, setCopiedId] = useState<boolean>(false);
+
+  // Block modal state
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState<boolean>(false);
+  const [blockReasonInput, setBlockReasonInput] = useState<string>('');
+  const [blockLoading, setBlockLoading] = useState<boolean>(false);
+
+  // Delete modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+
+  const handleToggleBlock = async () => {
+    if (!id || !userDetail) return;
+    setBlockLoading(true);
+    try {
+      const willBlock = !userDetail.isBlocked;
+      const res = await apiClient.patch(`/users/${id}/block`, {
+        isBlocked: willBlock,
+        blockedReason: willBlock ? (blockReasonInput.trim() || 'Блокировка администратором') : null,
+      });
+      setUserDetail((prev) =>
+        prev
+          ? {
+              ...prev,
+              isBlocked: willBlock,
+              blockedReason: res.data.user?.blockedReason,
+            }
+          : null
+      );
+      setIsBlockModalOpen(false);
+      setSaveSuccessMsg(
+        willBlock
+          ? 'Аккаунт пользователя заблокирован'
+          : 'Аккаунт пользователя успешно разблокирован'
+      );
+      setTimeout(() => setSaveSuccessMsg(null), 4000);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Ошибка изменения статуса блокировки');
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!id || !userDetail) return;
+    setDeleteLoading(true);
+    try {
+      await apiClient.delete(`/users/${id}`);
+      navigate('/users');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Ошибка при удалении аккаунта');
+      setDeleteLoading(false);
+    }
+  };
 
   const fetchUser = async () => {
     if (!id) return;
@@ -311,12 +368,25 @@ export const AdminUserDetailPage: React.FC = () => {
                 className={`inline-flex items-center gap-1 text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
                   userDetail.role === 'ADMIN'
                     ? 'bg-black text-white'
-                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                    : 'bg-gray-100 text-gray-800'
                 }`}
               >
-                {userDetail.role === 'ADMIN' && <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />}
+                {userDetail.role === 'ADMIN' && <ShieldCheck className="w-3.5 h-3.5 text-white" />}
                 {userDetail.role}
               </span>
+
+              {/* Status Badge */}
+              {userDetail.isBlocked ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200">
+                  <Lock className="w-3.5 h-3.5 text-red-600" />
+                  Заблокирован
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Активен
+                </span>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#64748B] mt-1 font-medium">
               <span className="flex items-center gap-1 font-mono">
@@ -331,16 +401,74 @@ export const AdminUserDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
+          <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end flex-wrap">
+            {/* Block / Unblock Button */}
+            <button
+              type="button"
+              disabled={adminUser?.id === userDetail.id}
+              onClick={() => {
+                setBlockReasonInput(userDetail.blockedReason || '');
+                setIsBlockModalOpen(true);
+              }}
+              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2.5 rounded-xl border transition-all shadow-2xs active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                userDetail.isBlocked
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                  : 'bg-gray-50 border-gray-200 text-gray-800 hover:text-black hover:bg-gray-100'
+              }`}
+              title={adminUser?.id === userDetail.id ? 'Нельзя заблокировать себя' : undefined}
+            >
+              {userDetail.isBlocked ? (
+                <>
+                  <Unlock className="w-4 h-4 text-emerald-600" />
+                  <span>Разблокировать</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Заблокировать</span>
+                </>
+              )}
+            </button>
+
+            {/* Delete User Button */}
+            <button
+              type="button"
+              disabled={adminUser?.id === userDetail.id}
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="inline-flex items-center gap-1.5 bg-gray-50 hover:bg-red-50 border border-gray-200 hover:border-red-200 text-gray-700 hover:text-red-600 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all shadow-2xs active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+              title={adminUser?.id === userDetail.id ? 'Нельзя удалить свой аккаунт' : 'Удалить аккаунт навсегда'}
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Удалить аккаунт</span>
+            </button>
+
             <Link
               to={`/label-designer?userId=${userDetail.id}`}
-              className="inline-flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-800 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all shadow-2xs active:scale-95"
+              className="inline-flex items-center gap-1.5 bg-black hover:bg-gray-800 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all shadow-2xs active:scale-95"
             >
-              <Palette className="w-4 h-4 text-blue-600" />
+              <Palette className="w-4 h-4 text-white" />
               <span>Создать макет</span>
             </Link>
           </div>
         </div>
+
+        {/* Blocked Alert Banner if blocked */}
+        {userDetail.isBlocked && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mt-6 text-xs text-red-900 flex items-start gap-3 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <span className="font-bold block mb-0.5">Внимание: Учетная запись заблокирована</span>
+              <p className="text-red-700 leading-relaxed">
+                Пользователь не может войти в личный кабинет.
+                {userDetail.blockedReason && (
+                  <span className="block mt-1 font-semibold text-red-950">
+                    Причина: {userDetail.blockedReason}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* 4 Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-6 border-t border-gray-100">
@@ -944,6 +1072,152 @@ export const AdminUserDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* MODAL 1: Block / Unblock Confirmation */}
+      {isBlockModalOpen && userDetail && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                    userDetail.isBlocked ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {userDetail.isBlocked ? (
+                    <Unlock className="w-5 h-5" />
+                  ) : (
+                    <Lock className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-black">
+                    {userDetail.isBlocked ? 'Разблокировать аккаунт?' : 'Заблокировать аккаунт?'}
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">{userDetail.companyName}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBlockModalOpen(false)}
+                className="text-gray-400 hover:text-black p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-gray-600 leading-relaxed">
+                {userDetail.isBlocked ? (
+                  <>
+                    После разблокировки пользователь <strong>{userDetail.email}</strong> сможет снова
+                    авторизоваться в личном кабинете.
+                  </>
+                ) : (
+                  <>
+                    Пользователь <strong>{userDetail.email}</strong> потеряет возможность входить в
+                    систему.
+                  </>
+                )}
+              </p>
+
+              {!userDetail.isBlocked && (
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    Причина блокировки (необязательно)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={blockReasonInput}
+                    onChange={(e) => setBlockReasonInput(e.target.value)}
+                    placeholder="Например: Нарушение условий / Задолженность..."
+                    className="w-full text-xs font-medium p-3 bg-gray-50 border border-gray-300 rounded-xl focus:bg-white focus:border-black focus:outline-none resize-none"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setIsBlockModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:text-black hover:bg-gray-100 transition-all"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                disabled={blockLoading}
+                onClick={handleToggleBlock}
+                className={`px-5 py-2.5 rounded-xl text-white text-xs font-extrabold shadow-md transition-all active:scale-95 disabled:opacity-50 ${
+                  userDetail.isBlocked
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-black hover:bg-gray-800'
+                }`}
+              >
+                {blockLoading
+                  ? 'Сохранение...'
+                  : userDetail.isBlocked
+                  ? 'Разблокировать'
+                  : 'Заблокировать доступ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Delete User Confirmation */}
+      {isDeleteModalOpen && userDetail && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-red-950">Удалить аккаунт навсегда?</h3>
+                  <p className="text-xs text-gray-500 font-medium">{userDetail.companyName}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="text-gray-400 hover:text-black p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-xs text-red-900 space-y-2">
+              <p className="font-bold">⚠️ Внимание! Это действие необратимо.</p>
+              <p className="leading-relaxed">
+                Будет безвозвратно удален аккаунт <strong>{userDetail.email}</strong> (БИН:{' '}
+                <code>{userDetail.binIin}</code>), а также все связанные с ним шаблоны этикеток и
+                история заказов.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:text-black hover:bg-gray-100 transition-all"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                disabled={deleteLoading}
+                onClick={handleDeleteUser}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold shadow-md transition-all active:scale-95 disabled:opacity-50"
+              >
+                {deleteLoading ? 'Удаление...' : 'Да, удалить навсегда'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -8,6 +8,8 @@ export interface UserClient {
   binIin: string;
   phone: string;
   role: 'CLIENT' | 'ADMIN';
+  isBlocked?: boolean;
+  blockedReason?: string | null;
   createdAt: string;
   _count?: {
     orders: number;

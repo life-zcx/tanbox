@@ -285,6 +285,16 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Неверный email или пароль' });
     }
 
+    // Check account block status
+    if (user.isBlocked) {
+      return res.status(403).json({
+        code: 'USER_BLOCKED',
+        message: user.blockedReason
+          ? `Ваш аккаунт заблокирован. Причина: ${user.blockedReason}`
+          : 'Ваш аккаунт заблокирован администратором платформы. Для разблокировки свяжитесь с поддержкой TANBOX.',
+      });
+    }
+
     // Two-Factor Authentication (2FA via Email OTP) for ADMIN role when entering Admin Panel
     const isFromAdminPanel = isAdminPanel === true || req.headers['x-client-app'] === 'admin';
     if (user.role === 'ADMIN' && isFromAdminPanel) {
@@ -414,12 +424,21 @@ export const getMe = async (req: AuthRequest, res: Response) => {
         binIin: true,
         phone: true,
         role: true,
+        isBlocked: true,
+        blockedReason: true,
         createdAt: true,
       },
     });
 
     if (!user) {
       return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+
+    if (user.isBlocked) {
+      return res.status(403).json({
+        code: 'USER_BLOCKED',
+        message: 'Ваш аккаунт заблокирован',
+      });
     }
 
     return res.json(user);

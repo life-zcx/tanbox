@@ -28,6 +28,7 @@ uploads/
 backups/
 backend/backups/
 *.sql
+!**/migrations/**/*.sql
 *.sql.gz
 
 # Local storage & runtime settings

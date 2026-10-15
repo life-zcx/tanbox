@@ -15,6 +15,8 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
         binIin: true,
         phone: true,
         role: true,
+        isBlocked: true,
+        blockedReason: true,
         createdAt: true,
         _count: {
           select: {
@@ -46,6 +48,8 @@ export const getUserById = async (req: AuthRequest, res: Response) => {
         binIin: true,
         phone: true,
         role: true,
+        isBlocked: true,
+        blockedReason: true,
         createdAt: true,
         updatedAt: true,
         orders: {
@@ -230,5 +234,124 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     logger.error('updateUser error:', error);
     return res.status(500).json({ message: 'Ошибка при обновлении данных пользователя' });
+  }
+};
+
+/**
+ * Блокировка / разблокировка учетной записи пользователя
+ */
+export const toggleBlockUser = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== Role.ADMIN) {
+      return res.status(403).json({ message: 'Доступ разрешен только администраторам' });
+    }
+
+    const { id } = req.params;
+    const { isBlocked, blockedReason } = req.body;
+
+    if (typeof isBlocked !== 'boolean') {
+      return res.status(400).json({ message: 'Параметр isBlocked должен быть булевым значением (true/false)' });
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+
+    // Защита: нельзя заблокировать самого себя
+    if (req.user.id === targetUser.id) {
+      return res.status(400).json({ message: 'Нельзя заблокировать собственную учетную запись' });
+    }
+
+    // Защита: нельзя заблокировать единственного активного администратора
+    if (targetUser.role === Role.ADMIN && isBlocked) {
+      const activeAdminsCount = await prisma.user.count({
+        where: { role: Role.ADMIN, isBlocked: false },
+      });
+      if (activeAdminsCount <= 1) {
+        return res.status(400).json({ message: 'Нельзя заблокировать единственного активного администратора системы' });
+      }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: {
+        isBlocked,
+        blockedReason: isBlocked ? (blockedReason ? String(blockedReason).trim().slice(0, 500) : 'Блокировка администратором') : null,
+      },
+      select: {
+        id: true,
+        email: true,
+        companyName: true,
+        binIin: true,
+        phone: true,
+        role: true,
+        isBlocked: true,
+        blockedReason: true,
+        updatedAt: true,
+      },
+    });
+
+    logger.info(`Admin ${req.user.email} ${isBlocked ? 'BLOCKED' : 'UNBLOCKED'} user ${updated.email}`);
+
+    return res.json({
+      success: true,
+      message: isBlocked ? 'Пользователь успешно заблокирован' : 'Пользователь успешно разблокирован',
+      user: updated,
+    });
+  } catch (error: any) {
+    logger.error('toggleBlockUser error:', error);
+    return res.status(500).json({ message: 'Ошибка при изменении статуса блокировки пользователя' });
+  }
+};
+
+/**
+ * Полное удаление учетной записи пользователя из системы
+ */
+export const deleteUser = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== Role.ADMIN) {
+      return res.status(403).json({ message: 'Доступ разрешен только администраторам' });
+    }
+
+    const { id } = req.params;
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, role: true, companyName: true },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+
+    // Защита: нельзя удалить самого себя
+    if (req.user.id === targetUser.id) {
+      return res.status(400).json({ message: 'Вы не можете удалить собственный аккаунт' });
+    }
+
+    // Защита: нельзя удалить единственного администратора
+    if (targetUser.role === Role.ADMIN) {
+      const adminCount = await prisma.user.count({ where: { role: Role.ADMIN } });
+      if (adminCount <= 1) {
+        return res.status(400).json({ message: 'Нельзя удалить единственного администратора системы' });
+      }
+    }
+
+    // Очистка кодов подтверждения
+    await prisma.verificationCode.deleteMany({ where: { email: targetUser.email } });
+
+    // Каскадное удаление через Prisma onDelete: Cascade
+    await prisma.user.delete({ where: { id } });
+
+    logger.info(`Admin ${req.user.email} DELETED user ${targetUser.email} (id: ${id})`);
+
+    return res.json({
+      success: true,
+      message: `Пользователь ${targetUser.email} (${targetUser.companyName}) успешно удален`,
+    });
+  } catch (error: any) {
+    logger.error('deleteUser error:', error);
+    return res.status(500).json({ message: 'Ошибка при удалении аккаунта пользователя' });
   }
 };
