@@ -538,9 +538,9 @@ class PdfGenerationQueue extends EventEmitter {
       `[PdfQueue] 🚀 Starting task "${task.description}" (waited ${waitTimeSec}s in queue, active: ${this.activeCount}/${this.maxConcurrency})`
     );
 
-    // Adaptive timeout safety: minimum 30 minutes, or 30ms per estimated label (for 150k labels ~ 75 mins)
+    // Adaptive timeout safety: minimum 45 minutes, or 75ms per estimated label (for 50k labels ~ 62 mins, for 100k ~ 125 mins)
     const estimatedCount = this.extractEstimatedCount(task.description);
-    const estimatedSec = Math.max(1800, Math.ceil(((estimatedCount || 50000) * 30) / 1000));
+    const estimatedSec = Math.max(2700, Math.ceil(((estimatedCount || 50000) * 75) / 1000));
     const timeoutMs = estimatedSec * 1000;
     const timeoutMin = Math.round(estimatedSec / 60);
 

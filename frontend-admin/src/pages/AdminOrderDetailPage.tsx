@@ -901,35 +901,27 @@ export const AdminOrderDetailPage: React.FC = () => {
         },
       });
 
-      // 2. Request PDF generation on the backend with force=true (processes all codes from uploaded file/DB)
-      // Trigger status check immediately so polling picks up the running task
-      setTimeout(() => fetchPdfStatus(), 400);
+      // 2. Launch asynchronous PDF generation in background queue
+      // Responds immediately (<50ms), completely avoiding Cloudflare 524 100s gateway timeout!
+      const res = await apiClient.post(`/orders/${order.id}/generate-async?force=true`);
 
-      const response = await apiClient.get(`/orders/${order.id}/pdf?force=true`, {
-        responseType: 'blob',
-        timeout: 600000,
-      });
+      setPdfSuccessMsg(res.data?.message || `Генерация этикеток партии (${order.itemsCount.toLocaleString()} шт.) запущена в очереди задач!`);
+      setTimeout(() => setPdfSuccessMsg(null), 7000);
 
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const generatedPath = `/api/orders/${order.id}/pdf`;
-
-      // Save generated blob to memory / local reference so user can download directly
-      (window as any)[`tanbox_pdf_blob_${order.id}`] = blob;
-      setPdfUrl(generatedPath);
+      // Update local state
       setOrder((prev) =>
         prev
           ? {
             ...prev,
-            pdfUrl: generatedPath,
             stickerLayout: { widthMm: w, heightMm: h, elements: templateElements },
           }
           : prev
       );
-      setPdfSuccessMsg(`PDF этикеток партии (${order.itemsCount.toLocaleString()} шт.) успешно сформирован на основе макета!`);
-      setTimeout(() => setPdfSuccessMsg(null), 5000);
+
+      // Trigger status check immediately so polling picks up the running task
       fetchPdfStatus();
     } catch (err: any) {
-      alert('Ошибка при генерации PDF: ' + (err.response?.data?.message || err.message));
+      alert('Ошибка при запуске генерации PDF: ' + (err.response?.data?.message || err.message));
     } finally {
       setGeneratingPdf(false);
       fetchPdfStatus();
@@ -938,6 +930,10 @@ export const AdminOrderDetailPage: React.FC = () => {
 
   const handleDownloadGeneratedPdf = async () => {
     if (!order) return;
+    if (!pdfStatus?.hasFullPdf) {
+      handleGeneratePdfFromDesigner();
+      return;
+    }
     const blob = (window as any)[`tanbox_pdf_blob_${order.id}`];
     if (blob) {
       const url = window.URL.createObjectURL(blob);

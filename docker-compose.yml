@@ -124,7 +124,7 @@ services:
     environment:
       PORT: 5060
       NODE_ENV: production
-      NODE_OPTIONS: "--max-old-space-size=512"
+      NODE_OPTIONS: "--max-old-space-size=1536"
     logging:
       driver: "json-file"
       options:

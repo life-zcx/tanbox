@@ -84,6 +84,8 @@ export class LabelPdfGenerator {
   private boldFontPath: string;
   private regularFontBuffer: Buffer | null = null;
   private boldFontBuffer: Buffer | null = null;
+  private barcodeCache = new Map<string, Buffer>();
+  private qrCache = new Map<string, Buffer>();
 
   constructor() {
     this.regularFontPath = '';
@@ -218,9 +220,14 @@ export class LabelPdfGenerator {
     const dataList = rows.length > 0 ? rows : [{}];
     const totalCount = dataList.length;
 
+    this.barcodeCache.clear();
+    this.qrCache.clear();
+
     for (let i = 0; i < totalCount; i++) {
       if ((outputStream as any).destroyed || (outputStream as any).closed || (outputStream as any).writableEnded) {
         console.log('[LabelPdfGenerator] Client aborted connection, stopping roll PDF generation');
+        this.barcodeCache.clear();
+        this.qrCache.clear();
         allowPageAddition = true;
         try {
           doc.end();
@@ -253,6 +260,8 @@ export class LabelPdfGenerator {
       } catch {}
     }
 
+    this.barcodeCache.clear();
+    this.qrCache.clear();
     allowPageAddition = true;
     doc.end();
   }
@@ -374,7 +383,11 @@ export class LabelPdfGenerator {
             val = digits.length >= 8 ? digits.slice(0, 14) : '2000000001234';
           }
           try {
-            const barcodePng = await generateCode128Buffer(val);
+            let barcodePng = this.barcodeCache.get(val);
+            if (!barcodePng) {
+              barcodePng = await generateCode128Buffer(val);
+              this.barcodeCache.set(val, barcodePng);
+            }
             const wPt = mmToPt(el.width);
             const hPt = mmToPt(el.height);
             doc.image(barcodePng, xPt, yPt, { width: wPt, height: hPt });
@@ -392,7 +405,11 @@ export class LabelPdfGenerator {
             drawMatrixVector(doc, rawMatrix, xPt, yPt, sizePt, 1);
           } catch (err) {
             try {
-              const qrPng = await generateQRCodeBuffer(val);
+              let qrPng = this.qrCache.get(val);
+              if (!qrPng) {
+                qrPng = await generateQRCodeBuffer(val);
+                this.qrCache.set(val, qrPng);
+              }
               doc.image(qrPng, xPt, yPt, { width: sizePt, height: sizePt });
             } catch (qrErr) {
               console.error('Error rendering QR code:', qrErr);

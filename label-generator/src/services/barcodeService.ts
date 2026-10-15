@@ -55,7 +55,13 @@ export function generateDataMatrixRaw(
   const { bwipText, useParsefnc } = prepareDataMatrixInput(text);
 
   if (matrixStructure !== 'auto') {
-    const candidateSizes = [36, 40, 44, 48];
+    // Select initial candidate sizes based on text length to avoid thousands of caught exceptions:
+    // 36x36 holds max 46 text chars, 40x40 holds max 62 chars, 44x44 holds max 80 chars.
+    const candidateSizes = bwipText.length > 80
+      ? [44, 48, 52]
+      : bwipText.length > 60
+      ? [40, 44, 48]
+      : [36, 40, 44, 48];
     for (const s of candidateSizes) {
       try {
         const raw = bwipjs.raw({

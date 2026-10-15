@@ -691,6 +691,10 @@ export const OrderDetailPage: React.FC = () => {
       alert(printBlockReason || 'Печать партии заблокирована.');
       return;
     }
+    if (!pdfStatus?.hasFullPdf) {
+      handleTriggerAsyncGeneration();
+      return;
+    }
     setDownloadingPdf(true);
     setTimeout(() => fetchPdfStatus(), 400);
     try {
