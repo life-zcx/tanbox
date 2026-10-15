@@ -2,22 +2,47 @@
 <html lang="ru">
 
 <head>
-  <!-- Google tag (gtag.js) -->
+  <!-- Динамическое подключение Google Analytics и Google Ads только на продакшене -->
   <script>
-    // Исключаем отправку тестовой аналитики только с локальной разработки (localhost)
-    if (['localhost', '127.0.0.1'].includes(window.location.hostname) || window.location.hostname.endsWith('.local')) {
-      window['ga-disable-G-GB7511BWTN'] = true;
-      window['ga-disable-AW-18368406368'] = true;
-    }
-  </script>
-  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18368406368"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
+    (function() {
+      var hostname = window.location.hostname;
+      // Исключаем локальные адреса и тестовые окружения
+      var isLocalhost = Boolean(
+        hostname === 'localhost' ||
+        hostname === '[::1]' ||
+        hostname === '127.0.0.1' ||
+        hostname.endsWith('.local') ||
+        hostname.endsWith('.internal')
+      );
 
-    gtag('config', 'AW-18368406368');
-    gtag('config', 'G-GB7511BWTN');
+      // Глобальная инициализация dataLayer и gtag
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
+
+      if (!isLocalhost) {
+        // Подключаем Google Analytics 4
+        var scriptGA = document.createElement('script');
+        scriptGA.async = true;
+        scriptGA.src = 'https://www.googletagmanager.com/gtag/js?id=G-GB7511BWTN';
+        document.head.appendChild(scriptGA);
+
+        // Подключаем Google Ads
+        var scriptAds = document.createElement('script');
+        scriptAds.async = true;
+        scriptAds.src = 'https://www.googletagmanager.com/gtag/js?id=AW-18368406368';
+        document.head.appendChild(scriptAds);
+
+        gtag('js', new Date());
+        gtag('config', 'G-GB7511BWTN');
+        gtag('config', 'AW-18368406368');
+      } else {
+        // Заглушка для локальной разработки: логирование без отправки в Google
+        window.gtag = function() {
+          console.debug('[Analytics Mock: Localhost]', arguments);
+        };
+      }
+    })();
   </script>
 
   <meta charset="UTF-8" />
