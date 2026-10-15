@@ -76,10 +76,19 @@ docker compose up -d
 echo "🧹 [TANBOX] Очистка кэша старых слоев Docker..."
 docker image prune -f > /dev/null 2>&1 || true
 
-# 6. Чтение учетных данных админа из .env
+# 6. Автоматическая регистрация ежедневного бэкапа в crontab (каждую ночь в 03:00)
+BACKUP_SCRIPT="$PROJECT_DIR/scripts/backup-db.sh"
+if [ -f "$BACKUP_SCRIPT" ]; then
+    chmod +x "$BACKUP_SCRIPT"
+    CRON_CMD="0 3 * * * cd $PROJECT_DIR && bash scripts/backup-db.sh >> /var/log/tanbox-backup.log 2>&1"
+    (crontab -l 2>/dev/null | grep -v "backup-db.sh" ; echo "$CRON_CMD") | crontab -
+    echo "⏰ [TANBOX] Ежедневный ночной бэкап БД (03:00) зарегистрирован в crontab."
+fi
+
+# 7. Чтение учетных данных админа из .env
 ADMIN_PASS=$(grep '^INITIAL_ADMIN_PASSWORD=' .env | cut -d '=' -f2- || echo "(указан в .env)")
 
-# 7. Статус запущенных сервисов
+# 8. Статус запущенных сервисов
 echo "=============================================================================="
 echo "🎉 Продакшн TANBOX успешно запущен и работает!"
 echo "=============================================================================="
