@@ -2,11 +2,10 @@
 <html lang="ru">
 
 <head>
-  <!-- Динамическое подключение Google Analytics и Google Ads только на продакшене -->
+  <!-- Google tag (gtag.js) -->
   <script>
     (function() {
       var hostname = window.location.hostname;
-      // Исключаем локальные адреса и тестовые окружения
       var isLocalhost = Boolean(
         hostname === 'localhost' ||
         hostname === '[::1]' ||
@@ -15,26 +14,22 @@
         hostname.endsWith('.internal')
       );
 
-      // 1. Инициализируем dataLayer и глобальную функцию window.gtag
       window.dataLayer = window.dataLayer || [];
       function gtag() { window.dataLayer.push(arguments); }
       window.gtag = gtag;
 
       if (!isLocalhost) {
-        // 2. Достаточно подключить библиотеку gtag.js один раз
         var script = document.createElement('script');
         script.async = true;
         script.src = 'https://www.googletagmanager.com/gtag/js?id=G-GB7511BWTN';
         document.head.appendChild(script);
 
-        // 3. Передаем конфигурации счетчиков
         gtag('js', new Date());
         gtag('config', 'G-GB7511BWTN');
         gtag('config', 'AW-18368406368');
       } else {
-        // Локальная заглушка: выводим события в консоль браузера для отладки
         window.gtag = function() {
-          console.debug('[Analytics Mock: Localhost]', Array.from(arguments));
+          console.debug('[analytics]', Array.from(arguments));
         };
       }
     })();
@@ -45,7 +40,6 @@
   <link rel="apple-touch-icon" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <!-- Primary Meta Tags -->
   <title>Маркировка товаров в Казахстане под ключ | Эмиссия кодов Data Matrix в ИС Танба — TANBOX.KZ</title>
   <meta name="title" content="Маркировка товаров в Казахстане под ключ | Эмиссия кодов Data Matrix в ИС Танба — TANBOX.KZ" />
   <meta name="description"
@@ -56,13 +50,12 @@
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
   <link rel="canonical" href="https://tanbox.kz/" />
 
-  <!-- Geo Meta Tags for Kazakhstan Local SEO -->
   <meta name="geo.region" content="KZ-ALA" />
   <meta name="geo.placename" content="Алматы" />
   <meta name="geo.position" content="43.238949;76.889709" />
   <meta name="ICBM" content="43.238949, 76.889709" />
 
-  <!-- Open Graph / Facebook -->
+  <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="ru_KZ" />
   <meta property="og:site_name" content="TANBOX.KZ — Сервис цифровой маркировки в РК" />
@@ -77,7 +70,7 @@
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="TANBOX.KZ — Сервис цифровой маркировки товаров в Республике Казахстан" />
 
-  <!-- Twitter Card -->
+  <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://tanbox.kz/" />
   <meta name="twitter:title" content="Маркировка товаров Data Matrix в Казахстане | ИС Танба — TANBOX" />
@@ -85,13 +78,13 @@
     content="Эмиссия кодов Data Matrix, регистрация в НКТ, термопечать этикеток и оклейка партий на складе по Казахстану." />
   <meta name="twitter:image" content="https://tanbox.kz/og-image.jpg" />
 
-  <!-- Fonts Preconnect -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
 
-  <!-- Schema.org JSON-LD Structured Data for Search Engines -->
+  <!-- Schema.org -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
