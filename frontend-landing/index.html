@@ -3,6 +3,13 @@
 
 <head>
   <!-- Google tag (gtag.js) -->
+  <script>
+    // Исключаем отправку тестовой аналитики только с локальной разработки (localhost)
+    if (['localhost', '127.0.0.1'].includes(window.location.hostname) || window.location.hostname.endsWith('.local')) {
+      window['ga-disable-G-GB7511BWTN'] = true;
+      window['ga-disable-AW-18368406368'] = true;
+    }
+  </script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18368406368"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
