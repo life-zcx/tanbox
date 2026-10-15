@@ -15,31 +15,26 @@
         hostname.endsWith('.internal')
       );
 
-      // Глобальная инициализация dataLayer и gtag
+      // 1. Инициализируем dataLayer и глобальную функцию window.gtag
       window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
+      function gtag() { window.dataLayer.push(arguments); }
       window.gtag = gtag;
 
       if (!isLocalhost) {
-        // Подключаем Google Analytics 4
-        var scriptGA = document.createElement('script');
-        scriptGA.async = true;
-        scriptGA.src = 'https://www.googletagmanager.com/gtag/js?id=G-GB7511BWTN';
-        document.head.appendChild(scriptGA);
+        // 2. Достаточно подключить библиотеку gtag.js один раз
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-GB7511BWTN';
+        document.head.appendChild(script);
 
-        // Подключаем Google Ads
-        var scriptAds = document.createElement('script');
-        scriptAds.async = true;
-        scriptAds.src = 'https://www.googletagmanager.com/gtag/js?id=AW-18368406368';
-        document.head.appendChild(scriptAds);
-
+        // 3. Передаем конфигурации счетчиков
         gtag('js', new Date());
         gtag('config', 'G-GB7511BWTN');
         gtag('config', 'AW-18368406368');
       } else {
-        // Заглушка для локальной разработки: логирование без отправки в Google
+        // Локальная заглушка: выводим события в консоль браузера для отладки
         window.gtag = function() {
-          console.debug('[Analytics Mock: Localhost]', arguments);
+          console.debug('[Analytics Mock: Localhost]', Array.from(arguments));
         };
       }
     })();
