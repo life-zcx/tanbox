@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting DB seeding...');
 
+  /* [ОТКЛЮЧЕНО] Создание учетной записи админа при сидинге (раскомментируйте при необходимости):
   // 1. Password hashes (using env variables or fallback for initial bootstrap)
   const isProd = process.env.NODE_ENV === 'production';
   const initialAdminPass = process.env.INITIAL_ADMIN_PASSWORD;
@@ -36,6 +37,7 @@ async function main() {
   } else {
     console.log(`ℹ️ Admin user already exists, keeping existing credentials.`);
   }
+  */
 
   // 3. Tariffs - only create if not yet existing (preserving any customizations made by admin)
   const defaultTariffs = [

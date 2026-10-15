@@ -32,10 +32,11 @@ if grep -q "replace_with_strong_password_minimum_24_chars" .env; then
     sed -i "s|replace_with_strong_password_minimum_24_chars|$RANDOM_PG_PASS|g" .env
 fi
 
-if grep -q "replace_with_initial_admin_password_here" .env; then
-    RANDOM_ADMIN_PASS=$(openssl rand -base64 12 2>/dev/null || tr -dc 'A-Za-z0-9_!' </dev/urandom | head -c 16)
-    sed -i "s|replace_with_initial_admin_password_here|$RANDOM_ADMIN_PASS|g" .env
-fi
+# [ОТКЛЮЧЕНО] Автоматическое создание/сброс пароля админа (раскомментируйте при необходимости):
+# if grep -q "replace_with_initial_admin_password_here" .env; then
+#     RANDOM_ADMIN_PASS=$(openssl rand -base64 12 2>/dev/null || tr -dc 'A-Za-z0-9_!' </dev/urandom | head -c 16)
+#     sed -i "s|replace_with_initial_admin_password_here|$RANDOM_ADMIN_PASS|g" .env
+# fi
 
 echo "✅ Конфигурация .env проверена и готова."
 
@@ -69,7 +70,8 @@ if docker ps | grep -q "tanbox_postgres"; then
 fi
 
 docker compose run --rm backend sh -c "npx prisma migrate deploy || npx prisma db push --skip-generate"
-docker compose run --rm backend node dist/seed.js
+# [ОТКЛЮЧЕНО] Сидинг админа (раскомментируйте, когда понадобится создать учетную запись):
+# docker compose run --rm backend node dist/seed.js
 
 # 4. Запуск всех сервисов в фоновом режиме
 echo "🚢 [TANBOX] Запуск продакшн-стека..."
