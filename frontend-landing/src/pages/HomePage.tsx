@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HeroSection } from '../components/landing/HeroSection';
 import { BusinessValueSection } from '../components/landing/BusinessValueSection';
 import { CategoriesSection } from '../components/landing/CategoriesSection';
@@ -6,6 +6,7 @@ import { CalculatorSection } from '../components/landing/CalculatorSection';
 import { HowItWorksSection } from '../components/landing/HowItWorksSection';
 import { FaqSection } from '../components/landing/FaqSection';
 import { ContactsSection } from '../components/landing/ContactsSection';
+import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
 import { TariffCode } from '../types';
 import { setPageSeo } from '../utils/seo';
 
@@ -18,6 +19,7 @@ interface HomePageProps {
 
 export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) => {
   const { lang } = useLanguage();
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
   useEffect(() => {
     if (lang === 'kz') {
@@ -61,6 +63,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) 
       <HeroSection
         onOpenCalculator={scrollToCalculator}
         onOpenAuth={onOpenAuth}
+        onOpenOrderModal={() => setIsOrderModalOpen(true)}
         onScrollNext={scrollToBusinessValue}
       />
 
@@ -85,6 +88,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) 
 
       {/* 7. Contacts */}
       <ContactsSection />
+
+      {/* Quick Service Order Modal */}
+      <ServiceOrderModal
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        initialServiceTitle={
+          lang === 'kz'
+            ? 'Тауарларды цифрлық таңбалау (кілтке дейін)'
+            : lang === 'en'
+            ? 'Turnkey Product Serialization & Marking'
+            : 'Цифровая маркировка товаров под ключ'
+        }
+      />
     </div>
   );
 };

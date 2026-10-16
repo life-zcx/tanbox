@@ -8,10 +8,11 @@ import { useLanguage } from '../../context/LanguageContext';
 interface HeroSectionProps {
   onOpenCalculator?: () => void;
   onOpenAuth: () => void;
+  onOpenOrderModal?: () => void;
   onScrollNext?: () => void;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onScrollNext }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onScrollNext, onOpenOrderModal }) => {
   const { lang, t, getLocalizedPath } = useLanguage();
   const [titleNumber, setTitleNumber] = useState(0);
 
@@ -115,14 +116,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
             <ArrowRight className="w-5 h-5 shrink-0" />
           </Link>
 
-          <a
-            href={getLkUrl('/orders/new')}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-transparent hover:bg-white/10 text-white border border-white/40 hover:border-white/70 text-sm sm:text-base font-bold px-7 sm:px-8 py-3.5 sm:py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95"
+          <button
+            type="button"
+            onClick={onOpenOrderModal}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-transparent hover:bg-white/10 text-white border border-white/40 hover:border-white/70 text-sm sm:text-base font-bold px-7 sm:px-8 py-3.5 sm:py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 cursor-pointer"
           >
             <span>{t('hero.btn_order')}</span>
-          </a>
+          </button>
         </div>
 
       </div>

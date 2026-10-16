@@ -22,6 +22,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
   const serviceOptions = useMemo(() => {
     if (lang === 'kz') {
       return [
+        'Тауарларды цифрлық таңбалау (кілтке дейін)',
         'Тауарларды кедендік ресімдеу және растаможка',
         'Тауарларды ҰТК каталогына енгізу (Ұлттық каталог)',
         'Data Matrix кодтарын эмиссиялау және жапсыру',
@@ -33,6 +34,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     }
     if (lang === 'en') {
       return [
+        'Turnkey Product Serialization & Marking',
         'Customs Clearance and Freight Handling',
         'National Product Catalog (NKT) Registration',
         'Data Matrix Code Issuance and Labeling',
@@ -43,6 +45,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
       ];
     }
     return [
+      'Цифровая маркировка товаров под ключ',
       'Таможенное оформление и растаможка грузов',
       'Заведение товаров в НКТ (Каталог товаров)',
       'Эмиссия и нанесение кодов Data Matrix',
