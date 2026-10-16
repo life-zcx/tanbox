@@ -24,6 +24,7 @@ import { logger } from '../utils/logger';
 import { syncOrderInvoices } from './invoices.controller';
 import { syncOrderPositionsFromNkt, resolveNktProduct } from '../services/nktCatalog.service';
 import { getNktSettings } from '../services/nktSettings.service';
+import { clientTelegramBot } from '../services/clientTelegram.service';
 export { getDefaultStickerLayout };
 
 function isSafeUrl(url?: string | null): boolean {
@@ -668,6 +669,14 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
       }).catch(() => {});
     }
 
+    // Trigger Telegram notifications to client if linked
+    if (status && status !== existing.status) {
+      clientTelegramBot.notifyOrderStatusChanged(existing.id, status).catch(() => {});
+    }
+    if (paymentStatus && paymentStatus !== existing.paymentStatus) {
+      clientTelegramBot.notifyPaymentStatusChanged(existing.id, paymentStatus).catch(() => {});
+    }
+
     return res.json({
       message: 'Статус заказа обновлен',
       order: updatedOrder,
@@ -700,6 +709,10 @@ export const updateOrderPrintPermission = async (req: AuthRequest, res: Response
           : {}),
       },
     });
+
+    if (paymentStatus && paymentStatus !== existing.paymentStatus) {
+      clientTelegramBot.notifyPaymentStatusChanged(existing.id, paymentStatus).catch(() => {});
+    }
 
     return res.json({
       message: 'Доступ к печати партии обновлен',
@@ -782,6 +795,10 @@ export const updateStickerLayout = async (req: AuthRequest, res: Response) => {
       where: { id: existing.id },
       data: updateData,
     });
+
+    if (sendToClient) {
+      clientTelegramBot.notifyStickerApprovalChanged(existing.id, 'WAITING_APPROVAL').catch(() => {});
+    }
 
     return res.json({
       message: sendToClient
@@ -873,6 +890,9 @@ export const updateStickerApproval = async (req: AuthRequest, res: Response) => 
       companyName: existing.user?.companyName,
       notes: comment,
     }).catch(() => {});
+
+    // Notify Client Personal Telegram Bot
+    clientTelegramBot.notifyStickerApprovalChanged(existing.id, approvalStatus, comment).catch(() => {});
 
     return res.json({
       message: approvalStatus === 'APPROVED' ? 'Макет успешно утвержден' : 'Запрос на доработку передан дизайнеру',

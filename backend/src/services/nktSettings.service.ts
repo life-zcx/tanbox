@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { prisma } from '../config/db';
 import { logger } from '../utils/logger';
 
 export interface NktSettings {
@@ -20,9 +21,28 @@ const DEFAULT_SETTINGS: NktSettings = {
 
 let cachedSettings: NktSettings | null = null;
 
-export function getNktSettings(): NktSettings {
-  if (cachedSettings) return cachedSettings;
+export async function initNktSettings(): Promise<NktSettings> {
+  try {
+    const record = await (prisma as any).systemSetting.findUnique({
+      where: { key: 'nkt' },
+    });
+    if (record && record.value && typeof record.value === 'object') {
+      const val = record.value as any;
+      cachedSettings = {
+        enabled: typeof val.enabled === 'boolean' ? val.enabled : true,
+        apiKey: (val.apiKey && String(val.apiKey).trim()) || DEFAULT_SETTINGS.apiKey,
+        baseUrl: (val.baseUrl && String(val.baseUrl).trim()) || DEFAULT_SETTINGS.baseUrl,
+        updatedAt: record.updatedAt ? record.updatedAt.toISOString() : undefined,
+        updatedBy: record.updatedBy || undefined,
+      };
+      logger.info(`[NKT Settings] Loaded from DB: enabled=${cachedSettings.enabled}`);
+      return cachedSettings;
+    }
+  } catch (err: any) {
+    logger.warn(`[NKT Settings] Could not load from DB: ${err.message}`);
+  }
 
+  // Fallback to legacy file or defaults if DB doesn't have it yet
   try {
     if (fs.existsSync(SETTINGS_FILE)) {
       const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
@@ -33,6 +53,33 @@ export function getNktSettings(): NktSettings {
         updatedAt: data.updatedAt,
         updatedBy: data.updatedBy,
       };
+      // Migrate legacy file into DB immediately
+      try {
+        await (prisma as any).systemSetting.upsert({
+          where: { key: 'nkt' },
+          update: {
+            value: {
+              enabled: cachedSettings.enabled,
+              apiKey: cachedSettings.apiKey,
+              baseUrl: cachedSettings.baseUrl,
+            },
+            updatedBy: cachedSettings.updatedBy || 'migration',
+          },
+          create: {
+            key: 'nkt',
+            value: {
+              enabled: cachedSettings.enabled,
+              apiKey: cachedSettings.apiKey,
+              baseUrl: cachedSettings.baseUrl,
+            },
+            description: 'Настройки интеграции с Национальным Каталогом (НКТ)',
+            updatedBy: cachedSettings.updatedBy || 'migration',
+          },
+        });
+        logger.info('[NKT Settings] Migrated legacy file to DB successfully');
+      } catch (e: any) {
+        logger.warn(`[NKT Settings] Could not migrate legacy file to DB: ${e.message}`);
+      }
       return cachedSettings;
     }
   } catch (err: any) {
@@ -43,7 +90,13 @@ export function getNktSettings(): NktSettings {
   return cachedSettings;
 }
 
-export function saveNktSettings(updates: Partial<NktSettings>, updatedBy?: string): NktSettings {
+export function getNktSettings(): NktSettings {
+  if (cachedSettings) return cachedSettings;
+  cachedSettings = { ...DEFAULT_SETTINGS };
+  return cachedSettings;
+}
+
+export async function saveNktSettings(updates: Partial<NktSettings>, updatedBy?: string): Promise<NktSettings> {
   const current = getNktSettings();
   const next: NktSettings = {
     enabled: typeof updates.enabled === 'boolean' ? updates.enabled : current.enabled,
@@ -53,17 +106,45 @@ export function saveNktSettings(updates: Partial<NktSettings>, updatedBy?: strin
     updatedBy: updatedBy || current.updatedBy,
   };
 
+  cachedSettings = next;
+
+  // Persist to DB
+  try {
+    await (prisma as any).systemSetting.upsert({
+      where: { key: 'nkt' },
+      update: {
+        value: {
+          enabled: next.enabled,
+          apiKey: next.apiKey,
+          baseUrl: next.baseUrl,
+        },
+        updatedBy: next.updatedBy || 'admin',
+      },
+      create: {
+        key: 'nkt',
+        value: {
+          enabled: next.enabled,
+          apiKey: next.apiKey,
+          baseUrl: next.baseUrl,
+        },
+        description: 'Настройки интеграции с Национальным Каталогом (НКТ)',
+        updatedBy: next.updatedBy || 'admin',
+      },
+    });
+    logger.info(`[NKT Settings] Saved to DB: enabled=${next.enabled}`);
+  } catch (err: any) {
+    logger.error(`[NKT Settings] Failed to save to DB: ${err.message}`);
+  }
+
+  // Backup to file for redundancy
   try {
     const dir = path.dirname(SETTINGS_FILE);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), 'utf-8');
-    cachedSettings = next;
-    logger.info(`[NKT Settings] Updated successfully: enabled=${next.enabled}`);
   } catch (err: any) {
-    logger.error(`[NKT Settings] Failed to write ${SETTINGS_FILE}: ${err.message}`);
-    cachedSettings = next;
+    logger.warn(`[NKT Settings] Failed to backup to file: ${err.message}`);
   }
 
   return next;

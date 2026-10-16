@@ -12,6 +12,7 @@ import { OrderDetailPage } from './pages/OrderDetailPage';
 import { LabelsRegistryPage } from './pages/LabelsRegistryPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { MarkirovkaPage } from './pages/MarkirovkaPage';
 import { MaintenanceScreen } from './components/common/MaintenanceScreen';
 import { apiClient } from './api/client';
 
@@ -256,6 +257,15 @@ const LkRouter: React.FC = () => {
           element={
             <ProtectedLayout>
               <InvoicesPage />
+            </ProtectedLayout>
+          }
+        />
+
+        <Route
+          path="/markirovka"
+          element={
+            <ProtectedLayout>
+              <MarkirovkaPage />
             </ProtectedLayout>
           }
         />

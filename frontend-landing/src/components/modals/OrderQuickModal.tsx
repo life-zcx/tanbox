@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { X, CheckCircle2 } from 'lucide-react';
@@ -43,6 +43,17 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
       document.body.style.overflow = '';
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -95,9 +106,23 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
     }
   };
 
+  const overlayMouseDownRef = useRef(false);
+
+  const handleOverlayMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    overlayMouseDownRef.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (overlayMouseDownRef.current && e.target === e.currentTarget) {
+      onClose();
+    }
+    overlayMouseDownRef.current = false;
+  };
+
   return createPortal(
     <div
-      onClick={onClose}
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
     >
       <div
@@ -203,20 +228,6 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-black uppercase mb-1 block">
-                  {lang === 'kz' ? 'БСН / ЖСН (ҚР)' : lang === 'en' ? 'BIN / IIN (KZ)' : 'БИН / ИИН (РК)'}
-                </label>
-                <input
-                  type="text"
-                  required
-                  maxLength={12}
-                  placeholder={lang === 'kz' ? 'БСН / ЖСН енгізіңіз' : lang === 'en' ? 'Enter BIN / IIN' : 'Введите БИН / ИИН'}
-                  value={form.binIin}
-                  onChange={(e) => setForm({ ...form, binIin: e.target.value.replace(/\D/g, '') })}
-                  className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-black focus:outline-none focus:border-[#0082FB]"
-                />
-              </div>
 
               <div>
                 <label className="text-xs font-bold text-black uppercase mb-1 block">

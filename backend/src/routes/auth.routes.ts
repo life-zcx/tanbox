@@ -7,6 +7,9 @@ import {
   sendRegisterCode,
   sendForgotPasswordCode,
   resetPasswordWithCode,
+  getTelegramStatus,
+  createTelegramLink,
+  unlinkTelegram,
 } from '../controllers/auth.controller';
 import { authenticateJWT } from '../middleware/auth.middleware';
 import { authRateLimiter } from '../middleware/rateLimiter';
@@ -20,5 +23,10 @@ router.post('/forgot-password', authRateLimiter, sendForgotPasswordCode);
 router.post('/reset-password', authRateLimiter, resetPasswordWithCode);
 router.get('/me', authenticateJWT, getMe);
 router.patch('/me', authenticateJWT, updateMe);
+
+// Client Telegram Notifications
+router.get('/me/telegram-status', authenticateJWT, getTelegramStatus);
+router.post('/me/telegram-link', authenticateJWT, createTelegramLink);
+router.post('/me/telegram-unlink', authenticateJWT, unlinkTelegram);
 
 export default router;

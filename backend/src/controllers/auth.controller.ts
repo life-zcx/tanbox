@@ -6,6 +6,7 @@ import { prisma } from '../config/db';
 import { env } from '../config/env';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendVerificationOtpEmail, sendPasswordResetOtpEmail, sendAdminLoginOtpEmail } from '../services/email.service';
+import { clientTelegramBot } from '../services/clientTelegram.service';
 import { logger } from '../utils/logger';
 
 // In-memory rate limiting / anti-abuse store
@@ -426,6 +427,9 @@ export const getMe = async (req: AuthRequest, res: Response) => {
         role: true,
         isBlocked: true,
         blockedReason: true,
+        telegramChatId: true,
+        telegramUsername: true,
+        telegramLinkedAt: true,
         createdAt: true,
       },
     });
@@ -638,6 +642,84 @@ export const resetPasswordWithCode = async (req: Request, res: Response) => {
   } catch (error: any) {
     logger.error('resetPasswordWithCode error:', error);
     return res.status(500).json({ message: 'Ошибка сервера при сбросе пароля' });
+  }
+};
+
+/**
+ * GET /api/auth/me/telegram-status
+ * Получить статус привязки Telegram для текущего пользователя
+ */
+export const getTelegramStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Не авторизован' });
+    }
+
+    const user = await (prisma as any).user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        telegramChatId: true,
+        telegramUsername: true,
+        telegramLinkedAt: true,
+      },
+    });
+
+    return res.json({
+      isLinked: Boolean(user?.telegramChatId),
+      username: user?.telegramUsername || null,
+      linkedAt: user?.telegramLinkedAt || null,
+      botUsername: clientTelegramBot.getBotUsername(),
+    });
+  } catch (error: any) {
+    logger.error('getTelegramStatus error:', error);
+    return res.status(500).json({ message: 'Ошибка получения статуса Telegram' });
+  }
+};
+
+/**
+ * POST /api/auth/me/telegram-link
+ * Сгенерировать ссылку привязки Telegram бота
+ */
+export const createTelegramLink = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Не авторизован' });
+    }
+
+    const { link, token } = await clientTelegramBot.generateAuthLink(req.user.id);
+
+    return res.json({
+      success: true,
+      link,
+      token,
+      botUsername: clientTelegramBot.getBotUsername(),
+      message: 'Ссылка для привязки Telegram бота сгенерирована',
+    });
+  } catch (error: any) {
+    logger.error('createTelegramLink error:', error);
+    return res.status(500).json({ message: 'Ошибка генерации ссылки Telegram' });
+  }
+};
+
+/**
+ * POST /api/auth/me/telegram-unlink
+ * Отвязать Telegram бота
+ */
+export const unlinkTelegram = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Не авторизован' });
+    }
+
+    await clientTelegramBot.unlinkUser(req.user.id);
+
+    return res.json({
+      success: true,
+      message: 'Telegram успешно отвязан от вашего аккаунта',
+    });
+  } catch (error: any) {
+    logger.error('unlinkTelegram error:', error);
+    return res.status(500).json({ message: 'Ошибка отвязки Telegram' });
   }
 };
 

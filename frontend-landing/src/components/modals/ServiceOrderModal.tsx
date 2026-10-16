@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { X, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
@@ -60,7 +60,6 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
   const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [binIin, setBinIin] = useState('');
   const [notes, setNotes] = useState('');
   const [consent, setConsent] = useState(false);
 
@@ -71,7 +70,6 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
   // Field validation error states
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
-  const [binError, setBinError] = useState<string | null>(null);
 
   // Phone Auto-Formatter (+7 7XX XXX-XX-XX)
   const formatKazakhPhone = (value: string): string => {
@@ -123,29 +121,14 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     return true;
   };
 
-  const validateBinIin = (val: string): boolean => {
-    if (!val.trim()) {
-      setBinError(null);
-      return true; // Optional field
-    }
-    const digitsOnly = val.replace(/\D/g, '');
-    if (digitsOnly.length !== 12 || val.trim().length !== 12) {
-      setBinError(lang === 'kz' ? 'БСН/ЖСН дәл 12 цифрдан тұруы тиіс' : lang === 'en' ? 'BIN/IIN must consist of exactly 12 digits' : 'БИН/ИИН должен состоять ровно из 12 цифр');
-      return false;
-    }
-    setBinError(null);
-    return true;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     const isPhoneValid = validatePhone(phone);
     const isEmailValid = validateEmail(email);
-    const isBinValid = validateBinIin(binIin);
 
-    if (!isPhoneValid || !isEmailValid || !isBinValid) {
+    if (!isPhoneValid || !isEmailValid) {
       setError(lang === 'kz' ? 'Өрістердің дұрыс толтырылғанын тексеріңіз.' : lang === 'en' ? 'Please check the required fields.' : 'Пожалуйста, проверьте правильность заполнения полей.');
       return;
     }
@@ -164,7 +147,6 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
         companyName,
         phone,
         email: email || undefined,
-        binIin: binIin || undefined,
         notes: notes || undefined,
       });
     } catch (err) {
@@ -200,21 +182,44 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     setCompanyName('');
     setPhone('');
     setEmail('');
-    setBinIin('');
     setNotes('');
     setConsent(false);
     setError(null);
     setPhoneError(null);
     setEmailError(null);
-    setBinError(null);
     onClose();
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleResetAndClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  const overlayMouseDownRef = useRef(false);
+
+  const handleOverlayMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    overlayMouseDownRef.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (overlayMouseDownRef.current && e.target === e.currentTarget) {
+      handleResetAndClose();
+    }
+    overlayMouseDownRef.current = false;
   };
 
   if (!isOpen) return null;
 
   return createPortal(
     <div
-      onClick={handleResetAndClose}
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
     >
       <div
@@ -353,50 +358,26 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
                 />
               </div>
 
-              {/* Grid: Email & BIN */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1 flex items-center justify-between">
-                    <span>E-mail</span>
-                  </label>
-                  <input
-                    type="email"
-                    maxLength={100}
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (emailError) validateEmail(e.target.value);
-                    }}
-                    onBlur={(e) => validateEmail(e.target.value)}
-                    placeholder="info@company.kz"
-                    className={`w-full bg-[#F4F6F9] border rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none transition-colors ${
-                      emailError ? 'border-red-500 focus:border-red-500' : 'border-gray-200/80 focus:border-[#0082FB]'
-                    }`}
-                  />
-                  {emailError && <p className="text-red-500 text-[10px] mt-1">{emailError}</p>}
-                </div>
-
-                <div>
-                  <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1 flex items-center justify-between">
-                    <span>{lang === 'kz' ? 'БСН / ЖСН (12 цифр)' : lang === 'en' ? 'BIN / IIN (12 digits)' : 'БИН / ИИН (12 цифр)'}</span>
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={12}
-                    value={binIin}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '');
-                      setBinIin(val);
-                      if (binError) validateBinIin(val);
-                    }}
-                    onBlur={(e) => validateBinIin(e.target.value)}
-                    placeholder="123456789012"
-                    className={`w-full bg-[#F4F6F9] border rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none transition-colors ${
-                      binError ? 'border-red-500 focus:border-red-500' : 'border-gray-200/80 focus:border-[#0082FB]'
-                    }`}
-                  />
-                  {binError && <p className="text-red-500 text-[10px] mt-1">{binError}</p>}
-                </div>
+              {/* Email (Optional) */}
+              <div>
+                <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1 flex items-center justify-between">
+                  <span>E-mail ({lang === 'kz' ? 'міндетті емес' : lang === 'en' ? 'optional' : 'необязательно'})</span>
+                </label>
+                <input
+                  type="email"
+                  maxLength={100}
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) validateEmail(e.target.value);
+                  }}
+                  onBlur={(e) => validateEmail(e.target.value)}
+                  placeholder="info@company.kz"
+                  className={`w-full bg-[#F4F6F9] border rounded-xl px-4 py-3 text-xs font-semibold text-[#111827] focus:outline-none transition-colors ${
+                    emailError ? 'border-red-500 focus:border-red-500' : 'border-gray-200/80 focus:border-[#0082FB]'
+                  }`}
+                />
+                {emailError && <p className="text-red-500 text-[10px] mt-1">{emailError}</p>}
               </div>
 
               {/* Notes */}

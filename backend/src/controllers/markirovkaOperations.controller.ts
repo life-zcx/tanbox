@@ -7,6 +7,36 @@ import { resolveNktProduct } from '../services/nktCatalog.service';
 import { logger } from '../utils/logger';
 
 /**
+ * Helper to resolve MarkirovkaAccount respecting user isolation:
+ * - Admin can access any account by ID or default active account
+ * - Client can only access accounts owned by their userId
+ */
+async function resolveAccountForUser(user: any, accountId?: string) {
+  if (user?.role === 'ADMIN') {
+    if (accountId && accountId !== 'ALL') {
+      return await prisma.markirovkaAccount.findUnique({ where: { id: String(accountId) } });
+    }
+    return await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
+  }
+
+  // Regular user (client)
+  if (accountId && accountId !== 'ALL') {
+    const acc = await prisma.markirovkaAccount.findFirst({
+      where: { id: String(accountId), userId: user?.id },
+    });
+    if (acc) return acc;
+  }
+  const userAcc = await prisma.markirovkaAccount.findFirst({
+    where: { userId: user?.id, status: 'ACTIVE' },
+  });
+  if (userAcc) return userAcc;
+
+  return await prisma.markirovkaAccount.findFirst({
+    where: { userId: user?.id },
+  });
+}
+
+/**
  * 1. Get operations history with filters
  */
 export async function getOperations(req: AuthRequest, res: Response) {
@@ -14,6 +44,12 @@ export async function getOperations(req: AuthRequest, res: Response) {
     const { type, status, accountId, limit = 50, page = 1 } = req.query;
 
     const where: any = {};
+    if (req.user?.role !== 'ADMIN') {
+      where.OR = [
+        { createdById: req.user?.id },
+        { account: { userId: req.user?.id } },
+      ];
+    }
     if (type && type !== 'ALL') {
       where.type = type as MarkirovkaOperationType;
     }
@@ -72,12 +108,7 @@ export async function validateCodes(req: AuthRequest, res: Response) {
 
     const cleanCodes = codes.map((c: string) => extractIdentificationCode(c)).filter(Boolean);
 
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: accountId } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
-    }
+    let account = await resolveAccountForUser(req.user, accountId);
 
     let isMptResponse: any = null;
     let results: any[] = [];
@@ -119,7 +150,7 @@ export async function validateCodes(req: AuthRequest, res: Response) {
           isValid: isFormatOk,
           status: isFormatOk ? 'EMITTED' : 'INVALID_FORMAT',
           statusLabel: isFormatOk ? 'Эмитирован в ИС МПТ' : 'Некорректный формат GS1',
-          ownerBin: account?.login || '990601301525',
+          ownerBin: account?.login || '',
           verifiedAt: new Date().toISOString(),
         };
       });
@@ -172,12 +203,7 @@ export async function createAggregation(req: AuthRequest, res: Response) {
     const cleanCodes = codes.map((c: string) => extractIdentificationCode(c)).filter(Boolean);
     const targetSscc = sscc?.trim() ? normalizeSscc18(sscc) : generateValidSscc18();
 
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: accountId } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
-    }
+    let account = await resolveAccountForUser(req.user, accountId);
 
     const docNumber = `AGG-${Date.now().toString().slice(-6)}`;
     let apiResponse: any = { message: 'Запрос отправлен в ИС МПТ' };
@@ -189,6 +215,7 @@ export async function createAggregation(req: AuthRequest, res: Response) {
         const aggRes = await client.sendIcomAggregationDocument({
           unitSerialNumber: targetSscc,
           codes: cleanCodes,
+          rawDocString: req.body.rawDocString,
           signature: req.body.signature,
         });
         apiResponse = {
@@ -212,7 +239,7 @@ export async function createAggregation(req: AuthRequest, res: Response) {
         codesCount: cleanCodes.length,
         status: isSuccess ? MarkirovkaOperationStatus.COMPLETED : MarkirovkaOperationStatus.FAILED,
         documentNumber: docNumber,
-        requestPayload: { sscc: targetSscc, unitType, category, codesCount: cleanCodes.length },
+        requestPayload: { sscc: targetSscc, unitType, category, codesCount: cleanCodes.length, codes: cleanCodes },
         responsePayload: apiResponse,
         errorDetails: isSuccess ? null : JSON.stringify(apiResponse),
         createdById: req.user?.id || null,
@@ -250,12 +277,7 @@ export async function createDisaggregation(req: AuthRequest, res: Response) {
     const { accountId, sscc } = req.body;
     if (!sscc) return res.status(400).json({ message: 'Укажите код агрегата (SSCC) для расформирования' });
 
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: accountId } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
-    }
+    let account = await resolveAccountForUser(req.user, accountId);
 
     const docNumber = `DIS-${Date.now().toString().slice(-6)}`;
     let apiResponse: any = { status: 'DISAGGREGATED', timestamp: new Date().toISOString() };
@@ -339,12 +361,7 @@ export async function createImportNotification(req: AuthRequest, res: Response) 
     const cleanCodes = codes.map((c: string) => extractIdentificationCode(c)).filter(Boolean);
     const docNumber = `IMP-${Date.now().toString().slice(-6)}`;
 
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: accountId } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
-    }
+    let account = await resolveAccountForUser(req.user, accountId);
 
     if (!account) {
       return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден.' });
@@ -361,6 +378,13 @@ export async function createImportNotification(req: AuthRequest, res: Response) 
       products: cleanCodes.map((c: string) => ({ cis: c })),
     };
 
+    const effectiveDocNumber =
+      declarationNumber ||
+      req.body.fnoNumber ||
+      req.body.certNumber ||
+      req.body.prodActNumber ||
+      `DOC-${Date.now().toString().slice(-6)}`;
+
     // 2. Dispatch genuine HTTP request to Kazakhstan xTrace ICOM REST API
     const client = new MarkirovkaClient(account);
     const parsedDate = declarationDate ? new Date(declarationDate).toISOString() : new Date().toISOString();
@@ -368,10 +392,10 @@ export async function createImportNotification(req: AuthRequest, res: Response) 
     const isMptRes = await client.sendIcomImportDocument({
       codes: cleanCodes,
       customsDeclaration: {
-        number: declarationNumber,
+        number: effectiveDocNumber,
         date: parsedDate,
       },
-      exportCountry: req.body.exportCountry || req.body.senderCountry || 'CN',
+      exportCountry: req.body.exportCountry || req.body.eeuCountry || req.body.senderCountry || (importType === 'PRODUCTION' ? 'KZ' : 'CN'),
       rawDocString: req.body.rawDocString,
       signature,
     });
@@ -398,11 +422,24 @@ export async function createImportNotification(req: AuthRequest, res: Response) 
         signature: signature || null,
         requestPayload: {
           importType,
-          declarationNumber,
-          declarationDate,
           category,
-          senderCountry,
+          declarationNumber: effectiveDocNumber,
+          declarationDate,
+          exportCountry: req.body.exportCountry || req.body.eeuCountry || (importType === 'PRODUCTION' ? 'KZ' : 'CN'),
+          fnoNumber: req.body.fnoNumber,
+          fnoDate: req.body.fnoDate,
+          primaryDocNumber: req.body.primaryDocNumber,
+          primaryDocDate: req.body.primaryDocDate,
+          certType: req.body.certType,
+          certNumber: req.body.certNumber,
+          certDate: req.body.certDate,
+          prodActNumber: req.body.prodActNumber,
+          prodActDate: req.body.prodActDate,
+          producerBin: req.body.producerBin,
+          contractNumber: req.body.contractNumber,
           codesCount: cleanCodes.length,
+          codes: cleanCodes,
+          orderId: req.body.orderId,
         },
         responsePayload,
         errorDetails: isSuccess ? null : (isMptRes.error || JSON.stringify(isMptRes.response)),
@@ -427,11 +464,20 @@ export async function createImportNotification(req: AuthRequest, res: Response) 
       });
     }
 
+    const typeLabel =
+      importType === 'EEU'
+        ? 'Ввоз из стран ЕАЭС (ФНО 328)'
+        : importType === 'PRODUCTION'
+        ? 'Ввод в оборот: Производство в РК'
+        : importType === 'CONTRACT_MANUFACTURING'
+        ? 'Ввод в оборот: Контрактное производство'
+        : 'Уведомление о ввозе товаров (по ГТД)';
+
     return res.json({
       success: true,
       operationId: op.id,
       documentNumber: docNumber,
-      message: `Уведомление о ввозе ${cleanCodes.length} товаров успешно зарегистрировано в ИС МПТ!`,
+      message: `${typeLabel} (${cleanCodes.length} товаров) успешно зарегистрировано в ИС МПТ!`,
       responsePayload,
     });
   } catch (err: any) {
@@ -461,12 +507,7 @@ export async function createRetirement(req: AuthRequest, res: Response) {
     const cleanCodes = codes.map((c: string) => extractIdentificationCode(c)).filter(Boolean);
     const docNumber = `RET-${Date.now().toString().slice(-6)}`;
 
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: accountId } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
-    }
+    let account = await resolveAccountForUser(req.user, accountId);
 
     if (!account) {
       return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден.' });
@@ -482,6 +523,8 @@ export async function createRetirement(req: AuthRequest, res: Response) {
         number: parsedDocNum,
         date: parsedDocDate,
       },
+      rawDocString: req.body.rawDocString,
+      signature,
     });
 
     const isSuccess = isMptRes.success;
@@ -507,6 +550,7 @@ export async function createRetirement(req: AuthRequest, res: Response) {
           userDocNum,
           documentDate,
           codesCount: cleanCodes.length,
+          codes: cleanCodes,
         },
         responsePayload,
         errorDetails: isSuccess ? null : (isMptRes.error || JSON.stringify(isMptRes.response)),
@@ -554,12 +598,7 @@ export async function createCorrection(req: AuthRequest, res: Response) {
     const cleanCodes = Array.isArray(codes) ? codes.map((c: string) => extractIdentificationCode(c)).filter(Boolean) : [];
     const docNumber = `COR-${Date.now().toString().slice(-6)}`;
 
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: accountId } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
-    }
+    let account = await resolveAccountForUser(req.user, accountId);
 
     if (!account) {
       return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден.' });
@@ -598,7 +637,7 @@ export async function createCorrection(req: AuthRequest, res: Response) {
         documentNumber: docNumber,
         isSigned: Boolean(signature),
         signature: signature || null,
-        requestPayload: { targetDocNumber, correctionType, notes, codesCount: cleanCodes.length },
+        requestPayload: { targetDocNumber, correctionType, notes, codesCount: cleanCodes.length, codes: cleanCodes },
         responsePayload,
         errorDetails: isSuccess ? null : (isMptRes.error || JSON.stringify(isMptRes.response)),
         createdById: req.user?.id || null,
@@ -641,12 +680,7 @@ export async function createCorrection(req: AuthRequest, res: Response) {
 export async function getAuthChallenge(req: AuthRequest, res: Response) {
   try {
     const { accountId } = req.query;
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: String(accountId) } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
-    }
+    let account = await resolveAccountForUser(req.user, accountId ? String(accountId) : undefined);
 
     if (!account) {
       return res.status(400).json({ message: 'Аккаунт ИС МПТ не найден' });
@@ -677,12 +711,7 @@ export async function authSimpleSignIn(req: AuthRequest, res: Response) {
       return res.status(400).json({ message: 'Требуется указать uuid и signature' });
     }
 
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: String(accountId) } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
-    }
+    let account = await resolveAccountForUser(req.user, accountId ? String(accountId) : undefined);
 
     if (!account) {
       return res.status(400).json({ message: 'Аккаунт ИС МПТ не найден' });
@@ -707,21 +736,33 @@ export async function authSimpleSignIn(req: AuthRequest, res: Response) {
  */
 export async function createUtilisation(req: AuthRequest, res: Response) {
   try {
-    const { accountId, category = 'OILS', codes, releaseType, productionDate, expirationDate, manufacturerCountry } = req.body;
+    const { accountId, category = 'OILS', codes, releaseType, productionDate, expirationDate, manufacturerCountry, orderId } = req.body;
 
     if (!Array.isArray(codes) || codes.length === 0) {
       return res.status(400).json({ message: 'Укажите коды маркировки для отчета о нанесении' });
     }
 
-    const cleanCodes = codes.map((c: string) => c.replace(/[\r\n]/g, '').trim()).filter(Boolean);
+    let cleanCodes = codes.map((c: string) => c.replace(/[\r\n]/g, '').trim()).filter(Boolean);
     const docNumber = `UTL-${Date.now().toString().slice(-6)}`;
 
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: accountId } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
+    // If codes are truncated to AI_REDUCED (without crypto-tail) and orderId is provided,
+    // recover the authentic full DataMatrix strings with crypto-tail from database orderCodeItem:
+    if (orderId && cleanCodes.some((c: string) => !c.includes('\u001d') && !c.includes('92'))) {
+      try {
+        const dbItems = await prisma.orderCodeItem.findMany({
+          where: { orderId: String(orderId) },
+          orderBy: { index: 'asc' },
+          take: cleanCodes.length || 500,
+        });
+        if (dbItems.length > 0 && dbItems[0].code.includes('\u001d')) {
+          cleanCodes = dbItems.map((item) => item.code);
+        }
+      } catch (err: any) {
+        logger.warn('Failed restoring full codes from orderCodeItem for utilisation:', err.message);
+      }
     }
+
+    let account = await resolveAccountForUser(req.user, accountId);
 
     if (!account) {
       return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден.' });
@@ -754,11 +795,34 @@ export async function createUtilisation(req: AuthRequest, res: Response) {
         status: isSuccess ? MarkirovkaOperationStatus.COMPLETED : MarkirovkaOperationStatus.FAILED,
         documentNumber: docNumber,
         isSigned: false,
-        requestPayload: { category, codesCount: cleanCodes.length, releaseType },
+        requestPayload: { category, codesCount: cleanCodes.length, codes: cleanCodes, releaseType, orderId },
         responsePayload,
         createdById: req.user?.id || null,
       },
     });
+
+    if (orderId) {
+      try {
+        const orderExists = await prisma.order.findUnique({ where: { id: String(orderId) } });
+        if (orderExists) {
+          await prisma.markirovkaUtilisationReport.create({
+            data: {
+              accountId: account.id,
+              orderId: String(orderId),
+              externalReportId: reportRes?.reportId || docNumber,
+              category: (category as any) || orderExists.category,
+              codesCount: cleanCodes.length,
+              status: isSuccess ? 'SUBMITTED' : 'REJECTED',
+              submittedAt: new Date(),
+              reportData: responsePayload,
+              errorDetails: isSuccess ? null : 'Failed to submit',
+            },
+          });
+        }
+      } catch (err: any) {
+        logger.warn('Failed linking MarkirovkaUtilisationReport to order:', err.message);
+      }
+    }
 
     return res.json({
       success: true,
@@ -797,12 +861,7 @@ export async function createReturnToTurnover(req: AuthRequest, res: Response) {
     const cleanCodes = codes.map((c: string) => extractIdentificationCode(c)).filter(Boolean);
     const docNumber = `RET-TURN-${Date.now().toString().slice(-6)}`;
 
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: accountId } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
-    }
+    let account = await resolveAccountForUser(req.user, accountId);
 
     if (!account) {
       return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден.' });
@@ -845,6 +904,7 @@ export async function createReturnToTurnover(req: AuthRequest, res: Response) {
           userDocNum,
           documentDate,
           codesCount: cleanCodes.length,
+          codes: cleanCodes,
         },
         responsePayload,
         errorDetails: isSuccess ? null : (isMptRes.error || JSON.stringify(isMptRes.response)),
@@ -932,8 +992,20 @@ export async function getOperationReceipt(req: AuthRequest, res: Response) {
       return res.status(404).json({ message: 'Операция не найдена' });
     }
 
+    if (req.user?.role !== 'ADMIN') {
+      if (op.createdById !== req.user?.id && op.account?.userId !== req.user?.id) {
+        return res.status(403).json({ message: 'Доступ к данной операции запрещен' });
+      }
+    }
+
     const respPayload: any = op.responsePayload || {};
-    const documentId = respPayload.documentId || respPayload.data?.documentId || respPayload.isMptResponse?.documentId;
+    const documentId =
+      respPayload.documentId ||
+      respPayload.reportId ||
+      respPayload.data?.documentId ||
+      respPayload.data?.reportId ||
+      respPayload.raw?.reportId ||
+      respPayload.isMptResponse?.documentId;
 
     if (!documentId) {
       let localCodes: any[] = [];
@@ -954,6 +1026,26 @@ export async function getOperationReceipt(req: AuthRequest, res: Response) {
           state: op.status === 'COMPLETED' ? 'SUCCESS' : 'ERROR',
           result: op.status === 'COMPLETED' ? 'Успешно' : 'Ошибка',
         }));
+      }
+
+      if (localCodes.length === 0 && (op.requestPayload as any)?.orderId) {
+        try {
+          const codeItems = await prisma.orderCodeItem.findMany({
+            where: { orderId: String((op.requestPayload as any).orderId) },
+            orderBy: { index: 'asc' },
+            take: 500,
+          });
+          if (codeItems.length > 0) {
+            localCodes = codeItems.map((ci) => ({
+              code: ci.code,
+              state: op.status === 'COMPLETED' ? 'SUCCESS' : 'ERROR',
+              result: op.status === 'COMPLETED' ? 'Успешно' : 'Ошибка',
+              gtin: ci.gtin,
+            }));
+          }
+        } catch (err: any) {
+          logger.warn('Failed retrieving orderCodeItems in getOperationReceipt:', err.message);
+        }
       }
 
       return res.json({
@@ -988,6 +1080,101 @@ export async function getOperationReceipt(req: AuthRequest, res: Response) {
       client.getIcomDocumentErrors(documentId).catch(() => null),
     ]);
 
+function formatMarkirovkaError(errorCode?: string, errorTags?: any, propertyName?: string | null): {
+  title: string;
+  description: string;
+  actionHint?: string;
+} {
+  const code = String(errorCode || '').toLowerCase();
+  const tagsStr = typeof errorTags === 'object' ? JSON.stringify(errorTags) : String(errorTags || '');
+
+  if (code.includes('invalid-code-properties') || code.includes('ai_reduced') || tagsStr.includes('AI_REDUCED')) {
+    return {
+      title: 'Неверный формат кода маркировки',
+      description: 'В отчет передан код с криптохвостом или неверной структурой. Для отчета о нанесении в ИС МПТ требуется короткий код идентификации (GTIN + серийный номер, 31 символ) без криптохвоста и спецсимволов.',
+      actionHint: 'В Tanbox уже включена авто-очистка кодов. Повторите операцию нанесения — коды будут переданы в правильном формате.',
+    };
+  }
+
+  if (code.includes('not-found') || code.includes('not_found')) {
+    return {
+      title: 'Код не найден в ИС МПТ',
+      description: 'Данный код маркировки не зарегистрирован в системе ИС МПТ (не был эмитирован для вашей организации).',
+      actionHint: 'Убедитесь, что коды были заказаны и выпущены в вашем аккаунте ИС МПТ.',
+    };
+  }
+
+  if (code.includes('already-utilised') || code.includes('already_utilized') || code.includes('already-applied')) {
+    return {
+      title: 'Код уже нанесен',
+      description: 'Отчет о нанесении для этого кода уже был успешно зарегистрирован ранее.',
+      actionHint: 'Повторное нанесение не требуется. Код готов к вводу в оборот или агрегации.',
+    };
+  }
+
+  if (code.includes('not-applied') || code.includes('not_applied')) {
+    return {
+      title: 'Код еще не нанесен',
+      description: 'Нельзя ввести товар в оборот или сформировать упаковку до успешной подачи отчета о нанесении.',
+      actionHint: 'Сначала выполните операцию «Отчет о нанесении» для этих кодов.',
+    };
+  }
+
+  if (code.includes('already-in-circulation') || code.includes('in-circulation') || code.includes('in_circulation')) {
+    return {
+      title: 'Товар уже в обороте',
+      description: 'Этот код маркировки уже находится в обороте.',
+      actionHint: 'Повторный ввод в оборот не требуется.',
+    };
+  }
+
+  if (code.includes('not-in-circulation')) {
+    return {
+      title: 'Товар не в обороте',
+      description: 'Код маркировки еще не введен в оборот либо уже списан.',
+      actionHint: 'Выполните ввод в оборот перед продажей или выводом.',
+    };
+  }
+
+  if (code.includes('withdrawn') || code.includes('retired')) {
+    return {
+      title: 'Код выведен из оборота',
+      description: 'Данный код маркировки уже списан, продан или выведен из оборота.',
+      actionHint: 'Коды, выведенные из оборота, нельзя использовать повторно.',
+    };
+  }
+
+  if (code.includes('owner') || code.includes('mismatch')) {
+    return {
+      title: 'Код принадлежит другой организации',
+      description: 'Текущим владельцем кода маркировки числится другой участник оборота (не совпадает БИН/ИИН).',
+      actionHint: 'Проверьте, была ли проведена приемка товара по электронному акту / ВС.',
+    };
+  }
+
+  if (code.includes('gtin')) {
+    return {
+      title: 'Ошибка товара в каталоге (GTIN)',
+      description: 'Товар с таким GTIN не найден в Национальном каталоге товаров (НКТ) или карточка не опубликована.',
+      actionHint: 'Проверьте статус карточки товара в НКТ на markirovka.kz.',
+    };
+  }
+
+  if (code.includes('date') || code.includes('time')) {
+    return {
+      title: 'Некорректная дата',
+      description: 'Указана недопустимая дата производства или срок годности (например, дата из будущего).',
+      actionHint: 'Укажите дату производства не позже сегодняшнего дня.',
+    };
+  }
+
+  return {
+    title: errorCode ? `Ошибка: ${errorCode}` : 'Ошибка обработки кода',
+    description: 'Система маркировки отклонила обработку кода по правилам валидации ИС МПТ.',
+    actionHint: 'Проверьте статус кода в личном кабинете markirovka.kz или повторите операцию.',
+  };
+}
+
     // Auto-sync status in DB if storage returns definitive status
     if (docStatus?.status) {
       const mappedStatus =
@@ -1001,6 +1188,74 @@ export async function getOperationReceipt(req: AuthRequest, res: Response) {
       }
     }
 
+    const errorMap = new Map<number, any>();
+    const rawErrors = Array.isArray(docErrors?.documentErrors) ? docErrors.documentErrors : [];
+    const enrichedErrors = rawErrors.map((err: any) => {
+      const readable = formatMarkirovkaError(err.errorCode, err.errorTags, err.propertyName);
+      return {
+        ...err,
+        userTitle: readable.title,
+        userMessage: readable.description,
+        actionHint: readable.actionHint,
+      };
+    });
+
+    for (const err of enrichedErrors) {
+      if (typeof err.index === 'number') {
+        errorMap.set(err.index, err);
+      }
+    }
+
+    // Fallback to local codes if True-API storage has not replicated codes yet
+    let effectiveCodes = Array.isArray(docCodes) && docCodes.length > 0 ? docCodes : [];
+    if (effectiveCodes.length === 0) {
+      let rawList: any[] = [];
+      if (Array.isArray((op.requestPayload as any)?.codes)) {
+        rawList = (op.requestPayload as any).codes;
+      } else if ((op.requestPayload as any)?.orderId) {
+        try {
+          const codeItems = await prisma.orderCodeItem.findMany({
+            where: { orderId: String((op.requestPayload as any).orderId) },
+            orderBy: { index: 'asc' },
+            take: 500,
+          });
+          rawList = codeItems.map((ci) => ci.code);
+        } catch (err: any) {
+          logger.warn('Failed fallback codeItems:', err.message);
+        }
+      }
+
+      effectiveCodes = rawList.map((c: string, idx: number) => {
+        const err = errorMap.get(idx);
+        const hasErr = !!err || docStatus?.status === 'ERROR';
+        let errorTitle = 'Отклонен ИС МПТ';
+        if (err?.userTitle) {
+          errorTitle = err.userTitle;
+        } else if (hasErr && enrichedErrors.length > 0) {
+          errorTitle = enrichedErrors[0].userTitle || 'Отклонен ИС МПТ';
+        }
+
+        return {
+          code: c,
+          state: hasErr ? 'ERROR' : 'SUCCESS',
+          result: hasErr ? errorTitle : 'Успешно',
+          errorDetails: err || (hasErr && enrichedErrors.length > 0 ? enrichedErrors[0] : null),
+        };
+      });
+    } else {
+      effectiveCodes = effectiveCodes.map((item: any, idx: number) => {
+        const err = errorMap.get(idx);
+        if (item.state === 'ERROR' || err) {
+          const readable = err ? err : formatMarkirovkaError(item.result, null, null);
+          return {
+            ...item,
+            result: readable.userTitle || readable.title || item.result,
+          };
+        }
+        return item;
+      });
+    }
+
     return res.json({
       success: true,
       operation: op,
@@ -1008,8 +1263,8 @@ export async function getOperationReceipt(req: AuthRequest, res: Response) {
       receipt: {
         status: docStatus?.status || op.status,
         docInfo: docStatus,
-        codes: docCodes,
-        errors: docErrors?.documentErrors || [],
+        codes: effectiveCodes,
+        errors: enrichedErrors,
       },
     });
   } catch (err: any) {
@@ -1028,12 +1283,7 @@ export async function checkPartyStatus(req: AuthRequest, res: Response) {
       return res.status(400).json({ message: 'Укажите ИИН/БИН участника для проверки' });
     }
 
-    let account = null;
-    if (accountId) {
-      account = await prisma.markirovkaAccount.findUnique({ where: { id: String(accountId) } });
-    } else {
-      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
-    }
+    let account = await resolveAccountForUser(req.user, accountId ? String(accountId) : undefined);
 
     if (!account) {
       return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден' });

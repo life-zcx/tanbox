@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowUp } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -6,11 +6,32 @@ interface ScrollToTopButtonProps {
   duration?: number;
 }
 
-export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = () => {
+export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration = 650 }) => {
   const { lang } = useLanguage();
   const [isVisible, setIsVisible] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [cookieBannerVisible, setCookieBannerVisible] = useState(false);
+  const animFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const cancelAnim = () => {
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+    };
+
+    window.addEventListener('wheel', cancelAnim, { passive: true });
+    window.addEventListener('touchmove', cancelAnim, { passive: true });
+
+    return () => {
+      window.removeEventListener('wheel', cancelAnim);
+      window.removeEventListener('touchmove', cancelAnim);
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const checkBanner = () => {
@@ -64,11 +85,45 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = () => {
       e.preventDefault();
       e.stopPropagation();
     }
-    try {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch {
-      window.scrollTo(0, 0);
+
+    if (animFrameRef.current !== null) {
+      cancelAnimationFrame(animFrameRef.current);
     }
+
+    const startPosition =
+      window.pageYOffset ||
+      window.scrollY ||
+      document.documentElement.scrollTop ||
+      document.body.scrollTop ||
+      0;
+
+    if (startPosition <= 0) return;
+
+    const startTime = performance.now();
+    // Dynamic duration based on distance so long pages feel natural (500ms - 800ms)
+    const animDuration = Math.min(Math.max(startPosition * 0.12, 500), 800);
+
+    // Easing: cubic bezier easeInOut for silky smooth start & soft deceleration
+    const easeInOutCubic = (t: number) =>
+      t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+    const step = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / animDuration, 1);
+      const eased = easeInOutCubic(progress);
+
+      const targetY = startPosition * (1 - eased);
+      window.scrollTo(0, targetY);
+
+      if (progress < 1) {
+        animFrameRef.current = requestAnimationFrame(step);
+      } else {
+        window.scrollTo(0, 0);
+        animFrameRef.current = null;
+      }
+    };
+
+    animFrameRef.current = requestAnimationFrame(step);
   };
 
   // SVG circle calculation
@@ -89,7 +144,6 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = () => {
       <button
         type="button"
         onClick={scrollToTop}
-        onTouchEnd={scrollToTop}
         aria-label={lang === 'kz' ? 'Беттің басына шығу' : lang === 'en' ? 'Scroll to top' : 'Наверх страницы'}
         title={lang === 'kz' ? 'Беттің басына шығу' : lang === 'en' ? 'Scroll to top' : 'Наверх страницы'}
         className="group relative w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-[#0082FB] hover:bg-[#0070DA] text-white flex items-center justify-center shadow-[0_0_20px_rgba(0,130,251,0.55)] hover:shadow-[0_0_28px_rgba(0,130,251,0.8)] hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer focus:outline-none ring-2 ring-white/30"

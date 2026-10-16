@@ -273,7 +273,8 @@ export const cleanPdfCache = async (req: AuthRequest, res: Response) => {
 export const toggleMaintenanceMode = async (req: AuthRequest, res: Response) => {
   try {
     const { active, message } = req.body;
-    const maintenance = setMaintenanceMode(active, message);
+    const user = (req as any).user;
+    const maintenance = await setMaintenanceMode(active, message, user?.email || 'admin');
 
     logger.info(`Maintenance mode toggled: active=${maintenance.active}`);
 

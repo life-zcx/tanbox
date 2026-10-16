@@ -812,8 +812,17 @@ export class MarkirovkaClient {
       expDateIso = new Date(prodDate.getTime() + 3 * 365 * 24 * 3600 * 1000).toISOString();
     }
 
+    // In IS MPT СУЗ, sntins in utilisation report MUST be full DataMatrix strings (with crypto-tail 91/92 and \u001d).
+    // Trimming to AI_REDUCED causes IS MPT to reject with: "invalid-code-properties: match: AI_REDUCED".
     const cleanCodes = params.codes
-      .map((c) => c.replace(/[\r\n]/g, '').trim())
+      .map((c) => {
+        let code = String(c || '').replace(/[\r\n]/g, '').trim();
+        code = code.replace(/<GS>/gi, '\u001d');
+        if (!code.includes('\u001d') && code.match(/\s91[^\s]{4}\s92/)) {
+          code = code.replace(/\s91/g, '\u001d91').replace(/\s92/g, '\u001d92');
+        }
+        return code;
+      })
       .filter((c) => c.length > 0);
 
     const releaseType = params.releaseType || 'PRODUCTION';
@@ -1020,6 +1029,7 @@ export class MarkirovkaClient {
     businessPlaceId?: number;
     unitSerialNumber: string;
     codes: string[];
+    rawDocString?: string;
     signature?: string;
   }): Promise<{
     success: boolean;
@@ -1032,28 +1042,33 @@ export class MarkirovkaClient {
     let auth = await this.authenticate(false);
     const targetUrl = `${this.baseUrl}/public/api/v1/doc/aggregation`;
 
+    let base64Body: string;
     const formattedSscc = normalizeSscc18(params.unitSerialNumber);
     const cleanCodes = params.codes.map((c) => extractIdentificationCode(c)).filter(Boolean);
 
-    const docObj = {
-      businessPlaceId: Number(params.businessPlaceId) || 44,
-      documentDate: new Date().toISOString(),
-      aggregationUnits: [
-        {
-          shouldBeUnbundled: true,
-          aggregationItemsCount: cleanCodes.length,
-          aggregationUnitCapacity: cleanCodes.length,
-          codes: cleanCodes,
-          unitSerialNumber: formattedSscc,
-        },
-      ],
-    };
-
-    const sortedDoc = sortKeysAlphabetically(docObj);
-    const base64Body = Buffer.from(JSON.stringify(sortedDoc), 'utf-8').toString('base64');
+    if (params.rawDocString) {
+      base64Body = Buffer.from(params.rawDocString, 'utf-8').toString('base64');
+    } else {
+      const docObj = {
+        aggregationUnits: [
+          {
+            aggregationItemsCount: cleanCodes.length,
+            aggregationUnitCapacity: cleanCodes.length,
+            codes: cleanCodes,
+            shouldBeUnbundled: true,
+            unitSerialNumber: formattedSscc,
+          },
+        ],
+        businessPlaceId: Number(params.businessPlaceId) || 44,
+        documentDate: new Date().toISOString(),
+      };
+      const sortedDoc = sortKeysAlphabetically(docObj);
+      base64Body = Buffer.from(JSON.stringify(sortedDoc), 'utf-8').toString('base64');
+    }
 
     const requestBody = {
       documentBody: base64Body,
+      signature: params.signature || '',
     };
 
     try {
@@ -1195,6 +1210,7 @@ export class MarkirovkaClient {
     withdrawalReason: string;
     codes: string[];
     primaryDocument?: { type?: string; date?: string; number?: string };
+    rawDocString?: string;
     signature?: string;
   }): Promise<{
     success: boolean;
@@ -1207,29 +1223,35 @@ export class MarkirovkaClient {
     let auth = await this.authenticate(false);
     const targetUrl = `${this.baseUrl}/public/api/v1/doc/withdrawal`;
 
+    let base64Body: string;
     const withdrawalType = params.withdrawalType || (params.withdrawalReason === 'DAMAGE' ? 'WRITE_OFF' : 'WITHDRAWAL');
     const cleanCodes = params.codes.map((c) => extractIdentificationCode(c)).filter(Boolean);
 
-    const docObj = {
-      businessPlaceId: Number(params.businessPlaceId) || 44,
-      childrenWriteOff: false,
-      codes: cleanCodes.map((c) => ({ code: c })),
-      primaryDocument: {
-        date: params.primaryDocument?.date || new Date().toISOString().slice(0, 10),
-        number: params.primaryDocument?.number || 'DOC-001',
-        type: params.primaryDocument?.type || '',
-      },
-      withdrawPartialQuantity: false,
-      withdrawalDate: new Date().toISOString(),
-      withdrawalReason: params.withdrawalReason || 'OTHER',
-      withdrawalType,
-    };
+    if (params.rawDocString) {
+      base64Body = Buffer.from(params.rawDocString, 'utf-8').toString('base64');
+    } else {
+      const docObj = {
+        businessPlaceId: Number(params.businessPlaceId) || 44,
+        childrenWriteOff: false,
+        codes: cleanCodes.map((c) => ({ code: c })),
+        primaryDocument: {
+          date: params.primaryDocument?.date || new Date().toISOString().slice(0, 10),
+          number: params.primaryDocument?.number || 'DOC-001',
+          type: params.primaryDocument?.type || '',
+        },
+        withdrawPartialQuantity: false,
+        withdrawalDate: new Date().toISOString(),
+        withdrawalReason: params.withdrawalReason || 'OTHER',
+        withdrawalType,
+      };
 
-    const sortedDoc = sortKeysAlphabetically(docObj);
-    const base64Body = Buffer.from(JSON.stringify(sortedDoc), 'utf-8').toString('base64');
+      const sortedDoc = sortKeysAlphabetically(docObj);
+      base64Body = Buffer.from(JSON.stringify(sortedDoc), 'utf-8').toString('base64');
+    }
 
     const requestBody = {
       documentBody: base64Body,
+      signature: params.signature || '',
     };
 
     try {
@@ -1582,6 +1604,7 @@ export class MarkirovkaClient {
 
     const requestBody = {
       documentBody: base64Body,
+      signature: params.signature || '',
     };
 
     try {
@@ -1676,6 +1699,7 @@ export class MarkirovkaClient {
 
     const requestBody = {
       documentBody: base64Body,
+      signature: params.signature || '',
     };
 
     try {

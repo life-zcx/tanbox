@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useOrders } from '../hooks/useOrders';
 import { OrderItem, OrderStatus } from '../types';
 import { StatusBadge, PageHeader } from '@shared';
-import { Search, Eye, Filter, ChevronDown, Plus } from 'lucide-react';
+import { Search, Eye, Filter, ChevronDown, Plus, Send, Bell } from 'lucide-react';
 import { getCategoryLabel } from '../data/categories';
+import { apiClient } from '../api/client';
+import { TelegramNotificationsModal } from '../components/modals/TelegramNotificationsModal';
 
 const STATUS_LABELS: Record<string, string> = {
   ALL: 'Все заказы',
@@ -20,6 +22,17 @@ export const OrdersPage: React.FC = () => {
   const { orders, loading, refetch } = useOrders();
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isTgModalOpen, setIsTgModalOpen] = useState<boolean>(false);
+  const [isTgLinked, setIsTgLinked] = useState<boolean>(false);
+
+  useEffect(() => {
+    apiClient
+      .get('/auth/me/telegram-status')
+      .then((res) => {
+        setIsTgLinked(Boolean(res.data?.isLinked));
+      })
+      .catch(() => {});
+  }, []);
 
   const filteredOrders = orders.filter((o) => {
     const matchStatus = selectedStatus === 'ALL' || o.status === selectedStatus;
@@ -38,13 +51,27 @@ export const OrdersPage: React.FC = () => {
         title="Мои заказы"
         description="Реестр и отслеживание статуса всех партий маркировки ИС Танба"
         action={
-          <Link
-            to="/orders/new"
-            className="hidden sm:inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-500/20 active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Создать заказ</span>
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setIsTgModalOpen(true)}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-sm active:scale-95 ${
+                isTgLinked
+                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
+                  : 'bg-[#0088cc]/10 hover:bg-[#0088cc]/20 text-[#0088cc] border border-[#0088cc]/30'
+              }`}
+            >
+              <Send className="w-4 h-4 shrink-0" />
+              <span>{isTgLinked ? 'Telegram активен' : 'Уведомления в Telegram'}</span>
+            </button>
+
+            <Link
+              to="/orders/new"
+              className="hidden sm:inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-500/20 active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Создать заказ</span>
+            </Link>
+          </div>
         }
       />
 
@@ -189,6 +216,13 @@ export const OrdersPage: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Модальное окно привязки Telegram */}
+      <TelegramNotificationsModal
+        isOpen={isTgModalOpen}
+        onClose={() => setIsTgModalOpen(false)}
+        onStatusChange={(linked) => setIsTgLinked(linked)}
+      />
 
     </div>
   );

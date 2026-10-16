@@ -8,6 +8,8 @@ import {
   FileText,
   RefreshCw,
   AlertTriangle,
+  AlertCircle,
+  HelpCircle,
   CheckCircle2,
   XCircle,
   Clock,
@@ -21,6 +23,109 @@ interface OperationReceiptModalProps {
   operation: any | null;
   onClose: () => void;
   onOperationUpdated?: () => void;
+}
+
+export function getHumanFriendlyError(err: any): {
+  title: string;
+  description: string;
+  actionHint?: string;
+} {
+  if (err?.userTitle && err?.userMessage) {
+    return {
+      title: err.userTitle,
+      description: err.userMessage,
+      actionHint: err.actionHint,
+    };
+  }
+
+  const codeStr = String(err?.errorCode || err?.result || (typeof err === 'string' ? err : '')).toLowerCase();
+  const tagsStr = typeof err?.errorTags === 'object' ? JSON.stringify(err.errorTags) : String(err?.errorTags || '');
+
+  if (codeStr.includes('invalid-code-properties') || codeStr.includes('ai_reduced') || tagsStr.includes('AI_REDUCED')) {
+    return {
+      title: 'Неверный формат кода маркировки',
+      description: 'В отчет передан код с криптохвостом или неверной структурой. Для отчета о нанесении в ИС МПТ требуется короткий код идентификации (GTIN + серийный номер, 31 символ) без спецсимволов и криптоподписи.',
+      actionHint: 'В Tanbox уже включена автоматическая нормализация кодов. Повторите операцию нанесения — коды будут отправлены в правильном формате.',
+    };
+  }
+
+  if (codeStr.includes('not-found') || codeStr.includes('not_found')) {
+    return {
+      title: 'Код не найден в ИС МПТ',
+      description: 'Данный код маркировки не зарегистрирован в системе ИС МПТ (не был эмитирован для вашей организации).',
+      actionHint: 'Убедитесь, что коды были заказаны и выпущены в вашем аккаунте ИС МПТ.',
+    };
+  }
+
+  if (codeStr.includes('already-utilised') || codeStr.includes('already_utilized') || codeStr.includes('already-applied')) {
+    return {
+      title: 'Код уже нанесен',
+      description: 'Отчет о нанесении для этого кода уже был успешно зарегистрирован ранее.',
+      actionHint: 'Повторное нанесение не требуется. Код готов к вводу в оборот или агрегации.',
+    };
+  }
+
+  if (codeStr.includes('not-applied') || codeStr.includes('not_applied')) {
+    return {
+      title: 'Код еще не нанесен',
+      description: 'Нельзя ввести товар в оборот или сформировать упаковку до успешной подачи отчета о нанесении.',
+      actionHint: 'Сначала выполните операцию «Отчет о нанесении» для этих кодов.',
+    };
+  }
+
+  if (codeStr.includes('already-in-circulation') || codeStr.includes('in-circulation') || codeStr.includes('in_circulation')) {
+    return {
+      title: 'Товар уже в обороте',
+      description: 'Этот код маркировки уже находится в обороте.',
+      actionHint: 'Повторный ввод в оборот не требуется.',
+    };
+  }
+
+  if (codeStr.includes('not-in-circulation')) {
+    return {
+      title: 'Товар не в обороте',
+      description: 'Код маркировки еще не введен в оборот либо уже списан.',
+      actionHint: 'Выполните ввод в оборот перед продажей или выводом.',
+    };
+  }
+
+  if (codeStr.includes('withdrawn') || codeStr.includes('retired')) {
+    return {
+      title: 'Код выведен из оборота',
+      description: 'Данный код маркировки уже списан, продан или выведен из оборота.',
+      actionHint: 'Коды, выведенные из оборота, нельзя использовать повторно.',
+    };
+  }
+
+  if (codeStr.includes('owner') || codeStr.includes('mismatch')) {
+    return {
+      title: 'Код принадлежит другой организации',
+      description: 'Текущим владельцем кода маркировки числится другой участник оборота (не совпадает БИН/ИИН).',
+      actionHint: 'Проверьте, была ли проведена приемка товара по электронному акту / ВС.',
+    };
+  }
+
+  if (codeStr.includes('gtin')) {
+    return {
+      title: 'Ошибка товара в каталоге (GTIN)',
+      description: 'Товар с таким GTIN не найден в Национальном каталоге товаров (НКТ) или карточка не опубликована.',
+      actionHint: 'Проверьте статус карточки товара в НКТ на markirovka.kz.',
+    };
+  }
+
+  if (codeStr.includes('date') || codeStr.includes('time')) {
+    return {
+      title: 'Некорректная дата',
+      description: 'Указана недопустимая дата производства или срок годности (например, дата из будущего).',
+      actionHint: 'Укажите дату производства не позже сегодняшнего дня.',
+    };
+  }
+
+  return {
+    title: err?.errorCode ? `Ошибка: ${err.errorCode}` : 'Ошибка обработки кода',
+    description: 'Система маркировки отклонила обработку кода по правилам валидации ИС МПТ.',
+    actionHint: 'Проверьте статус кода в личном кабинете markirovka.kz или обратитесь в поддержку.',
+  };
 }
 
 export const OperationReceiptModal: React.FC<OperationReceiptModalProps> = ({
@@ -455,8 +560,8 @@ export const OperationReceiptModal: React.FC<OperationReceiptModalProps> = ({
                                   </span>
                                 )}
                                 {item.result && (
-                                  <span className={`text-[11px] font-medium mt-0.5 block ${isSuccess ? 'text-emerald-700' : 'text-red-600'}`}>
-                                    {isSuccess ? item.result : `Причина: ${item.result}`}
+                                  <span className={`text-[11px] font-medium mt-0.5 block ${isSuccess ? 'text-emerald-700' : 'text-rose-600'}`}>
+                                    {isSuccess ? item.result : `Причина: ${getHumanFriendlyError(item).title}`}
                                   </span>
                                 )}
                               </div>
@@ -469,8 +574,8 @@ export const OperationReceiptModal: React.FC<OperationReceiptModalProps> = ({
                                   Успешно
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-100 text-red-800">
-                                  <XCircle className="w-3 h-3 text-red-700" />
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800">
+                                  <XCircle className="w-3 h-3 text-rose-700" />
                                   Ошибка
                                 </span>
                               )}
@@ -494,29 +599,58 @@ export const OperationReceiptModal: React.FC<OperationReceiptModalProps> = ({
           )}
 
           {activeTab === 'ERRORS' && (
-            <div className="space-y-2">
-              {errors.map((errItem, idx) => (
-                <div key={idx} className="p-3 bg-red-50 border border-red-200 rounded-xl space-y-1 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-red-900">
-                      Код ошибки: {errItem.errorCode || 'UNKNOWN'}
-                    </span>
-                    {errItem.index !== undefined && (
-                      <span className="text-[10px] bg-red-200 text-red-800 px-1.5 py-0.5 rounded font-mono">
-                        Индекс кода: #{errItem.index + 1}
-                      </span>
+            <div className="space-y-3">
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">ИС МПТ отклонила обработку кодов ({errors.length} шт.)</p>
+                  <p className="text-[11px] text-rose-700 mt-0.5 leading-relaxed">
+                    Ниже приведены понятные описания причин отказа и рекомендации по устранению.
+                  </p>
+                </div>
+              </div>
+
+              {errors.map((errItem, idx) => {
+                const readable = getHumanFriendlyError(errItem);
+                return (
+                  <div key={idx} className="p-3.5 bg-white border border-rose-200 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                        <span className="font-bold text-gray-900 text-xs">
+                          {readable.title}
+                        </span>
+                      </div>
+                      {errItem.index !== undefined && (
+                        <span className="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded-md font-mono font-bold shrink-0">
+                          Код #{errItem.index + 1}
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-gray-700 leading-relaxed pl-4">
+                      {readable.description}
+                    </p>
+
+                    {readable.actionHint && (
+                      <div className="ml-4 p-2 bg-blue-50/70 border border-blue-100 rounded-lg text-[11px] text-blue-900 flex items-start gap-1.5">
+                        <HelpCircle className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                        <span><strong>Что делать:</strong> {readable.actionHint}</span>
+                      </div>
+                    )}
+
+                    <div className="pt-1.5 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400 font-mono">
+                      <span>Код ИС МПТ: <strong className="text-rose-600">{errItem.errorCode || 'UNKNOWN'}</strong></span>
+                      {errItem.propertyName && <span>Поле: {errItem.propertyName}</span>}
+                    </div>
+                    {errItem.errorTags && (
+                      <div className="text-[10px] font-mono text-rose-600 bg-rose-50 p-1.5 rounded">
+                        {JSON.stringify(errItem.errorTags)}
+                      </div>
                     )}
                   </div>
-                  {errItem.propertyName && (
-                    <p className="text-[11px] text-red-700">Поле: {errItem.propertyName}</p>
-                  )}
-                  {errItem.errorTags && (
-                    <div className="mt-1 text-[10px] font-mono text-red-600 bg-red-100/60 p-1.5 rounded">
-                      {JSON.stringify(errItem.errorTags)}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -530,7 +664,9 @@ export const OperationReceiptModal: React.FC<OperationReceiptModalProps> = ({
         {/* Footer */}
         <div className="pt-2 border-t border-gray-100 flex items-center justify-between shrink-0">
           <div className="text-[11px] text-gray-400">
-            {receiptData?.documentId ? 'Синхронизировано с True API / xTrace' : 'Локальная запись'}
+            {receiptData?.documentId || (operation?.responsePayload as any)?.reportId || (operation?.responsePayload as any)?.documentId
+              ? 'Синхронизировано с ИС МПТ (True API / СУЗ)'
+              : 'Локальная запись'}
           </div>
           <button
             type="button"

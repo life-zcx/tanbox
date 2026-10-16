@@ -31,9 +31,21 @@ import {
   Receipt,
   Loader2,
   Boxes,
+  Send,
+  ChevronDown,
+  KeyRound,
+  FileCheck2,
+  FileDown,
+  FileX2,
+  CheckCircle,
+  Settings,
 } from 'lucide-react';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
 import RollSplitModal from '../components/modals/RollSplitModal';
+import { TelegramNotificationsModal } from '../components/modals/TelegramNotificationsModal';
+import { ConnectMarkirovkaModal } from '../components/modals/ConnectMarkirovkaModal';
+import { OperationModal } from '../components/markirovka/OperationModal';
+import { MarkirovkaOpChoice } from '../components/markirovka/MarkirovkaOperationsButton';
 
 
 interface StepConfig {
@@ -124,6 +136,19 @@ export const OrderDetailPage: React.FC = () => {
   const [designerLabel, setDesignerLabel] = useState<any>(null);
   const [showRevisionInput, setShowRevisionInput] = useState<boolean>(false);
   const [revisionComment, setRevisionComment] = useState<string>('');
+
+  // Markirovka Operation Modal state
+  const [markirovkaOp, setMarkirovkaOp] = useState<MarkirovkaOpChoice | null>(null);
+  const [markirovkaAccounts, setMarkirovkaAccounts] = useState<any[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState<boolean>(true);
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState<boolean>(false);
+  const [isOperationMenuOpen, setIsOperationMenuOpen] = useState<boolean>(false);
+  const [showUtilisationNoticeModal, setShowUtilisationNoticeModal] = useState<boolean>(false);
+  const [pendingOpAfterNotice, setPendingOpAfterNotice] = useState<MarkirovkaOpChoice | null>(null);
+  const [forceUtilisedOverride, setForceUtilisedOverride] = useState<boolean>(false);
+  const markirovkaMenuRef = useRef<HTMLDivElement>(null);
+  const [orderCodesForMarkirovka, setOrderCodesForMarkirovka] = useState<string[]>([]);
+  const [loadingMarkirovkaCodes, setLoadingMarkirovkaCodes] = useState<boolean>(false);
 
   // Codes file upload state
   const [uploadingCodes, setUploadingCodes] = useState<boolean>(false);
@@ -254,6 +279,41 @@ export const OrderDetailPage: React.FC = () => {
     } catch { }
     return {};
   });
+
+  const [isTgModalOpen, setIsTgModalOpen] = useState(false);
+  const [isTgLinked, setIsTgLinked] = useState(false);
+
+  const fetchAccounts = () => {
+    setLoadingAccounts(true);
+    apiClient
+      .get('/markirovka/accounts')
+      .then((res) => {
+        setMarkirovkaAccounts(res.data?.accounts || []);
+      })
+      .catch(() => setMarkirovkaAccounts([]))
+      .finally(() => setLoadingAccounts(false));
+  };
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (markirovkaMenuRef.current && !markirovkaMenuRef.current.contains(e.target as Node)) {
+        setIsOperationMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    apiClient
+      .get('/auth/me/telegram-status')
+      .then((res) => setIsTgLinked(Boolean(res.data?.isLinked)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const fetchOrderDetail = async () => {
@@ -493,6 +553,16 @@ export const OrderDetailPage: React.FC = () => {
 
   const parsedNotes = useMemo(() => parseOrderNotes(order?.notes), [order?.notes]);
 
+  const isOrderUtilised = useMemo(() => {
+    if (forceUtilisedOverride) return true;
+    if (!order) return false;
+    if (order.status === 'COMPLETED') return true;
+    if (Array.isArray((order as any).markirovkaReports) && (order as any).markirovkaReports.some((r: any) => r.status === 'SUBMITTED' || r.status === 'ACCEPTED')) {
+      return true;
+    }
+    return false;
+  }, [order, forceUtilisedOverride]);
+
   const hasLayoutReady = Boolean(
     approvalStatus === 'WAITING_APPROVAL' ||
     approvalStatus === 'APPROVED' ||
@@ -682,6 +752,40 @@ export const OrderDetailPage: React.FC = () => {
       alert('Ошибка при скачивании файла кодов: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingCodes(false);
+    }
+  };
+
+  const handleSelectOperation = async (op: MarkirovkaOpChoice) => {
+    setIsOperationMenuOpen(false);
+    if (op === 'IMPORT_NOTIFICATION' && !isOrderUtilised) {
+      setPendingOpAfterNotice(op);
+      setShowUtilisationNoticeModal(true);
+      return;
+    }
+    await executeOpenOperation(op);
+  };
+
+  const executeOpenOperation = async (op: MarkirovkaOpChoice) => {
+    if (!order) return;
+    try {
+      setLoadingMarkirovkaCodes(true);
+      if (orderCodesForMarkirovka.length === 0 && order.codesFileUrl) {
+        const codesRes = await apiClient.get(`/orders/${order.id}/codes-file`, { responseType: 'text' }).catch(() => ({ data: '' }));
+        const text = typeof codesRes.data === 'string' ? codesRes.data : '';
+        if (text) {
+          const lines = text
+            .split(/[\r\n]+/)
+            .map((l: string) => l.trim())
+            .filter(Boolean);
+          setOrderCodesForMarkirovka(lines);
+        }
+      }
+      setMarkirovkaOp(op);
+    } catch (e: any) {
+      console.error('Failed to prepare codes for markirovka modal:', e);
+      setMarkirovkaOp(op);
+    } finally {
+      setLoadingMarkirovkaCodes(false);
     }
   };
 
@@ -949,6 +1053,179 @@ export const OrderDetailPage: React.FC = () => {
               <span>•</span>
               <span>Категория: <strong className="text-[#111827]">{getCategoryLabel(order.category)}</strong></span>
             </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Markirovka Actions: Connected vs Not Connected */}
+            {loadingAccounts ? (
+              <div className="h-9 w-36 bg-gray-100 animate-pulse rounded-xl" />
+            ) : markirovkaAccounts.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => setIsConnectModalOpen(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 text-amber-900 border border-amber-400/40 transition-all shadow-xs active:scale-95 cursor-pointer"
+                title="Подключите ваш аккаунт ИС МПТ (СУЗ) для автоматической отправки отчетов и ввода в оборот"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>Подключить ИС МПТ</span>
+              </button>
+            ) : (
+              <div className="relative inline-block text-left" ref={markirovkaMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsOperationMenuOpen(!isOperationMenuOpen)}
+                  disabled={loadingMarkirovkaCodes}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-[#0082FB]/10 hover:bg-[#0082FB]/20 text-[#0082FB] border border-[#0082FB]/30 transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+                  title="Операции с маркировкой заказа в ИС МПТ (СУЗ)"
+                >
+                  <Boxes className="w-3.5 h-3.5 shrink-0" />
+                  <span>{loadingMarkirovkaCodes ? 'Загрузка кодов...' : 'Операции с заказом в ИС МПТ'}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOperationMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isOperationMenuOpen && (
+                  <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-white shadow-2xl border border-gray-100 ring-1 ring-black/5 p-2 z-50 divide-y divide-gray-100 animate-in fade-in-50 zoom-in-95">
+                    {/* Active profile banner */}
+                    <div className="px-3 py-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Профиль ИС МПТ</span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          {markirovkaAccounts[0]?.environment === 'PROD' ? 'PROD' : 'TEST'}
+                        </span>
+                      </div>
+                      <p className="font-bold text-gray-900 truncate mt-0.5">{markirovkaAccounts[0]?.name || markirovkaAccounts[0]?.login}</p>
+                      <p className="text-[10px] text-gray-400 truncate">БИН/ИИН: {markirovkaAccounts[0]?.login}</p>
+                    </div>
+
+                    {/* Operations list */}
+                    <div className="py-1.5 space-y-0.5">
+                      {/* Step 1: Utilisation */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectOperation('UTILISATION')}
+                        className="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isOrderUtilised ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-[#0082FB]'}`}>
+                            <FileCheck2 className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-900 group-hover:text-[#0082FB] transition-colors">1. Отчет о нанесении КМ</div>
+                            <div className="text-[10px] text-gray-500">СУЗ • Статус APPLIED</div>
+                          </div>
+                        </div>
+                        {isOrderUtilised ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">✓ Сдан</span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">Шаг 1</span>
+                        )}
+                      </button>
+
+                      {/* Step 2: Aggregation */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectOperation('AGGREGATION')}
+                        className="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                            <Boxes className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">2. Агрегация в короба (SSCC)</div>
+                            <div className="text-[10px] text-gray-500">Формирование паллет и коробов</div>
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Step 3: Import / Intro */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectOperation('IMPORT_NOTIFICATION')}
+                        className="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isOrderUtilised ? 'bg-amber-50 text-amber-600' : 'bg-gray-100 text-gray-400'}`}>
+                            <FileDown className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-900 group-hover:text-amber-600 transition-colors">3. Ввод в оборот (Импорт)</div>
+                            <div className="text-[10px] text-gray-500">Уведомление о ввозе • ЭЦП</div>
+                          </div>
+                        </div>
+                        {!isOrderUtilised && (
+                          <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded flex items-center gap-1">
+                            <Lock className="w-2.5 h-2.5" /> Шаг 2
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Step 4: Retirement */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectOperation('RETIREMENT')}
+                        className="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                            <FileX2 className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-900 group-hover:text-rose-600 transition-colors">4. Вывод из оборота (Брак)</div>
+                            <div className="text-[10px] text-gray-500">Списание испорченных кодов</div>
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Step 5: Validation */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectOperation('VALIDATION')}
+                        className="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                            <CheckCircle className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-900 group-hover:text-teal-600 transition-colors">Проверить статусы КМ</div>
+                            <div className="text-[10px] text-gray-500">Онлайн-запрос в ИС МПТ</div>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Footer: Manage accounts */}
+                    <div className="pt-1.5 px-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsOperationMenuOpen(false);
+                          setIsConnectModalOpen(true);
+                        }}
+                        className="w-full text-left px-2 py-1.5 rounded-lg text-[11px] text-gray-600 hover:text-gray-900 hover:bg-gray-50 flex items-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <Settings className="w-3.5 h-3.5 text-gray-400" />
+                        <span>Настройки подключения ИС МПТ</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={() => setIsTgModalOpen(true)}
+              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all shadow-xs active:scale-95 ${
+                isTgLinked
+                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
+                  : 'bg-[#0088cc]/10 hover:bg-[#0088cc]/20 text-[#0088cc] border border-[#0088cc]/30'
+              }`}
+            >
+              <Send className="w-3.5 h-3.5 shrink-0" />
+              <span>{isTgLinked ? 'Telegram активен' : 'Уведомления в Telegram'}</span>
+            </button>
           </div>
         </div>
 
@@ -2200,6 +2477,118 @@ export const OrderDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Модальное окно привязки Telegram */}
+      <TelegramNotificationsModal
+        isOpen={isTgModalOpen}
+        onClose={() => setIsTgModalOpen(false)}
+        onStatusChange={(linked) => setIsTgLinked(linked)}
+      />
+
+      {/* Модальное окно подключения ИС МПТ */}
+      <ConnectMarkirovkaModal
+        isOpen={isConnectModalOpen}
+        onClose={() => setIsConnectModalOpen(false)}
+        onSuccess={() => {
+          setIsConnectModalOpen(false);
+          fetchAccounts();
+        }}
+        initialAccount={markirovkaAccounts[0] || null}
+      />
+
+      {/* Модальное окно операций ИС МПТ */}
+      <OperationModal
+        operationType={markirovkaOp}
+        accounts={markirovkaAccounts}
+        initialCodes={orderCodesForMarkirovka}
+        initialCategory={order?.category}
+        orderId={order?.id}
+        onClose={() => setMarkirovkaOp(null)}
+        onSuccess={() => {
+          alert('Операция успешно отправлена в ИС МПТ!');
+          setMarkirovkaOp(null);
+          if (id) {
+            apiClient.get(`/orders/${id}`).then((res) => setOrder(res.data)).catch(() => {});
+          }
+        }}
+      />
+
+      {/* Модальное окно предупреждения о регламенте нанесения */}
+      {showUtilisationNoticeModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowUtilisationNoticeModal(false);
+                setPendingOpAfterNotice(null);
+              }
+            }}
+          >
+            <div className="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-4 animate-in zoom-in-95 duration-150">
+              {/* Крестик закрытия */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUtilisationNoticeModal(false);
+                  setPendingOpAfterNotice(null);
+                }}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-xl transition-colors cursor-pointer"
+                title="Закрыть"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900 pr-6">
+                  Сначала требуется отчет о нанесении КМ
+                </h3>
+                <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">
+                  По регламенту <strong>ИС МПТ РК</strong>, коды маркировки невозможно ввести в оборот, пока по ним не принят <strong>Отчет о нанесении</strong> (перевод в статус <em>APPLIED</em>). Иначе система вернет отказ (REJECTED).
+                </p>
+              </div>
+
+              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-700 space-y-1.5">
+                <div className="font-semibold text-gray-900">Рекомендуемый порядок:</div>
+                <p>1. Отправьте отчет о нанесении КМ прямо сейчас через СУЗ в 1 клик.</p>
+                <p>2. Либо, если отчет уже сдан на портале markirovka.kz вручную, вы можете продолжить ввод в оборот.</p>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUtilisationNoticeModal(false);
+                    setPendingOpAfterNotice(null);
+                    executeOpenOperation('UTILISATION');
+                  }}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold bg-[#0082FB] hover:bg-[#0072de] text-white transition-all cursor-pointer shadow-xs"
+                >
+                  Отправить отчет о нанесении
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForceUtilisedOverride(true);
+                    setShowUtilisationNoticeModal(false);
+                    if (pendingOpAfterNotice) {
+                      executeOpenOperation(pendingOpAfterNotice);
+                      setPendingOpAfterNotice(null);
+                    }
+                  }}
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  Я уже нанес — продолжить
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
     </div>
   );

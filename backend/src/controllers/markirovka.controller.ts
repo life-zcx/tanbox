@@ -608,7 +608,7 @@ export async function updateNktSettingsHandler(req: Request, res: Response) {
   try {
     const user = (req as any).user;
     const { enabled, apiKey, baseUrl } = req.body;
-    const updated = saveNktSettings(
+    const updated = await saveNktSettings(
       {
         enabled: typeof enabled === 'boolean' ? enabled : undefined,
         apiKey: typeof apiKey === 'string' ? apiKey : undefined,

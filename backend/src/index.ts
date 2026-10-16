@@ -22,6 +22,9 @@ import { logger } from './utils/logger';
 import { generalApiLimiter } from './middleware/rateLimiter';
 import { telegram } from './services/telegram.service';
 import { isMaintenanceActive, getMaintenanceMessage } from './controllers/system.controller';
+import { initMaintenanceSettings } from './services/maintenance.service';
+import { initNktSettings } from './services/nktSettings.service';
+import { clientTelegramBot } from './services/clientTelegram.service';
 
 import { env } from './config/env';
 
@@ -192,9 +195,15 @@ process.on('unhandledRejection', (reason: any) => {
   }).catch(() => {});
 });
 
+// Preload persistent system settings from DB into memory cache
+Promise.all([initMaintenanceSettings(), initNktSettings()]).catch((err) => {
+  logger.error('Failed to preload system settings:', err);
+});
+
 const server = app.listen(PORT, () => {
   logger.info(`🚀 TANBOX Backend REST API running on port ${PORT}`);
   telegram.startPolling();
+  clientTelegramBot.startPolling();
 });
 
 // Configure server timeouts for heavy operations (large PDF batches up to 150k items)

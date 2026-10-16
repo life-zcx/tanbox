@@ -52,18 +52,18 @@ router.get('/party/status', checkPartyStatus);
 router.get('/products/search-by-gtin', getProductByGtin);
 
 // Operations routes (True API & OMS)
-router.get('/operations', requireAdmin, getOperations);
-router.get('/operations/auth-challenge', requireAdmin, getAuthChallenge);
-router.post('/operations/auth-simple', requireAdmin, authSimpleSignIn);
-router.post('/operations/validate', requireAdmin, validateCodes);
-router.post('/operations/aggregation', requireAdmin, createAggregation);
-router.post('/operations/disaggregation', requireAdmin, createDisaggregation);
-router.post('/operations/import-notification', requireAdmin, createImportNotification);
-router.post('/operations/retirement', requireAdmin, createRetirement);
-router.post('/operations/correction', requireAdmin, createCorrection);
-router.post('/operations/utilisation', requireAdmin, createUtilisation);
-router.post('/operations/return-to-turnover', requireAdmin, createReturnToTurnover);
-router.get('/operations/:id/receipt', requireAdmin, getOperationReceipt);
+router.get('/operations', getOperations);
+router.get('/operations/auth-challenge', getAuthChallenge);
+router.post('/operations/auth-simple', authSimpleSignIn);
+router.post('/operations/validate', validateCodes);
+router.post('/operations/aggregation', createAggregation);
+router.post('/operations/disaggregation', createDisaggregation);
+router.post('/operations/import-notification', createImportNotification);
+router.post('/operations/retirement', createRetirement);
+router.post('/operations/correction', createCorrection);
+router.post('/operations/utilisation', createUtilisation);
+router.post('/operations/return-to-turnover', createReturnToTurnover);
+router.get('/operations/:id/receipt', getOperationReceipt);
 
 // Sandbox & Activity endpoints restricted to Admin role
 router.post('/sandbox/order-codes', requireAdmin, sandboxOrderCodes);

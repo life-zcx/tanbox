@@ -37,7 +37,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'hero.title_line2_prefix': 'под ключ:',
     'hero.title_start': 'Цифровая маркировка товаров',
     'hero.title_highlight': 'под ключ',
-    'hero.subtitle': 'Берем на себя весь цикл — от растаможки до интеграции в 1С: регистрация в НКТ, печать кодов Data Matrix и оперативная оклейка с гарантией сроков.',
+    'hero.subtitle': 'Берем на себя печать Data Matrix и качественную маркировку партий любого масштаба. Также можем отдельно зарегистрировать карточки в НКТ или помочь с таможенным оформлением груза.',
     'hero.btn_calc': 'Рассчитать стоимость (₸)',
     'hero.btn_order': 'Оформить заявку',
 
@@ -134,7 +134,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'hero.title_line2_prefix': 'кілтке дейін:',
     'hero.title_start': 'Тауарларды цифрлық таңбалау',
     'hero.title_highlight': 'кілтке дейін',
-    'hero.subtitle': 'Толық циклді өз мойнымызға аламыз — кедендік ресімдеуден 1С-пен интеграцияға дейін: ТҰК-де тіркеу, Data Matrix басып шығару және кепілді мерзімде жедел оклейка.',
+    'hero.subtitle': 'Кез келген көлемдегі партияларды Data Matrix бойынша сапалы таңбалау мен басып шығаруды өз мойнымызға аламыз. Сондай-ақ карточкаларды ТҰК-де жеке тіркеп немесе жүкті кедендік ресімдеуге көмектесе аламыз.',
     'hero.btn_calc': 'Құнын есептеу (₸)',
     'hero.btn_order': 'Өтінім беру',
 
@@ -231,7 +231,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'hero.title_line2_prefix': 'Turnkey:',
     'hero.title_start': 'Digital Product Serialization',
     'hero.title_highlight': 'Turnkey',
-    'hero.subtitle': 'We handle the complete cycle — from customs clearance to 1C integration: National Catalog registration, Data Matrix printing, and on-time stickering.',
+    'hero.subtitle': 'We take care of Data Matrix label printing and high-grade batch serialization at any scale. We can also independently register catalog cards in NKT or assist with freight customs clearance.',
     'hero.btn_calc': 'Calculate Cost (₸)',
     'hero.btn_order': 'Submit Request',
 

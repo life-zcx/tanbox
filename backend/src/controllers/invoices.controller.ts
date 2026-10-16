@@ -3,6 +3,7 @@ import { prisma } from '../config/db';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { InvoiceStatus } from '@prisma/client';
 import { renderCustomInvoicePdf, generateCustomInvoiceHtml } from '../services/orderDocuments.service';
+import { clientTelegramBot } from '../services/clientTelegram.service';
 import { logger } from '../utils/logger';
 
 /**
@@ -374,6 +375,8 @@ export async function updateInvoiceStatus(req: AuthRequest, res: Response) {
         where: { id: updated.orderId },
         data: { paymentStatus: 'PAID' },
       }).catch((e) => logger.warn(`Failed to auto-update order payment status: ${e}`));
+
+      clientTelegramBot.notifyPaymentStatusChanged(updated.orderId, 'PAID').catch(() => {});
     }
 
     return res.json(updated);

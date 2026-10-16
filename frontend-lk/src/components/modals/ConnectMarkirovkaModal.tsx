@@ -6,13 +6,15 @@ import { apiClient } from '../../api/client';
 interface ConnectMarkirovkaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (account: any) => void;
+  onSuccess: (account?: any) => void;
+  initialAccount?: any;
 }
 
 export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  initialAccount,
 }) => {
   const isDevOrTest = typeof window !== 'undefined' && (
     Boolean(import.meta.env.DEV) ||
@@ -24,16 +26,34 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
     window.location.hostname.endsWith('.local')
   );
 
-  const [name, setName] = useState('');
-  const [login, setLogin] = useState('');
+  const [name, setName] = useState(initialAccount?.name || '');
+  const [login, setLogin] = useState(initialAccount?.login || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [environment, setEnvironment] = useState<'TEST' | 'PROD'>(isDevOrTest ? 'TEST' : 'PROD');
+  const [environment, setEnvironment] = useState<'TEST' | 'PROD'>(
+    initialAccount?.environment || (isDevOrTest ? 'TEST' : 'PROD')
+  );
 
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialAccount) {
+      setName(initialAccount.name || '');
+      setLogin(initialAccount.login || '');
+      setPassword('');
+      setEnvironment(initialAccount.environment || (isDevOrTest ? 'TEST' : 'PROD'));
+    } else {
+      setName('');
+      setLogin('');
+      setPassword('');
+      setEnvironment(isDevOrTest ? 'TEST' : 'PROD');
+    }
+    setTestResult(null);
+    setErrorMsg(null);
+  }, [initialAccount, isOpen, isDevOrTest]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -55,7 +75,7 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
   if (!isOpen) return null;
 
   const handleTestConnection = async () => {
-    if (!login.trim() || !password.trim()) {
+    if (!initialAccount && (!login.trim() || !password.trim())) {
       setErrorMsg('Укажите логин и пароль для проверки соединения');
       return;
     }
@@ -64,11 +84,17 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
     setTestResult(null);
 
     try {
-      const res = await apiClient.post('/markirovka/test-connection', {
+      const testPayload: any = {
         environment,
         login: login.trim(),
-        password: password.trim(),
-      });
+      };
+      if (password.trim()) {
+        testPayload.password = password.trim();
+      } else if (initialAccount?.id) {
+        testPayload.id = initialAccount.id;
+      }
+
+      const res = await apiClient.post('/markirovka/test-connection', testPayload);
 
       if (res.data?.success) {
         setTestResult({
@@ -93,8 +119,13 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !login.trim() || !password.trim()) {
-      setErrorMsg('Пожалуйста, заполните название, логин и пароль');
+    if (!name.trim() || !login.trim()) {
+      setErrorMsg('Пожалуйста, заполните название и логин');
+      return;
+    }
+
+    if (!initialAccount && !password.trim()) {
+      setErrorMsg('Пожалуйста, укажите пароль');
       return;
     }
 
@@ -102,14 +133,26 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
     setErrorMsg(null);
 
     try {
-      const res = await apiClient.post('/markirovka/accounts', {
-        name: name.trim(),
-        login: login.trim(),
-        password: password.trim(),
-        environment,
-      });
-
-      onSuccess(res.data);
+      if (initialAccount?.id) {
+        const updatePayload: any = {
+          name: name.trim(),
+          login: login.trim(),
+          environment,
+        };
+        if (password.trim()) {
+          updatePayload.password = password.trim();
+        }
+        const res = await apiClient.put(`/markirovka/accounts/${initialAccount.id}`, updatePayload);
+        onSuccess(res.data);
+      } else {
+        const res = await apiClient.post('/markirovka/accounts', {
+          name: name.trim(),
+          login: login.trim(),
+          password: password.trim(),
+          environment,
+        });
+        onSuccess(res.data);
+      }
       onClose();
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Ошибка сохранения аккаунта маркировки');
@@ -240,11 +283,11 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Пароль"
+                placeholder={initialAccount ? 'Оставьте пустым, если не меняется' : 'Пароль'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-3.5 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#111827] focus:bg-white focus:border-[#0082FB] focus:outline-none transition-colors"
-                required
+                required={!initialAccount}
                 autoComplete="new-password"
               />
               <button
