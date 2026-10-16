@@ -1,17 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import { getLkUrl } from '../../utils/navigation';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface HeroSectionProps {
-  onOpenCalculator: () => void;
+  onOpenCalculator?: () => void;
   onOpenAuth: () => void;
   onScrollNext?: () => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onScrollNext }) => {
-  const { lang, t } = useLanguage();
+  const { lang, t, getLocalizedPath } = useLanguage();
   const [titleNumber, setTitleNumber] = useState(0);
 
   const titles = useMemo(() => {
@@ -106,14 +107,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
 
         {/* Buttons - Natural proportional width and proper rounded corners */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-2 sm:pt-4">
-          <button
-            type="button"
-            onClick={onOpenCalculator}
+          <Link
+            to={getLocalizedPath('/calculator')}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-sm sm:text-base font-bold px-7 sm:px-8 py-3.5 sm:py-4 rounded-xl shadow-lg shadow-blue-500/25 transition-all active:scale-95 cursor-pointer"
           >
             <span>{lang === 'kz' ? 'Құнын есептеу' : lang === 'en' ? 'Calculate Cost' : 'Рассчитать стоимость'}</span>
             <ArrowRight className="w-5 h-5 shrink-0" />
-          </button>
+          </Link>
 
           <a
             href={getLkUrl('/orders/new')}
