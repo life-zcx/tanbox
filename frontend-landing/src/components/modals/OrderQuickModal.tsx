@@ -5,6 +5,7 @@ import { X, CheckCircle2 } from 'lucide-react';
 import { TariffCode } from '../../types';
 import { apiClient } from '../../api/client';
 import { getLkUrl } from '../../utils/navigation';
+import { trackGoogleConversion } from '../../utils/analytics';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface OrderQuickModalProps {
@@ -89,6 +90,7 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
     } catch (err) {
       console.warn('Backend API quick lead warning:', err);
     } finally {
+      trackGoogleConversion({ value: totalPrice || 1.0, currency: 'KZT' });
       setSubmitted(true);
     }
   };

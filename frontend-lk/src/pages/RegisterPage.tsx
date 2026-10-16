@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Building2, Phone, Hash, AlertCircle, Eye, EyeOff, CheckCircle2, XCircle, ArrowRight, ArrowLeft, RefreshCw, KeyRound, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { apiClient } from '../api/client';
+import { trackGoogleConversion } from '../utils/analytics';
 
 export const RegisterPage: React.FC = () => {
   const { user, loading: authLoading, register } = useAuth();
@@ -300,6 +301,7 @@ export const RegisterPage: React.FC = () => {
         consent: true,
         code,
       });
+      trackGoogleConversion({ value: 1.0, currency: 'USD' });
       navigate('/dashboard');
     } catch (err: any) {
       const respData = err.response?.data;

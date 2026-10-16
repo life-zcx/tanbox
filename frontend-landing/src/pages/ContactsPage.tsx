@@ -5,6 +5,7 @@ import { apiClient } from '../api/client';
 import { ContactsSection } from '../components/landing/ContactsSection';
 import { COMPANY_CONTACTS, getLocalizedCompanyContacts } from '../data/companyContacts';
 import { setPageSeo } from '../utils/seo';
+import { trackGoogleConversion } from '../utils/analytics';
 import { useLanguage } from '../context/LanguageContext';
 
 export const ContactsPage: React.FC = () => {
@@ -253,6 +254,7 @@ export const ContactsPage: React.FC = () => {
       }
       console.warn('Backend API submission warning:', err);
     } finally {
+      trackGoogleConversion({ value: 1.0, currency: 'USD' });
       setSubmitted(true);
       setLoading(false);
 

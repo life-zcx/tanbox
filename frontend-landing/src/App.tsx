@@ -16,6 +16,7 @@ import { TermsPage } from './pages/TermsPage';
 import { CookiePolicyPage } from './pages/CookiePolicyPage';
 import { TariffCode } from './types';
 import { getLkUrl } from './utils/navigation';
+import { trackGoogleConversion } from './utils/analytics';
 import { LanguageProvider } from './context/LanguageContext';
 
 const ScrollToTop: React.FC = () => {
@@ -74,6 +75,7 @@ const AppContent: React.FC = () => {
       return;
     }
     try {
+      trackGoogleConversion({ value: totalPrice || 1.0, currency: 'KZT' });
       localStorage.setItem(
         'tanbox_pending_order',
         JSON.stringify({

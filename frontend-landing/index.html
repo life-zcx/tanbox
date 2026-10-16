@@ -3,36 +3,20 @@
 
 <head>
   <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18368406368"></script>
   <script>
-    (function() {
-      var hostname = window.location.hostname;
-      var isLocalhost = Boolean(
-        hostname === 'localhost' ||
-        hostname === '[::1]' ||
-        hostname === '127.0.0.1' ||
-        hostname.endsWith('.local') ||
-        hostname.endsWith('.internal')
-      );
-
-      window.dataLayer = window.dataLayer || [];
-      function gtag() { window.dataLayer.push(arguments); }
-      window.gtag = gtag;
-
-      if (!isLocalhost) {
-        var script = document.createElement('script');
-        script.async = true;
-        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-GB7511BWTN';
-        document.head.appendChild(script);
-
-        gtag('js', new Date());
-        gtag('config', 'G-GB7511BWTN');
-        gtag('config', 'AW-18368406368');
-      } else {
-        window.gtag = function() {
-          console.debug('[analytics]', Array.from(arguments));
-        };
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      window.dataLayer.push(arguments);
+      if (['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)) {
+        console.debug('[gtag]', Array.from(arguments));
       }
-    })();
+    }
+    window.gtag = gtag;
+
+    gtag('js', new Date());
+    gtag('config', 'AW-18368406368');
+    gtag('config', 'G-GB7511BWTN');
   </script>
 
   <meta charset="UTF-8" />
