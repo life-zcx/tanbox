@@ -296,11 +296,10 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Two-Factor Authentication (2FA via Email OTP) for ADMIN role when entering Admin Panel
-    const isFromAdminPanel = isAdminPanel === true || req.headers['x-client-app'] === 'admin';
-    if (user.role === 'ADMIN' && isFromAdminPanel) {
+    // Two-Factor Authentication (2FA via Email OTP) for all ADMIN accounts
+    if (user.role === 'ADMIN') {
       const now = Date.now();
-      const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '—';
+      const ip = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '—';
 
       // STEP 1: If OTP code was not yet supplied, generate code and send email
       if (!code) {

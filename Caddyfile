@@ -36,6 +36,12 @@ tanbox.kz, www.tanbox.kz {
     handle /api/* {
         reverse_proxy backend:5050
     }
+    handle /lk* {
+        redir https://lk.tanbox.kz{uri} permanent
+    }
+    handle /admin* {
+        redir https://admin.tanbox.kz{uri} permanent
+    }
     handle {
         reverse_proxy frontend-landing:3000
     }

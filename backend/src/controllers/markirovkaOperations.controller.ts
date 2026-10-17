@@ -36,6 +36,62 @@ async function resolveAccountForUser(user: any, accountId?: string) {
   });
 }
 
+function mapOrderToOperation(ord: any) {
+  const opStatus: MarkirovkaOperationStatus =
+    ord.status === 'COMPLETED'
+      ? MarkirovkaOperationStatus.COMPLETED
+      : ord.status === 'FAILED'
+      ? MarkirovkaOperationStatus.FAILED
+      : MarkirovkaOperationStatus.PROCESSING;
+
+  const docNumber = ord.externalOrderId
+    ? `ORD-${ord.externalOrderId.length > 8 ? ord.externalOrderId.slice(0, 8) : ord.externalOrderId}`
+    : `ORD-${ord.id.slice(0, 8)}`;
+
+  return {
+    id: ord.id,
+    type: 'ORDER',
+    accountId: ord.accountId,
+    account: ord.account
+      ? {
+          id: ord.account.id,
+          name: ord.account.name,
+          environment: ord.account.environment,
+          login: ord.account.login,
+        }
+      : null,
+    documentNumber: docNumber,
+    codesCount: ord.quantityReceived || ord.quantityRequested || 0,
+    status: opStatus,
+    isSigned: false,
+    signature: null,
+    requestPayload: {
+      orderId: ord.id,
+      externalOrderId: ord.externalOrderId,
+      gtin: ord.gtin,
+      category: ord.category,
+      quantityRequested: ord.quantityRequested,
+      quantityReceived: ord.quantityReceived,
+    },
+    responsePayload: {
+      orderId: ord.id,
+      externalOrderId: ord.externalOrderId,
+      codes: ord.codes || [],
+      details: {
+        gtin: ord.gtin,
+        category: ord.category,
+        quantityRequested: ord.quantityRequested,
+        quantityReceived: ord.quantityReceived,
+        externalOrderId: ord.externalOrderId,
+      },
+    },
+    errorDetails: ord.errorDetails,
+    createdById: ord.order?.userId || null,
+    createdAt: ord.createdAt,
+    updatedAt: ord.updatedAt,
+  };
+}
+
 /**
  * 1. Get operations history with filters
  */
@@ -50,9 +106,6 @@ export async function getOperations(req: AuthRequest, res: Response) {
         { account: { userId: req.user?.id } },
       ];
     }
-    if (type && type !== 'ALL') {
-      where.type = type as MarkirovkaOperationType;
-    }
     if (status && status !== 'ALL') {
       where.status = status as MarkirovkaOperationStatus;
     }
@@ -60,16 +113,108 @@ export async function getOperations(req: AuthRequest, res: Response) {
       where.accountId = String(accountId);
     }
 
+    const orderWhere: any = {};
+    if (req.user?.role !== 'ADMIN') {
+      orderWhere.OR = [
+        { account: { userId: req.user?.id } },
+        { order: { userId: req.user?.id } },
+      ];
+    }
+    if (accountId && accountId !== 'ALL') {
+      orderWhere.accountId = String(accountId);
+    }
+    if (status && status !== 'ALL') {
+      if (status === 'COMPLETED') {
+        orderWhere.status = 'COMPLETED';
+      } else if (status === 'FAILED') {
+        orderWhere.status = 'FAILED';
+      } else if (status === 'PROCESSING') {
+        orderWhere.status = { in: ['PENDING', 'READY', 'FETCHING'] };
+      }
+    }
+
     const take = Math.min(Number(limit) || 50, 100);
     const skip = (Math.max(Number(page) || 1, 1) - 1) * take;
 
-    const [total, items] = await Promise.all([
+    // 1. If filtering specifically for orders
+    if (type === 'ORDER') {
+      const [total, orders] = await Promise.all([
+        prisma.markirovkaOrder.count({ where: orderWhere }),
+        prisma.markirovkaOrder.findMany({
+          where: orderWhere,
+          orderBy: { createdAt: 'desc' },
+          take,
+          skip,
+          include: {
+            account: {
+              select: {
+                id: true,
+                name: true,
+                environment: true,
+                login: true,
+              },
+            },
+            order: {
+              select: {
+                userId: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+      return res.json({
+        total,
+        page: Number(page),
+        totalPages: Math.ceil(total / take),
+        operations: orders.map(mapOrderToOperation),
+      });
+    }
+
+    // 2. If filtering specifically for another operation type
+    if (type && type !== 'ALL') {
+      where.type = type as MarkirovkaOperationType;
+
+      const [total, items] = await Promise.all([
+        prisma.markirovkaOperation.count({ where }),
+        prisma.markirovkaOperation.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          take,
+          skip,
+          include: {
+            account: {
+              select: {
+                id: true,
+                name: true,
+                environment: true,
+                login: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+      return res.json({
+        total,
+        page: Number(page),
+        totalPages: Math.ceil(total / take),
+        operations: items,
+      });
+    }
+
+    // 3. ALL operations (including orders)
+    const [opTotal, orderTotal] = await Promise.all([
       prisma.markirovkaOperation.count({ where }),
+      prisma.markirovkaOrder.count({ where: orderWhere }),
+    ]);
+    const total = opTotal + orderTotal;
+
+    const [items, orders] = await Promise.all([
       prisma.markirovkaOperation.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        take,
-        skip,
+        take: skip + take,
         include: {
           account: {
             select: {
@@ -81,13 +226,40 @@ export async function getOperations(req: AuthRequest, res: Response) {
           },
         },
       }),
+      prisma.markirovkaOrder.findMany({
+        where: orderWhere,
+        orderBy: { createdAt: 'desc' },
+        take: skip + take,
+        include: {
+          account: {
+            select: {
+              id: true,
+              name: true,
+              environment: true,
+              login: true,
+            },
+          },
+          order: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      }),
     ]);
+
+    const combined = [
+      ...items,
+      ...orders.map(mapOrderToOperation),
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const pagedOperations = combined.slice(skip, skip + take);
 
     return res.json({
       total,
       page: Number(page),
       totalPages: Math.ceil(total / take),
-      operations: items,
+      operations: pagedOperations,
     });
   } catch (err: any) {
     logger.error('Failed to get markirovka operations:', err);
@@ -989,7 +1161,69 @@ export async function getOperationReceipt(req: AuthRequest, res: Response) {
     });
 
     if (!op) {
-      return res.status(404).json({ message: 'Операция не найдена' });
+      const markOrder = await prisma.markirovkaOrder.findUnique({
+        where: { id },
+        include: {
+          account: true,
+          order: { select: { userId: true } },
+        },
+      });
+
+      if (!markOrder) {
+        return res.status(404).json({ message: 'Операция не найдена' });
+      }
+
+      if (req.user?.role !== 'ADMIN') {
+        if (markOrder.account?.userId !== req.user?.id && markOrder.order?.userId !== req.user?.id) {
+          return res.status(403).json({ message: 'Доступ к данной операции запрещен' });
+        }
+      }
+
+      const mappedOp = mapOrderToOperation(markOrder);
+      let localCodes: any[] = [];
+      if (Array.isArray(markOrder.codes)) {
+        localCodes = (markOrder.codes as string[]).map((c: string) => ({
+          code: c,
+          state: markOrder.status === 'COMPLETED' ? 'SUCCESS' : 'ERROR',
+          result: markOrder.status === 'COMPLETED' ? 'Эмитирован в ИС МПТ' : markOrder.status,
+          gtin: markOrder.gtin,
+        }));
+      }
+
+      return res.json({
+        success: true,
+        operation: mappedOp,
+        documentId: markOrder.externalOrderId || null,
+        storageInfo: null,
+        receipt: {
+          status: mappedOp.status,
+          docInfo: {
+            status: mappedOp.status,
+            type: 'ORDER',
+            documentNumber: mappedOp.documentNumber,
+            date: markOrder.createdAt,
+            category: markOrder.category,
+            gtin: markOrder.gtin,
+            quantityRequested: markOrder.quantityRequested,
+            quantityReceived: markOrder.quantityReceived,
+          },
+          codes: localCodes,
+          errors: markOrder.errorDetails
+            ? [
+                {
+                  code: 'ORDER_ERROR',
+                  error: markOrder.errorDetails,
+                  friendly: {
+                    title: 'Ошибка заказа кодов маркировки',
+                    description: markOrder.errorDetails,
+                    actionHint: 'Проверьте статус заказа в СУЗ ИС МПТ или повторите попытку',
+                  },
+                },
+              ]
+            : [],
+        },
+        message: 'Квитанция заказа кодов маркировки (СУЗ)',
+      });
     }
 
     if (req.user?.role !== 'ADMIN') {

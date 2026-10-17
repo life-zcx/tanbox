@@ -20,6 +20,7 @@ import {
   XCircle,
   KeyRound,
   ShieldAlert,
+  PackagePlus,
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { NCALayerBadge } from '../components/markirovka/NCALayerBadge';
@@ -84,6 +85,8 @@ export const MarkirovkaPage: React.FC = () => {
 
   const getOpBadge = (type: string) => {
     switch (type) {
+      case 'ORDER':
+        return { label: 'Заказ кодов', icon: PackagePlus, color: 'bg-violet-50 text-violet-700 border-violet-200' };
       case 'IMPORT_NOTIFICATION':
         return { label: 'Ввоз товаров', icon: FileDown, color: 'bg-blue-50 text-[#0082FB] border-blue-200' };
       case 'UTILISATION':
@@ -107,6 +110,7 @@ export const MarkirovkaPage: React.FC = () => {
 
   const tabs = [
     { id: 'ALL', label: 'Все операции' },
+    { id: 'ORDER', label: 'Заказы КМ' },
     { id: 'IMPORT_NOTIFICATION', label: 'Ввоз товаров' },
     { id: 'UTILISATION', label: 'Нанесение КМ' },
     { id: 'AGGREGATION', label: 'Агрегация' },

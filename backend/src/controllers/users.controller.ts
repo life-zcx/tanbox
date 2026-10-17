@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../config/db';
-import { AuthRequest } from '../middleware/auth.middleware';
+import { AuthRequest, invalidateUserBlockCache } from '../middleware/auth.middleware';
 import { Role } from '@prisma/client';
 import { logger } from '../utils/logger';
 
@@ -292,6 +292,7 @@ export const toggleBlockUser = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    invalidateUserBlockCache(id);
     logger.info(`Admin ${req.user.email} ${isBlocked ? 'BLOCKED' : 'UNBLOCKED'} user ${updated.email}`);
 
     return res.json({
@@ -344,6 +345,7 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
     // Каскадное удаление через Prisma onDelete: Cascade
     await prisma.user.delete({ where: { id } });
 
+    invalidateUserBlockCache(id);
     logger.info(`Admin ${req.user.email} DELETED user ${targetUser.email} (id: ${id})`);
 
     return res.json({

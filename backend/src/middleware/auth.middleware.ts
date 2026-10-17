@@ -14,7 +14,22 @@ export interface AuthRequest extends Request {
   };
 }
 
-export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunction) => {
+import { prisma } from '../config/db';
+
+interface CachedUserStatus {
+  isBlocked: boolean;
+  blockedReason: string | null;
+  cachedAt: number;
+}
+
+const userBlockCache = new Map<string, CachedUserStatus>();
+const CACHE_TTL_MS = 15000; // 15 seconds
+
+export const invalidateUserBlockCache = (userId: string) => {
+  userBlockCache.delete(userId);
+};
+
+export const authenticateJWT = async (req: AuthRequest, res: Response, next: NextFunction) => {
   let token: string | undefined;
   const authHeader = req.headers.authorization;
 
@@ -29,6 +44,48 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as any;
     req.user = decoded;
+
+    // Verify account active status in DB (blocked or deleted users are rejected)
+    if (decoded?.id) {
+      const now = Date.now();
+      const cached = userBlockCache.get(decoded.id);
+
+      if (cached && now - cached.cachedAt < CACHE_TTL_MS) {
+        if (cached.isBlocked) {
+          return res.status(403).json({
+            code: 'USER_BLOCKED',
+            message: cached.blockedReason
+              ? `Ваш аккаунт заблокирован. Причина: ${cached.blockedReason}`
+              : 'Ваш аккаунт заблокирован администратором платформы',
+          });
+        }
+      } else {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: decoded.id },
+          select: { id: true, isBlocked: true, blockedReason: true },
+        });
+
+        if (!dbUser) {
+          return res.status(401).json({ message: 'Пользователь не найден или был удален' });
+        }
+
+        userBlockCache.set(decoded.id, {
+          isBlocked: dbUser.isBlocked,
+          blockedReason: dbUser.blockedReason,
+          cachedAt: now,
+        });
+
+        if (dbUser.isBlocked) {
+          return res.status(403).json({
+            code: 'USER_BLOCKED',
+            message: dbUser.blockedReason
+              ? `Ваш аккаунт заблокирован. Причина: ${dbUser.blockedReason}`
+              : 'Ваш аккаунт заблокирован администратором платформы',
+          });
+        }
+      }
+    }
+
     next();
   } catch (error) {
     return res.status(403).json({ message: 'Недействительный или просроченный токен' });

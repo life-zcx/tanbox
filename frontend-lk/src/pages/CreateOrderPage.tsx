@@ -119,8 +119,8 @@ export const CreateOrderPage: React.FC = () => {
   const [markirovkaGtin, setMarkirovkaGtin] = useState<string>('');
   const [manualCount, setManualCount] = useState<number>(500);
   const [isConnectModalOpen, setIsConnectModalOpen] = useState<boolean>(false);
-  const [emissionReleaseType, setEmissionReleaseType] = useState<'PRODUCTION' | 'IMPORT' | 'REMAINDER'>('PRODUCTION');
-  const [emissionPurpose, setEmissionPurpose] = useState<'FOR_SALE' | 'CROSS_BORDER'>('FOR_SALE');
+  const [emissionReleaseType, setEmissionReleaseType] = useState<'PRODUCTION' | 'IMPORT' | 'REMAINDER' | ''>('');
+  const [emissionPurpose, setEmissionPurpose] = useState<'FOR_SALE' | 'CROSS_BORDER' | ''>('');
 
   // Load available markirovka accounts on mount
   useEffect(() => {
@@ -902,6 +902,18 @@ export const CreateOrderPage: React.FC = () => {
         return;
       }
 
+      if (!emissionReleaseType) {
+        setErrorMsg('Пожалуйста, выберите способ выпуска в оборот (Шаг 2).');
+        document.getElementById('step-codes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      if (!emissionPurpose) {
+        setErrorMsg('Пожалуйста, выберите цель маркировки (Шаг 2).');
+        document.getElementById('step-codes-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
       const hasValidEmissionGtin = positions.some((p) => p.gtin && p.gtin.trim().length >= 8);
 
       if (!hasValidEmissionGtin) {
@@ -952,7 +964,7 @@ export const CreateOrderPage: React.FC = () => {
       !tariffType ||
       (tariffType !== 'DIGITAL' && !warehouseAddress.trim()) ||
       (markirovkaMode === 'FILE' && (!codesFile && uploadedCsvFiles.length === 0)) ||
-      (markirovkaMode === 'EMISSION' && (!markirovkaAccountId || !hasValidEmissionGtin)) ||
+      (markirovkaMode === 'EMISSION' && (!markirovkaAccountId || !hasValidEmissionGtin || !emissionReleaseType || !emissionPurpose)) ||
       finalCount < 1
     ) {
       return;
@@ -1559,8 +1571,11 @@ export const CreateOrderPage: React.FC = () => {
                     <select
                       value={emissionReleaseType}
                       onChange={(e) => setEmissionReleaseType(e.target.value as any)}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs text-gray-900 bg-white focus:outline-none focus:border-[#0082FB]"
+                      className={`w-full px-3 py-2 rounded-xl border border-gray-300 text-xs bg-white focus:outline-none focus:border-[#0082FB] ${
+                        !emissionReleaseType ? 'text-gray-400' : 'text-gray-900'
+                      }`}
                     >
+                      <option value="" disabled>Выберите способ выпуска...</option>
                       <option value="PRODUCTION">Производство в РК (внутреннее)</option>
                       <option value="IMPORT">Импорт в РК (ввоз товара)</option>
                       <option value="REMAINDER">Маркировка остатков / в обороте</option>
@@ -1575,8 +1590,11 @@ export const CreateOrderPage: React.FC = () => {
                     <select
                       value={emissionPurpose}
                       onChange={(e) => setEmissionPurpose(e.target.value as any)}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs text-gray-900 bg-white focus:outline-none focus:border-[#0082FB]"
+                      className={`w-full px-3 py-2 rounded-xl border border-gray-300 text-xs bg-white focus:outline-none focus:border-[#0082FB] ${
+                        !emissionPurpose ? 'text-gray-400' : 'text-gray-900'
+                      }`}
                     >
+                      <option value="" disabled>Выберите цель маркировки...</option>
                       <option value="FOR_SALE">Для реализации в РК</option>
                       <option value="CROSS_BORDER">Трансграничная торговля / ЕАЭС</option>
                     </select>

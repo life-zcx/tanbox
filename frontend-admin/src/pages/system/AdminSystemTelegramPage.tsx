@@ -35,6 +35,21 @@ interface DispatchRecord {
   error?: string;
 }
 
+function renderSafeTelegramPreview(text: string): string {
+  if (!text || !text.trim()) {
+    return '<i class="text-gray-400">Здесь появится текст вашего сообщения...</i>';
+  }
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  return escaped
+    .replace(/&lt;(\/?)(b|strong|i|em|u|s|strike|del|code|pre)&gt;/gi, '<$1$2>')
+    .replace(/&lt;a\s+href=&quot;(https?:\/\/[^&"]+)&quot;&gt;/gi, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-[#0082FB] underline">')
+    .replace(/&lt;\/a&gt;/gi, '</a>');
+}
+
 export const AdminSystemTelegramPage: React.FC = () => {
   const { showToast } = useOutletContext<SystemOutletContext>();
 
@@ -485,9 +500,7 @@ export const AdminSystemTelegramPage: React.FC = () => {
               <div
                 className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap font-sans"
                 dangerouslySetInnerHTML={{
-                  __html:
-                    messageText.trim() ||
-                    '<i class="text-gray-400">Здесь появится текст вашего сообщения...</i>',
+                  __html: renderSafeTelegramPreview(messageText),
                 }}
               />
 

@@ -17,6 +17,7 @@ import {
   History,
   Building2,
   Users,
+  PackagePlus,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PageHeader } from '@shared';
@@ -96,6 +97,8 @@ export const AdminMarkirovkaActivityPage: React.FC = () => {
 
   const getOpBadge = (type: string) => {
     switch (type) {
+      case 'ORDER':
+        return { label: 'Заказ кодов', icon: PackagePlus, color: 'bg-violet-50 text-violet-700 border-violet-200' };
       case 'IMPORT_NOTIFICATION':
         return { label: 'Ввоз товаров', icon: FileDown, color: 'bg-blue-50 text-[#0082FB] border-blue-200' };
       case 'UTILISATION':
@@ -247,6 +250,7 @@ export const AdminMarkirovkaActivityPage: React.FC = () => {
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
         {[
           { id: 'ALL', label: 'Все операции' },
+          { id: 'ORDER', label: 'Заказы КМ' },
           { id: 'IMPORT_NOTIFICATION', label: 'Ввоз товаров' },
           { id: 'UTILISATION', label: 'Нанесение КМ' },
           { id: 'AGGREGATION', label: 'Агрегация' },

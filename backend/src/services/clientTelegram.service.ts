@@ -216,13 +216,13 @@ export class ClientTelegramBotService {
         `• Сумма: <b>${Number(order.totalPrice || 0).toLocaleString('ru-RU')} ₸</b>`,
         comment ? `\n💬 Комментарий: <i>${comment}</i>` : '',
         ``,
-        `🌐 <a href="https://tanbox.kz/lk/orders/${order.id}">Перейти в карточку заказа в ЛК</a>`,
+        `🌐 <a href="https://lk.tanbox.kz/orders/${order.id}">Перейти в карточку заказа в ЛК</a>`,
       ].filter(Boolean).join('\n');
 
       await this.sendMessage(order.user.telegramChatId, message, {
         replyMarkup: {
           inline_keyboard: [
-            [{ text: '🔍 Открыть заказ в ЛК', url: `https://tanbox.kz/lk/orders/${order.id}` }],
+            [{ text: '🔍 Открыть заказ в ЛК', url: `https://lk.tanbox.kz/orders/${order.id}` }],
           ],
         },
       });
@@ -275,13 +275,13 @@ export class ClientTelegramBotService {
         ``,
         `<i>${desc}</i>`,
         ``,
-        `🌐 <a href="https://tanbox.kz/lk/orders/${order.id}">Перейти в карточку заказа в ЛК</a>`,
+        `🌐 <a href="https://lk.tanbox.kz/orders/${order.id}">Перейти в карточку заказа в ЛК</a>`,
       ].join('\n');
 
       await this.sendMessage(order.user.telegramChatId, message, {
         replyMarkup: {
           inline_keyboard: [
-            [{ text: '🔍 Посмотреть макет в ЛК', url: `https://tanbox.kz/lk/orders/${order.id}` }],
+            [{ text: '🔍 Посмотреть макет в ЛК', url: `https://lk.tanbox.kz/orders/${order.id}` }],
           ],
         },
       });
@@ -318,13 +318,13 @@ export class ClientTelegramBotService {
         ``,
         `• Сумма к оплате: <b>${Number(order.totalPrice || 0).toLocaleString('ru-RU')} ₸</b>`,
         ``,
-        `🌐 <a href="https://tanbox.kz/lk/orders/${order.id}">Подробнее в личном кабинете</a>`,
+        `🌐 <a href="https://lk.tanbox.kz/orders/${order.id}">Подробнее в личном кабинете</a>`,
       ].join('\n');
 
       await this.sendMessage(order.user.telegramChatId, message, {
         replyMarkup: {
           inline_keyboard: [
-            [{ text: '📄 Посмотреть счёт / квитанцию', url: `https://tanbox.kz/lk/orders/${order.id}` }],
+            [{ text: '📄 Посмотреть счёт / квитанцию', url: `https://lk.tanbox.kz/orders/${order.id}` }],
           ],
         },
       });
@@ -427,7 +427,7 @@ export class ClientTelegramBotService {
       await this.sendMessage(
         chatId,
         `⚠️ <b>Ссылка привязки недействительна или устарела.</b>\n\n` +
-        `Пожалуйста, вернитесь в личный кабинет на сайте tanbox.kz и нажмите кнопку «Получать уведомления о заказах» для создания новой ссылки.`
+        `Пожалуйста, вернитесь в личный кабинет на сайте lk.tanbox.kz и нажмите кнопку «Получать уведомления о заказах» для создания новой ссылки.`
       );
       return;
     }
@@ -499,14 +499,14 @@ export class ClientTelegramBotService {
       chatId,
       `⚠️ <b>Ваш аккаунт не привязан к боту.</b>\n\n` +
       `Чтобы получать уведомления об изменении статусов и оплат ваших заказов:\n` +
-      `1. Войдите в личный кабинет на сайте <b>tanbox.kz</b>\n` +
+      `1. Войдите в личный кабинет на сайте <b>lk.tanbox.kz</b>\n` +
       `2. В разделе «Мои заказы» нажмите кнопку <b>«🔔 Получать уведомления о заказах»</b>\n` +
       `3. Нажмите кнопку перехода в бот — аккаунт привяжется автоматически!\n\n` +
-      `🌐 <a href="https://tanbox.kz/lk">Войти в Личный кабинет TANBOX</a>`,
+      `🌐 <a href="https://lk.tanbox.kz">Войти в Личный кабинет TANBOX</a>`,
       {
         replyMarkup: {
           inline_keyboard: [
-            [{ text: '🌐 Войти в Личный кабинет', url: 'https://tanbox.kz/lk' }],
+            [{ text: '🌐 Войти в Личный кабинет', url: 'https://lk.tanbox.kz' }],
           ],
         },
       }
@@ -536,7 +536,7 @@ export class ClientTelegramBotService {
       await this.sendMessage(
         chatId,
         `У вас пока нет оформленных заказов.\n\n` +
-        `Создать заказ можно в вашем <a href="https://tanbox.kz/lk/orders/new">личном кабинете</a>.`
+        `Создать заказ можно в вашем <a href="https://lk.tanbox.kz/orders/new">личном кабинете</a>.`
       );
       return;
     }
@@ -562,7 +562,7 @@ export class ClientTelegramBotService {
         stickerInfo +
         `\n• Оплата: ${payInfo.emoji} <i>${payInfo.label}</i>\n` +
         `• Сумма: <b>${Number(o.totalPrice || 0).toLocaleString('ru-RU')} ₸</b>\n` +
-        `👉 <a href="https://tanbox.kz/lk/orders/${o.id}">Открыть детали</a>\n`
+        `👉 <a href="https://lk.tanbox.kz/orders/${o.id}">Открыть детали</a>\n`
       );
     });
 
@@ -575,7 +575,7 @@ export class ClientTelegramBotService {
     await this.sendMessage(chatId, text, {
       replyMarkup: {
         inline_keyboard: [
-          [{ text: '🌐 Открыть все заказы в ЛК', url: 'https://tanbox.kz/lk/orders' }],
+          [{ text: '🌐 Открыть все заказы в ЛК', url: 'https://lk.tanbox.kz/orders' }],
         ],
       },
     });
@@ -607,7 +607,7 @@ export class ClientTelegramBotService {
       chatId,
       `✅ <b>Уведомления отключены.</b>\n\n` +
       `Ваш Telegram отвязан от аккаунта ${user.companyName || user.email}.\n` +
-      `Вы в любой момент сможете подключить их снова в личном кабинете на сайте tanbox.kz.`,
+      `Вы в любой момент сможете подключить их снова в личном кабинете на сайте lk.tanbox.kz.`,
       {
         replyMarkup: { remove_keyboard: true },
       }

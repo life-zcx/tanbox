@@ -58,17 +58,8 @@ if docker ps | grep -q "tanbox_postgres"; then
     }
 fi
 
-# 3. Применение безопасных SQL-миграций и синхронизация
-echo "🗄️ [TANBOX] Применение безопасных SQL-миграций (zero-data-loss)..."
-if docker ps | grep -q "tanbox_postgres"; then
-    for mig in backend/prisma/migrations/*/migration.sql; do
-        if [ -f "$mig" ]; then
-            echo "   -> Применяю миграцию: $(basename $(dirname "$mig"))"
-            docker exec -i tanbox_postgres psql -U "${POSTGRES_USER:-tanbox_user}" -d "${POSTGRES_DB:-tanbox_db}" < "$mig" || true
-        fi
-    done
-fi
-
+# 3. Применение безопасных миграций схемы БД (zero-data-loss)
+echo "🗄️ [TANBOX] Применение безопасных миграций Prisma..."
 docker compose run --rm backend sh -c "npx prisma migrate deploy || npx prisma db push --skip-generate"
 # [ОТКЛЮЧЕНО] Сидинг админа (раскомментируйте, когда понадобится создать учетную запись):
 # docker compose run --rm backend node dist/seed.js

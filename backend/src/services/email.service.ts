@@ -77,7 +77,9 @@ export const sendEmail = async ({ to, subject, html, attachments }: SendEmailOpt
 export const sendVerificationOtpEmail = async (to: string, code: string): Promise<void> => {
   const cleanEmail = to.trim().toLowerCase();
   
-  logger.info(`🔑 [DEV OTP] Код подтверждения для ${cleanEmail}: >>> ${code} <<<`);
+  if (process.env.NODE_ENV === 'development') {
+    logger.info(`🔑 [DEV OTP] Код подтверждения для ${cleanEmail}: >>> ${code} <<<`);
+  }
 
   // Official logo attachment
   const logoPath = path.resolve(__dirname, '../assets/tanbox-logo.png');
@@ -155,7 +157,9 @@ export const sendVerificationOtpEmail = async (to: string, code: string): Promis
 export const sendPasswordResetOtpEmail = async (to: string, code: string): Promise<void> => {
   const cleanEmail = to.trim().toLowerCase();
 
-  logger.info(`🔑 [DEV OTP] Код сброса пароля для ${cleanEmail}: >>> ${code} <<<`);
+  if (process.env.NODE_ENV === 'development') {
+    logger.info(`🔑 [DEV OTP] Код сброса пароля для ${cleanEmail}: >>> ${code} <<<`);
+  }
 
   const logoPath = path.resolve(__dirname, '../assets/tanbox-logo.png');
   const hasLogo = fs.existsSync(logoPath);
@@ -236,7 +240,9 @@ export const sendAdminLoginOtpEmail = async (
 ): Promise<void> => {
   const cleanEmail = to.trim().toLowerCase();
 
-  logger.info(`🔑 [DEV 2FA CODE] Код подтверждения входа для ${cleanEmail}: >>> ${code} <<<`);
+  if (process.env.NODE_ENV === 'development') {
+    logger.info(`🔑 [DEV 2FA CODE] Код подтверждения входа для ${cleanEmail}: >>> ${code} <<<`);
+  }
 
   const logoPath = path.resolve(__dirname, '../assets/tanbox-logo.png');
   const hasLogo = fs.existsSync(logoPath);

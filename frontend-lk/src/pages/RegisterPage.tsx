@@ -619,9 +619,9 @@ export const RegisterPage: React.FC = () => {
                   errors.consent ? 'text-red-800' : 'text-[#0082FB]'
                 }`}
               >
-                Политике конфиденциальности РК
-              </a>{' '}
-              и{' '}
+                Политике конфиденциальности
+              </a>
+              ,{' '}
               <a
                 href={
                   window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -635,6 +635,21 @@ export const RegisterPage: React.FC = () => {
                 }`}
               >
                 Публичной оферте
+              </a>{' '}
+              и{' '}
+              <a
+                href={
+                  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? `${window.location.protocol}//${window.location.hostname}:3000/payment-procedure`
+                    : `${window.location.protocol}//${window.location.hostname.replace(/^(lk|admin)\./, '')}/payment-procedure`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`font-semibold underline underline-offset-2 ${
+                  errors.consent ? 'text-red-800' : 'text-[#0082FB]'
+                }`}
+              >
+                Порядку оплаты и возврата
               </a>.
             </label>
           </div>

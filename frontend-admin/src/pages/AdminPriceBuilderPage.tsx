@@ -41,7 +41,7 @@ export const AdminPriceBuilderPage: React.FC = () => {
   // General offer settings
   const [clientName, setClientName] = useState<string>('Для корпоративных клиентов');
   const [managerName, setManagerName] = useState<string>('Отдел корпоративных продаж');
-  const [managerPhone, setManagerPhone] = useState<string>('+7 (707) 711-16-53');
+  const [managerPhone, setManagerPhone] = useState<string>('+7 (700) 304- 85-32');
   const [managerEmail, setManagerEmail] = useState<string>('sales@tanbox.kz');
   const [validUntilDays, setValidUntilDays] = useState<number>(14);
 
@@ -390,476 +390,475 @@ export const AdminPriceBuilderPage: React.FC = () => {
       <div className="space-y-6 pb-16">
         {/* Header with actions */}
         <div className="no-print">
-        <PageHeader
-          title="Конструктор прайс-листов"
-          description="Формирование официального коммерческого предложения, настройка стоимости под клиента и экспорт в PDF"
-          action={
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <button
-                type="button"
-                onClick={loadPricesFromDatabase}
-                disabled={loadingDb}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
-                title="Загрузить текущие тарифы из базы данных"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingDb ? 'animate-spin text-[#0082FB]' : 'text-gray-500'}`} />
-                {loadingDb ? 'Загрузка...' : 'Подтянуть из базы'}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCopyText}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
-                title="Скопировать прайс в виде текста для мессенджеров"
-              >
-                {copiedText ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-emerald-700">Скопировано!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5 text-gray-500" />
-                    <span>Копировать текст</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDownloadPdf}
-                disabled={downloadingPdf}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
-              >
-                <Download className="w-3.5 h-3.5 text-gray-500" />
-                {downloadingPdf ? 'Генерация PDF...' : 'Скачать PDF'}
-              </button>
-
-              <button
-                type="button"
-                onClick={handlePrint}
-                className="px-4 py-2 rounded-xl text-xs font-extrabold bg-[#0082FB] hover:bg-[#0072de] text-white flex items-center gap-2 transition-all shadow-md shadow-[#0082FB]/20 active:scale-95 cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                Печать / Векторный PDF
-              </button>
-            </div>
-          }
-        />
-      </div>
-
-      {/* Main Two-Column Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-        {/* LEFT COLUMN: Controls & Settings */}
-        <div className="xl:col-span-6 space-y-6 no-print">
-          {/* Card 1: Client & Contact details */}
-          <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-4">
-            <div className="flex items-center gap-2 text-xs font-extrabold text-[#111827] uppercase tracking-wider pb-3 border-b border-gray-100">
-              <Building className="w-4 h-4 text-[#0082FB]" />
-              Реквизиты и контакты предложения
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div>
-                <label className="text-[11px] font-bold text-gray-600 block mb-1">
-                  Кому адресовано (Клиент / Компания)
-                </label>
-                <input
-                  type="text"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="ТОО Компания / Для коммерческого предложения"
-                  className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-600 block mb-1">
-                  Срок действия КП (дней)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="90"
-                  value={validUntilDays}
-                  onChange={(e) => setValidUntilDays(parseInt(e.target.value, 10) || 14)}
-                  className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-600 block mb-1">
-                  Ответственный менеджер / Отдел
-                </label>
-                <input
-                  type="text"
-                  value={managerName}
-                  onChange={(e) => setManagerName(e.target.value)}
-                  className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-600 block mb-1">
-                  Телефон / WhatsApp
-                </label>
-                <input
-                  type="text"
-                  value={managerPhone}
-                  onChange={(e) => setManagerPhone(e.target.value)}
-                  className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-600 block mb-1">
-                  Email для связи
-                </label>
-                <input
-                  type="email"
-                  value={managerEmail}
-                  onChange={(e) => setManagerEmail(e.target.value)}
-                  className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                />
-              </div>
-
-              {/* Legal Credentials Block */}
-              <div className="sm:col-span-2 pt-3 border-t border-gray-150 space-y-2.5">
-                <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider block">
-                  Юридические реквизиты исполнителя (по договору)
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[10px] font-medium text-gray-500 block mb-0.5">Юр. лицо / ИП</label>
-                    <input
-                      type="text"
-                      value={legalName}
-                      onChange={(e) => setLegalName(e.target.value)}
-                      className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-lg px-2.5 py-1.5 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-medium text-gray-500 block mb-0.5">ИИН / БИН</label>
-                    <input
-                      type="text"
-                      value={legalIin}
-                      onChange={(e) => setLegalIin(e.target.value)}
-                      className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-lg px-2.5 py-1.5 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Tariffs Matrix */}
-          <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2 text-xs font-extrabold text-[#111827] uppercase tracking-wider">
-                <FileSpreadsheet className="w-4 h-4 text-[#0082FB]" />
-                Тарифы на маркировку (₸ за 1 код)
-              </div>
-              <span className="text-[11px] text-[#64748B]">
-                Цены можно править вручную
-              </span>
-            </div>
-
-            <div className="space-y-4">
-              {tariffs.map((t) => (
-                <div
-                  key={t.id}
-                  className={`p-3.5 rounded-xl border transition-all ${
-                    t.enabled
-                      ? 'border-gray-200 bg-[#F8FAFC]'
-                      : 'border-gray-200/60 bg-gray-50 opacity-50'
-                  }`}
+          <PageHeader
+            title="Конструктор прайс-листов"
+            description="Формирование официального коммерческого предложения, настройка стоимости под клиента и экспорт в PDF"
+            action={
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={loadPricesFromDatabase}
+                  disabled={loadingDb}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
+                  title="Загрузить текущие тарифы из базы данных"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={t.enabled}
-                        onChange={() => toggleTariffEnabled(t.id)}
-                        className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
-                      />
-                      <span className="text-xs font-bold text-[#111827]">{t.name}</span>
-                    </label>
-                  </div>
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingDb ? 'animate-spin text-[#0082FB]' : 'text-gray-500'}`} />
+                  {loadingDb ? 'Загрузка...' : 'Подтянуть из базы'}
+                </button>
 
-                  <p className="text-[11px] text-[#64748B] mb-3">{t.description}</p>
-
-                  <div className="grid grid-cols-4 gap-2">
-                    <div>
-                      <span className="text-[10px] font-semibold text-gray-500 block mb-1">
-                        до 1 000 шт
-                      </span>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={t.p1}
-                          disabled={!t.enabled}
-                          onChange={(e) => handleTariffPriceChange(t.id, 'p1', e.target.value)}
-                          className="w-full text-center text-xs font-bold bg-white border border-gray-200 rounded-lg py-1.5 px-1 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-[10px] font-semibold text-gray-500 block mb-1">
-                        1 001–5 000
-                      </span>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={t.p2}
-                          disabled={!t.enabled}
-                          onChange={(e) => handleTariffPriceChange(t.id, 'p2', e.target.value)}
-                          className="w-full text-center text-xs font-bold bg-white border border-gray-200 rounded-lg py-1.5 px-1 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-[10px] font-semibold text-gray-500 block mb-1">
-                        5 001–20 000
-                      </span>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={t.p3}
-                          disabled={!t.enabled}
-                          onChange={(e) => handleTariffPriceChange(t.id, 'p3', e.target.value)}
-                          className="w-full text-center text-xs font-bold bg-white border border-gray-200 rounded-lg py-1.5 px-1 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-[10px] font-semibold text-gray-500 block mb-1">
-                        от 20 001 шт
-                      </span>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={t.p4}
-                          disabled={!t.enabled}
-                          onChange={(e) => handleTariffPriceChange(t.id, 'p4', e.target.value)}
-                          className="w-full text-center text-xs font-bold bg-white border border-gray-200 rounded-lg py-1.5 px-1 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Card 3: Additional Services */}
-          <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2 text-xs font-extrabold text-[#111827] uppercase tracking-wider">
-                <Zap className="w-4 h-4 text-[#0082FB]" />
-                Дополнительные услуги TANBOX
-              </div>
-              <button
-                type="button"
-                onClick={handleAddExtraService}
-                className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#0082FB] hover:bg-blue-50 flex items-center gap-1 transition-all"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Добавить услугу
-              </button>
-            </div>
-
-            <div className="space-y-2.5">
-              {extraServices.map((service) => (
-                <div
-                  key={service.id}
-                  className="flex items-center gap-2 p-2.5 rounded-xl border border-gray-200 bg-[#F8FAFC]"
+                <button
+                  type="button"
+                  onClick={handleCopyText}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
+                  title="Скопировать прайс в виде текста для мессенджеров"
                 >
-                  <input
-                    type="checkbox"
-                    checked={service.enabled}
-                    onChange={(e) => handleExtraServiceChange(service.id, 'enabled', e.target.checked)}
-                    className="w-4 h-4 rounded text-[#0082FB] shrink-0"
-                  />
-                  <input
-                    type="text"
-                    value={service.name}
-                    onChange={(e) => handleExtraServiceChange(service.id, 'name', e.target.value)}
-                    className="flex-1 text-xs font-medium bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                  />
-                  <input
-                    type="text"
-                    value={service.unit}
-                    placeholder="ед. изм."
-                    onChange={(e) => handleExtraServiceChange(service.id, 'unit', e.target.value)}
-                    className="w-16 text-center text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1.5 text-gray-600 focus:outline-none focus:border-[#0082FB]"
-                  />
-                  <input
-                    type="text"
-                    value={service.price}
-                    placeholder="цена"
-                    onChange={(e) => handleExtraServiceChange(service.id, 'price', e.target.value)}
-                    className="w-28 text-center text-xs font-bold text-[#0082FB] bg-white border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#0082FB]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteExtraService(service.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+                  {copiedText ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-700">Скопировано!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-gray-500" />
+                      <span>Копировать текст</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  disabled={downloadingPdf}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Download className="w-3.5 h-3.5 text-gray-500" />
+                  {downloadingPdf ? 'Генерация PDF...' : 'Скачать PDF'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-4 py-2 rounded-xl text-xs font-extrabold bg-[#0082FB] hover:bg-[#0072de] text-white flex items-center gap-2 transition-all shadow-md shadow-[#0082FB]/20 active:scale-95 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Печать / Векторный PDF
+                </button>
+              </div>
+            }
+          />
         </div>
 
-        {/* RIGHT COLUMN: Interactive Live A4 Preview Sheet */}
-        <div className="xl:col-span-6 sticky top-6">
-          <div className="preview-outer-box bg-gray-100/90 rounded-2xl p-4 border border-gray-200/80 print:p-0 print:border-none print:bg-transparent print:rounded-none">
-            <div className="flex items-center justify-between pb-3 px-1 no-print">
-              <span className="text-xs font-extrabold text-[#475569] uppercase tracking-wider flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5 text-[#0082FB]" />
-                Превью печатного листа А4
-              </span>
-              <span className="text-[11px] text-[#64748B] font-mono">
-                210 × 297 мм
-              </span>
+        {/* Main Two-Column Layout */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+          {/* LEFT COLUMN: Controls & Settings */}
+          <div className="xl:col-span-6 space-y-6 no-print">
+            {/* Card 1: Client & Contact details */}
+            <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-4">
+              <div className="flex items-center gap-2 text-xs font-extrabold text-[#111827] uppercase tracking-wider pb-3 border-b border-gray-100">
+                <Building className="w-4 h-4 text-[#0082FB]" />
+                Реквизиты и контакты предложения
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="text-[11px] font-bold text-gray-600 block mb-1">
+                    Кому адресовано (Клиент / Компания)
+                  </label>
+                  <input
+                    type="text"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="ТОО Компания / Для коммерческого предложения"
+                    className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-gray-600 block mb-1">
+                    Срок действия КП (дней)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="90"
+                    value={validUntilDays}
+                    onChange={(e) => setValidUntilDays(parseInt(e.target.value, 10) || 14)}
+                    className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-gray-600 block mb-1">
+                    Ответственный менеджер / Отдел
+                  </label>
+                  <input
+                    type="text"
+                    value={managerName}
+                    onChange={(e) => setManagerName(e.target.value)}
+                    className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-gray-600 block mb-1">
+                    Телефон / WhatsApp
+                  </label>
+                  <input
+                    type="text"
+                    value={managerPhone}
+                    onChange={(e) => setManagerPhone(e.target.value)}
+                    className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-gray-600 block mb-1">
+                    Email для связи
+                  </label>
+                  <input
+                    type="email"
+                    value={managerEmail}
+                    onChange={(e) => setManagerEmail(e.target.value)}
+                    className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                  />
+                </div>
+
+                {/* Legal Credentials Block */}
+                <div className="sm:col-span-2 pt-3 border-t border-gray-150 space-y-2.5">
+                  <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider block">
+                    Юридические реквизиты исполнителя (по договору)
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 block mb-0.5">Юр. лицо / ИП</label>
+                      <input
+                        type="text"
+                        value={legalName}
+                        onChange={(e) => setLegalName(e.target.value)}
+                        className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-lg px-2.5 py-1.5 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-gray-500 block mb-0.5">ИИН / БИН</label>
+                      <input
+                        type="text"
+                        value={legalIin}
+                        onChange={(e) => setLegalIin(e.target.value)}
+                        className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-lg px-2.5 py-1.5 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Printable A4 Container */}
-            <div
-              id="tanbox-print-sheet"
-              ref={previewRef}
-              className="bg-white rounded-xl shadow-md border border-gray-300/80 p-8 text-[#111827] font-sans mx-auto max-w-[650px] space-y-5 print:border-none print:rounded-none print:shadow-none print:p-0 print:m-0 print:max-w-none print:w-full"
-            >
-              {/* Sheet Header */}
-              <div className="flex items-center justify-between border-b-2 border-[#0082FB] pb-4">
-                <div className="space-y-1">
-                  <img src="/tanbox-dark.svg" alt="TANBOX" className="h-7 w-auto object-contain" />
-                  <p className="text-[10px] text-gray-500 font-medium">
-                    Цифровая маркировка товаров под ключ в Республике Казахстан (ИС Танба)
-                  </p>
+            {/* Card 2: Tariffs Matrix */}
+            <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2 text-xs font-extrabold text-[#111827] uppercase tracking-wider">
+                  <FileSpreadsheet className="w-4 h-4 text-[#0082FB]" />
+                  Тарифы на маркировку (₸ за 1 код)
                 </div>
-                <div className="text-right space-y-0.5">
-                  <span className="text-[10px] font-black uppercase text-[#0082FB] tracking-widest block">
-                    КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ
-                  </span>
-                  <p className="text-xs font-bold text-[#111827]">
-                    Прайс-лист на услуги
-                  </p>
-                  <p className="text-[10px] text-gray-500">
-                    от {currentDateFormatted}
-                  </p>
-                </div>
+                <span className="text-[11px] text-[#64748B]">
+                  Цены можно править вручную
+                </span>
               </div>
 
-              {/* Destination Meta */}
-              <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg text-xs">
-                <div>
-                  <span className="text-[10px] text-gray-500 uppercase tracking-wider block font-semibold">
-                    Заказчик:
-                  </span>
-                  <span className="font-bold text-[#111827]">{clientName || 'Для корпоративных клиентов'}</span>
+              <div className="space-y-4">
+                {tariffs.map((t) => (
+                  <div
+                    key={t.id}
+                    className={`p-3.5 rounded-xl border transition-all ${t.enabled
+                        ? 'border-gray-200 bg-[#F8FAFC]'
+                        : 'border-gray-200/60 bg-gray-50 opacity-50'
+                      }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={t.enabled}
+                          onChange={() => toggleTariffEnabled(t.id)}
+                          className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
+                        />
+                        <span className="text-xs font-bold text-[#111827]">{t.name}</span>
+                      </label>
+                    </div>
+
+                    <p className="text-[11px] text-[#64748B] mb-3">{t.description}</p>
+
+                    <div className="grid grid-cols-4 gap-2">
+                      <div>
+                        <span className="text-[10px] font-semibold text-gray-500 block mb-1">
+                          до 1 000 шт
+                        </span>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={t.p1}
+                            disabled={!t.enabled}
+                            onChange={(e) => handleTariffPriceChange(t.id, 'p1', e.target.value)}
+                            className="w-full text-center text-xs font-bold bg-white border border-gray-200 rounded-lg py-1.5 px-1 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-semibold text-gray-500 block mb-1">
+                          1 001–5 000
+                        </span>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={t.p2}
+                            disabled={!t.enabled}
+                            onChange={(e) => handleTariffPriceChange(t.id, 'p2', e.target.value)}
+                            className="w-full text-center text-xs font-bold bg-white border border-gray-200 rounded-lg py-1.5 px-1 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-semibold text-gray-500 block mb-1">
+                          5 001–20 000
+                        </span>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={t.p3}
+                            disabled={!t.enabled}
+                            onChange={(e) => handleTariffPriceChange(t.id, 'p3', e.target.value)}
+                            className="w-full text-center text-xs font-bold bg-white border border-gray-200 rounded-lg py-1.5 px-1 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-semibold text-gray-500 block mb-1">
+                          от 20 001 шт
+                        </span>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={t.p4}
+                            disabled={!t.enabled}
+                            onChange={(e) => handleTariffPriceChange(t.id, 'p4', e.target.value)}
+                            className="w-full text-center text-xs font-bold bg-white border border-gray-200 rounded-lg py-1.5 px-1 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Card 3: Additional Services */}
+            <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2 text-xs font-extrabold text-[#111827] uppercase tracking-wider">
+                  <Zap className="w-4 h-4 text-[#0082FB]" />
+                  Дополнительные услуги TANBOX
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-gray-500 uppercase tracking-wider block font-semibold">
-                    Срок действия предложения:
-                  </span>
-                  <span className="font-bold text-[#111827]">
-                    {validUntilDays} дней (до {new Date(Date.now() + validUntilDays * 86400000).toLocaleDateString('ru-RU')})
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleAddExtraService}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#0082FB] hover:bg-blue-50 flex items-center gap-1 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Добавить услугу
+                </button>
               </div>
 
-              {/* Tariffs Table */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#111827]">
-                    1. Тарифы на маркировку продукции (₸ за 1 код)
-                  </span>
-                </div>
+              <div className="space-y-2.5">
+                {extraServices.map((service) => (
+                  <div
+                    key={service.id}
+                    className="flex items-center gap-2 p-2.5 rounded-xl border border-gray-200 bg-[#F8FAFC]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={service.enabled}
+                      onChange={(e) => handleExtraServiceChange(service.id, 'enabled', e.target.checked)}
+                      className="w-4 h-4 rounded text-[#0082FB] shrink-0"
+                    />
+                    <input
+                      type="text"
+                      value={service.name}
+                      onChange={(e) => handleExtraServiceChange(service.id, 'name', e.target.value)}
+                      className="flex-1 text-xs font-medium bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                    />
+                    <input
+                      type="text"
+                      value={service.unit}
+                      placeholder="ед. изм."
+                      onChange={(e) => handleExtraServiceChange(service.id, 'unit', e.target.value)}
+                      className="w-16 text-center text-xs bg-white border border-gray-200 rounded-lg px-1.5 py-1.5 text-gray-600 focus:outline-none focus:border-[#0082FB]"
+                    />
+                    <input
+                      type="text"
+                      value={service.price}
+                      placeholder="цена"
+                      onChange={(e) => handleExtraServiceChange(service.id, 'price', e.target.value)}
+                      className="w-28 text-center text-xs font-bold text-[#0082FB] bg-white border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#0082FB]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteExtraService(service.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
 
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <table className="w-full text-[11px] text-left border-collapse">
-                    <thead>
-                      <tr className="bg-[#F1F5F9] text-gray-700 font-bold border-b border-gray-200 text-[10px] uppercase">
-                        <th className="p-2 pl-3">Тариф / Состав услуг</th>
-                        <th className="p-2 text-center w-16">до 1 тыс</th>
-                        <th className="p-2 text-center w-16">1–5 тыс</th>
-                        <th className="p-2 text-center w-16">5–20 тыс</th>
-                        <th className="p-2 text-center w-16 text-[#0082FB]">от 20 тыс</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {tariffs
-                        .filter((t) => t.enabled)
-                        .map((t) => (
-                          <tr key={t.id} className="hover:bg-gray-50/50">
-                            <td className="p-2 pl-3">
-                              <span className="font-bold text-[#111827] block text-xs">{t.name}</span>
-                              <span className="text-[10px] text-gray-500 line-clamp-1">{t.description}</span>
-                            </td>
-                            <td className="p-2 text-center font-mono font-medium">{t.p1} ₸</td>
-                            <td className="p-2 text-center font-mono font-medium">{t.p2} ₸</td>
-                            <td className="p-2 text-center font-mono font-medium">{t.p3} ₸</td>
-                            <td className="p-2 text-center font-mono font-bold text-[#0082FB]">{t.p4} ₸</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
+          {/* RIGHT COLUMN: Interactive Live A4 Preview Sheet */}
+          <div className="xl:col-span-6 sticky top-6">
+            <div className="preview-outer-box bg-gray-100/90 rounded-2xl p-4 border border-gray-200/80 print:p-0 print:border-none print:bg-transparent print:rounded-none">
+              <div className="flex items-center justify-between pb-3 px-1 no-print">
+                <span className="text-xs font-extrabold text-[#475569] uppercase tracking-wider flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 text-[#0082FB]" />
+                  Превью печатного листа А4
+                </span>
+                <span className="text-[11px] text-[#64748B] font-mono">
+                  210 × 297 мм
+                </span>
               </div>
 
-              {/* Extra Services Table */}
-              {extraServices.filter((s) => s.enabled).length > 0 && (
+              {/* Printable A4 Container */}
+              <div
+                id="tanbox-print-sheet"
+                ref={previewRef}
+                className="bg-white rounded-xl shadow-md border border-gray-300/80 p-8 text-[#111827] font-sans mx-auto max-w-[650px] space-y-5 print:border-none print:rounded-none print:shadow-none print:p-0 print:m-0 print:max-w-none print:w-full"
+              >
+                {/* Sheet Header */}
+                <div className="flex items-center justify-between border-b-2 border-[#0082FB] pb-4">
+                  <div className="space-y-1">
+                    <img src="/tanbox-dark.svg" alt="TANBOX" className="h-7 w-auto object-contain" />
+                    <p className="text-[10px] text-gray-500 font-medium">
+                      Цифровая маркировка товаров под ключ в Республике Казахстан (ИС Танба)
+                    </p>
+                  </div>
+                  <div className="text-right space-y-0.5">
+                    <span className="text-[10px] font-black uppercase text-[#0082FB] tracking-widest block">
+                      КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ
+                    </span>
+                    <p className="text-xs font-bold text-[#111827]">
+                      Прайс-лист на услуги
+                    </p>
+                    <p className="text-[10px] text-gray-500">
+                      от {currentDateFormatted}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Destination Meta */}
+                <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg text-xs">
+                  <div>
+                    <span className="text-[10px] text-gray-500 uppercase tracking-wider block font-semibold">
+                      Заказчик:
+                    </span>
+                    <span className="font-bold text-[#111827]">{clientName || 'Для корпоративных клиентов'}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-gray-500 uppercase tracking-wider block font-semibold">
+                      Срок действия предложения:
+                    </span>
+                    <span className="font-bold text-[#111827]">
+                      {validUntilDays} дней (до {new Date(Date.now() + validUntilDays * 86400000).toLocaleDateString('ru-RU')})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tariffs Table */}
                 <div className="space-y-2">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#111827] block">
-                    2. Сопутствующие и цифровые услуги
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#111827]">
+                      1. Тарифы на маркировку продукции (₸ за 1 код)
+                    </span>
+                  </div>
 
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="w-full text-[11px] text-left border-collapse">
+                      <thead>
+                        <tr className="bg-[#F1F5F9] text-gray-700 font-bold border-b border-gray-200 text-[10px] uppercase">
+                          <th className="p-2 pl-3">Тариф / Состав услуг</th>
+                          <th className="p-2 text-center w-16">до 1 тыс</th>
+                          <th className="p-2 text-center w-16">1–5 тыс</th>
+                          <th className="p-2 text-center w-16">5–20 тыс</th>
+                          <th className="p-2 text-center w-16 text-[#0082FB]">от 20 тыс</th>
+                        </tr>
+                      </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {extraServices
-                          .filter((s) => s.enabled)
-                          .map((s) => (
-                            <tr key={s.id} className="hover:bg-gray-50/50">
-                              <td className="p-2 pl-3 text-gray-800 font-medium">
-                                {s.name}
+                        {tariffs
+                          .filter((t) => t.enabled)
+                          .map((t) => (
+                            <tr key={t.id} className="hover:bg-gray-50/50">
+                              <td className="p-2 pl-3">
+                                <span className="font-bold text-[#111827] block text-xs">{t.name}</span>
+                                <span className="text-[10px] text-gray-500 line-clamp-1">{t.description}</span>
                               </td>
-                              <td className="p-2 text-right pr-3 font-bold text-[#111827] whitespace-nowrap">
-                                {s.price} <span className="text-[10px] text-gray-500 font-normal">/ {s.unit}</span>
-                              </td>
+                              <td className="p-2 text-center font-mono font-medium">{t.p1} ₸</td>
+                              <td className="p-2 text-center font-mono font-medium">{t.p2} ₸</td>
+                              <td className="p-2 text-center font-mono font-medium">{t.p3} ₸</td>
+                              <td className="p-2 text-center font-mono font-bold text-[#0082FB]">{t.p4} ₸</td>
                             </tr>
                           ))}
                       </tbody>
                     </table>
                   </div>
                 </div>
-              )}
+
+                {/* Extra Services Table */}
+                {extraServices.filter((s) => s.enabled).length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#111827] block">
+                      2. Сопутствующие и цифровые услуги
+                    </span>
+
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="w-full text-[11px] text-left border-collapse">
+                        <tbody className="divide-y divide-gray-100">
+                          {extraServices
+                            .filter((s) => s.enabled)
+                            .map((s) => (
+                              <tr key={s.id} className="hover:bg-gray-50/50">
+                                <td className="p-2 pl-3 text-gray-800 font-medium">
+                                  {s.name}
+                                </td>
+                                <td className="p-2 text-right pr-3 font-bold text-[#111827] whitespace-nowrap">
+                                  {s.price} <span className="text-[10px] text-gray-500 font-normal">/ {s.unit}</span>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
 
 
-              {/* Contacts & Signoff Footer */}
-              <div className="pt-3 border-t border-gray-200 flex items-center justify-between text-[10px] text-gray-600">
-                <div className="space-y-0.5">
-                  <p className="font-bold text-[#111827]">{legalName} • ИИН: {legalIin}</p>
-                  <p>Официальный сервис: <span className="font-semibold text-[#0082FB]">tanbox.kz</span></p>
-                </div>
-                <div className="text-right space-y-0.5">
-                  <p className="font-semibold text-[#111827]">{managerName}</p>
-                  <p className="font-bold text-gray-900">{managerPhone}</p>
-                  <p>{managerEmail}</p>
+                {/* Contacts & Signoff Footer */}
+                <div className="pt-3 border-t border-gray-200 flex items-center justify-between text-[10px] text-gray-600">
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-[#111827]">{legalName} • ИИН: {legalIin}</p>
+                    <p>Официальный сервис: <span className="font-semibold text-[#0082FB]">tanbox.kz</span></p>
+                  </div>
+                  <div className="text-right space-y-0.5">
+                    <p className="font-semibold text-[#111827]">{managerName}</p>
+                    <p className="font-bold text-gray-900">{managerPhone}</p>
+                    <p>{managerEmail}</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </>
-);
+    </>
+  );
 };

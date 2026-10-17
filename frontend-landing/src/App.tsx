@@ -14,6 +14,7 @@ import { ContactsPage } from './pages/ContactsPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { TermsPage } from './pages/TermsPage';
 import { CookiePolicyPage } from './pages/CookiePolicyPage';
+import { PaymentProcedurePage } from './pages/PaymentProcedurePage';
 import { TariffCode } from './types';
 import { getLkUrl } from './utils/navigation';
 import { trackGoogleConversion } from './utils/analytics';
@@ -114,6 +115,9 @@ const AppContent: React.FC = () => {
       <Route path={`${prefix}/contacts`} element={<ContactsPage />} />
       <Route path={`${prefix}/privacy`} element={<PrivacyPolicyPage />} />
       <Route path={`${prefix}/terms`} element={<TermsPage />} />
+      <Route path={`${prefix}/payment-procedure`} element={<PaymentProcedurePage />} />
+      <Route path={`${prefix}/payments`} element={<PaymentProcedurePage />} />
+      <Route path={`${prefix}/payment`} element={<PaymentProcedurePage />} />
       <Route path={`${prefix}/cookies`} element={<CookiePolicyPage />} />
       <Route path={`${prefix}/cookie-policy`} element={<CookiePolicyPage />} />
     </>

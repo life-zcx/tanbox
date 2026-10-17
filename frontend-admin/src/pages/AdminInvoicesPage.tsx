@@ -660,782 +660,778 @@ export const AdminInvoicesPage: React.FC = () => {
       <div className="space-y-6 pb-20">
         {/* Header */}
         <div className="no-print">
-        <PageHeader
-          title="Счета на оплату"
-          description="Реестр выставленных счетов, выставление счетов на любые услуги TANBOX и печать официальных бланков РК"
-          action={
-            <button
-              type="button"
-              onClick={handleOpenCreateModal}
-              className="px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#0082FB] hover:bg-[#0070DA] text-white flex items-center gap-2 transition-all shadow-md shadow-[#0082FB]/20 active:scale-95 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              Создать счет на оплату
-            </button>
-          }
-        />
-      </div>
+          <PageHeader
+            title="Счета на оплату"
+            description="Реестр выставленных счетов, выставление счетов на любые услуги TANBOX и печать официальных бланков РК"
+            action={
+              <button
+                type="button"
+                onClick={handleOpenCreateModal}
+                className="px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#0082FB] hover:bg-[#0070DA] text-white flex items-center gap-2 transition-all shadow-md shadow-[#0082FB]/20 active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                Создать счет на оплату
+              </button>
+            }
+          />
+        </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
-        <div className="bg-white border border-gray-200/90 rounded-2xl p-4 shadow-2xs space-y-1">
-          <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block">
-            Всего счетов в реестре
-          </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-[#111827]">{totalInvoicesCount}</span>
-            <span className="text-xs font-bold text-gray-500">счетов</span>
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+          <div className="bg-white border border-gray-200/90 rounded-2xl p-4 shadow-2xs space-y-1">
+            <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block">
+              Всего счетов в реестре
+            </span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-black text-[#111827]">{totalInvoicesCount}</span>
+              <span className="text-xs font-bold text-gray-500">счетов</span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200/90 rounded-2xl p-4 shadow-2xs space-y-1">
+            <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block">
+              Ожидает оплаты
+            </span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-black text-amber-600">
+                {totalPendingSum.toLocaleString()} ₸
+              </span>
+              <span className="text-[10px] font-extrabold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
+                В ожидании
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200/90 rounded-2xl p-4 shadow-2xs space-y-1">
+            <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block">
+              Оплачено
+            </span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-black text-emerald-600">
+                {totalPaidSum.toLocaleString()} ₸
+              </span>
+              <span className="text-[10px] font-extrabold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                Поступило
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200/90 rounded-2xl p-4 shadow-2xs space-y-1">
+            <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block">
+              Оплата отменена
+            </span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-black text-rose-600">
+                {totalCancelledSum.toLocaleString()} ₸
+              </span>
+              <span className="text-[10px] font-extrabold bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">
+                Отменено
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200/90 rounded-2xl p-4 shadow-2xs space-y-1">
-          <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block">
-            Ожидает оплаты
-          </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-amber-600">
-              {totalPendingSum.toLocaleString()} ₸
-            </span>
-            <span className="text-[10px] font-extrabold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
-              В ожидании
-            </span>
+        {/* Filter and Search Bar */}
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-2xs flex flex-wrap items-center justify-between gap-4 no-print">
+          <div className="flex items-center gap-3 flex-1 min-w-[260px]">
+            <div className="relative w-full max-w-md">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Поиск по номеру счета, названию компании или БИН..."
+                className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {(
+              [
+                { id: 'ALL', label: 'Все счета' },
+                { id: 'PENDING', label: 'Ожидает оплаты' },
+                { id: 'PAID', label: 'Оплачено' },
+                { id: 'CANCELLED', label: 'Оплата отменена' },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setStatusFilter(tab.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${statusFilter === tab.id
+                    ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-2xs font-extrabold'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200/90 rounded-2xl p-4 shadow-2xs space-y-1">
-          <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block">
-            Оплачено
-          </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-emerald-600">
-              {totalPaidSum.toLocaleString()} ₸
-            </span>
-            <span className="text-[10px] font-extrabold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
-              Поступило
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-200/90 rounded-2xl p-4 shadow-2xs space-y-1">
-          <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block">
-            Оплата отменена
-          </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-rose-600">
-              {totalCancelledSum.toLocaleString()} ₸
-            </span>
-            <span className="text-[10px] font-extrabold bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">
-              Отменено
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-2xs flex flex-wrap items-center justify-between gap-4 no-print">
-        <div className="flex items-center gap-3 flex-1 min-w-[260px]">
-          <div className="relative w-full max-w-md">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Поиск по номеру счета, названию компании или БИН..."
-              className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {(
-            [
-              { id: 'ALL', label: 'Все счета' },
-              { id: 'PENDING', label: 'Ожидает оплаты' },
-              { id: 'PAID', label: 'Оплачено' },
-              { id: 'CANCELLED', label: 'Оплата отменена' },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                statusFilter === tab.id
-                  ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-2xs font-extrabold'
-                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Invoices Table */}
-      <div className="bg-white border border-gray-200/90 rounded-2xl shadow-2xs overflow-hidden no-print">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-[#F8FAFC] border-b border-gray-200 text-[#475569] font-bold text-[11px] uppercase tracking-wider">
-                <th className="py-3 px-4">Номер и дата счета</th>
-                <th className="py-3 px-4">Покупатель / Контрагент</th>
-                <th className="py-3 px-4">Состав услуг</th>
-                <th className="py-3 px-4 text-right">Сумма (₸)</th>
-                <th className="py-3 px-4 text-center">Статус</th>
-                <th className="py-3 px-4 text-right">Действия</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-12 text-gray-500">
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#0082FB]" />
-                    Загрузка реестра счетов...
-                  </td>
+        {/* Invoices Table */}
+        <div className="bg-white border border-gray-200/90 rounded-2xl shadow-2xs overflow-hidden no-print">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-[#F8FAFC] border-b border-gray-200 text-[#475569] font-bold text-[11px] uppercase tracking-wider">
+                  <th className="py-3 px-4">Номер и дата счета</th>
+                  <th className="py-3 px-4">Покупатель / Контрагент</th>
+                  <th className="py-3 px-4">Состав услуг</th>
+                  <th className="py-3 px-4 text-right">Сумма (₸)</th>
+                  <th className="py-3 px-4 text-center">Статус</th>
+                  <th className="py-3 px-4 text-right">Действия</th>
                 </tr>
-              ) : filteredInvoices.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-12 text-gray-500">
-                    Счета не найдены. Нажмите «Создать счет на оплату», чтобы выставить новый счет.
-                  </td>
-                </tr>
-              ) : (
-                filteredInvoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-blue-50/20 transition-colors">
-                    {/* Invoice Number & Date */}
-                    <td className="py-3.5 px-4 align-top">
-                      <div className="font-extrabold text-[#111827]">{inv.invoiceNumber}</div>
-                      <div className="text-[10px] text-gray-500 font-medium">от {inv.date}</div>
-                      {inv.orderNumber && (
-                        <span className="text-[9px] bg-blue-50 text-[#0082FB] font-semibold px-1.5 py-0.2 rounded mt-1 inline-block">
-                          Заказ: {inv.orderNumber}
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Customer */}
-                    <td className="py-3.5 px-4 align-top">
-                      <div className="font-bold text-[#111827]">{inv.customerName}</div>
-                      <div className="text-[10px] text-gray-500 font-mono">
-                        БИН/ИИН: {inv.customerBinIin}
-                      </div>
-                      {inv.customerPhone && (
-                        <div className="text-[10px] text-gray-400">{inv.customerPhone}</div>
-                      )}
-                    </td>
-
-                    {/* Items lines */}
-                    <td className="py-3.5 px-4 align-top max-w-xs">
-                      <div className="space-y-1">
-                        {inv.items.map((it, idx) => (
-                          <div key={idx} className="text-[11px] text-[#334155] line-clamp-1">
-                            • {it.name} <span className="text-gray-400">({it.qty} {it.unit})</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-
-                    {/* Sum */}
-                    <td className="py-3.5 px-4 align-top text-right whitespace-nowrap">
-                      <div className="font-black text-sm text-[#111827]">
-                        {inv.totalAmount.toLocaleString()} ₸
-                      </div>
-                      <div className="text-[10px] text-gray-400 font-medium">Без НДС</div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-3.5 px-4 align-top text-center">
-                      <select
-                        value={inv.status}
-                        onChange={(e) =>
-                          handleSetStatus(inv, e.target.value as 'PENDING' | 'PAID' | 'CANCELLED')
-                        }
-                        className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border cursor-pointer focus:outline-none transition-all ${
-                          inv.status === 'PAID'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                            : inv.status === 'CANCELLED'
-                            ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                            : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-                        }`}
-                      >
-                        <option value="PENDING">Ожидает оплаты</option>
-                        <option value="PAID">Оплачено</option>
-                        <option value="CANCELLED">Оплата отменена</option>
-                      </select>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3.5 px-4 align-top text-right whitespace-nowrap space-x-1">
-                      <button
-                        type="button"
-                        onClick={() => setActiveViewInvoice(inv)}
-                        className="p-1.5 rounded-lg text-gray-500 hover:text-[#0082FB] hover:bg-blue-50 transition-all cursor-pointer"
-                        title="Просмотр и печать счета"
-                      >
-                        <Printer className="w-4 h-4" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteInvoice(inv.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer"
-                        title="Удалить счет"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-12 text-gray-500">
+                      <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#0082FB]" />
+                      Загрузка реестра счетов...
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                ) : filteredInvoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-12 text-gray-500">
+                      Счета не найдены. Нажмите «Создать счет на оплату», чтобы выставить новый счет.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredInvoices.map((inv) => (
+                    <tr key={inv.id} className="hover:bg-blue-50/20 transition-colors">
+                      {/* Invoice Number & Date */}
+                      <td className="py-3.5 px-4 align-top">
+                        <div className="font-extrabold text-[#111827]">{inv.invoiceNumber}</div>
+                        <div className="text-[10px] text-gray-500 font-medium">от {inv.date}</div>
+                        {inv.orderNumber && (
+                          <span className="text-[9px] bg-blue-50 text-[#0082FB] font-semibold px-1.5 py-0.2 rounded mt-1 inline-block">
+                            Заказ: {inv.orderNumber}
+                          </span>
+                        )}
+                      </td>
 
-      {/* MODAL 1: Create Invoice with ALL Tanbox Services */}
-      {isCreateModalOpen &&
-        createPortal(
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-md no-print animate-in fade-in duration-150">
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
-              {/* Modal Header */}
-              <div className="p-4 sm:p-5 border-b border-gray-150 flex items-center justify-between bg-[#F8FAFC]">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
-                    <Receipt className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-[#111827] uppercase tracking-wide">
-                      Выставление счета на оплату
-                    </h3>
-                    <p className="text-[11px] text-[#64748B]">
-                      Выберите услуги из каталога сайта TANBOX или укажите произвольные позиции
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-5 overflow-y-auto space-y-6">
-                {/* Top row: Number, Date, Customer */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-600 block mb-1">
-                      Номер счета
-                    </label>
-                    <input
-                      type="text"
-                      value={invoiceNumberInput}
-                      readOnly
-                      disabled
-                      title="Номер присваивается автоматически по порядку"
-                      className="w-full text-xs font-black bg-gray-100 border border-gray-200 rounded-xl px-3 py-2 text-gray-800 cursor-not-allowed select-none"
-                    />
-                    <span className="text-[10px] text-gray-400 mt-0.5 block">
-                      Присваивается автоматически по порядку
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-600 block mb-1">
-                      Дата счета
-                    </label>
-                    <input
-                      type="date"
-                      value={invoiceDateInput}
-                      onChange={(e) => setInvoiceDateInput(e.target.value)}
-                      className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-600 block mb-1">
-                      Тип контрагента
-                    </label>
-                    <div className="flex items-center gap-1.5 pt-0.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCustomerMode('SELECT');
-                          setSelectedUserId('');
-                          setCustomCustomerName('');
-                          setCustomCustomerBin('');
-                          setCustomCustomerPhone('');
-                          setCustomCustomerAddress('г. Алматы');
-                        }}
-                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
-                          customerMode === 'SELECT'
-                            ? 'bg-blue-50 border-[#0082FB] text-[#0082FB] font-extrabold'
-                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        Из базы клиентов
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCustomerMode('MANUAL');
-                          setSelectedUserId('');
-                          setCustomCustomerName('');
-                          setCustomCustomerBin('');
-                          setCustomCustomerPhone('');
-                          setCustomCustomerAddress('г. Алматы');
-                        }}
-                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
-                          customerMode === 'MANUAL'
-                            ? 'bg-blue-50 border-[#0082FB] text-[#0082FB] font-extrabold'
-                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        Новый вручную
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Customer selection / input */}
-                <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
-                  <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider block">
-                    Реквизиты покупателя (Плательщика)
-                  </span>
-
-                  {customerMode === 'SELECT' ? (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-[10px] font-medium text-gray-500 block mb-1">
-                          Выберите организацию из базы клиентов ({usersList.length})
-                        </label>
-                        <select
-                          value={selectedUserId}
-                          onChange={(e) => handleSelectCustomer(e.target.value)}
-                          className="w-full text-xs font-bold bg-white border border-gray-200 rounded-lg px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                        >
-                          <option value="">
-                            -- {usersList.length > 0 ? `Выберите клиента из списка (${usersList.length} контрагентов)` : 'Загрузка клиентов...'} --
-                          </option>
-                          {usersList.map((u) => (
-                            <option key={u.id} value={u.id}>
-                              {u.companyName || u.name || 'Организация'} {u.binIin ? `(БИН/ИИН: ${u.binIin})` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {selectedUserId && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-2.5 bg-white rounded-lg border border-gray-200/80 text-xs">
-                          <div>
-                            <span className="text-[10px] text-gray-400 block font-semibold">Компания:</span>
-                            <span className="font-bold text-[#111827]">{customCustomerName || '—'}</span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-gray-400 block font-semibold">БИН / ИИН:</span>
-                            <span className="font-mono font-bold text-[#111827]">{customCustomerBin || '—'}</span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-gray-400 block font-semibold">Телефон:</span>
-                            <span className="text-gray-700">{customCustomerPhone || '—'}</span>
-                          </div>
+                      {/* Customer */}
+                      <td className="py-3.5 px-4 align-top">
+                        <div className="font-bold text-[#111827]">{inv.customerName}</div>
+                        <div className="text-[10px] text-gray-500 font-mono">
+                          БИН/ИИН: {inv.customerBinIin}
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="text-[10px] font-medium text-gray-500 block mb-0.5">
-                          Наименование компании / ИП
-                        </label>
-                        <input
-                          type="text"
-                          value={customCustomerName}
-                          onChange={(e) => setCustomCustomerName(e.target.value)}
-                          placeholder="ТОО Название компании"
-                          className="w-full text-xs font-bold bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#0082FB]"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-gray-500 block mb-0.5">
-                          БИН / ИИН (12 цифр)
-                        </label>
-                        <input
-                          type="text"
-                          value={customCustomerBin}
-                          onChange={(e) => setCustomCustomerBin(e.target.value)}
-                          placeholder="123456789012"
-                          className="w-full text-xs font-mono bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#0082FB]"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-gray-500 block mb-0.5">
-                          Телефон плательщика
-                        </label>
-                        <input
-                          type="text"
-                          value={customCustomerPhone}
-                          onChange={(e) => setCustomCustomerPhone(e.target.value)}
-                          placeholder="+7 777 000-00-00"
-                          className="w-full text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#0082FB]"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                        {inv.customerPhone && (
+                          <div className="text-[10px] text-gray-400">{inv.customerPhone}</div>
+                        )}
+                      </td>
 
-                {/* Service Selection from Full Tanbox Catalog */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold uppercase tracking-wide text-[#111827]">
-                    Добавить услуги из официального каталога TANBOX
-                  </span>
+                      {/* Items lines */}
+                      <td className="py-3.5 px-4 align-top max-w-xs">
+                        <div className="space-y-1">
+                          {inv.items.map((it, idx) => (
+                            <div key={idx} className="text-[11px] text-[#334155] line-clamp-1">
+                              • {it.name} <span className="text-gray-400">({it.qty} {it.unit})</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+
+                      {/* Sum */}
+                      <td className="py-3.5 px-4 align-top text-right whitespace-nowrap">
+                        <div className="font-black text-sm text-[#111827]">
+                          {inv.totalAmount.toLocaleString()} ₸
+                        </div>
+                        <div className="text-[10px] text-gray-400 font-medium">Без НДС</div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4 align-top text-center">
+                        <select
+                          value={inv.status}
+                          onChange={(e) =>
+                            handleSetStatus(inv, e.target.value as 'PENDING' | 'PAID' | 'CANCELLED')
+                          }
+                          className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border cursor-pointer focus:outline-none transition-all ${inv.status === 'PAID'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              : inv.status === 'CANCELLED'
+                                ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                            }`}
+                        >
+                          <option value="PENDING">Ожидает оплаты</option>
+                          <option value="PAID">Оплачено</option>
+                          <option value="CANCELLED">Оплата отменена</option>
+                        </select>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3.5 px-4 align-top text-right whitespace-nowrap space-x-1">
+                        <button
+                          type="button"
+                          onClick={() => setActiveViewInvoice(inv)}
+                          className="p-1.5 rounded-lg text-gray-500 hover:text-[#0082FB] hover:bg-blue-50 transition-all cursor-pointer"
+                          title="Просмотр и печать счета"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteInvoice(inv.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+                          title="Удалить счет"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* MODAL 1: Create Invoice with ALL Tanbox Services */}
+        {isCreateModalOpen &&
+          createPortal(
+            <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-md no-print animate-in fade-in duration-150">
+              <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
+                {/* Modal Header */}
+                <div className="p-4 sm:p-5 border-b border-gray-150 flex items-center justify-between bg-[#F8FAFC]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+                      <Receipt className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-[#111827] uppercase tracking-wide">
+                        Выставление счета на оплату
+                      </h3>
+                      <p className="text-[11px] text-[#64748B]">
+                        Выберите услуги из каталога сайта TANBOX или укажите произвольные позиции
+                      </p>
+                    </div>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={handleAddCustomLine}
-                    className="text-xs font-bold text-[#0082FB] hover:underline flex items-center gap-1"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    + Своя строка
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
 
-                {/* Service Category Buttons */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-56 overflow-y-auto p-1 bg-gray-50 rounded-xl border border-gray-200">
-                  {TANBOX_SERVICES_CATALOG.map((cat, catIdx) => (
-                    <div key={catIdx} className="bg-white p-3 rounded-xl border border-gray-150 space-y-2">
-                      <span className="text-[10px] font-black uppercase text-[#0082FB] tracking-wider block">
-                        {cat.category}
+                {/* Modal Body */}
+                <div className="p-5 overflow-y-auto space-y-6">
+                  {/* Top row: Number, Date, Customer */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <div>
+                      <label className="text-[11px] font-bold text-gray-600 block mb-1">
+                        Номер счета
+                      </label>
+                      <input
+                        type="text"
+                        value={invoiceNumberInput}
+                        readOnly
+                        disabled
+                        title="Номер присваивается автоматически по порядку"
+                        className="w-full text-xs font-black bg-gray-100 border border-gray-200 rounded-xl px-3 py-2 text-gray-800 cursor-not-allowed select-none"
+                      />
+                      <span className="text-[10px] text-gray-400 mt-0.5 block">
+                        Присваивается автоматически по порядку
                       </span>
-                      <div className="space-y-1">
-                        {cat.items.map((svc, sIdx) => (
-                          <button
-                            key={sIdx}
-                            type="button"
-                            onClick={() => handleAddCatalogService(svc)}
-                            className="w-full text-left p-1.5 rounded-lg hover:bg-blue-50/60 transition-colors flex items-center justify-between gap-2 group text-xs cursor-pointer"
-                          >
-                            <span className="text-[11px] font-medium text-gray-800 group-hover:text-[#0082FB] line-clamp-1">
-                              + {svc.name}
-                            </span>
-                            <span className="text-[10px] font-bold text-gray-500 shrink-0">
-                              {svc.defaultPrice.toLocaleString()} ₸
-                            </span>
-                          </button>
-                        ))}
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-gray-600 block mb-1">
+                        Дата счета
+                      </label>
+                      <input
+                        type="date"
+                        value={invoiceDateInput}
+                        onChange={(e) => setInvoiceDateInput(e.target.value)}
+                        className="w-full text-xs bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-gray-600 block mb-1">
+                        Тип контрагента
+                      </label>
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomerMode('SELECT');
+                            setSelectedUserId('');
+                            setCustomCustomerName('');
+                            setCustomCustomerBin('');
+                            setCustomCustomerPhone('');
+                            setCustomCustomerAddress('г. Алматы');
+                          }}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${customerMode === 'SELECT'
+                              ? 'bg-blue-50 border-[#0082FB] text-[#0082FB] font-extrabold'
+                              : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                            }`}
+                        >
+                          Из базы клиентов
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomerMode('MANUAL');
+                            setSelectedUserId('');
+                            setCustomCustomerName('');
+                            setCustomCustomerBin('');
+                            setCustomCustomerPhone('');
+                            setCustomCustomerAddress('г. Алматы');
+                          }}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${customerMode === 'MANUAL'
+                              ? 'bg-blue-50 border-[#0082FB] text-[#0082FB] font-extrabold'
+                              : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                            }`}
+                        >
+                          Новый вручную
+                        </button>
                       </div>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Customer selection / input */}
+                  <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider block">
+                      Реквизиты покупателя (Плательщика)
+                    </span>
+
+                    {customerMode === 'SELECT' ? (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-[10px] font-medium text-gray-500 block mb-1">
+                            Выберите организацию из базы клиентов ({usersList.length})
+                          </label>
+                          <select
+                            value={selectedUserId}
+                            onChange={(e) => handleSelectCustomer(e.target.value)}
+                            className="w-full text-xs font-bold bg-white border border-gray-200 rounded-lg px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                          >
+                            <option value="">
+                              -- {usersList.length > 0 ? `Выберите клиента из списка (${usersList.length} контрагентов)` : 'Загрузка клиентов...'} --
+                            </option>
+                            {usersList.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.companyName || u.name || 'Организация'} {u.binIin ? `(БИН/ИИН: ${u.binIin})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {selectedUserId && (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-2.5 bg-white rounded-lg border border-gray-200/80 text-xs">
+                            <div>
+                              <span className="text-[10px] text-gray-400 block font-semibold">Компания:</span>
+                              <span className="font-bold text-[#111827]">{customCustomerName || '—'}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-gray-400 block font-semibold">БИН / ИИН:</span>
+                              <span className="font-mono font-bold text-[#111827]">{customCustomerBin || '—'}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-gray-400 block font-semibold">Телефон:</span>
+                              <span className="text-gray-700">{customCustomerPhone || '—'}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-[10px] font-medium text-gray-500 block mb-0.5">
+                            Наименование компании / ИП
+                          </label>
+                          <input
+                            type="text"
+                            value={customCustomerName}
+                            onChange={(e) => setCustomCustomerName(e.target.value)}
+                            placeholder="ТОО Название компании"
+                            className="w-full text-xs font-bold bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#0082FB]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-medium text-gray-500 block mb-0.5">
+                            БИН / ИИН (12 цифр)
+                          </label>
+                          <input
+                            type="text"
+                            value={customCustomerBin}
+                            onChange={(e) => setCustomCustomerBin(e.target.value)}
+                            placeholder="123456789012"
+                            className="w-full text-xs font-mono bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#0082FB]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-medium text-gray-500 block mb-0.5">
+                            Телефон плательщика
+                          </label>
+                          <input
+                            type="text"
+                            value={customCustomerPhone}
+                            onChange={(e) => setCustomCustomerPhone(e.target.value)}
+                            placeholder="+7 777 000-00-00"
+                            className="w-full text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#0082FB]"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Service Selection from Full Tanbox Catalog */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold uppercase tracking-wide text-[#111827]">
+                        Добавить услуги из официального каталога TANBOX
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleAddCustomLine}
+                        className="text-xs font-bold text-[#0082FB] hover:underline flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        + Своя строка
+                      </button>
+                    </div>
+
+                    {/* Service Category Buttons */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-56 overflow-y-auto p-1 bg-gray-50 rounded-xl border border-gray-200">
+                      {TANBOX_SERVICES_CATALOG.map((cat, catIdx) => (
+                        <div key={catIdx} className="bg-white p-3 rounded-xl border border-gray-150 space-y-2">
+                          <span className="text-[10px] font-black uppercase text-[#0082FB] tracking-wider block">
+                            {cat.category}
+                          </span>
+                          <div className="space-y-1">
+                            {cat.items.map((svc, sIdx) => (
+                              <button
+                                key={sIdx}
+                                type="button"
+                                onClick={() => handleAddCatalogService(svc)}
+                                className="w-full text-left p-1.5 rounded-lg hover:bg-blue-50/60 transition-colors flex items-center justify-between gap-2 group text-xs cursor-pointer"
+                              >
+                                <span className="text-[11px] font-medium text-gray-800 group-hover:text-[#0082FB] line-clamp-1">
+                                  + {svc.name}
+                                </span>
+                                <span className="text-[10px] font-bold text-gray-500 shrink-0">
+                                  {svc.defaultPrice.toLocaleString()} ₸
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Invoice Lines Table (Positions) */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-extrabold uppercase tracking-wide text-[#111827] block">
+                      Позиции счёта на оплату
+                    </span>
+
+                    <div className="border border-gray-200 rounded-xl overflow-hidden">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-[#F8FAFC] border-b border-gray-200 text-gray-700 font-bold text-[10px] uppercase">
+                            <th className="p-2.5 pl-3 w-8">№</th>
+                            <th className="p-2.5">Наименование товара / услуги</th>
+                            <th className="p-2.5 text-center w-20">Кол-во</th>
+                            <th className="p-2.5 text-center w-20">Ед. изм.</th>
+                            <th className="p-2.5 text-right w-28">Цена (₸)</th>
+                            <th className="p-2.5 text-right w-28">Сумма (₸)</th>
+                            <th className="p-2.5 text-center w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-150">
+                          {createLines.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="text-center py-6 text-gray-400 text-xs">
+                                Позиции пока не добавлены. Выберите нужные услуги из каталога выше или добавьте свою строку.
+                              </td>
+                            </tr>
+                          ) : (
+                            createLines.map((line, idx) => (
+                              <tr key={line.id} className="hover:bg-gray-50/50">
+                                <td className="p-2.5 pl-3 text-gray-400 font-mono text-center">
+                                  {idx + 1}
+                                </td>
+                                <td className="p-2">
+                                  <input
+                                    type="text"
+                                    value={line.name}
+                                    onChange={(e) => handleUpdateLine(line.id, 'name', e.target.value)}
+                                    className="w-full text-xs font-medium bg-white border border-gray-200 rounded px-2 py-1 text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    value={line.qty}
+                                    onChange={(e) => handleUpdateLine(line.id, 'qty', e.target.value)}
+                                    className="w-full text-center text-xs font-bold bg-white border border-gray-200 rounded px-1.5 py-1"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input
+                                    type="text"
+                                    value={line.unit}
+                                    onChange={(e) => handleUpdateLine(line.id, 'unit', e.target.value)}
+                                    className="w-full text-center text-xs bg-white border border-gray-200 rounded px-1 py-1"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={line.price}
+                                    onChange={(e) => handleUpdateLine(line.id, 'price', e.target.value)}
+                                    className="w-full text-right text-xs font-bold bg-white border border-gray-200 rounded px-2 py-1 text-[#111827]"
+                                  />
+                                </td>
+                                <td className="p-2.5 text-right font-black text-xs text-[#111827]">
+                                  {line.sum.toLocaleString()} ₸
+                                </td>
+                                <td className="p-2 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteLine(line.id)}
+                                    className="text-gray-400 hover:text-red-600 transition-colors"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Subtotal & Amount in words preview */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-blue-50/50 border border-blue-100 rounded-xl gap-2">
+                      <div className="text-[11px] text-gray-600">
+                        <span className="font-semibold block text-gray-800">
+                          Сумма прописью:
+                        </span>
+                        {numberToWordsRu(totalCreateSum)}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[11px] text-gray-500 uppercase block font-semibold">Итого к оплате:</span>
+                        <span className="text-lg font-black text-[#0082FB]">
+                          {totalCreateSum.toLocaleString()} ₸
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-4 border-t border-gray-200 bg-[#F8FAFC] flex justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveInvoice}
+                    disabled={createLines.length === 0}
+                    className="px-5 py-2 rounded-xl text-xs font-extrabold bg-[#0082FB] hover:bg-[#0070DA] disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-md shadow-[#0082FB]/20 cursor-pointer"
+                  >
+                    Сформировать счет на оплату
+                  </button>
                 </div>
               </div>
+            </div>,
+            document.body
+          )}
 
-              {/* Invoice Lines Table (Positions) */}
-              <div className="space-y-2">
-                <span className="text-xs font-extrabold uppercase tracking-wide text-[#111827] block">
-                  Позиции счёта на оплату
-                </span>
+        {/* MODAL 2: Official Printable Kazakh 1C Invoice (Full-width clean sheet) */}
+        {activeViewInvoice &&
+          createPortal(
+            <div className="invoice-modal-overlay fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150 print:p-0 print:bg-white print:static print:block print:inset-auto print:z-auto print:backdrop-blur-none">
+              <div className="print-container-wrapper bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[96vh] flex flex-col overflow-hidden">
+                {/* Top Bar with Print & Download */}
+                <div className="p-3 sm:p-4 border-b border-gray-150 flex items-center justify-between bg-[#F8FAFC] no-print">
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-[#0082FB]" />
+                    <span className="text-xs font-black text-gray-900 uppercase">
+                      Счет на оплату № {activeViewInvoice.invoiceNumber}
+                    </span>
+                  </div>
 
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-[#F8FAFC] border-b border-gray-200 text-gray-700 font-bold text-[10px] uppercase">
-                        <th className="p-2.5 pl-3 w-8">№</th>
-                        <th className="p-2.5">Наименование товара / услуги</th>
-                        <th className="p-2.5 text-center w-20">Кол-во</th>
-                        <th className="p-2.5 text-center w-20">Ед. изм.</th>
-                        <th className="p-2.5 text-right w-28">Цена (₸)</th>
-                        <th className="p-2.5 text-right w-28">Сумма (₸)</th>
-                        <th className="p-2.5 text-center w-10"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-150">
-                      {createLines.length === 0 ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDownloadPdf}
+                      disabled={downloadingPdf}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5 text-gray-500" />
+                      {downloadingPdf ? 'Генерация...' : 'Скачать PDF'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handlePrint}
+                      className="px-4 py-1.5 rounded-lg text-xs font-extrabold bg-[#0082FB] text-white hover:bg-[#0070DA] flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      Печать бланка
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveViewInvoice(null)}
+                      className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-200 ml-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Document Body (Strictly styled like standard Kazakh 1C Invoice) */}
+                <div className="overflow-y-auto p-4 sm:p-8 bg-gray-100/50 print:p-0 print:bg-white flex justify-center">
+                  <div
+                    id="official-invoice-print-sheet"
+                    ref={printSheetRef}
+                    className="w-full bg-white text-black p-6 sm:p-8 space-y-4 max-w-[210mm] text-[10pt] font-sans leading-normal print:p-0 print:max-w-none box-border"
+                  >
+                    {/* Warning header */}
+                    <div className="border border-gray-300 p-2.5 text-[8.5pt] text-gray-700 leading-snug">
+                      Внимание! Оплата данного счета означает согласие с условиями оказания услуг по цифровой маркировке товаров.<br />
+                      Уведомление об оплате обязательно, в противном случае не гарантируется сохранение сроков выполнения.
+                    </div>
+
+                    {/* Bank Details Table */}
+                    <table className="w-full border-collapse border border-black text-[9pt]">
+                      <tbody>
                         <tr>
-                          <td colSpan={7} className="text-center py-6 text-gray-400 text-xs">
-                            Позиции пока не добавлены. Выберите нужные услуги из каталога выше или добавьте свою строку.
+                          <td colSpan={2} className="border border-black p-1.5 align-top w-[65%]">
+                            АО «Kaspi Bank», г. Алматы<br />
+                            <span className="text-[7.5pt] text-gray-500">Банк получателя</span>
+                          </td>
+                          <td className="border border-black p-1.5 align-top w-[15%]">БИК</td>
+                          <td className="border border-black p-1.5 align-top w-[20%] font-bold font-mono">CASPKZKA</td>
+                        </tr>
+                        <tr>
+                          <td colSpan={2} className="border border-black p-1.5"></td>
+                          <td className="border border-black p-1.5">ИИК</td>
+                          <td className="border border-black p-1.5 font-bold font-mono">KZ58722S000055787378</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-black p-1.5 w-[15%]">ИИН / БИН</td>
+                          <td className="border border-black p-1.5 font-bold font-mono w-[50%]">990601301525</td>
+                          <td className="border border-black p-1.5">КБе</td>
+                          <td className="border border-black p-1.5 font-bold font-mono">19</td>
+                        </tr>
+                        <tr>
+                          <td colSpan={2} className="border border-black p-1.5 align-top">
+                            <strong>ИП INTERSENSE</strong><br />
+                            <span className="text-[7.5pt] text-gray-500">Получатель</span>
+                          </td>
+                          <td colSpan={2} className="border border-black p-1.5"></td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* Document Title */}
+                    <div className="border-b-2 border-black pb-1.5 pt-2 text-base font-bold">
+                      Счет на оплату № {activeViewInvoice.invoiceNumber} от {activeViewInvoice.date} г.
+                    </div>
+
+                    {/* Parties details */}
+                    <table className="w-full text-[9pt] border-collapse">
+                      <tbody>
+                        <tr>
+                          <td className="w-24 font-bold align-top py-0.5">Поставщик:</td>
+                          <td className="py-0.5">
+                            <strong>ИП INTERSENSE, ИИН 990601301525</strong>, тел.: +7 (700) 304-85-32, email: sales@tanbox.kz
                           </td>
                         </tr>
-                      ) : (
-                        createLines.map((line, idx) => (
-                          <tr key={line.id} className="hover:bg-gray-50/50">
-                            <td className="p-2.5 pl-3 text-gray-400 font-mono text-center">
-                              {idx + 1}
-                            </td>
-                            <td className="p-2">
-                              <input
-                                type="text"
-                                value={line.name}
-                                onChange={(e) => handleUpdateLine(line.id, 'name', e.target.value)}
-                                className="w-full text-xs font-medium bg-white border border-gray-200 rounded px-2 py-1 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                              />
-                            </td>
-                            <td className="p-2">
-                              <input
-                                type="number"
-                                min={1}
-                                value={line.qty}
-                                onChange={(e) => handleUpdateLine(line.id, 'qty', e.target.value)}
-                                className="w-full text-center text-xs font-bold bg-white border border-gray-200 rounded px-1.5 py-1"
-                              />
-                            </td>
-                            <td className="p-2">
-                              <input
-                                type="text"
-                                value={line.unit}
-                                onChange={(e) => handleUpdateLine(line.id, 'unit', e.target.value)}
-                                className="w-full text-center text-xs bg-white border border-gray-200 rounded px-1 py-1"
-                              />
-                            </td>
-                            <td className="p-2">
-                              <input
-                                type="number"
-                                min={0}
-                                value={line.price}
-                                onChange={(e) => handleUpdateLine(line.id, 'price', e.target.value)}
-                                className="w-full text-right text-xs font-bold bg-white border border-gray-200 rounded px-2 py-1 text-[#111827]"
-                              />
-                            </td>
-                            <td className="p-2.5 text-right font-black text-xs text-[#111827]">
-                              {line.sum.toLocaleString()} ₸
-                            </td>
-                            <td className="p-2 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteLine(line.id)}
-                                className="text-gray-400 hover:text-red-600 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </td>
+                        <tr>
+                          <td className="font-bold align-top py-0.5">Покупатель:</td>
+                          <td className="py-0.5">
+                            <strong>{activeViewInvoice.customerName}, БИН/ИИН {activeViewInvoice.customerBinIin}</strong>
+                            {activeViewInvoice.customerAddress ? `, ${activeViewInvoice.customerAddress}` : ''}
+                            {activeViewInvoice.customerPhone ? `, тел.: ${activeViewInvoice.customerPhone}` : ''}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="font-bold align-top py-0.5">Договор:</td>
+                          <td className="py-0.5">
+                            Публичный договор-оферта на оказание услуг цифровой маркировки от {activeViewInvoice.date} г.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* Items Table */}
+                    <table className="w-full border-collapse border-2 border-black text-[8.5pt]">
+                      <thead>
+                        <tr className="bg-gray-100 font-bold border-b border-black text-center">
+                          <th className="border border-black p-1.5 w-7">№</th>
+                          <th className="border border-black p-1.5 text-left">Товары (работы, услуги)</th>
+                          <th className="border border-black p-1.5 w-14">Кол-во</th>
+                          <th className="border border-black p-1.5 w-10">Ед.</th>
+                          <th className="border border-black p-1.5 w-24">Цена</th>
+                          <th className="border border-black p-1.5 w-28">Сумма</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeViewInvoice.items.map((it, idx) => (
+                          <tr key={it.id || idx}>
+                            <td className="border border-black p-1.5 text-center">{idx + 1}</td>
+                            <td className="border border-black p-1.5 text-left font-medium">{it.name}</td>
+                            <td className="border border-black p-1.5 text-right font-mono">{it.qty}</td>
+                            <td className="border border-black p-1.5 text-center">{it.unit}</td>
+                            <td className="border border-black p-1.5 text-right font-mono">{it.price.toLocaleString()} ₸</td>
+                            <td className="border border-black p-1.5 text-right font-bold font-mono">{it.sum.toLocaleString()} ₸</td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                </table>
-              </div>
+                        ))}
+                      </tbody>
+                    </table>
 
-              {/* Subtotal & Amount in words preview */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-blue-50/50 border border-blue-100 rounded-xl gap-2">
-                <div className="text-[11px] text-gray-600">
-                  <span className="font-semibold block text-gray-800">
-                    Сумма прописью:
-                  </span>
-                  {numberToWordsRu(totalCreateSum)}
-                </div>
-                <div className="text-right shrink-0">
-                  <span className="text-[11px] text-gray-500 uppercase block font-semibold">Итого к оплате:</span>
-                  <span className="text-lg font-black text-[#0082FB]">
-                    {totalCreateSum.toLocaleString()} ₸
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+                    {/* Totals */}
+                    <div className="space-y-1 text-[9pt]">
+                      <div className="flex justify-end gap-6 font-bold">
+                        <span>Итого:</span>
+                        <span className="font-mono w-28 text-right">{activeViewInvoice.totalAmount.toLocaleString()} ₸</span>
+                      </div>
+                      <div className="flex justify-end gap-6 font-bold text-gray-700">
+                        <span>В том числе НДС:</span>
+                        <span className="w-28 text-right">Без НДС</span>
+                      </div>
+                    </div>
 
-          {/* Modal Footer */}
-            <div className="p-4 border-t border-gray-200 bg-[#F8FAFC] flex justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveInvoice}
-                disabled={createLines.length === 0}
-                className="px-5 py-2 rounded-xl text-xs font-extrabold bg-[#0082FB] hover:bg-[#0070DA] disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-md shadow-[#0082FB]/20 cursor-pointer"
-              >
-                Сформировать счет на оплату
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+                    {/* Amount in words */}
+                    <div className="border-t border-black pt-2 text-[9pt] space-y-0.5">
+                      <div>Всего наименований {activeViewInvoice.items.length}, на сумму {activeViewInvoice.totalAmount.toLocaleString()} теңге</div>
+                      <div><strong>Всего к оплате: {numberToWordsRu(activeViewInvoice.totalAmount)}</strong></div>
+                    </div>
 
-      {/* MODAL 2: Official Printable Kazakh 1C Invoice (Full-width clean sheet) */}
-      {activeViewInvoice &&
-        createPortal(
-          <div className="invoice-modal-overlay fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150 print:p-0 print:bg-white print:static print:block print:inset-auto print:z-auto print:backdrop-blur-none">
-            <div className="print-container-wrapper bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[96vh] flex flex-col overflow-hidden">
-              {/* Top Bar with Print & Download */}
-              <div className="p-3 sm:p-4 border-b border-gray-150 flex items-center justify-between bg-[#F8FAFC] no-print">
-                <div className="flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-[#0082FB]" />
-                <span className="text-xs font-black text-gray-900 uppercase">
-                  Счет на оплату № {activeViewInvoice.invoiceNumber}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleDownloadPdf}
-                  disabled={downloadingPdf}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5 text-gray-500" />
-                  {downloadingPdf ? 'Генерация...' : 'Скачать PDF'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handlePrint}
-                  className="px-4 py-1.5 rounded-lg text-xs font-extrabold bg-[#0082FB] text-white hover:bg-[#0070DA] flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  Печать бланка
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveViewInvoice(null)}
-                  className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-200 ml-1"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Document Body (Strictly styled like standard Kazakh 1C Invoice) */}
-            <div className="overflow-y-auto p-4 sm:p-8 bg-gray-100/50 print:p-0 print:bg-white flex justify-center">
-              <div
-                id="official-invoice-print-sheet"
-                ref={printSheetRef}
-                className="w-full bg-white text-black p-6 sm:p-8 space-y-4 max-w-[210mm] text-[10pt] font-sans leading-normal print:p-0 print:max-w-none box-border"
-              >
-                {/* Warning header */}
-                <div className="border border-gray-300 p-2.5 text-[8.5pt] text-gray-700 leading-snug">
-                  Внимание! Оплата данного счета означает согласие с условиями оказания услуг по цифровой маркировке товаров.<br />
-                  Уведомление об оплате обязательно, в противном случае не гарантируется сохранение сроков выполнения.
-                </div>
-
-                {/* Bank Details Table */}
-                <table className="w-full border-collapse border border-black text-[9pt]">
-                  <tbody>
-                    <tr>
-                      <td colSpan={2} className="border border-black p-1.5 align-top w-[65%]">
-                        АО «Kaspi Bank», г. Алматы<br />
-                        <span className="text-[7.5pt] text-gray-500">Банк получателя</span>
-                      </td>
-                      <td className="border border-black p-1.5 align-top w-[15%]">БИК</td>
-                      <td className="border border-black p-1.5 align-top w-[20%] font-bold font-mono">CASPKZKA</td>
-                    </tr>
-                    <tr>
-                      <td colSpan={2} className="border border-black p-1.5"></td>
-                      <td className="border border-black p-1.5">ИИК</td>
-                      <td className="border border-black p-1.5 font-bold font-mono">KZ58722S000055787378</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-black p-1.5 w-[15%]">ИИН / БИН</td>
-                      <td className="border border-black p-1.5 font-bold font-mono w-[50%]">990601301525</td>
-                      <td className="border border-black p-1.5">КБе</td>
-                      <td className="border border-black p-1.5 font-bold font-mono">19</td>
-                    </tr>
-                    <tr>
-                      <td colSpan={2} className="border border-black p-1.5 align-top">
-                        <strong>ИП INTERSENSE</strong><br />
-                        <span className="text-[7.5pt] text-gray-500">Получатель</span>
-                      </td>
-                      <td colSpan={2} className="border border-black p-1.5"></td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                {/* Document Title */}
-                <div className="border-b-2 border-black pb-1.5 pt-2 text-base font-bold">
-                  Счет на оплату № {activeViewInvoice.invoiceNumber} от {activeViewInvoice.date} г.
-                </div>
-
-                {/* Parties details */}
-                <table className="w-full text-[9pt] border-collapse">
-                  <tbody>
-                    <tr>
-                      <td className="w-24 font-bold align-top py-0.5">Поставщик:</td>
-                      <td className="py-0.5">
-                        <strong>ИП INTERSENSE, ИИН 990601301525</strong>, тел.: +7 (707) 711-16-53, email: sales@tanbox.kz
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="font-bold align-top py-0.5">Покупатель:</td>
-                      <td className="py-0.5">
-                        <strong>{activeViewInvoice.customerName}, БИН/ИИН {activeViewInvoice.customerBinIin}</strong>
-                        {activeViewInvoice.customerAddress ? `, ${activeViewInvoice.customerAddress}` : ''}
-                        {activeViewInvoice.customerPhone ? `, тел.: ${activeViewInvoice.customerPhone}` : ''}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="font-bold align-top py-0.5">Договор:</td>
-                      <td className="py-0.5">
-                        Публичный договор-оферта на оказание услуг цифровой маркировки от {activeViewInvoice.date} г.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                {/* Items Table */}
-                <table className="w-full border-collapse border-2 border-black text-[8.5pt]">
-                  <thead>
-                    <tr className="bg-gray-100 font-bold border-b border-black text-center">
-                      <th className="border border-black p-1.5 w-7">№</th>
-                      <th className="border border-black p-1.5 text-left">Товары (работы, услуги)</th>
-                      <th className="border border-black p-1.5 w-14">Кол-во</th>
-                      <th className="border border-black p-1.5 w-10">Ед.</th>
-                      <th className="border border-black p-1.5 w-24">Цена</th>
-                      <th className="border border-black p-1.5 w-28">Сумма</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activeViewInvoice.items.map((it, idx) => (
-                      <tr key={it.id || idx}>
-                        <td className="border border-black p-1.5 text-center">{idx + 1}</td>
-                        <td className="border border-black p-1.5 text-left font-medium">{it.name}</td>
-                        <td className="border border-black p-1.5 text-right font-mono">{it.qty}</td>
-                        <td className="border border-black p-1.5 text-center">{it.unit}</td>
-                        <td className="border border-black p-1.5 text-right font-mono">{it.price.toLocaleString()} ₸</td>
-                        <td className="border border-black p-1.5 text-right font-bold font-mono">{it.sum.toLocaleString()} ₸</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Totals */}
-                <div className="space-y-1 text-[9pt]">
-                  <div className="flex justify-end gap-6 font-bold">
-                    <span>Итого:</span>
-                    <span className="font-mono w-28 text-right">{activeViewInvoice.totalAmount.toLocaleString()} ₸</span>
-                  </div>
-                  <div className="flex justify-end gap-6 font-bold text-gray-700">
-                    <span>В том числе НДС:</span>
-                    <span className="w-28 text-right">Без НДС</span>
-                  </div>
-                </div>
-
-                {/* Amount in words */}
-                <div className="border-t border-black pt-2 text-[9pt] space-y-0.5">
-                  <div>Всего наименований {activeViewInvoice.items.length}, на сумму {activeViewInvoice.totalAmount.toLocaleString()} теңге</div>
-                  <div><strong>Всего к оплате: {numberToWordsRu(activeViewInvoice.totalAmount)}</strong></div>
-                </div>
-
-                {/* Signatures */}
-                <div className="pt-6 border-t-2 border-black flex items-center justify-between text-[9pt] font-bold">
-                  <div>Исполнитель</div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-44 border-b border-black"></div>
-                    <div>/ИП INTERSENSE/</div>
+                    {/* Signatures */}
+                    <div className="pt-6 border-t-2 border-black flex items-center justify-between text-[9pt] font-bold">
+                      <div>Исполнитель</div>
+                      <div className="flex items-center gap-4">
+                        <div className="w-44 border-b border-black"></div>
+                        <div>/ИП INTERSENSE/</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+            </div>,
+            document.body
+          )}
       </div>
     </>
   );

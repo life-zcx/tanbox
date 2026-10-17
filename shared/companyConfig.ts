@@ -81,17 +81,17 @@ export const COMPANY_CONFIG: CompanyConfig = {
     city: 'Онлайн',
 
     // Горячая линия лендинга (24/7)
-    hotline: '+7 (707) 711-16-53',
-    hotlineRaw: '+77077111653',
+    hotline: '+7 (700) 304-85-32',
+    hotlineRaw: '+77003048532',
 
     // Мобильный / WhatsApp отдела продаж
-    mobile: '+7 (707) 711-16-53',
-    mobileRaw: '+77077111653',
+    mobile: '+7 (700) 304-85-32',
+    mobileRaw: '+77003048532',
     mobileNote: '(WhatsApp / Telegram)',
 
     // Ссылка на WhatsApp
-    whatsapp: '+7 (707) 711-16-53',
-    whatsappUrl: 'https://wa.me/77077111653',
+    whatsapp: '+7 (700) 304-85-32',
+    whatsappUrl: 'https://wa.me/77003048532',
 
     // Телеграм-канал сервиса
     telegramChannel: 'https://t.me/tanboxkz',
@@ -119,8 +119,8 @@ export const COMPANY_CONFIG: CompanyConfig = {
     title: 'Служба поддержки',
 
     // Телефон техподдержки ЛК
-    phone: '+7 (707) 711-16-53',
-    phoneRaw: '+77077111653',
+    phone: '+7 (700) 304-85-32',
+    phoneRaw: '+77003048532',
 
     // Email техподдержки ЛК
     email: 'support@tanbox.kz',
@@ -136,7 +136,7 @@ export const COMPANY_CONFIG: CompanyConfig = {
   // Отображаются в шапке Поставщика/Исполнителя в генерируемых PDF
   documents: {
     contractorTitle: 'Индивидуальный предприниматель "INTERSENSE"',
-    phone: '+7 (707) 711-16-53',
+    phone: '+7 (700) 304-85-32',
   },
 };
 

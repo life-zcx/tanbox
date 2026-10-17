@@ -285,7 +285,7 @@ export const AdminTariffsPage: React.FC = () => {
     text += `--------------------------------------------------\n`;
     text += `✓ Официальный договор (ИП INTERSENSE, ИИН 990601301525), ЭСФ и АВР\n`;
     text += `✓ 100% гарантия считываемости кодов DataMatrix\n`;
-    text += `✓ Тел.: +7 (707) 711-16-53 | sales@tanbox.kz | www.tanbox.kz`;
+    text += `✓ Тел.: +7 (700) 304-85-32 | sales@tanbox.kz | www.tanbox.kz`;
 
     navigator.clipboard.writeText(text);
     setCopiedText(true);
@@ -298,8 +298,8 @@ export const AdminTariffsPage: React.FC = () => {
     simCount > pricingSettings.volumeTier2
       ? Number(simSelectedTariff?.priceLargeWholesale) || 0
       : simCount > pricingSettings.volumeTier1
-      ? Number(simSelectedTariff?.priceWholesale) || 0
-      : Number(simSelectedTariff?.priceRetail) || 0;
+        ? Number(simSelectedTariff?.priceWholesale) || 0
+        : Number(simSelectedTariff?.priceRetail) || 0;
 
   const simUnitAdditions =
     simSscc && simTariff !== 'PRO' ? Number(pricingSettings.ssccPrice) || 0 : 0;
@@ -353,11 +353,10 @@ export const AdminTariffsPage: React.FC = () => {
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className={`inline-flex items-center gap-2 text-white font-extrabold text-xs px-6 py-2.5 rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer disabled:opacity-50 ${
-                hasUnsavedChanges
-                  ? 'bg-[#0082FB] hover:bg-[#0070DA] ring-2 ring-blue-400/40'
-                  : 'bg-[#0082FB] hover:bg-[#0070DA]'
-              }`}
+              className={`inline-flex items-center gap-2 text-white font-extrabold text-xs px-6 py-2.5 rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer disabled:opacity-50 ${hasUnsavedChanges
+                ? 'bg-[#0082FB] hover:bg-[#0070DA] ring-2 ring-blue-400/40'
+                : 'bg-[#0082FB] hover:bg-[#0070DA]'
+                }`}
             >
               {saving ? (
                 <>
@@ -1044,7 +1043,7 @@ export const AdminTariffsPage: React.FC = () => {
                   {/* Footer */}
                   <div className="pt-2 border-t border-gray-200 flex justify-between items-center text-[10px] text-gray-500">
                     <div>ИП INTERSENSE • ИИН: 990601301525 • г. Алматы, мкр. Атырау, д. 8</div>
-                    <div className="font-semibold text-gray-700">Телефон: +7 (707) 711-16-53 • sales@tanbox.kz • www.tanbox.kz</div>
+                    <div className="font-semibold text-gray-700">Телефон: +7 (700) 304-85-32 • sales@tanbox.kz • www.tanbox.kz</div>
                   </div>
                 </div>
               </div>

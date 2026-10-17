@@ -61,7 +61,7 @@ export const TermsPage: React.FC = () => {
                 </p>
                 <div className="flex justify-between items-center text-xs text-gray-500 pt-3">
                   <span>Алматы қ.</span>
-                  <span>2026 жылғы 01 қаңтардағы редакция</span>
+                  <span>2026 жылғы 03 тамыздағы редакция</span>
                 </div>
               </div>
 
@@ -101,7 +101,8 @@ export const TermsPage: React.FC = () => {
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">4. Қызметтердің құны және есеп айырысу тәртібі</h2>
                 <p>4.1. Қызметтердің құны Орындаушының қолданыстағы тарифтері негізінде анықталады және Қазақстан Республикасының ұлттық валютасында — теңгемен (₸) бекітіледі.</p>
                 <p>4.2. ҚР Салық кодексінің 367-бабы 1-тармағының 1-тармақшасына сәйкес Орындаушының қызметтеріне <strong>ҚҚС салынбайды</strong> (Орындаушы оңайлатылған декларация негізінде арнайы салық режимін қолданады).</p>
-                <p>4.3. Төлем Тапсырыс беруші тарапынан Төлем шоты негізінде Орындаушының банктік шотына қолма-қол ақшасыз аудару немесе Kaspi Pay төлем сервистері арқылы жүзеге асырылады.</p>
+                <p>4.3. Төлем Тапсырыс беруші тарапынан Төлем шоты негізінде Орындаушының банктік шотына қолма-қол ақшасыз аудару арқылы, немесе Freedom Pay қорғалған шлюзі арқылы VISA және MasterCard карталарымен онлайн-төлем жасау арқылы, сондай-ақ Kaspi Pay төлем сервистері арқылы жүзеге асырылады.</p>
+                <p>4.4. Банктік карталармен төлеу тәртібі, қаражатты қайтару және жеткізу ережелері Сайттағы <code>tanbox.kz/payment-procedure</code> мекенжайында жарияланған «Төлем тәртібі, жеткізу және қайтару ережелері» құжатымен реттеледі. Картамен төленген қаражатты қайтару тек төлем жасалған сол банктік картаға жүргізіледі.</p>
               </div>
 
               {/* Section 5 KZ */}
@@ -114,22 +115,32 @@ export const TermsPage: React.FC = () => {
 
               {/* Section 6 KZ */}
               <div className="space-y-2">
-                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">6. Тараптардың жауапкершілігі және дауларды шешу</h2>
-                <p>6.1. Міндеттемелерді орындамағаны немесе тиісінше орындамағаны үшін тараптар Қазақстан Республикасының заңнамасына сәйкес жауапты болады.</p>
-                <p>6.2. Орындаушы жағылған Data Matrix кодтарының стандартты 2D сканерлерімен 100% өнеркәсіптік оқылуына кепілдік береді.</p>
-                <p>6.3. Тапсырыс беруші таңбаланған тауарларды Қазақстан Республикасы аумағында заңды айналымға енгізу үшін дербес жауапты болады.</p>
-                <p>6.4. Даулар жауап беру мерзімі 10 (он) күнтізбелік күн болатын талап қою тәртібімен шешіледі. Келісімге қол жеткізілмеген жағдайда даулар Орындаушының орналасқан жері бойынша сотқа беріледі.</p>
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">6. Қызметтерден бас тарту және ақшалай қаражатты қайтару тәртібі</h2>
+                <p>6.1. Тапсырыс беруші «Тұтынушылардың құқықтарын қорғау туралы» ҚР Заңында және ҚР Азаматтық кодексінде көзделген тәртіппен және талаптармен қызметтерден бас тартуға құқылы.</p>
+                <p>6.2. Тапсырыс беруші тиісті сапада толық орындалған (көрсетілген) қызметтерден бас тартуға құқылы емес.</p>
+                <p>6.3. Тапсырыс беруші орындау басталғанға дейін бас тартқан кезде, Орындаушы Тапсырыс беруші төлеген соманы Орындаушының нақты шеккен шығыстарын шегергенде қайтарады.</p>
+                <p>6.4. Freedom Pay шлюзі арқылы банктік картамен төлеу кезінде ақшалай қаражатты қайтару қолма-қол ақшасыз тәртіппен тек төлем жасалған сол банктік картаға жүргізіледі (өтініш қаралғаннан кейін 10 жұмыс күніне дейін, банктердің есеп айырысуы 3-тен 21 жұмыс күніне дейін). Қолма-қол ақшамен қайтару жүргізілмейді.</p>
+                <p>6.5. Қайтару рәсімі туралы толық мәліметтер Сайттағы <code>tanbox.kz/payment-procedure</code> мекенжайындағы «Төлем тәртібі, жеткізу және қайтару ережелері» құжатында көрсетілген.</p>
               </div>
 
               {/* Section 7 KZ */}
               <div className="space-y-2">
-                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">7. Шарттың қолданылу мерзімі</h2>
-                <p>7.1. Осы Шарт Тапсырыс беруші Офертаны акцепттеген сәттен бастап күшіне енеді және тараптар қабылданған міндеттемелерді толық орындағанға дейін қолданылады.</p>
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">7. Тараптардың жауапкершілігі және дауларды шешу</h2>
+                <p>7.1. Міндеттемелерді орындамағаны немесе тиісінше орындамағаны үшін тараптар Қазақстан Республикасының заңнамасына сәйкес жауапты болады.</p>
+                <p>7.2. Орындаушы жағылған Data Matrix кодтарының стандартты 2D сканерлерімен 100% өнеркәсіптік оқылуына кепілдік береді.</p>
+                <p>7.3. Тапсырыс беруші таңбаланған тауарларды Қазақстан Республикасы аумағында заңды айналымға енгізу үшін дербес жауапты болады.</p>
+                <p>7.4. Даулар жауап беру мерзімі 10 (он) күнтізбелік күн болатын талап қою тәртібімен шешіледі. Келісімге қол жеткізілмеген жағдайда даулар Орындаушының орналасқан жері бойынша сотқа беріледі.</p>
+              </div>
+
+              {/* Section 8 KZ */}
+              <div className="space-y-2">
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">8. Шарттың қолданылу мерзімі</h2>
+                <p>8.1. Осы Шарт Тапсырыс беруші Офертаны акцепттеген сәттен бастап күшіне енеді және тараптар қабылданған міндеттемелерді толық орындағанға дейін қолданылады.</p>
               </div>
 
               {/* Requisites Table KZ */}
               <div className="pt-6 border-t border-gray-200 space-y-3">
-                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">8. Орындаушының деректемелері</h2>
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">9. Орындаушының деректемелері</h2>
                 <table className="w-full border-collapse border border-gray-300 text-xs">
                   <tbody>
                     <tr>
@@ -168,7 +179,7 @@ export const TermsPage: React.FC = () => {
                 </p>
                 <div className="flex justify-between items-center text-xs text-gray-500 pt-3">
                   <span>Almaty, Kazakhstan</span>
-                  <span>Effective January 01, 2026</span>
+                  <span>Effective August 03, 2026</span>
                 </div>
               </div>
 
@@ -208,7 +219,8 @@ export const TermsPage: React.FC = () => {
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">4. Pricing & Payments</h2>
                 <p>4.1. Pricing is pegged to Contractor tariff sheets and invoiced in Kazakhstan Tenge (₸).</p>
                 <p>4.2. Pursuant to the Tax Code of RK, the Contractor operates under a simplified tax regime; services are <strong>exempt from VAT</strong>.</p>
-                <p>4.3. Payment is made via wire transfer or certified electronic payment systems (Kaspi Pay / acquirers).</p>
+                <p>4.3. Payment is made via bank wire transfer or online via VISA/MasterCard through the secured Freedom Pay payment gateway (with 3D-Secure support).</p>
+                <p>4.4. Payment and refund details are governed by the "Payment, Delivery & Refund Policy" published at <code>tanbox.kz/payment-procedure</code>.</p>
               </div>
 
               {/* Section 5 EN */}
@@ -221,21 +233,30 @@ export const TermsPage: React.FC = () => {
 
               {/* Section 6 EN */}
               <div className="space-y-2">
-                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">6. Liability & Dispute Resolution</h2>
-                <p>6.1. Parties bear statutory liability in accordance with Kazakhstan law.</p>
-                <p>6.2. The Contractor guarantees 100% industrial readability of printed Data Matrix codes by certified 2D optical scanners.</p>
-                <p>6.3. Disputes are addressed via claim notices within 10 calendar days. Unresolved disputes are submitted to courts at the Contractor's legal seat.</p>
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">6. Order Cancellation & Refund Policy</h2>
+                <p>6.1. The Customer may cancel services subject to the Law of RK "On Consumer Rights Protection" and the Civil Code of RK.</p>
+                <p>6.2. The Customer may not cancel services that have already been properly and fully rendered.</p>
+                <p>6.3. If canceled prior to production kickoff, the Contractor refunds paid amounts less direct expenses actually incurred.</p>
+                <p>6.4. Online card payments are refunded strictly in non-cash format to the same bank card used for payment. Cash refunds for card transactions are strictly prohibited.</p>
               </div>
 
               {/* Section 7 EN */}
               <div className="space-y-2">
-                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">7. Term</h2>
-                <p>7.1. This Agreement enters into force upon Offer acceptance and remains valid until all obligations are fulfilled.</p>
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">7. Liability & Dispute Resolution</h2>
+                <p>7.1. Parties bear statutory liability in accordance with Kazakhstan law.</p>
+                <p>7.2. The Contractor guarantees 100% industrial readability of printed Data Matrix codes by certified 2D optical scanners.</p>
+                <p>7.3. Disputes are addressed via claim notices within 10 calendar days. Unresolved disputes are submitted to courts at the Contractor's legal seat.</p>
+              </div>
+
+              {/* Section 8 EN */}
+              <div className="space-y-2">
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">8. Term</h2>
+                <p>8.1. This Agreement enters into force upon Offer acceptance and remains valid until all obligations are fulfilled.</p>
               </div>
 
               {/* Requisites Table EN */}
               <div className="pt-6 border-t border-gray-200 space-y-3">
-                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">8. Contractor Details</h2>
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">9. Contractor Details</h2>
                 <table className="w-full border-collapse border border-gray-300 text-xs">
                   <tbody>
                     <tr>
@@ -274,7 +295,7 @@ export const TermsPage: React.FC = () => {
                 </p>
                 <div className="flex justify-between items-center text-xs text-gray-500 pt-3">
                   <span>г. Алматы</span>
-                  <span>Редакция от 01 января 2026 года</span>
+                  <span>Редакция от 03 августа 2026 года</span>
                 </div>
               </div>
 
@@ -314,8 +335,9 @@ export const TermsPage: React.FC = () => {
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">4. Стоимость услуг и порядок расчетов</h2>
                 <p>4.1. Стоимость услуг определяется на основании действующих тарифов Исполнителя и фиксируется в национальной валюте Республики Казахстан — тенге (₸).</p>
                 <p>4.2. В соответствии с подпунктом 1 пункта 1 статьи 367 Налогового кодекса РК, услуги Исполнителя <strong>НДС не облагаются</strong> (Исполнитель применяет специальный налоговый режим на основе упрощенной декларации).</p>
-                <p>4.3. Оплата осуществляется Заказчиком в безналичном порядке путем банковского перевода на расчетный счет Исполнителя на основании Счета на оплату либо через платежные сервисы Kaspi Pay / эквайринг банков.</p>
+                <p>4.3. Оплата осуществляется Заказчиком в безналичном порядке путем банковского перевода на расчетный счет Исполнителя на основании Счета на оплату, либо онлайн-оплатой банковскими картами VISA и MasterCard через защищенный платежный шлюз Freedom Pay (с поддержкой технологии 3D-Secure), либо через платежные сервисы Kaspi Pay / банковский эквайринг.</p>
                 <p>4.4. Все комиссии банков и платежных систем, связанные с переводом денежных средств, оплачиваются Заказчиком самостоятельно.</p>
+                <p>4.5. Порядок оплаты банковскими картами, правила возврата денежных средств и доставка регламентируются документом «Порядок оплаты, доставки и правила возврата», размещенным на Сайте по адресу <code>tanbox.kz/payment-procedure</code>. При оплате картами возврат денежных средств осуществляется исключительно на ту банковскую карту, с которой была совершена исходная оплата.</p>
               </div>
 
               {/* Section 5 RU */}
@@ -328,22 +350,33 @@ export const TermsPage: React.FC = () => {
 
               {/* Section 6 RU */}
               <div className="space-y-2">
-                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">6. Ответственность сторон и разрешение споров</h2>
-                <p>6.1. За неисполнение или ненадлежащее исполнение обязательств стороны несут ответственность в соответствии с законодательством Республики Казахстан.</p>
-                <p>6.2. Исполнитель гарантирует 100% промышленную считываемость нанесенных кодов Data Matrix стандартными оптическими сканерами и ТСД.</p>
-                <p>6.3. Заказчик самостоятельно несет ответственность за законность ввода маркируемых товаров в гражданский оборот на территории Республики Казахстан.</p>
-                <p>6.4. Споры и разногласия разрешаются в претензионном порядке со сроком ответа 10 (десять) календарных дней. При недостижении согласия споры передаются на рассмотрение в суд по месту нахождения Исполнителя.</p>
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">6. Отказ от услуг и порядок возврата денежных средств</h2>
+                <p>6.1. Заказчик вправе отказаться от услуг в порядке и на условиях, предусмотренных Законом РК «О защите прав потребителей» и Гражданским кодексом Республики Казахстан.</p>
+                <p>6.2. Заказчик не вправе отказаться от услуг, выполненных (оказанных) надлежащим образом в полном объеме.</p>
+                <p>6.3. При отказе Заказчика от услуг до момента начала фактического исполнения (до запуска печати тиража этикеток либо заказа кодов в ИС Танба), Исполнитель возвращает Заказчику уплаченную сумму за вычетом фактически понесенных расходов Исполнителя.</p>
+                <p>6.4. При оплате банковскими картами VISA или MasterCard через процессинговый шлюз Freedom Pay возврат денежных средств осуществляется исключительно в безналичном порядке на ту же банковскую карту, с которой был совершен первоначальный платеж. Выплата возврата наличными денежными средствами категорически не допускается правилами МПС Visa / MasterCard.</p>
+                <p>6.5. Срок рассмотрения заявления на возврат составляет до 10 (десяти) рабочих дней. Зачисление средств банком-эмитентом карты Заказчика осуществляется в течение от 3 до 21 рабочего дня в зависимости от регламентов обслуживающего банка.</p>
+                <p>6.6. Подробные условия, форма заявления и контактные данные для подачи запроса на возврат опубликованы на Сайте по адресу <code>tanbox.kz/payment-procedure</code>.</p>
               </div>
 
               {/* Section 7 RU */}
               <div className="space-y-2">
-                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">7. Срок действия договора</h2>
-                <p>7.1. Настоящий Договор вступает в силу с момента акцепта Оферты Заказчиком и действует до полного исполнения сторонами принятых обязательств.</p>
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">7. Ответственность сторон и разрешение споров</h2>
+                <p>7.1. За неисполнение или ненадлежащее исполнение обязательств стороны несут ответственность в соответствии с законодательством Республики Казахстан.</p>
+                <p>7.2. Исполнитель гарантирует 100% промышленную считываемость нанесенных кодов Data Matrix стандартными оптическими сканерами и ТСД.</p>
+                <p>7.3. Заказчик самостоятельно несет ответственность за законность ввода маркируемых товаров в гражданский оборот на территории Республики Казахстан.</p>
+                <p>7.4. Споры и разногласия разрешаются в претензионном порядке со сроком ответа 10 (десять) календарных дней. При недостижении согласия споры передаются на рассмотрение в суд по месту нахождения Исполнителя.</p>
+              </div>
+
+              {/* Section 8 RU */}
+              <div className="space-y-2">
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">8. Срок действия договора</h2>
+                <p>8.1. Настоящий Договор вступает в силу с момента акцепта Оферты Заказчиком и действует до полного исполнения сторонами принятых обязательств.</p>
               </div>
 
               {/* Requisites Table RU */}
               <div className="pt-6 border-t border-gray-200 space-y-3">
-                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">8. Адрес и реквизиты Исполнителя</h2>
+                <h2 className="text-xs sm:text-sm font-bold uppercase text-black">9. Адрес и реквизиты Исполнителя</h2>
                 <table className="w-full border-collapse border border-gray-300 text-xs">
                   <tbody>
                     <tr>

@@ -61,7 +61,7 @@ export const CookiePolicyPage: React.FC = () => {
                 </p>
                 <div className="flex justify-between items-center text-xs text-gray-500 pt-3">
                   <span>Алматы қ.</span>
-                  <span>2026 жылғы 01 қаңтардағы редакция</span>
+                  <span>2026 жылғы 03 тамыздағы редакция</span>
                 </div>
               </div>
 
@@ -105,7 +105,7 @@ export const CookiePolicyPage: React.FC = () => {
                 </p>
                 <div className="flex justify-between items-center text-xs text-gray-500 pt-3">
                   <span>Almaty, Kazakhstan</span>
-                  <span>Effective January 01, 2026</span>
+                  <span>Effective August 03, 2026</span>
                 </div>
               </div>
 
@@ -149,7 +149,7 @@ export const CookiePolicyPage: React.FC = () => {
                 </p>
                 <div className="flex justify-between items-center text-xs text-gray-500 pt-3">
                   <span>г. Алматы</span>
-                  <span>Редакция от 01 января 2026 года</span>
+                  <span>Редакция от 03 августа 2026 года</span>
                 </div>
               </div>
 

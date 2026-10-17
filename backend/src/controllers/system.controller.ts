@@ -252,6 +252,13 @@ export const cleanPdfCache = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    if (deletedCount > 0) {
+      await prisma.order.updateMany({
+        where: { pdfUrl: { not: null } },
+        data: { pdfUrl: null },
+      });
+    }
+
     const freedFormatted = `${(freedBytes / (1024 * 1024)).toFixed(2)} MB`;
     logger.info(`Cleaned PDF cache: ${deletedCount} files deleted, ${freedFormatted} freed.`);
 

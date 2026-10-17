@@ -15,6 +15,7 @@ import {
   Clock,
   Search,
   Boxes,
+  PackagePlus,
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
@@ -128,6 +129,7 @@ export function getHumanFriendlyError(err: any): {
 }
 
 const OPERATION_TYPE_LABELS: Record<string, string> = {
+  ORDER: 'Заказ кодов маркировки',
   UTILISATION: 'Отчет о нанесении',
   IMPORT_NOTIFICATION: 'Ввод в оборот',
   AGGREGATION: 'Агрегация (Короб)',
@@ -197,6 +199,13 @@ export const OperationReceiptModal: React.FC<OperationReceiptModalProps> = ({
         gtin: r.gtin,
         packageType: r.packageType,
         emissionDate: r.emissionDate,
+      }))
+    : Array.isArray((operation?.responsePayload as any)?.codes) && (operation.responsePayload as any).codes.length > 0
+    ? ((operation.responsePayload as any).codes as string[]).map((c: string) => ({
+        code: c,
+        state: 'SUCCESS',
+        result: 'Эмитирован в ИС МПТ',
+        gtin: (operation?.responsePayload as any)?.details?.gtin || (operation?.requestPayload as any)?.gtin,
       }))
     : Array.isArray((operation?.requestPayload as any)?.codes)
     ? ((operation.requestPayload as any).codes as string[]).map((c: string) => ({
@@ -371,6 +380,27 @@ export const OperationReceiptModal: React.FC<OperationReceiptModalProps> = ({
           <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center gap-2 shrink-0">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>{fetchError}</span>
+          </div>
+        )}
+
+        {/* ORDER: Dedicated Order Info Box */}
+        {operation.type === 'ORDER' && (
+          <div className="p-3 bg-violet-50/70 border border-violet-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
+                <PackagePlus className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-[11px] font-bold text-violet-900 block">
+                  Заказ эмиссии кодов маркировки (СУЗ)
+                </span>
+                <span className="text-[11px] text-violet-700 font-mono">
+                  GTIN: {docInfo?.gtin || (operation.requestPayload as any)?.gtin || '—'}
+                  {docInfo?.category ? ` • Категория: ${docInfo.category}` : ''}
+                  {docInfo?.quantityRequested ? ` • Заказано: ${docInfo.quantityRequested} шт.` : ''}
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
