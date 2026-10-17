@@ -10,6 +10,13 @@
  * 4. Контакты для бухгалтерских документов (счета, акты)
  */
 
+export interface BankRequisite {
+  bankName: string;
+  bik: string;
+  iban: string;
+  kbe: string;
+}
+
 export interface CompanyConfig {
   legal: {
     companyName: string;
@@ -19,6 +26,13 @@ export interface CompanyConfig {
     bik: string;
     iik: string;
     kbe: string;
+    // Реквизиты Freedom Bank (АО "Фридом Банк Казахстан")
+    freedomBank: string;
+    freedomBik: string;
+    freedomIik: string;
+    freedomKbe: string;
+    // Список всех активных банковских счетов
+    accounts: BankRequisite[];
   };
   landing: {
     officeTitle: string;
@@ -64,10 +78,31 @@ export const COMPANY_CONFIG: CompanyConfig = {
     companyName: 'ИП INTERSENSE',
     address: 'Алматы, МИКРОРАЙОН АТЫРАУ, дом 8, кв/офис 16',
     iinBin: '990601301525',
+    // Основной расчетный счет (Kaspi Bank)
     bank: 'АО «Kaspi Bank»',
     bik: 'CASPKZKA',
     iik: 'KZ58722S000055787378',
     kbe: '19',
+    // Расчетный счет Freedom Bank
+    freedomBank: 'АО "Фридом Банк Казахстан"',
+    freedomBik: 'KSNVKZKA',
+    freedomIik: 'KZ02551A600019440585',
+    freedomKbe: '19',
+    // Все счета
+    accounts: [
+      {
+        bankName: 'АО «Kaspi Bank»',
+        bik: 'CASPKZKA',
+        iban: 'KZ58722S000055787378',
+        kbe: '19',
+      },
+      {
+        bankName: 'АО "Фридом Банк Казахстан"',
+        bik: 'KSNVKZKA',
+        iban: 'KZ02551A600019440585',
+        kbe: '19',
+      },
+    ],
   },
 
   // =========================================================================

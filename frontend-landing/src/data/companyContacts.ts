@@ -20,10 +20,31 @@ export const COMPANY_CONFIG = {
     companyName: 'ИП INTERSENSE',
     address: 'Алматы, МИКРОРАЙОН АТЫРАУ, дом 8, кв/офис 16',
     iinBin: '990601301525',
+    // Основной расчетный счет (Kaspi Bank)
     bank: 'АО «Kaspi Bank»',
     bik: 'CASPKZKA',
     iik: 'KZ58722S000055787378',
     kbe: '19',
+    // Расчетный счет Freedom Bank
+    freedomBank: 'АО "Фридом Банк Казахстан"',
+    freedomBik: 'KSNVKZKA',
+    freedomIik: 'KZ02551A600019440585',
+    freedomKbe: '19',
+    // Все счета
+    accounts: [
+      {
+        bankName: 'АО «Kaspi Bank»',
+        bik: 'CASPKZKA',
+        iban: 'KZ58722S000055787378',
+        kbe: '19',
+      },
+      {
+        bankName: 'АО "Фридом Банк Казахстан"',
+        bik: 'KSNVKZKA',
+        iban: 'KZ02551A600019440585',
+        kbe: '19',
+      },
+    ],
   },
 
   // =========================================================================
@@ -143,6 +164,11 @@ export const COMPANY_CONTACTS = {
     kbe: COMPANY_CONFIG.legal.kbe,
     bik: COMPANY_CONFIG.legal.bik,
     bank: COMPANY_CONFIG.legal.bank,
+    freedomBank: COMPANY_CONFIG.legal.freedomBank,
+    freedomBik: COMPANY_CONFIG.legal.freedomBik,
+    freedomIik: COMPANY_CONFIG.legal.freedomIik,
+    freedomKbe: COMPANY_CONFIG.legal.freedomKbe,
+    accounts: COMPANY_CONFIG.legal.accounts,
   },
 };
 

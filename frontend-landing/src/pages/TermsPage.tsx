@@ -153,7 +153,10 @@ export const TermsPage: React.FC = () => {
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Банктік деректемелер</td>
-                      <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.bank}, шот: {COMPANY_CONTACTS.legal.iik}</td>
+                      <td className="border border-gray-300 p-2.5 space-y-1.5">
+                        <div><span className="font-semibold">{COMPANY_CONTACTS.legal.bank}</span>, шот: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.iik}</span>, БИК: <span className="font-mono">{COMPANY_CONTACTS.legal.bik}</span></div>
+                        <div><span className="font-semibold">{COMPANY_CONTACTS.legal.freedomBank}</span>, шот: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.freedomIik}</span>, БИК: <span className="font-mono">{COMPANY_CONTACTS.legal.freedomBik}</span></div>
+                      </td>
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Мекенжай</td>
@@ -269,7 +272,10 @@ export const TermsPage: React.FC = () => {
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Bank Details</td>
-                      <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.bank}, Account: {COMPANY_CONTACTS.legal.iik}</td>
+                      <td className="border border-gray-300 p-2.5 space-y-1.5">
+                        <div><span className="font-semibold">{COMPANY_CONTACTS.legal.bank}</span>, Account: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.iik}</span>, BIC: <span className="font-mono">{COMPANY_CONTACTS.legal.bik}</span></div>
+                        <div><span className="font-semibold">{COMPANY_CONTACTS.legal.freedomBank}</span>, Account: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.freedomIik}</span>, BIC: <span className="font-mono">{COMPANY_CONTACTS.legal.freedomBik}</span></div>
+                      </td>
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Address</td>
@@ -389,7 +395,10 @@ export const TermsPage: React.FC = () => {
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Банковские реквизиты</td>
-                      <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.bank}, счет: {COMPANY_CONTACTS.legal.iik}</td>
+                      <td className="border border-gray-300 p-2.5 space-y-1.5">
+                        <div><span className="font-semibold">{COMPANY_CONTACTS.legal.bank}</span>, счет: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.iik}</span>, БИК: <span className="font-mono">{COMPANY_CONTACTS.legal.bik}</span></div>
+                        <div><span className="font-semibold">{COMPANY_CONTACTS.legal.freedomBank}</span>, счет: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.freedomIik}</span>, БИК: <span className="font-mono">{COMPANY_CONTACTS.legal.freedomBik}</span></div>
+                      </td>
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Адрес</td>
