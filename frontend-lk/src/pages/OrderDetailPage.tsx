@@ -39,6 +39,7 @@ import {
   FileX2,
   CheckCircle,
   Settings,
+  CreditCard,
 } from 'lucide-react';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
 import RollSplitModal from '../components/modals/RollSplitModal';
@@ -155,6 +156,7 @@ export const OrderDetailPage: React.FC = () => {
   const [downloadingCodes, setDownloadingCodes] = useState<boolean>(false);
   const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
   const [triggeringAsync, setTriggeringAsync] = useState<boolean>(false);
+  const [isPayingOnline, setIsPayingOnline] = useState<boolean>(false);
   const [pdfStatus, setPdfStatus] = useState<{
     isGenerating: boolean;
     activeJob?: any;
@@ -910,6 +912,27 @@ export const OrderDetailPage: React.FC = () => {
       alert('Ошибка при формировании Счёта на оплату: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingDoc(null);
+    }
+  };
+
+  const handlePayOrderOnline = async () => {
+    if (!order) return;
+    setIsPayingOnline(true);
+    try {
+      const res = await apiClient.post('/payments/init', {
+        type: 'ORDER',
+        orderId: order.id,
+        amount: order.totalPrice,
+      });
+      if (res.data?.redirectUrl) {
+        window.location.href = res.data.redirectUrl;
+      } else {
+        alert(res.data?.message || 'Не удалось получить ссылку на оплату');
+        setIsPayingOnline(false);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Ошибка запуска онлайн-оплаты');
+      setIsPayingOnline(false);
     }
   };
 
@@ -2279,6 +2302,24 @@ export const OrderDetailPage: React.FC = () => {
                   </span>
                 </div>
               </div>
+
+              {/* Online Payment via Freedom Pay */}
+              {order.paymentStatus !== 'PAID' && (
+                <div className="pt-3 border-t border-gray-100 space-y-2">
+                  <button
+                    type="button"
+                    onClick={handlePayOrderOnline}
+                    disabled={isPayingOnline}
+                    className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 bg-[#0082FB] hover:bg-[#0070DA] text-white rounded-xl text-xs font-extrabold shadow-md shadow-[#0082FB]/20 transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>{isPayingOnline ? 'Переход к оплате...' : 'Оплатить картой онлайн'}</span>
+                  </button>
+                  <p className="text-[10px] text-gray-500 text-center font-medium">
+                    Freedom Pay • Мгновенное подтверждение и открытие печати
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Accounting Documents */}

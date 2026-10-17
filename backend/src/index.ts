@@ -18,6 +18,7 @@ import labelsRoutes from './routes/labels.routes';
 import systemRoutes from './routes/system.routes';
 import markirovkaRoutes from './routes/markirovka.routes';
 import invoicesRoutes from './routes/invoices.routes';
+import paymentsRoutes from './routes/payments.routes';
 import { logger } from './utils/logger';
 import { generalApiLimiter } from './middleware/rateLimiter';
 import { telegram } from './services/telegram.service';
@@ -117,6 +118,7 @@ app.use((req, res, next) => {
       req.path.startsWith('/api/system') || 
       req.path.startsWith('/api/auth/login') ||
       req.path.startsWith('/api/auth/me') ||
+      req.path.startsWith('/api/payments/freedom') ||
       req.path === '/api/health';
 
     if (!isExcluded) {
@@ -155,6 +157,7 @@ app.use('/api/labels', labelsRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/markirovka', markirovkaRoutes);
 app.use('/api/invoices', invoicesRoutes);
+app.use('/api/payments', paymentsRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

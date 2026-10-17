@@ -80,6 +80,11 @@ api.tanbox.kz {
     import security_headers
     import caddy_logging
     encode gzip zstd
+
+    # Transparently route requests both with and without /api prefix
+    @not_api not path /api/*
+    rewrite @not_api /api{uri}
+
     reverse_proxy backend:5050
 }
 
@@ -124,5 +129,9 @@ http://admin.tanbox.local {
 http://api.tanbox.local {
     import security_headers
     encode gzip zstd
+
+    @not_api not path /api/*
+    rewrite @not_api /api{uri}
+
     reverse_proxy backend:5050
 }

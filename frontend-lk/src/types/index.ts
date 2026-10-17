@@ -20,6 +20,7 @@ export interface UserProfile {
   binIin: string;
   phone: string;
   role: 'CLIENT' | 'ADMIN';
+  balance?: number;
   createdAt: string;
 }
 

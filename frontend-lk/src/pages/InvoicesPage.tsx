@@ -12,6 +12,7 @@ import {
   XCircle,
   ChevronDown,
   RefreshCw,
+  CreditCard,
 } from 'lucide-react';
 
 interface InvoiceItem {
@@ -48,6 +49,27 @@ export const InvoicesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [printingId, setPrintingId] = useState<string | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
+
+  const handlePayOnline = async (inv: InvoiceRecord) => {
+    setPayingId(inv.id);
+    try {
+      const res = await apiClient.post('/payments/init', {
+        type: 'INVOICE',
+        invoiceId: inv.id,
+        amount: inv.totalAmount,
+      });
+      if (res.data?.redirectUrl) {
+        window.location.href = res.data.redirectUrl;
+      } else {
+        alert(res.data?.message || 'Не удалось получить ссылку на оплату');
+        setPayingId(null);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Ошибка запуска онлайн-оплаты');
+      setPayingId(null);
+    }
+  };
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -332,6 +354,18 @@ export const InvoicesPage: React.FC = () => {
 
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {inv.status !== 'PAID' && inv.status !== 'CANCELLED' && (
+                          <button
+                            type="button"
+                            onClick={() => handlePayOnline(inv)}
+                            disabled={payingId === inv.id}
+                            title="Оплатить счет онлайн через Freedom Pay"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>{payingId === inv.id ? 'Переход...' : 'Оплатить картой'}</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleDownloadPdf(inv)}

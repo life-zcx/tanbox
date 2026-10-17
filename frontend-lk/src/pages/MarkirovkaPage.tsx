@@ -21,6 +21,7 @@ import {
   KeyRound,
   ShieldAlert,
   PackagePlus,
+  Wallet,
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { NCALayerBadge } from '../components/markirovka/NCALayerBadge';
@@ -32,6 +33,7 @@ import { OperationModal } from '../components/markirovka/OperationModal';
 import { OperationReceiptModal } from '../components/markirovka/OperationReceiptModal';
 import { PartyAndCatalogModal } from '../components/markirovka/PartyAndCatalogModal';
 import { ConnectMarkirovkaModal } from '../components/modals/ConnectMarkirovkaModal';
+import { TopUpBalanceModal } from '../components/modals/TopUpBalanceModal';
 
 export const MarkirovkaPage: React.FC = () => {
   const [operations, setOperations] = useState<any[]>([]);
@@ -46,6 +48,8 @@ export const MarkirovkaPage: React.FC = () => {
   const [showToolsModal, setShowToolsModal] = useState<boolean>(false);
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [accountToEdit, setAccountToEdit] = useState<any | null>(null);
+  const [showTopUpModal, setShowTopUpModal] = useState<boolean>(false);
+  const [userBalance, setUserBalance] = useState<number>(0);
 
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -65,13 +69,17 @@ export const MarkirovkaPage: React.FC = () => {
         opParams.type = activeTabFilter;
       }
 
-      const [opRes, accRes] = await Promise.all([
+      const [opRes, accRes, balRes] = await Promise.all([
         apiClient.get('/markirovka/operations', { params: opParams }).catch(() => ({ data: { operations: [] } })),
         apiClient.get('/markirovka/accounts').catch(() => ({ data: { accounts: [] } })),
+        apiClient.get('/payments/balance').catch(() => ({ data: { balance: 0 } })),
       ]);
 
       setOperations(opRes.data?.operations || []);
       setAccounts(accRes.data?.accounts || []);
+      if (balRes.data?.balance !== undefined) {
+        setUserBalance(Number(balRes.data.balance));
+      }
     } catch (err: any) {
       showToast(err.response?.data?.message || 'Ошибка загрузки данных маркировки', 'error');
     } finally {
@@ -147,6 +155,21 @@ export const MarkirovkaPage: React.FC = () => {
 
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
           <NCALayerBadge />
+
+          {/* Balance Widget */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200/90 rounded-xl shadow-2xs">
+            <Wallet className="w-3.5 h-3.5 text-[#0082FB]" />
+            <span className="text-xs font-semibold text-gray-600">
+              Баланс: <strong className="text-gray-900 font-extrabold">{userBalance.toLocaleString('ru-RU')} ₸</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowTopUpModal(true)}
+              className="text-[11px] font-extrabold text-[#0082FB] hover:text-[#0070DA] hover:underline cursor-pointer ml-1"
+            >
+              + Пополнить
+            </button>
+          </div>
 
           <button
             type="button"
@@ -444,6 +467,14 @@ export const MarkirovkaPage: React.FC = () => {
           showToast('Аккаунт ИС МПТ сохранен!', 'success');
           fetchData();
         }}
+      />
+
+      {/* Top Up Balance Modal */}
+      <TopUpBalanceModal
+        isOpen={showTopUpModal}
+        onClose={() => setShowTopUpModal(false)}
+        currentBalance={userBalance}
+        onSuccess={() => fetchData()}
       />
     </div>
   );

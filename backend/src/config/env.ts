@@ -28,5 +28,26 @@ export const env = {
     }
     return secret;
   },
+  get FREEDOM_PAY_MERCHANT_ID(): string {
+    return process.env.FREEDOM_PAY_MERCHANT_ID || '';
+  },
+  get FREEDOM_PAY_SECRET_KEY(): string {
+    return process.env.FREEDOM_PAY_SECRET_KEY || '';
+  },
+  get FREEDOM_PAY_API_URL(): string {
+    return process.env.FREEDOM_PAY_API_URL || 'https://api.freedompay.kz';
+  },
+  get FREEDOM_PAY_TEST_MODE(): string {
+    return process.env.FREEDOM_PAY_TEST_MODE || '1';
+  },
+  get APP_URL(): string {
+    return process.env.APP_URL || 'https://tanbox.kz';
+  },
+  get LK_URL(): string {
+    return process.env.LK_URL || 'https://lk.tanbox.kz';
+  },
+  get API_URL(): string {
+    return process.env.API_URL || 'https://api.tanbox.kz';
+  },
 };
 

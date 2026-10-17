@@ -401,6 +401,7 @@ export const login = async (req: Request, res: Response) => {
         binIin: user.binIin,
         phone: user.phone,
         role: user.role,
+        balance: Number(user.balance || 0),
       },
     });
   } catch (error: any) {
@@ -429,6 +430,7 @@ export const getMe = async (req: AuthRequest, res: Response) => {
         telegramChatId: true,
         telegramUsername: true,
         telegramLinkedAt: true,
+        balance: true,
         createdAt: true,
       },
     });

@@ -662,6 +662,62 @@ class TelegramService {
   }
 
   /**
+   * Уведомление об успешной онлайн-оплате через Freedom Pay
+   */
+  public async sendOnlinePaymentNotification(payment: {
+    paymentNumber: string;
+    amount: string | number;
+    companyName: string;
+    email: string;
+    phone?: string;
+    type: string;
+    description: string;
+    cardPan?: string | null;
+  }) {
+    if (!this.leadsChatId) return;
+
+    const typeNames: Record<string, string> = {
+      ORDER: 'Оплата заказа маркировки',
+      INVOICE: 'Оплата счета на оплату',
+      STICKER_LAYOUT: 'Оплата конструктора макетов',
+      BALANCE: 'Пополнение баланса ЛК',
+    };
+
+    const typeLabel = typeNames[payment.type] || payment.type;
+    const formattedAmount = Number(payment.amount).toLocaleString('ru-RU');
+
+    const msg = [
+      `💳 <b>УСПЕШНАЯ ОНЛАЙН-ОПЛАТА (Freedom Pay)</b>`,
+      `──────────────────────────────`,
+      `💰 <b>Сумма:</b> <b>${formattedAmount} ₸</b>`,
+      `📑 <b>Тип:</b> ${this.escapeHtml(typeLabel)}`,
+      `🔢 <b>Номер платежа:</b> <code>${this.escapeHtml(payment.paymentNumber)}</code>`,
+      `🏢 <b>Компания:</b> ${this.escapeHtml(payment.companyName)}`,
+      `✉️ <b>Email:</b> ${this.escapeHtml(payment.email)}`,
+      payment.phone ? `📞 <b>Телефон:</b> <code>${this.escapeHtml(payment.phone)}</code>` : null,
+      payment.cardPan ? `💳 <b>Карта:</b> <code>${this.escapeHtml(payment.cardPan)}</code>` : null,
+      `📝 <b>Назначение:</b> <i>${this.escapeHtml(payment.description)}</i>`,
+      `──────────────────────────────`,
+      `⏰ <i>${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' })} (Алматы)</i>`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: '🌐 Открыть в админ-панели',
+            url: `https://admin.tanbox.kz/orders`,
+          },
+        ],
+      ],
+    };
+
+    await this.sendRaw(this.leadsChatId, msg, { replyMarkup: keyboard });
+  }
+
+  /**
    * Уведомление о новом оформленном заказе из кабинета клиента (ЛК)
    */
   public async sendNewOrderNotification(order: {

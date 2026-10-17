@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PackagePlus, FileText, Receipt, User, LogOut, ExternalLink, Phone, Mail, Send, Tag, X, FileCheck2 } from 'lucide-react';
+import { LayoutDashboard, PackagePlus, FileText, Receipt, User, LogOut, ExternalLink, Phone, Mail, Send, Tag, X, FileCheck2, Wallet } from 'lucide-react';
 import { getLandingUrl, COMPANY_CONFIG } from '@shared';
 import { UserProfile } from '../../types';
+import { TopUpBalanceModal } from '../modals/TopUpBalanceModal';
+import { apiClient } from '../../api/client';
 
 interface SidebarProps {
   user: UserProfile | null;
@@ -13,6 +15,18 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen = false, onClose }) => {
   const location = useLocation();
+  const [isTopUpOpen, setIsTopUpOpen] = useState(false);
+  const [currentBalance, setCurrentBalance] = useState<number>(Number(user?.balance || 0));
+
+  useEffect(() => {
+    if (user?.id) {
+      apiClient.get('/payments/balance').then((res) => {
+        if (res.data?.balance !== undefined) {
+          setCurrentBalance(Number(res.data.balance));
+        }
+      }).catch(() => {});
+    }
+  }, [user?.id, location.pathname]);
 
   const links = [
     { to: '/dashboard', label: 'Обзор и Статистика', icon: LayoutDashboard },
@@ -82,16 +96,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen = false
           </div>
         </div>
 
-        {/* User Card in Mobile Drawer */}
-        {isMobile && user && (
-          <div className="bg-[#F8FAFC] border border-gray-200/80 rounded-2xl p-4 space-y-1 shadow-2xs">
-            <p className="text-sm font-extrabold text-[#111827] truncate">
-              {user.companyName || 'Организация'}
-            </p>
-            <p className="text-xs text-[#64748B] truncate font-medium">{user.email}</p>
-            {user.binIin && (
-              <p className="text-xs text-[#94A3B8] font-mono">БИН/ИИН: {user.binIin}</p>
-            )}
+        {/* User & Balance Card */}
+        {user && (
+          <div className="bg-[#F8FAFC] border border-gray-200/80 rounded-2xl p-3.5 space-y-2.5 shadow-2xs">
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold text-[#111827] truncate">
+                {user.companyName || 'Организация'}
+              </p>
+              <p className="text-[11px] text-[#64748B] truncate font-medium">{user.email}</p>
+            </div>
+
+            <div className="pt-2 border-t border-gray-200/60 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Баланс ЛК
+                </span>
+                <span className="text-sm font-black text-[#111827]">
+                  {Number(currentBalance).toLocaleString('ru-RU')} ₸
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTopUpOpen(true)}
+                className="px-2.5 py-1 text-[11px] font-extrabold bg-[#0082FB] hover:bg-[#0070DA] text-white rounded-lg transition-all shadow-xs active:scale-95 cursor-pointer"
+              >
+                + Пополнить
+              </button>
+            </div>
           </div>
         )}
 
@@ -174,6 +205,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isOpen = false
           {renderContent(true)}
         </div>
       )}
+
+      {/* Top Up Balance Modal */}
+      <TopUpBalanceModal
+        isOpen={isTopUpOpen}
+        onClose={() => setIsTopUpOpen(false)}
+        currentBalance={currentBalance}
+      />
     </>
   );
 };

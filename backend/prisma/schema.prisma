@@ -78,6 +78,7 @@ model User {
   telegramUsername  String?
   telegramAuthToken String?   @unique
   telegramLinkedAt  DateTime?
+  balance           Decimal   @default(0.0) @db.Decimal(12, 2)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -85,6 +86,7 @@ model User {
   stickerTemplates UserStickerTemplate[]
   markirovkaAccounts MarkirovkaAccount[]
   invoices         Invoice[]
+  onlinePayments   OnlinePayment[]
 }
 
 model Order {
@@ -124,6 +126,7 @@ model Order {
   markirovkaOrders      MarkirovkaOrder[]
   markirovkaReports     MarkirovkaUtilisationReport[]
   invoices              Invoice[]
+  onlinePayments        OnlinePayment[]
 
   @@index([userId])
   @@index([status])
@@ -457,6 +460,55 @@ model SystemSetting {
   updatedBy   String?
 
   @@index([key])
+}
+
+enum OnlinePaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum OnlinePaymentType {
+  ORDER
+  INVOICE
+  STICKER_LAYOUT
+  BALANCE
+}
+
+model OnlinePayment {
+  id              String              @id @default(uuid())
+  paymentNumber   String              @unique
+  userId          String
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  orderId         String?
+  order           Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  
+  invoiceId       String?
+  
+  type            OnlinePaymentType   @default(ORDER)
+  amount          Decimal             @db.Decimal(12, 2)
+  currency        String              @default("KZT")
+  status          OnlinePaymentStatus @default(PENDING)
+  description     String
+  
+  pgPaymentId     String?             @unique
+  pgCardPan       String?
+  pgPaymentDate   DateTime?
+  
+  redirectUrl     String?
+  rawResponse     Json?
+  metadata        Json?
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 
