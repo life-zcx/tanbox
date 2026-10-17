@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAdminLeads, ServiceLeadItem } from '../hooks/useAdminLeads';
-import { Search, Filter, ChevronDown, Phone, Mail, Building2, Calendar, FileText, CheckCircle2, Clock, XCircle, AlertCircle, X, Copy, Check, Eye } from 'lucide-react';
+import { Search, Filter, ChevronDown, Phone, Mail, Building2, Calendar, FileText, CheckCircle2, Clock, XCircle, AlertCircle, X, Copy, Check, Eye, Bug, ExternalLink } from 'lucide-react';
 import { PageHeader } from '@shared';
 
 const STATUS_CONFIG: Record<string, { label: string; badgeStyle: string }> = {
@@ -10,8 +10,32 @@ const STATUS_CONFIG: Record<string, { label: string; badgeStyle: string }> = {
   REJECTED: { label: 'Отклонена', badgeStyle: 'bg-red-50 text-red-700 border-red-200/80' },
 };
 
+interface BugData {
+  type: string;
+  category?: string;
+  categoryTitle?: string;
+  description?: string;
+  pageUrl?: string;
+  screenResolution?: string;
+  userAgent?: string;
+  screenshotFileName?: string;
+  screenshotPath?: string;
+}
+
+const parseBugData = (notes: string | null): BugData | null => {
+  if (!notes) return null;
+  try {
+    const data = JSON.parse(notes);
+    if (data && (data.type === 'BUG_REPORT' || data.categoryTitle)) {
+      return data;
+    }
+  } catch {}
+  return null;
+};
+
 export const AdminLeadsPage: React.FC = () => {
   const { leads, loading, updateLeadStatus } = useAdminLeads();
+  const [selectedType, setSelectedType] = useState<'ALL' | 'LEADS' | 'BUGS'>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -24,13 +48,21 @@ export const AdminLeadsPage: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const leadsOnlyCount = leads.filter((l) => !l.serviceTitle.includes('[БАГ-РЕПОРТ]')).length;
+  const bugsOnlyCount = leads.filter((l) => l.serviceTitle.includes('[БАГ-РЕПОРТ]')).length;
+
   const filteredLeads = leads.filter((l) => {
+    const isBug = l.serviceTitle.includes('[БАГ-РЕПОРТ]');
+    if (selectedType === 'LEADS' && isBug) return false;
+    if (selectedType === 'BUGS' && !isBug) return false;
+
     const matchStatus = selectedStatus === 'ALL' || l.status === selectedStatus;
     const matchSearch =
       l.serviceTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
       l.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       l.phone.includes(searchQuery) ||
-      (l.binIin || '').includes(searchQuery);
+      (l.binIin || '').includes(searchQuery) ||
+      (l.notes || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchStatus && matchSearch;
   });
 
@@ -48,9 +80,47 @@ export const AdminLeadsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Заявки на услуги"
-        description="Реестр обращений с главной страницы и карточек услуг для обработки менеджерами"
+        title="Обращения и заявки"
+        description="Реестр клиентских заявок на услуги и сообщений об ошибках (баг-репортов) для обработки менеджерами"
       />
+
+      {/* Tabs Filter (Все / Заявки / Баг-репорты) */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setSelectedType('ALL')}
+          className={`px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+            selectedType === 'ALL'
+              ? 'bg-[#0082FB] text-white shadow-xs'
+              : 'bg-white hover:bg-gray-100 text-[#475569] border border-gray-200/80'
+          }`}
+        >
+          Все обращения ({leads.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedType('LEADS')}
+          className={`px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+            selectedType === 'LEADS'
+              ? 'bg-[#0082FB] text-white shadow-xs'
+              : 'bg-white hover:bg-gray-100 text-[#475569] border border-gray-200/80'
+          }`}
+        >
+          Заявки на услуги ({leadsOnlyCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedType('BUGS')}
+          className={`px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+            selectedType === 'BUGS'
+              ? 'bg-rose-600 text-white shadow-xs'
+              : 'bg-white hover:bg-rose-50 text-rose-700 border border-rose-200/80'
+          }`}
+        >
+          <Bug className="w-3.5 h-3.5" />
+          Баг-репорты ({bugsOnlyCount})
+        </button>
+      </div>
 
       {/* Filter Bar */}
       <div className="bg-white border border-gray-100 rounded-3xl p-5 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
@@ -66,7 +136,7 @@ export const AdminLeadsPage: React.FC = () => {
             onChange={(e) => setSelectedStatus(e.target.value)}
             className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-20 pr-8 py-2.5 text-xs font-bold text-[#111827] focus:outline-none focus:border-[#0082FB] appearance-none cursor-pointer"
           >
-            <option value="ALL">Все заявки ({leads.length})</option>
+            <option value="ALL">Все статусы ({leads.length})</option>
             <option value="NEW">Новые</option>
             <option value="IN_PROGRESS">В работе</option>
             <option value="COMPLETED">Завершены</option>
@@ -80,7 +150,7 @@ export const AdminLeadsPage: React.FC = () => {
           <Search className="w-4 h-4 text-[#64748B] absolute left-3.5 top-3.5" />
           <input
             type="text"
-            placeholder="Поиск по компании, телефону, услуге..."
+            placeholder="Поиск по компании, телефону, ошибке..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-10 pr-3 py-2.5 text-xs font-medium text-[#111827] focus:outline-none focus:border-[#0082FB]"

@@ -3,7 +3,8 @@ import path from 'path';
 import { Response } from 'express';
 import { prisma } from '../config/db';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { OrderCategory, OrderStatus } from '@prisma/client';
+import { OrderCategory, OrderStatus, OnlinePaymentType, OnlinePaymentStatus } from '@prisma/client';
+import { telegram } from '../services/telegram.service';
 
 function isSafeUrl(url?: string | null): boolean {
   if (!url) return true;
@@ -130,6 +131,8 @@ export const createUserTemplate = async (req: AuthRequest, res: Response) => {
         heightMm: Number(heightMm) || 40,
         elements: elements || [],
         previewUrl: previewUrl || null,
+        isPaid: req.user.role === 'ADMIN',
+        paidAt: req.user.role === 'ADMIN' ? new Date() : null,
         sourceOrderId: sourceOrderId || null,
       },
     });
@@ -283,5 +286,226 @@ export const deleteUserTemplate = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('deleteUserTemplate error:', error);
     return res.status(500).json({ message: 'Ошибка при удалении шаблона' });
+  }
+};
+
+/**
+ * Оплата и разблокировка самостоятельно созданного макета из конструктора (1 000 ₸ с баланса)
+ * POST /api/user-templates/:id/pay
+ */
+export const payUserTemplate = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    const { id } = req.params;
+
+    const template = await prisma.userStickerTemplate.findUnique({
+      where: { id },
+      include: { user: true },
+    });
+
+    if (!template) {
+      return res.status(404).json({ message: 'Шаблон не найден' });
+    }
+
+    if (req.user.role !== 'ADMIN' && template.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Нет доступа к этому шаблону' });
+    }
+
+    if (template.isPaid) {
+      return res.json({
+        message: 'Шаблон уже оплачен и утвержден',
+        template,
+        alreadyPaid: true,
+      });
+    }
+
+    // Получаем стоимость из pricingSettings (по умолчанию 1000 ₸)
+    const pricingSettings = await prisma.pricingSettings.findUnique({
+      where: { key: 'GLOBAL' },
+    });
+    const layoutPrice = Number(pricingSettings?.selfLayoutPrice) || 1000;
+
+    // Проверяем баланс пользователя
+    const user = await prisma.user.findUnique({
+      where: { id: template.userId },
+      select: { id: true, balance: true, companyName: true, email: true, phone: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+
+    const currentBalance = Number(user.balance);
+    if (currentBalance < layoutPrice) {
+      return res.status(400).json({
+        error: 'INSUFFICIENT_BALANCE',
+        message: `Недостаточно средств на балансе. Стоимость утверждения макета: ${layoutPrice.toLocaleString('ru-RU')} ₸. Ваш текущий баланс: ${currentBalance.toLocaleString('ru-RU')} ₸`,
+        requiredAmount: layoutPrice,
+        currentBalance,
+        missingAmount: layoutPrice - currentBalance,
+      });
+    }
+
+    // Атомарное списание с баланса, разблокировка макета и фиксация платежа
+    const timestamp = Date.now().toString().slice(-6);
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const paymentNumber = `TB-TMP-${timestamp}-${randomSuffix}`;
+
+    const [updatedUser, updatedTemplate, payment] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          balance: { decrement: layoutPrice },
+        },
+      }),
+      prisma.userStickerTemplate.update({
+        where: { id },
+        data: {
+          isPaid: true,
+          paidAt: new Date(),
+        },
+      }),
+      prisma.onlinePayment.create({
+        data: {
+          paymentNumber,
+          userId: user.id,
+          type: OnlinePaymentType.STICKER_LAYOUT,
+          amount: layoutPrice,
+          currency: 'KZT',
+          status: OnlinePaymentStatus.PAID,
+          description: `Оплата макета этикетки «${template.name}» (${template.widthMm}×${template.heightMm} мм)`,
+          metadata: {
+            templateId: template.id,
+            templateName: template.name,
+            dimensions: `${template.widthMm}x${template.heightMm} мм`,
+            paidViaBalance: true,
+          },
+        },
+      }),
+    ]);
+
+    // Уведомление в Telegram
+    telegram.sendOnlinePaymentNotification({
+      paymentNumber,
+      amount: layoutPrice.toString(),
+      companyName: user.companyName,
+      email: user.email,
+      phone: user.phone,
+      type: 'STICKER_LAYOUT',
+      description: `Самостоятельное утверждение макета «${template.name}» (с баланса ЛК)`,
+    }).catch(() => {});
+
+    return res.json({
+      message: `Макет «${template.name}» успешно оплачен и утвержден!`,
+      template: updatedTemplate,
+      newBalance: Number(updatedUser.balance),
+    });
+  } catch (error: any) {
+    console.error('payUserTemplate error:', error);
+    return res.status(500).json({ message: 'Ошибка при оплате макета: ' + (error.message || 'Внутренняя ошибка') });
+  }
+};
+
+/**
+ * Заказ индивидуальной разработки макета дизайнером TANBOX (5 000 ₸ с баланса)
+ * POST /api/user-templates/order-designer
+ */
+export const orderDesignerLayout = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+
+    const {
+      name,
+      category,
+      widthMm = 58,
+      heightMm = 40,
+      description,
+      sampleFileUrl,
+    } = req.body;
+
+    const pricingSettings = await prisma.pricingSettings.findUnique({
+      where: { key: 'GLOBAL' },
+    });
+    const designerPrice = Number(pricingSettings?.stickerLayoutPrice) || 5000;
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, balance: true, companyName: true, email: true, phone: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+
+    const currentBalance = Number(user.balance);
+    if (currentBalance < designerPrice) {
+      return res.status(400).json({
+        error: 'INSUFFICIENT_BALANCE',
+        message: `Недостаточно средств на балансе для заказа дизайна. Стоимость: ${designerPrice.toLocaleString('ru-RU')} ₸, ваш баланс: ${currentBalance.toLocaleString('ru-RU')} ₸`,
+        requiredAmount: designerPrice,
+        currentBalance,
+        missingAmount: designerPrice - currentBalance,
+      });
+    }
+
+    const cleanName = (name && typeof name === 'string' ? name.trim() : `Макет от дизайнера (${widthMm}×${heightMm} мм)`).slice(0, 150);
+    const timestamp = Date.now().toString().slice(-6);
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const paymentNumber = `TB-DSN-${timestamp}-${randomSuffix}`;
+
+    const [updatedUser, newTemplate, payment] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { balance: { decrement: designerPrice } },
+      }),
+      prisma.userStickerTemplate.create({
+        data: {
+          userId: user.id,
+          name: cleanName,
+          category: category && Object.values(OrderCategory).includes(category) ? category : null,
+          widthMm: Number(widthMm) || 58,
+          heightMm: Number(heightMm) || 40,
+          elements: [],
+          isPaid: true,
+          paidAt: new Date(),
+        },
+      }),
+      prisma.onlinePayment.create({
+        data: {
+          paymentNumber,
+          userId: user.id,
+          type: OnlinePaymentType.STICKER_LAYOUT,
+          amount: designerPrice,
+          currency: 'KZT',
+          status: OnlinePaymentStatus.PAID,
+          description: `Заказ профессионального дизайна макета TANBOX: «${cleanName}»`,
+          metadata: {
+            service: 'DESIGNER_LAYOUT',
+            userNotes: description || '',
+            sampleFileUrl: sampleFileUrl || '',
+          },
+        },
+      }),
+    ]);
+
+    // Уведомление в Telegram отделу дизайна
+    telegram.sendOnlinePaymentNotification({
+      paymentNumber,
+      amount: designerPrice.toString(),
+      companyName: user.companyName,
+      email: user.email,
+      phone: user.phone,
+      type: 'STICKER_LAYOUT',
+      description: `🎨 ЗАКАЗ ДИЗАЙНА МАКЕТА (${designerPrice.toLocaleString('ru-RU')} ₸)\nРазмер: ${widthMm}×${heightMm} мм\nКлиент: ${user.companyName}\nПожелания: ${description || '—'}`,
+    }).catch(() => {});
+
+    return res.status(201).json({
+      message: 'Заказ на дизайн макета успешно оформлен! Дизайнер TANBOX подготовит макет и согласует его с вами.',
+      template: newTemplate,
+      newBalance: Number(updatedUser.balance),
+    });
+  } catch (error: any) {
+    console.error('orderDesignerLayout error:', error);
+    return res.status(500).json({ message: 'Ошибка при заказе макета: ' + (error.message || 'Внутренняя ошибка') });
   }
 };

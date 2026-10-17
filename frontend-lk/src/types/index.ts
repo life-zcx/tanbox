@@ -1,16 +1,20 @@
 export type OrderStatus = 'NEW' | 'PROCESSING' | 'PRINTING' | 'STICKERING' | 'COMPLETED' | 'CANCELLED';
-export type OrderCategory =
-  | 'SHOES'
-  | 'TEXTILE'
-  | 'MEDICINE'
-  | 'WATER'
-  | 'TOBACCO'
-  | 'BEER'
-  | 'OILS'
-  | 'DIETARY_SUPPLEMENTS'
-  | 'JEWELRY'
-  | 'SAIGA'
-  | 'OTHER';
+
+export const OrderCategory = {
+  SHOES: 'SHOES',
+  TEXTILE: 'TEXTILE',
+  MEDICINE: 'MEDICINE',
+  WATER: 'WATER',
+  TOBACCO: 'TOBACCO',
+  BEER: 'BEER',
+  OILS: 'OILS',
+  DIETARY_SUPPLEMENTS: 'DIETARY_SUPPLEMENTS',
+  JEWELRY: 'JEWELRY',
+  SAIGA: 'SAIGA',
+  OTHER: 'OTHER',
+} as const;
+
+export type OrderCategory = (typeof OrderCategory)[keyof typeof OrderCategory];
 export type TariffType = 'DIGITAL' | 'PRINT' | 'STANDARD' | 'PRO';
 
 export interface UserProfile {
@@ -81,6 +85,8 @@ export interface UserStickerTemplate {
   heightMm: number;
   elements: any[];
   previewUrl?: string | null;
+  isPaid?: boolean;
+  paidAt?: string | null;
   sourceOrderId?: string | null;
   createdAt: string;
   updatedAt: string;

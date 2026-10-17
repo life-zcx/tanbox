@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useOrders } from '../hooks/useOrders';
 import { useAuth } from '../hooks/useAuth';
-import { FileText, Cpu, CheckCircle2, ArrowRight, Wallet } from 'lucide-react';
-import { StatusBadge, PageHeader } from '@shared';
+import { ArrowRight } from 'lucide-react';
+import { StatusBadge } from '@shared';
 import { getCategoryLabel } from '../data/categories';
 
 export const DashboardPage: React.FC = () => {
@@ -19,55 +19,43 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title="Обзор и Статистика"
-        description="Сводные метрики, статус выгрузок в ИС Танба и активные заказы организации"
-        action={
-          <Link
-            to="/orders/new"
-            className="hidden sm:inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs px-5 py-3 rounded-2xl shadow-sm transition-all active:scale-95"
-          >
-            + Создать заказ
-          </Link>
-        }
-      />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Всего заказов</span>
-            <FileText className="w-4 h-4 text-gray-400" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white border border-gray-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          <div className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2">
+            Всего заказов
           </div>
-          <p className="text-2xl font-extrabold text-[#111827]">{totalOrders}</p>
+          <div className="text-2xl font-black text-[#111827] font-mono">
+            {totalOrders}
+          </div>
         </div>
 
-        <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Заказов в работе</span>
-            <CheckCircle2 className="w-4 h-4 text-gray-400" />
+        <div className="bg-white border border-gray-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          <div className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2">
+            Заказов в работе
           </div>
-          <p className="text-2xl font-extrabold text-[#111827]">{activeOrders}</p>
+          <div className="text-2xl font-black text-[#111827] font-mono">
+            {activeOrders}
+          </div>
         </div>
 
-        <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Сгенерировано кодов</span>
-            <Cpu className="w-4 h-4 text-gray-400" />
+        <div className="bg-white border border-gray-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          <div className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2">
+            Сгенерировано кодов
           </div>
-          <p className="text-2xl font-extrabold text-[#111827]">
+          <div className="text-2xl font-black text-[#111827] font-mono">
             {totalCodesCount.toLocaleString('ru-RU')} <span className="text-xs font-semibold text-[#64748B]">шт.</span>
-          </p>
+          </div>
         </div>
 
-        <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Сумма заказов</span>
-            <Wallet className="w-4 h-4 text-gray-400" />
+        <div className="bg-white border border-gray-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          <div className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2">
+            Сумма заказов
           </div>
-          <p className="text-2xl font-extrabold text-[#111827]">
-            {totalAmount.toLocaleString('ru-RU')} <span className="text-xs font-semibold text-[#64748B]">₸</span>
-          </p>
+          <div className="text-2xl font-black text-[#111827] font-mono">
+            {totalAmount.toLocaleString('ru-RU')} ₸
+          </div>
         </div>
       </div>
 
@@ -105,7 +93,7 @@ export const DashboardPage: React.FC = () => {
                     >
                       {ord.orderNumber}
                     </Link>
-                    <StatusBadge status={ord.status} tariffType={ord.tariffType} />
+                    <StatusBadge status={ord.status} tariffType={ord.tariffType} paymentStatus={ord.paymentStatus} />
                   </div>
                   <div className="flex items-center justify-between text-xs text-[#64748B]">
                     <span className="font-semibold text-[#111827]">{getCategoryLabel(ord.category)}</span>
@@ -144,7 +132,7 @@ export const DashboardPage: React.FC = () => {
                       <td className="py-3.5 px-4 text-[#475569]">{ord.tariffType}</td>
                       <td className="py-3.5 px-4 font-extrabold text-[#111827]">{ord.itemsCount.toLocaleString()} шт</td>
                       <td className="py-3.5 px-4 font-bold text-[#111827]">{ord.totalPrice.toLocaleString()} ₸</td>
-                      <td className="py-3.5 px-4"><StatusBadge status={ord.status} /></td>
+                      <td className="py-3.5 px-4"><StatusBadge status={ord.status} tariffType={ord.tariffType} paymentStatus={ord.paymentStatus} /></td>
                     </tr>
                   ))}
                 </tbody>

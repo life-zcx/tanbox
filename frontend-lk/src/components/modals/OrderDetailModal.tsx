@@ -34,7 +34,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
           <div>
             <div className="flex items-center gap-3">
               <h3 className="text-2xl font-black text-black">{order.orderNumber}</h3>
-              <StatusBadge status={order.status} />
+              <StatusBadge status={order.status} tariffType={order.tariffType} paymentStatus={order.paymentStatus} />
             </div>
             <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5" /> Создан: {new Date(order.createdAt).toLocaleDateString('ru-RU')}
@@ -79,6 +79,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
                 const SERVICE_NAMES: Record<string, string> = {
                   ON_SITE_STICKERING: 'Стикеровка на складе',
                   STICKER_LAYOUT_DESIGN: 'Разработка макета стикера',
+                  STICKER_LAYOUT_APPROVAL: 'Согласование макета стикера',
                   URGENT_PROCESSING: 'Срочное исполнение (24ч)',
                   EXPRESS_DELIVERY: 'Экспресс-доставка рулонов',
                   SSCC_AGGREGATION: 'SSCC Агрегация коробов',
@@ -193,9 +194,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
               )}
               {parsed.address && (
                 <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#111827] uppercase tracking-wider">
-                    <MapPin className="w-3.5 h-3.5 text-[#0082FB]" />
-                    <span>Адрес склада в РК:</span>
+                  <div className="text-xs font-bold text-[#111827] uppercase tracking-wider">
+                    Адрес склада в РК:
                   </div>
                   <div className="text-xs font-semibold text-[#111827] bg-[#F8FAFC] p-3 rounded-xl border border-gray-200 leading-relaxed">
                     {parsed.address}
@@ -205,9 +205,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
 
               {parsed.clientNote && (
                 <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#111827] uppercase tracking-wider">
-                    <FileText className="w-3.5 h-3.5 text-[#64748B]" />
-                    <span>Примечание клиента:</span>
+                  <div className="text-xs font-bold text-[#111827] uppercase tracking-wider">
+                    Примечание клиента:
                   </div>
                   <div className="text-xs text-[#334155] bg-[#F8FAFC] p-3 rounded-xl border border-gray-200 leading-relaxed whitespace-pre-wrap">
                     {parsed.clientNote}

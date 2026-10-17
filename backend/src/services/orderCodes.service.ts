@@ -3,6 +3,7 @@ import fs from 'fs';
 import { prisma } from '../config/db';
 import { CodeItemStatus } from '@prisma/client';
 import { getClientOrderStartIndex, reindexClientOrders } from '../utils/orderNumbering';
+import { advanceOrderStatus } from '../utils/orderLifecycle';
 
 export function parseCodesFile(raw: string): { headers: string[]; rows: Record<string, string>[] } {
   const content = raw.replace(/^\uFEFF/, '').trim();
@@ -292,6 +293,9 @@ export const attachCodesToOrder = async (
       itemsCount: items.length > 0 ? items.length : undefined,
     },
   });
+
+  // Advance order lifecycle status (e.g. NEW -> PROCESSING or COMPLETED if DIGITAL & paid)
+  await advanceOrderStatus(order.id, 'CODES_ATTACHED').catch(() => {});
 
   return { count: items.length, filePath: targetFilePath, relativeUrl };
 };

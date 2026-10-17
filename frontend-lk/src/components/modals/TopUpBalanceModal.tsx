@@ -1,42 +1,75 @@
-import React, { useState } from 'react';
-import { X, CreditCard, ShieldCheck, ArrowRight, Loader2, Wallet } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  X,
+  ArrowRight,
+  Loader2,
+  Wallet,
+} from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { useNavigate } from 'react-router-dom';
 
 interface TopUpBalanceModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentBalance?: number;
+  initialAmount?: number;
+  initialTab?: 'topup' | 'history';
   onSuccess?: () => void;
 }
 
-const PRESET_AMOUNTS = [5000, 10000, 25000, 50000, 100000];
+const PRESET_AMOUNTS = [1000, 5000, 10000, 25000, 50000, 100000];
 
 export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
   isOpen,
   onClose,
   currentBalance = 0,
+  initialAmount,
+  initialTab = 'topup',
 }) => {
-  const [selectedAmount, setSelectedAmount] = useState<number>(10000);
-  const [customAmount, setCustomAmount] = useState<string>('');
-  const [isCustom, setIsCustom] = useState<boolean>(false);
+  const navigate = useNavigate();
+  const [amountInput, setAmountInput] = useState<string>(
+    initialAmount ? initialAmount.toLocaleString('ru-RU') : '5 000'
+  );
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      if (initialTab === 'history') {
+        onClose();
+        navigate('/payments');
+        return;
+      }
+      if (initialAmount) {
+        setAmountInput(initialAmount.toLocaleString('ru-RU'));
+      } else if (!amountInput) {
+        setAmountInput('5 000');
+      }
+      setError(null);
+    }
+  }, [isOpen, initialTab, initialAmount, navigate, onClose]);
+
   if (!isOpen) return null;
 
-  const effectiveAmount = isCustom ? Number(customAmount) : selectedAmount;
+  const effectiveAmount = parseInt(amountInput.replace(/\s/g, ''), 10) || 0;
   const isAmountValid = effectiveAmount >= 500;
 
   const handleSelectPreset = (amount: number) => {
-    setSelectedAmount(amount);
-    setIsCustom(false);
+    setAmountInput(amount.toLocaleString('ru-RU'));
     setError(null);
   };
 
-  const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, '');
-    setCustomAmount(val);
-    setIsCustom(true);
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    if (!raw) {
+      setAmountInput('');
+      setError(null);
+      return;
+    }
+    const num = parseInt(raw, 10);
+    if (num > 50000000) return;
+    setAmountInput(num.toLocaleString('ru-RU'));
     setError(null);
   };
 
@@ -67,10 +100,10 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-gray-100 space-y-6 animate-in zoom-in-95 duration-150 relative"
+        className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-gray-100 space-y-5 animate-in zoom-in-95 duration-150 relative max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -81,7 +114,7 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-extrabold text-[#111827]">Пополнение баланса</h3>
-              <p className="text-xs text-[#64748B]">Лицевой счет в системе TANBOX</p>
+              <p className="text-xs text-[#64748B]">Моментальное зачисление средств на лицевой счет</p>
             </div>
           </div>
           <button
@@ -93,7 +126,7 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
         </div>
 
         {/* Current Balance Card */}
-        <div className="bg-[#F8FAFC] border border-gray-200/80 rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-[#F8FAFC] border border-gray-200/80 rounded-2xl p-4 flex items-center justify-between shrink-0">
           <div>
             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
               Текущий остаток
@@ -112,93 +145,85 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
           </div>
         </div>
 
-        {/* Amount Selector */}
-        <div className="space-y-3">
-          <label className="text-xs font-bold text-[#111827] uppercase tracking-wider block">
-            Выберите сумму пополнения
-          </label>
-          <div className="grid grid-cols-3 gap-2">
-            {PRESET_AMOUNTS.map((amt) => (
-              <button
-                key={amt}
-                type="button"
-                onClick={() => handleSelectPreset(amt)}
-                className={`py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                  !isCustom && selectedAmount === amt
-                    ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-md shadow-[#0082FB]/20'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50/40'
-                }`}
-              >
-                {amt.toLocaleString('ru-RU')} ₸
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setIsCustom(true)}
-              className={`py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
-                isCustom
-                  ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-md shadow-[#0082FB]/20'
-                  : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50/40'
-              }`}
-            >
-              Другая сумма
-            </button>
-          </div>
+        {/* TOPUP FORM */}
+        <div className="space-y-5 overflow-y-auto pr-1">
+          {/* Amount input & quick presets */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
+                Сумма пополнения
+              </label>
+              <span className="text-[11px] font-semibold text-gray-400">
+                мин. 500 ₸
+              </span>
+            </div>
 
-          {isCustom && (
-            <div className="relative pt-1 animate-in fade-in duration-100">
+            {/* Input field */}
+            <div className="relative">
               <input
                 type="text"
-                value={customAmount}
-                onChange={handleCustomChange}
-                placeholder="Введите сумму (от 500 ₸)"
-                className="w-full py-2.5 px-3.5 pr-10 bg-white border border-gray-300 rounded-xl text-sm font-bold text-[#111827] focus:outline-none focus:border-[#0082FB]"
+                inputMode="numeric"
+                value={amountInput}
+                onChange={handleAmountChange}
+                placeholder="5 000"
+                className="w-full text-xl sm:text-2xl font-black text-[#111827] bg-white border border-gray-300 focus:border-[#0082FB] rounded-2xl py-3 px-4 pr-12 transition-all outline-none"
                 autoFocus
               />
-              <span className="absolute right-3.5 top-3.5 text-xs font-bold text-gray-400">₸</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 pointer-events-none">
+                ₸
+              </span>
             </div>
-          )}
-        </div>
 
-        {/* Security & Acquiring Badges */}
-        <div className="space-y-2 pt-2">
-          <div className="flex items-center justify-between px-2 py-1.5 rounded-xl bg-gray-50 border border-gray-100 text-[11px] text-[#64748B]">
-            <div className="flex items-center gap-1.5 font-medium">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>Шлюз Freedom Pay • 3D-Secure 2.0</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-800">Visa / Mastercard</span>
+            {/* Presets grid */}
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {PRESET_AMOUNTS.map((amt) => {
+                const isActive = effectiveAmount === amt;
+                return (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => handleSelectPreset(amt)}
+                    className={`py-2 px-3 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                      isActive
+                        ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-sm shadow-[#0082FB]/20'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50/40'
+                    }`}
+                  >
+                    {amt.toLocaleString('ru-RU')} ₸
+                  </button>
+                );
+              })}
             </div>
           </div>
-        </div>
 
-        {error && (
-          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold">
-            {error}
-          </div>
-        )}
-
-        {/* Action Button */}
-        <button
-          type="button"
-          onClick={handleTopUp}
-          disabled={loading || !isAmountValid}
-          className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-[#0082FB] hover:bg-[#0070DA] disabled:opacity-50 text-white rounded-2xl font-extrabold text-sm shadow-md shadow-[#0082FB]/20 transition-all cursor-pointer active:scale-95"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Переход на платежный шлюз...</span>
-            </>
-          ) : (
-            <>
-              <span>Оплатить {effectiveAmount ? `${effectiveAmount.toLocaleString('ru-RU')} ₸` : ''} картой</span>
-              <ArrowRight className="w-4 h-4" />
-            </>
+          {error && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold">
+              {error}
+            </div>
           )}
-        </button>
+
+          {/* Action Button */}
+          <button
+            type="button"
+            onClick={handleTopUp}
+            disabled={loading || !isAmountValid}
+            className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-[#0082FB] hover:bg-[#0070DA] disabled:opacity-50 text-white rounded-2xl font-extrabold text-sm shadow-md shadow-[#0082FB]/20 transition-all cursor-pointer active:scale-95"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Переход на платежный шлюз...</span>
+              </>
+            ) : (
+              <>
+                <span>Оплатить {effectiveAmount > 0 ? `${effectiveAmount.toLocaleString('ru-RU')} ₸` : ''} картой</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

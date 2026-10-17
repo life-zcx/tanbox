@@ -40,6 +40,7 @@ import {
   CheckCircle,
   Settings,
   CreditCard,
+  ExternalLink,
 } from 'lucide-react';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
 import RollSplitModal from '../components/modals/RollSplitModal';
@@ -47,6 +48,7 @@ import { TelegramNotificationsModal } from '../components/modals/TelegramNotific
 import { ConnectMarkirovkaModal } from '../components/modals/ConnectMarkirovkaModal';
 import { OperationModal } from '../components/markirovka/OperationModal';
 import { MarkirovkaOpChoice } from '../components/markirovka/MarkirovkaOperationsButton';
+import { PaymentChoiceModal } from '../components/modals/PaymentChoiceModal';
 
 
 interface StepConfig {
@@ -57,30 +59,30 @@ interface StepConfig {
 
 const TARIFF_STEPS: Record<string, StepConfig[]> = {
   DIGITAL: [
-    { key: 'NEW', title: 'Создан', desc: 'Файл кодов проверен' },
-    { key: 'PROCESSING', title: 'В обработке', desc: 'Сверка кодов и реквизитов' },
-    { key: 'PRINTING', title: 'Генерация кодов', desc: 'Вёрстка макетов Data Matrix' },
-    { key: 'STICKERING', title: 'Формирование файлов', desc: 'Подготовка PDF рулонов / CSV' },
-    { key: 'COMPLETED', title: 'Готов к выгрузке', desc: 'Файлы доступны для скачивания' },
+    { key: 'NEW', title: 'Оформление и оплата', desc: 'Заказ создан, оплата с баланса или картой' },
+    { key: 'PROCESSING', title: 'Коды маркировки', desc: 'Эмиссия в ИС МПТ или загрузка CSV' },
+    { key: 'PRINTING', title: 'Генерация макетов', desc: 'Вёрстка PDF Data Matrix' },
+    { key: 'STICKERING', title: 'Подготовка файлов', desc: 'Сборка и валидация архива' },
+    { key: 'COMPLETED', title: 'Готов к скачиванию', desc: 'Файлы готовы + ввод в оборот ИС МПТ' },
   ],
   PRINT: [
-    { key: 'NEW', title: 'Создан', desc: 'Файл кодов проверен' },
-    { key: 'PROCESSING', title: 'В обработке', desc: 'Подготовка макета к печати' },
+    { key: 'NEW', title: 'Оформление и оплата', desc: 'Заказ создан, оплата партии' },
+    { key: 'PROCESSING', title: 'Подготовка макета', desc: 'Проверка кодов и шаблона печати' },
     { key: 'PRINTING', title: 'Печать рулонов', desc: 'Термотрансферная печать 58×40' },
-    { key: 'STICKERING', title: 'Упаковка партии', desc: 'Контроль и упаковка рулонов' },
-    { key: 'COMPLETED', title: 'Готов к выдаче', desc: 'Рулоны готовы к отгрузке' },
+    { key: 'STICKERING', title: 'Упаковка партии', desc: 'Контроль качества и фасовка рулонов' },
+    { key: 'COMPLETED', title: 'Готов к выдаче', desc: 'Рулоны готовы к отгрузке / самовывозу' },
   ],
   STANDARD: [
-    { key: 'NEW', title: 'Создан', desc: 'Файл кодов проверен' },
-    { key: 'PROCESSING', title: 'В обработке', desc: 'Подготовка и планирование выезда' },
-    { key: 'PRINTING', title: 'Печать кодов', desc: 'Печать этикеток партии' },
+    { key: 'NEW', title: 'Оформление и оплата', desc: 'Заказ создан, оплата услуг' },
+    { key: 'PROCESSING', title: 'Подготовка', desc: 'Проверка кодов и планирование выезда' },
+    { key: 'PRINTING', title: 'Печать этикеток', desc: 'Печать партии маркировки' },
     { key: 'STICKERING', title: 'Стикеровка', desc: 'Оклейка товаров на складе в РК' },
     { key: 'COMPLETED', title: 'Выполнен', desc: 'Ввод в оборот и отчетность' },
   ],
   PRO: [
-    { key: 'NEW', title: 'Создан', desc: 'Файл кодов проверен' },
+    { key: 'NEW', title: 'Оформление и оплата', desc: 'Заказ создан, оплата услуг' },
     { key: 'PROCESSING', title: 'Сверка и приемка', desc: 'Сверка артикулов и брак-контроль' },
-    { key: 'PRINTING', title: 'Печать и стикеровка', desc: 'Маркировка единиц товара' },
+    { key: 'PRINTING', title: 'Печать и оклейка', desc: 'Маркировка единиц товара' },
     { key: 'STICKERING', title: 'SSCC Агрегация', desc: 'Формирование коробов и паллет' },
     { key: 'COMPLETED', title: 'Выполнен', desc: 'Партия агрегирована в Танба' },
   ],
@@ -157,6 +159,7 @@ export const OrderDetailPage: React.FC = () => {
   const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
   const [triggeringAsync, setTriggeringAsync] = useState<boolean>(false);
   const [isPayingOnline, setIsPayingOnline] = useState<boolean>(false);
+  const [isPaymentChoiceOpen, setIsPaymentChoiceOpen] = useState<boolean>(false);
   const [pdfStatus, setPdfStatus] = useState<{
     isGenerating: boolean;
     activeJob?: any;
@@ -242,8 +245,8 @@ export const OrderDetailPage: React.FC = () => {
           setOrder(res.data.order);
         }
       })
-      .catch((err) => {
-        console.warn('[Auto NKT Sync] Warning:', err);
+      .catch(() => {
+        // Silent fallback when NKT sync is disabled or unavailable
       });
   }, [order?.id, order?.positions]);
 
@@ -317,33 +320,33 @@ export const OrderDetailPage: React.FC = () => {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const fetchOrderDetail = async () => {
-      if (!id) return;
-      setLoading(true);
+  const fetchOrderDetail = async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const res = await apiClient.get(`/orders/${id}`);
+      setOrder(res.data);
+      setError(null);
+    } catch (err: any) {
+      // Fallback: try fetching all orders and finding by id if single GET fails
       try {
-        const res = await apiClient.get(`/orders/${id}`);
-        setOrder(res.data);
-        setError(null);
-      } catch (err: any) {
-        // Fallback: try fetching all orders and finding by id if single GET fails
-        try {
-          const listRes = await apiClient.get('/orders');
-          const found = (listRes.data as OrderItem[]).find((o) => o.id === id || o.orderNumber === id);
-          if (found) {
-            setOrder(found);
-            setError(null);
-          } else {
-            setError('Заказ не найден');
-          }
-        } catch {
-          setError('Не удалось загрузить данные заказа');
+        const listRes = await apiClient.get('/orders');
+        const found = (listRes.data as OrderItem[]).find((o) => o.id === id || o.orderNumber === id);
+        if (found) {
+          setOrder(found);
+          setError(null);
+        } else {
+          setError('Заказ не найден');
         }
-      } finally {
-        setLoading(false);
+      } catch {
+        setError('Не удалось загрузить данные заказа');
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchOrderDetail();
   }, [id]);
 
@@ -982,8 +985,8 @@ export const OrderDetailPage: React.FC = () => {
   } else if (!isPrintAllowedByAdmin) {
     printBlockReason =
       tariffKey === 'DIGITAL'
-        ? 'Ожидается подтверждение оплаты администратором для открытия доступа к выгрузке файлов.'
-        : 'Ожидается подтверждение оплаты администратором для открытия доступа к печати партии.';
+        ? 'Ожидается оплата заказа для открытия доступа к выгрузке файлов.'
+        : 'Ожидается оплата заказа для открытия доступа к печати партии.';
   }
 
   const isLayoutApproved = isApprovedByClient;
@@ -1016,7 +1019,7 @@ export const OrderDetailPage: React.FC = () => {
   const getStepIndex = (st: string) => {
     switch (st) {
       case 'NEW':
-        return 0;
+        return order?.paymentStatus === 'PAID' ? 1 : 0;
       case 'PROCESSING':
         return 1;
       case 'PRINTING':
@@ -1066,7 +1069,12 @@ export const OrderDetailPage: React.FC = () => {
           <div className="space-y-1.5">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-black text-[#111827] tracking-tight">{order.orderNumber}</h1>
-              <StatusBadge status={order.status} tariffType={order.tariffType} />
+              <StatusBadge
+                status={order.status}
+                tariffType={order.tariffType}
+                paymentStatus={order.paymentStatus}
+                hasUtilisationReport={Boolean((order as any).markirovkaReports?.some((r: any) => r.status === 'ACCEPTED'))}
+              />
             </div>
             <p className="text-xs text-[#64748B] flex items-center gap-2">
               <span className="flex items-center gap-1">
@@ -1283,8 +1291,9 @@ export const OrderDetailPage: React.FC = () => {
         <div className="pt-2">
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 relative">
             {STEPS.map((step, idx) => {
-              const isDone = idx < currentStepIdx || order.status === 'COMPLETED';
-              const isCurrent = idx === currentStepIdx && order.status !== 'COMPLETED';
+              const isOrderCompleted = order.status === 'COMPLETED';
+              const isDone = isOrderCompleted || idx < currentStepIdx || (idx === 0 && order.paymentStatus === 'PAID');
+              const isCurrent = !isOrderCompleted && idx === currentStepIdx;
 
               return (
                 <div
@@ -1471,6 +1480,7 @@ export const OrderDetailPage: React.FC = () => {
                     const SERVICE_NAMES: Record<string, string> = {
                       ON_SITE_STICKERING: 'Стикеровка на складе',
                       STICKER_LAYOUT_DESIGN: 'Разработка макета стикера',
+                      STICKER_LAYOUT_APPROVAL: 'Согласование макета стикера',
                       URGENT_PROCESSING: 'Срочное исполнение (24ч)',
                       EXPRESS_DELIVERY: 'Экспресс-доставка рулонов',
                       SSCC_AGGREGATION: 'SSCC Агрегация коробов',
@@ -1506,8 +1516,7 @@ export const OrderDetailPage: React.FC = () => {
                 <div className="pt-3 border-t border-gray-100 text-xs space-y-3">
                   {parsed.warehouseConditions && (
                     <div className="space-y-1.5">
-                      <span className="text-[#64748B] font-bold flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                        <Building2 className="w-3.5 h-3.5 text-[#0082FB]" />
+                      <span className="text-[#64748B] font-bold uppercase tracking-wider text-[11px] block">
                         Параметры склада:
                       </span>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
@@ -1535,8 +1544,7 @@ export const OrderDetailPage: React.FC = () => {
 
                   {parsed.address && (
                     <div className="space-y-1">
-                      <span className="text-[#64748B] font-bold flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                        <MapPin className="w-3.5 h-3.5 text-[#0082FB]" />
+                      <span className="text-[#64748B] font-bold uppercase tracking-wider text-[11px] block">
                         Адрес склада в РК:
                       </span>
                       <p className="text-[#111827] font-semibold bg-gray-50/70 p-3 rounded-xl border border-gray-200/70 leading-relaxed">
@@ -1547,8 +1555,7 @@ export const OrderDetailPage: React.FC = () => {
 
                   {parsed.clientNote && (
                     <div className="space-y-1">
-                      <span className="text-[#64748B] font-bold flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                        <FileText className="w-3.5 h-3.5 text-[#64748B]" />
+                      <span className="text-[#64748B] font-bold uppercase tracking-wider text-[11px] block">
                         Примечание клиента:
                       </span>
                       <p className="text-[#334155] bg-gray-50/70 p-3 rounded-xl border border-gray-200/70 leading-relaxed whitespace-pre-wrap">
@@ -1725,13 +1732,25 @@ export const OrderDetailPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setShowStickerModal(true)}
-                        className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[#0082FB] hover:text-[#0070DA] hover:underline cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5" /> Посмотреть макет в полном размере
-                      </button>
+                      <div className="mt-3 flex items-center justify-center gap-4 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => setShowStickerModal(true)}
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0082FB] hover:text-[#0070DA] hover:underline cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Посмотреть в полном размере
+                        </button>
+
+                        {((order as any)?.templateId || layoutElements.length > 0) && (
+                          <Link
+                            to={(order as any)?.templateId ? `/designer?templateId=${(order as any).templateId}` : '/designer'}
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-[#0082FB] hover:underline"
+                          >
+                            <ExternalLink className="w-3 h-3 text-gray-400" />
+                            <span>Открыть в Конструкторе</span>
+                          </Link>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
@@ -2114,22 +2133,34 @@ export const OrderDetailPage: React.FC = () => {
                   })()}
 
                   {!canPrintBatch && (
-                    <div className="mt-3 p-3.5 rounded-2xl border border-blue-200/90 bg-gradient-to-r from-blue-50/90 via-sky-50/40 to-white flex items-center gap-3.5 shadow-xs">
-                      <div className="w-8 h-8 rounded-xl bg-[#0082FB] text-white flex items-center justify-center shrink-0 shadow-xs">
-                        <Lock className="w-4 h-4 text-white" />
+                    <div className="mt-3 p-3.5 rounded-2xl border border-blue-200/90 bg-gradient-to-r from-blue-50/90 via-sky-50/40 to-white flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-xs">
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-[#0082FB] text-white flex items-center justify-center shrink-0 shadow-xs">
+                          <Lock className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-extrabold text-[#0B3A78] text-xs block">
+                            {!isApprovedByClient
+                              ? 'Печать партии заблокирована: макет ещё не утверждён'
+                              : 'Ожидается оплата заказа'}
+                          </span>
+                          <span className="text-[11px] text-[#334D6E] leading-relaxed block mt-0.5">
+                            {!isApprovedByClient
+                              ? 'Чтобы скачать полную партию этикеток или рулоны, сначала согласуйте дизайн макета в блоке выше.'
+                              : 'После поступления оплаты доступ к скачиванию рулонов и всей партии откроется автоматически.'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="font-extrabold text-[#0B3A78] text-xs block">
-                          {!isApprovedByClient
-                            ? 'Печать тиража заблокирована: макет ещё не утверждён'
-                            : 'Ожидается подтверждение оплаты администратором'}
-                        </span>
-                        <span className="text-[11px] text-[#334D6E] leading-relaxed block mt-0.5">
-                          {!isApprovedByClient
-                            ? 'Чтобы скачать полную партию этикеток или рулоны, сначала согласуйте дизайн макета в блоке выше.'
-                            : 'Администратор подтверждает условную оплату. После одобрения доступ к скачиванию рулонов и всей партии откроется автоматически.'}
-                        </span>
-                      </div>
+                      {isApprovedByClient && order.paymentStatus !== 'PAID' && (
+                        <button
+                          type="button"
+                          onClick={() => setIsPaymentChoiceOpen(true)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#0082FB] hover:bg-[#0070DA] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 self-start sm:self-auto"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>Оплатить {order.totalPrice.toLocaleString()} ₸</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </>
@@ -2226,6 +2257,7 @@ export const OrderDetailPage: React.FC = () => {
 
                 const SERVICE_NAMES: Record<string, string> = {
                   STICKER_LAYOUT_DESIGN: 'Разработка макета этикетки',
+                  STICKER_LAYOUT_APPROVAL: 'Согласование макета стикера',
                   SSCC_AGGREGATION: 'SSCC Агрегация коробов',
                   URGENT_PROCESSING: 'Срочное исполнение',
                   EXPRESS_DELIVERY: 'Экспресс-доставка рулонов',
@@ -2303,20 +2335,19 @@ export const OrderDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Online Payment via Freedom Pay */}
+              {/* Online Payment (Balance or Card) */}
               {order.paymentStatus !== 'PAID' && (
                 <div className="pt-3 border-t border-gray-100 space-y-2">
                   <button
                     type="button"
-                    onClick={handlePayOrderOnline}
-                    disabled={isPayingOnline}
-                    className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 bg-[#0082FB] hover:bg-[#0070DA] text-white rounded-xl text-xs font-extrabold shadow-md shadow-[#0082FB]/20 transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+                    onClick={() => setIsPaymentChoiceOpen(true)}
+                    className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
                   >
                     <CreditCard className="w-4 h-4" />
-                    <span>{isPayingOnline ? 'Переход к оплате...' : 'Оплатить картой онлайн'}</span>
+                    <span>Оплатить заказ ({order.totalPrice.toLocaleString()} ₸)</span>
                   </button>
                   <p className="text-[10px] text-gray-500 text-center font-medium">
-                    Freedom Pay • Мгновенное подтверждение и открытие печати
+                    С баланса ЛК или банковской картой онлайн (Freedom Pay)
                   </p>
                 </div>
               )}
@@ -2373,22 +2404,26 @@ export const OrderDetailPage: React.FC = () => {
 
             <div className="space-y-3 text-xs">
               <div>
-                <span className="text-[11px] font-bold text-[#64748B] block mb-1 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-gray-400" /> Склад / Адрес доставки:
+                <span className="text-[11px] font-bold text-[#64748B] block mb-1">
+                  Склад / Адрес доставки:
                 </span>
                 <p className="text-[#111827] font-semibold bg-gray-50/80 p-2.5 rounded-xl border border-gray-200/70">
-                  {parsedNotes.address || defaultWarehouse || 'Основной склад (г. Алматы)'}
+                  {order.tariffType === 'DIGITAL'
+                    ? 'Электронный заказ (выгрузка кодов в ЛК)'
+                    : parsedNotes.address || defaultWarehouse || 'Основной склад (г. Алматы)'}
                 </p>
               </div>
 
-              <div>
-                <span className="text-[11px] font-bold text-[#64748B] block mb-1 flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-gray-400" /> Примечание к заказу:
-                </span>
-                <p className="text-[#111827] font-medium bg-gray-50/80 p-2.5 rounded-xl border border-gray-200/70 leading-relaxed">
-                  {parsedNotes.clientNote || 'Без примечаний к заказу'}
-                </p>
-              </div>
+              {parsedNotes.clientNote && (
+                <div>
+                  <span className="text-[11px] font-bold text-[#64748B] block mb-1">
+                    Примечание к заказу:
+                  </span>
+                  <p className="text-[#111827] font-medium bg-gray-50/80 p-2.5 rounded-xl border border-gray-200/70 leading-relaxed whitespace-pre-wrap">
+                    {parsedNotes.clientNote}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -2630,6 +2665,36 @@ export const OrderDetailPage: React.FC = () => {
           </div>,
           document.body
         )}
+
+      {/* Payment Choice Modal (Balance or Card) */}
+      {order && isPaymentChoiceOpen && (
+        <PaymentChoiceModal
+          isOpen={isPaymentChoiceOpen}
+          onClose={() => setIsPaymentChoiceOpen(false)}
+          title="Оплата заказа"
+          itemTitle={`Заказ маркировки #${order.orderNumber}`}
+          itemSubtitle={`Тариф: ${TARIFF_NAMES[getTariffKey(order.tariffType)] || order.tariffType} • ${(order.itemsCount || order.positions?.reduce((acc, p) => acc + (p.quantity || 0), 0) || 0).toLocaleString('ru-RU')} шт.`}
+          amount={order.totalPrice}
+          onPayBalance={async () => {
+            await apiClient.post(`/orders/${order.id}/pay-balance`);
+          }}
+          onPayCard={async () => {
+            const res = await apiClient.post('/payments/init', {
+              type: 'ORDER',
+              orderId: order.id,
+              amount: order.totalPrice,
+            });
+            if (res.data?.redirectUrl) {
+              window.location.href = res.data.redirectUrl;
+            } else {
+              throw new Error(res.data?.message || 'Не удалось получить ссылку на оплату');
+            }
+          }}
+          onPaymentSuccess={() => {
+            fetchOrderDetail();
+          }}
+        />
+      )}
 
     </div>
   );

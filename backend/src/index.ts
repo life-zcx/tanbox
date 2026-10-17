@@ -1,3 +1,8 @@
+import dns from 'dns';
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {}
+
 import express from 'express';
 import path from 'path';
 import cors from 'cors';
@@ -19,6 +24,7 @@ import systemRoutes from './routes/system.routes';
 import markirovkaRoutes from './routes/markirovka.routes';
 import invoicesRoutes from './routes/invoices.routes';
 import paymentsRoutes from './routes/payments.routes';
+import supportRoutes from './routes/support.routes';
 import { logger } from './utils/logger';
 import { generalApiLimiter } from './middleware/rateLimiter';
 import { telegram } from './services/telegram.service';
@@ -158,6 +164,7 @@ app.use('/api/system', systemRoutes);
 app.use('/api/markirovka', markirovkaRoutes);
 app.use('/api/invoices', invoicesRoutes);
 app.use('/api/payments', paymentsRoutes);
+app.use('/api/support', supportRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

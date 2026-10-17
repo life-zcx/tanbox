@@ -6,6 +6,7 @@ import {
   updateInvoiceStatus,
   deleteInvoice,
   getInvoicePdf,
+  payInvoiceWithBalance,
 } from '../controllers/invoices.controller';
 import { authenticateJWT, requireAdmin } from '../middleware/auth.middleware';
 
@@ -19,6 +20,9 @@ router.get('/:id/pdf', authenticateJWT, getInvoicePdf);
 
 // View single invoice details
 router.get('/:id', authenticateJWT, getInvoiceById);
+
+// Client: Pay invoice using balance
+router.post('/:id/pay-balance', authenticateJWT, payInvoiceWithBalance);
 
 // Admin-only operations
 router.post('/', authenticateJWT, requireAdmin, createInvoice);

@@ -71,6 +71,7 @@ export async function computeOrderPricing(params: CalculationParams): Promise<Pr
   // Extra services exact additions
   const ssccPricePerItem = dbSettings ? Number(dbSettings.ssccPrice) : 5.0;
   const stickerLayoutPrice = dbSettings ? Number(dbSettings.stickerLayoutPrice) : 5000.0;
+  const selfLayoutPrice = dbSettings ? Number(dbSettings.selfLayoutPrice) : 1000.0;
   const urgentPercent = dbSettings ? Number(dbSettings.urgentPercent) : 20.0;
   const expressDeliveryPrice = dbSettings ? Number(dbSettings.expressDeliveryPrice) : 15000.0;
 
@@ -85,6 +86,10 @@ export async function computeOrderPricing(params: CalculationParams): Promise<Pr
 
   if (extraServices.includes('STICKER_LAYOUT_DESIGN')) {
     flatAdditions += stickerLayoutPrice;
+  }
+
+  if (extraServices.includes('STICKER_LAYOUT_APPROVAL')) {
+    flatAdditions += selfLayoutPrice;
   }
 
   if (extraServices.includes('EXPRESS_DELIVERY')) {

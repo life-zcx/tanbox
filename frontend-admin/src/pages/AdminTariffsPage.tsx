@@ -35,6 +35,7 @@ const MARKET_BENCHMARKS: {
   settings: {
     ssccPrice: 5,
     stickerLayoutPrice: 5000,
+    selfLayoutPrice: 1000,
     urgentPercent: 20,
     expressDeliveryPrice: 15000,
     volumeTier1: 20000,
@@ -47,6 +48,7 @@ export const AdminTariffsPage: React.FC = () => {
   const [pricingSettings, setPricingSettings] = useState<PricingSettingsItem>({
     ssccPrice: 5,
     stickerLayoutPrice: 5000,
+    selfLayoutPrice: 1000,
     urgentPercent: 20,
     expressDeliveryPrice: 15000,
     volumeTier1: 20000,
@@ -97,6 +99,7 @@ export const AdminTariffsPage: React.FC = () => {
         setPricingSettings({
           ssccPrice: Number(res.data.pricingSettings.ssccPrice) || 5,
           stickerLayoutPrice: Number(res.data.pricingSettings.stickerLayoutPrice) || 5000,
+          selfLayoutPrice: Number(res.data.pricingSettings.selfLayoutPrice) || 1000,
           urgentPercent: Number(res.data.pricingSettings.urgentPercent) || 20,
           expressDeliveryPrice: Number(res.data.pricingSettings.expressDeliveryPrice) || 15000,
           volumeTier1: Number(res.data.pricingSettings.volumeTier1) || 20000,
@@ -186,6 +189,7 @@ export const AdminTariffsPage: React.FC = () => {
       const payloadSettings = {
         ssccPrice: Math.max(0, Number(pricingSettings.ssccPrice) || 0),
         stickerLayoutPrice: Math.max(0, Number(pricingSettings.stickerLayoutPrice) || 0),
+        selfLayoutPrice: Math.max(0, Number(pricingSettings.selfLayoutPrice) || 0),
         urgentPercent: Math.max(0, Number(pricingSettings.urgentPercent) || 0),
         expressDeliveryPrice: Math.max(0, Number(pricingSettings.expressDeliveryPrice) || 0),
         volumeTier1: Math.max(100, Math.floor(Number(pricingSettings.volumeTier1) || 20000)),
@@ -215,6 +219,7 @@ export const AdminTariffsPage: React.FC = () => {
         setPricingSettings({
           ssccPrice: Number(res.data.pricingSettings.ssccPrice) || 0,
           stickerLayoutPrice: Number(res.data.pricingSettings.stickerLayoutPrice) || 0,
+          selfLayoutPrice: Number(res.data.pricingSettings.selfLayoutPrice) || 0,
           urgentPercent: Number(res.data.pricingSettings.urgentPercent) || 0,
           expressDeliveryPrice: Number(res.data.pricingSettings.expressDeliveryPrice) || 0,
           volumeTier1: Number(res.data.pricingSettings.volumeTier1) || 20000,
@@ -489,10 +494,10 @@ export const AdminTariffsPage: React.FC = () => {
             <p className="text-[10px] text-gray-500">Надбавка за код групповой тары</p>
           </div>
 
-          {/* Layout design */}
+          {/* Designer Layout */}
           <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3.5 space-y-1.5">
             <label className="text-[11px] font-extrabold text-gray-700 block">
-              Разработка макета стикера
+              Разработка макета дизайнером
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -505,7 +510,26 @@ export const AdminTariffsPage: React.FC = () => {
               />
               <span className="text-xs font-bold text-gray-500 shrink-0">₸</span>
             </div>
-            <p className="text-[10px] text-gray-500">Фиксированная разовая плата</p>
+            <p className="text-[10px] text-gray-500">Индивидуальный дизайн специалистом TANBOX</p>
+          </div>
+
+          {/* Self Layout in Constructor */}
+          <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3.5 space-y-1.5">
+            <label className="text-[11px] font-extrabold text-gray-700 block">
+              Конструктор макета клиентом
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                step={100}
+                value={pricingSettings.selfLayoutPrice ?? 1000}
+                onChange={(e) => handleSettingsChange('selfLayoutPrice', e.target.value)}
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-black text-black focus:outline-none focus:border-[#0082FB]"
+              />
+              <span className="text-xs font-bold text-gray-500 shrink-0">₸</span>
+            </div>
+            <p className="text-[10px] text-gray-500">Разовая плата за утверждение и разблокировку макета</p>
           </div>
 
           {/* Urgent surcharge */}

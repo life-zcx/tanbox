@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useOrders } from '../hooks/useOrders';
 import { OrderItem, OrderStatus } from '../types';
-import { StatusBadge, PageHeader } from '@shared';
+import { StatusBadge } from '@shared';
 import { Search, Eye, Filter, ChevronDown, Plus, Send, Bell } from 'lucide-react';
 import { getCategoryLabel } from '../data/categories';
 import { apiClient } from '../api/client';
@@ -46,70 +46,65 @@ export const OrdersPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      
-      <PageHeader
-        title="Мои заказы"
-        description="Реестр и отслеживание статуса всех партий маркировки ИС Танба"
-        action={
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setIsTgModalOpen(true)}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-sm active:scale-95 ${
-                isTgLinked
-                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
-                  : 'bg-[#0088cc]/10 hover:bg-[#0088cc]/20 text-[#0088cc] border border-[#0088cc]/30'
-              }`}
+      {/* Filter Bar with Actions */}
+      <div className="bg-white border border-gray-200/80 rounded-3xl p-4 sm:p-5 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 shadow-xs">
+        {/* Filters Left Side */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 flex-1">
+          {/* Status Dropdown Filter */}
+          <div className="relative w-full sm:w-60">
+            <div className="absolute left-3.5 top-3 pointer-events-none text-[#64748B] flex items-center gap-1.5 text-xs font-bold">
+              <Filter className="w-3.5 h-3.5 text-[#0082FB]" />
+              <span className="text-[#64748B]">Статус:</span>
+            </div>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-20 pr-8 py-2.5 text-xs font-bold text-[#111827] focus:outline-none focus:border-[#0082FB] appearance-none cursor-pointer"
             >
-              <Send className="w-4 h-4 shrink-0" />
-              <span>{isTgLinked ? 'Telegram активен' : 'Уведомления в Telegram'}</span>
-            </button>
-
-            <Link
-              to="/orders/new"
-              className="hidden sm:inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-500/20 active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Создать заказ</span>
-            </Link>
+              {Object.entries(STATUS_LABELS).map(([val, label]) => (
+                <option key={val} value={val}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 text-[#64748B] absolute right-3 top-3 pointer-events-none" />
           </div>
-        }
-      />
 
-      {/* Filter Bar */}
-      <div className="bg-white border border-gray-100 rounded-3xl p-5 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
-        
-        {/* Status Dropdown Filter */}
-        <div className="relative w-full md:w-64">
-          <div className="absolute left-3.5 top-3 pointer-events-none text-[#64748B] flex items-center gap-1.5 text-xs font-bold">
-            <Filter className="w-3.5 h-3.5 text-[#0082FB]" />
-            <span className="text-[#64748B]">Статус:</span>
+          {/* Search Input */}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-[#64748B] absolute left-3.5 top-3.5" />
+            <input
+              type="text"
+              placeholder="Поиск по номеру заказа..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-10 pr-3 py-2.5 text-xs font-medium focus:outline-none focus:border-[#0082FB]"
+            />
           </div>
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-20 pr-8 py-2.5 text-xs font-bold text-[#111827] focus:outline-none focus:border-[#0082FB] appearance-none cursor-pointer"
+        </div>
+
+        {/* Actions Right Side */}
+        <div className="flex items-center gap-2.5 shrink-0 self-end lg:self-auto">
+          <button
+            onClick={() => setIsTgModalOpen(true)}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-xs active:scale-95 cursor-pointer ${
+              isTgLinked
+                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
+                : 'bg-[#0088cc]/10 hover:bg-[#0088cc]/20 text-[#0088cc] border border-[#0088cc]/30'
+            }`}
           >
-            {Object.entries(STATUS_LABELS).map(([val, label]) => (
-              <option key={val} value={val}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="w-4 h-4 text-[#64748B] absolute right-3 top-3 pointer-events-none" />
-        </div>
+            <Send className="w-4 h-4 shrink-0" />
+            <span>{isTgLinked ? 'Telegram активен' : 'Уведомления в Telegram'}</span>
+          </button>
 
-        {/* Search Input */}
-        <div className="relative w-full md:w-64">
-          <Search className="w-4 h-4 text-[#64748B] absolute left-3.5 top-3.5" />
-          <input
-            type="text"
-            placeholder="Поиск по номеру заказа..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl pl-10 pr-3 py-2.5 text-xs font-medium focus:outline-none focus:border-[#0082FB]"
-          />
+          <Link
+            to="/orders/new"
+            className="inline-flex items-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Создать заказ</span>
+          </Link>
         </div>
-
       </div>
 
       {/* Orders List / Table */}
@@ -131,7 +126,7 @@ export const OrdersPage: React.FC = () => {
                     >
                       {ord.orderNumber}
                     </Link>
-                    <StatusBadge status={ord.status} tariffType={ord.tariffType} />
+                    <StatusBadge status={ord.status} tariffType={ord.tariffType} paymentStatus={ord.paymentStatus} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs text-[#64748B]">
@@ -159,10 +154,9 @@ export const OrdersPage: React.FC = () => {
                     </span>
                     <Link
                       to={`/orders/${ord.id}`}
-                      className="inline-flex items-center gap-1.5 bg-[#EBF5FF] text-[#0082FB] hover:bg-[#0082FB] hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all active:scale-95"
+                      className="inline-flex items-center bg-[#EBF5FF] text-[#0082FB] hover:bg-[#0082FB] hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all active:scale-95"
                     >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>Детали заказа</span>
+                      <span>Детали заказа →</span>
                     </Link>
                   </div>
                 </div>
@@ -199,13 +193,13 @@ export const OrdersPage: React.FC = () => {
                       <td className="py-4 px-5 text-[#475569]">{ord.tariffType}</td>
                       <td className="py-4 px-5 font-extrabold text-[#111827]">{ord.itemsCount.toLocaleString()}</td>
                       <td className="py-4 px-5 font-bold text-[#111827]">{ord.totalPrice.toLocaleString()} ₸</td>
-                      <td className="py-4 px-5"><StatusBadge status={ord.status} /></td>
+                      <td className="py-4 px-5"><StatusBadge status={ord.status} tariffType={ord.tariffType} paymentStatus={ord.paymentStatus} /></td>
                       <td className="py-4 px-5 text-right">
                         <Link
                           to={`/orders/${ord.id}`}
-                          className="inline-flex items-center gap-1.5 bg-[#EBF5FF] text-[#0082FB] hover:bg-[#0082FB] hover:text-white px-4 py-2 rounded-xl text-xs font-extrabold transition-all shadow-sm"
+                          className="inline-flex items-center bg-[#EBF5FF] text-[#0082FB] hover:bg-[#0082FB] hover:text-white px-4 py-2 rounded-xl text-xs font-extrabold transition-all shadow-sm"
                         >
-                          <Eye className="w-3.5 h-3.5" /> Детали
+                          <span>Детали →</span>
                         </Link>
                       </td>
                     </tr>

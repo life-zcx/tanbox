@@ -120,10 +120,10 @@ export const AdminOrdersPage: React.FC = () => {
                       </td>
                       <td className="py-4 px-4 text-xs text-gray-700">{ord.category}</td>
                       <td className="py-4 px-4 text-xs text-gray-700">{ord.tariffType}</td>
-                      <td className="py-4 px-4 font-extrabold text-black">{ord.itemsCount.toLocaleString()} шт</td>
-                      <td className="py-4 px-4 font-bold text-black">{ord.totalPrice.toLocaleString()} ₸</td>
+                      <td className="py-4 px-4 font-extrabold text-black">{Number(ord.itemsCount || 0).toLocaleString('ru-RU')} шт</td>
+                      <td className="py-4 px-4 font-bold text-black">{Number(ord.totalPrice || 0).toLocaleString('ru-RU')} ₸</td>
                       <td className="py-4 px-4">
-                        <StatusBadge status={ord.status} />
+                        <StatusBadge status={ord.status} tariffType={ord.tariffType} paymentStatus={ord.paymentStatus} />
                       </td>
                       <td className="py-4 px-4 text-right">
                         <Link

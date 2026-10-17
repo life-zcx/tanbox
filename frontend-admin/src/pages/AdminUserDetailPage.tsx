@@ -28,23 +28,34 @@ import {
   AlertTriangle,
   Layers,
   Clock,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  CreditCard,
 } from 'lucide-react';
-import { UserDetail } from '../types';
+import { UserDetail, BalanceHistoryItem } from '../types';
 import { apiClient } from '../api/client';
 import { useAdminAuth } from '../hooks/useAdminAuth';
 import { StatusBadge } from '@shared';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
 import { formatPhoneNumber, isValidPhoneNumber, getPhoneDigitsCount } from '../utils/phone';
+import { AdminAdjustBalanceModal } from '../components/modals/AdminAdjustBalanceModal';
 
 export const AdminUserDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { adminUser } = useAdminAuth();
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'templates'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'templates' | 'balance'>('profile');
   const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Balance adjustment modal & history
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState<boolean>(false);
+  const [balanceHistory, setBalanceHistory] = useState<BalanceHistoryItem[]>([]);
+  const [loadingBalanceHistory, setLoadingBalanceHistory] = useState<boolean>(false);
+  const [balanceFilter, setBalanceFilter] = useState<'ALL' | 'IN' | 'OUT'>('ALL');
 
   // Edit form state
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
@@ -147,9 +158,35 @@ export const AdminUserDetailPage: React.FC = () => {
     }
   };
 
+  const fetchBalanceHistory = async () => {
+    if (!id) return;
+    setLoadingBalanceHistory(true);
+    try {
+      const res = await apiClient.get(`/users/${id}/balance-history`);
+      setBalanceHistory(res.data?.history || []);
+    } catch (err) {
+      console.warn('Could not fetch balance history:', err);
+    } finally {
+      setLoadingBalanceHistory(false);
+    }
+  };
+
   useEffect(() => {
     fetchUser();
   }, [id]);
+
+  useEffect(() => {
+    if (activeTab === 'balance') {
+      fetchBalanceHistory();
+    }
+  }, [activeTab, id]);
+
+  const handleBalanceAdjustSuccess = (newBal: number) => {
+    setUserDetail((prev) => (prev ? { ...prev, balance: newBal } : null));
+    fetchBalanceHistory();
+    setSaveSuccessMsg(`Баланс клиента успешно обновлен. Текущий остаток: ${newBal.toLocaleString('ru-RU')} ₸`);
+    setTimeout(() => setSaveSuccessMsg(null), 4000);
+  };
 
   const handleCopyId = () => {
     if (!id) return;
@@ -322,9 +359,11 @@ export const AdminUserDetailPage: React.FC = () => {
     );
   }
 
-  const totalOrders = userDetail.orders?.length || 0;
-  const totalSpent = (userDetail.orders || []).reduce((sum, ord) => sum + (ord.totalPrice || 0), 0);
-  const totalTemplates = userDetail.stickerTemplates?.length || 0;
+  const totalOrders = userDetail._count?.orders ?? userDetail.orders?.length ?? 0;
+  const totalSpent = userDetail.totalSpent != null
+    ? Number(userDetail.totalSpent)
+    : (userDetail.orders || []).reduce((sum, ord) => sum + (Number(ord.totalPrice) || 0), 0);
+  const totalTemplates = userDetail._count?.stickerTemplates ?? userDetail.stickerTemplates?.length ?? 0;
 
   return (
     <div className="w-full space-y-6 pb-12">
@@ -470,8 +509,37 @@ export const AdminUserDetailPage: React.FC = () => {
           </div>
         )}
 
-        {/* 4 Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-6 border-t border-gray-100">
+        {/* 5 Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-6 pt-6 border-t border-gray-100">
+          {/* Card 1: Balance */}
+          <div className="bg-emerald-50/60 border border-emerald-200/90 rounded-2xl p-4 flex flex-col justify-between">
+            <div>
+              <div className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+                  Баланс ЛК
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsBalanceModalOpen(true)}
+                  className="text-[10px] font-black text-emerald-700 bg-emerald-100/80 hover:bg-emerald-200 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                >
+                  + Пополнить
+                </button>
+              </div>
+              <div className="text-xl font-black text-emerald-700 mt-1">
+                {Number(userDetail.balance || 0).toLocaleString('ru-RU')} ₸
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('balance')}
+              className="text-[10px] font-bold text-emerald-700 hover:underline mt-2 text-left cursor-pointer"
+            >
+              История операций →
+            </button>
+          </div>
+
           <div className="bg-gray-50/80 border border-gray-200/80 rounded-2xl p-4">
             <div className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
               <Package className="w-3.5 h-3.5 text-blue-600" />
@@ -519,7 +587,7 @@ export const AdminUserDetailPage: React.FC = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
+      <div className="flex items-center gap-2 border-b border-gray-200 pb-3 flex-wrap">
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
@@ -531,6 +599,19 @@ export const AdminUserDetailPage: React.FC = () => {
         >
           <Edit3 className="w-4 h-4" />
           Реквизиты и профиль
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('balance')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+            activeTab === 'balance'
+              ? 'bg-[#111827] text-white shadow-xs'
+              : 'bg-white text-gray-600 hover:text-black hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <Wallet className="w-4 h-4 text-emerald-600" />
+          Баланс и выписка ({Number(userDetail.balance || 0).toLocaleString('ru-RU')} ₸)
         </button>
 
         <button
@@ -873,10 +954,10 @@ export const AdminUserDetailPage: React.FC = () => {
                         {ord.itemsCount.toLocaleString('ru-RU')} шт.
                       </td>
                       <td className="py-3.5 px-4 text-right font-black text-emerald-600">
-                        {ord.totalPrice.toLocaleString('ru-RU')} ₸
+                        {Number(ord.totalPrice || 0).toLocaleString('ru-RU')} ₸
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <StatusBadge status={ord.status} />
+                        <StatusBadge status={ord.status} tariffType={ord.tariffType} paymentStatus={ord.paymentStatus} />
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <Link
@@ -1017,6 +1098,229 @@ export const AdminUserDetailPage: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 4: Balance & Transaction History */}
+      {activeTab === 'balance' && (
+        <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-100 pb-5">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-extrabold text-[#111827]">
+                  Баланс и выписка по операциям
+                </h2>
+                <span className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+                  {balanceHistory.length} записей
+                </span>
+              </div>
+              <p className="text-xs text-[#64748B] mt-1">
+                Полный аудит пополнений через эквайринг, оплат заказов и ручных корректировок администратора
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={fetchBalanceHistory}
+                disabled={loadingBalanceHistory}
+                className="p-2.5 text-gray-500 hover:text-black bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                title="Обновить выписку"
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingBalanceHistory ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsBalanceModalOpen(true)}
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-4 py-2.5 rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer"
+              >
+                <Wallet className="w-4 h-4" />
+                <span>Пополнить / Списать</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Current Balance Banner */}
+          <div className="bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">
+                Текущий баланс клиента в ЛК
+              </span>
+              <div className="text-3xl font-black text-emerald-700 mt-1 font-mono">
+                {Number(userDetail.balance || 0).toLocaleString('ru-RU')} ₸
+              </div>
+            </div>
+            <div className="text-xs text-emerald-900/80 max-w-md bg-white/70 backdrop-blur-xs border border-emerald-200/60 p-3 rounded-xl leading-relaxed">
+              💡 Средства с баланса списываются автоматически при выборе способа оплаты <strong>«С баланса кабинета»</strong> при оформлении или оплате заказа и макетов.
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setBalanceFilter('ALL')}
+              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                balanceFilter === 'ALL'
+                  ? 'bg-black text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Все операции ({balanceHistory.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setBalanceFilter('IN')}
+              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                balanceFilter === 'IN'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60'
+              }`}
+            >
+              Пополнения (+{balanceHistory.filter((i) => i.direction === 'IN').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setBalanceFilter('OUT')}
+              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                balanceFilter === 'OUT'
+                  ? 'bg-slate-800 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Списания и оплаты (-{balanceHistory.filter((i) => i.direction === 'OUT').length})
+            </button>
+          </div>
+
+          {/* Transactions List */}
+          {loadingBalanceHistory ? (
+            <div className="flex flex-col items-center justify-center py-16 space-y-2">
+              <RefreshCw className="w-6 h-6 text-emerald-600 animate-spin" />
+              <span className="text-xs font-bold text-gray-500">Загрузка выписки операций...</span>
+            </div>
+          ) : balanceHistory.filter((item) => balanceFilter === 'ALL' || item.direction === balanceFilter).length === 0 ? (
+            <div className="text-center py-16 text-gray-400 text-xs font-bold bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 space-y-2">
+              <Wallet className="w-8 h-8 text-gray-300 mx-auto" />
+              <div>Операций в выбранной категории пока нет.</div>
+            </div>
+          ) : (
+            <div className="border border-gray-200 rounded-2xl overflow-hidden">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
+                    <th className="py-3 px-4">Дата / Время</th>
+                    <th className="py-3 px-4">Транзакция</th>
+                    <th className="py-3 px-4">Тип операции</th>
+                    <th className="py-3 px-4 text-right">Сумма</th>
+                    <th className="py-3 px-4 text-center">Статус</th>
+                    <th className="py-3 px-4">Детали / Аудит</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {balanceHistory
+                    .filter((item) => balanceFilter === 'ALL' || item.direction === balanceFilter)
+                    .map((item) => {
+                      const isCredit = item.direction === 'IN';
+                      const meta = item.metadata || {};
+                      const isManual = Boolean(meta.manualByAdmin);
+
+                      return (
+                        <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3.5 px-4 text-gray-500 whitespace-nowrap">
+                            <div className="font-semibold text-gray-900">
+                              {new Date(item.createdAt).toLocaleDateString('ru-RU')}
+                            </div>
+                            <div className="text-[11px] text-gray-400 font-mono">
+                              {new Date(item.createdAt).toLocaleTimeString('ru-RU', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-bold text-gray-700 whitespace-nowrap">
+                            {item.paymentNumber}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-1.5">
+                              {isCredit ? (
+                                <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                                  <ArrowDownRight className="w-3.5 h-3.5" />
+                                </div>
+                              ) : (
+                                <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center shrink-0">
+                                  <ArrowUpRight className="w-3.5 h-3.5" />
+                                </div>
+                              )}
+                              <div>
+                                <div className="font-extrabold text-gray-900">
+                                  {isManual
+                                    ? isCredit
+                                      ? 'Ручное пополнение'
+                                      : 'Ручное списание'
+                                    : item.category === 'ONLINE_TOPUP'
+                                    ? 'Онлайн-пополнение'
+                                    : item.category === 'ORDER_PAYMENT'
+                                    ? 'Оплата заказа'
+                                    : item.category === 'LAYOUT_PAYMENT'
+                                    ? 'Оплата макета'
+                                    : item.description || 'Платеж'}
+                                </div>
+                                <div className="text-[11px] text-gray-500 line-clamp-1">
+                                  {item.description}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono font-black text-sm">
+                            <span className={isCredit ? 'text-emerald-600' : 'text-gray-900'}>
+                              {isCredit ? '+' : '-'}{item.amount.toLocaleString('ru-RU')} ₸
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
+                                item.status === 'SUCCESS' || item.status === 'PAID'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : item.status === 'PENDING'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}
+                            >
+                              {item.status === 'SUCCESS' || item.status === 'PAID'
+                                ? 'Успешно'
+                                : item.status === 'PENDING'
+                                ? 'В обработке'
+                                : item.status}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-gray-600 text-xs">
+                            {isManual && meta.adminEmail && (
+                              <div className="text-[11px] text-gray-500">
+                                Администратор: <strong className="text-gray-800">{meta.adminEmail}</strong>
+                              </div>
+                            )}
+                            {meta.comment && (
+                              <div className="text-xs text-gray-800 font-medium italic mt-0.5">
+                                «{meta.comment}»
+                              </div>
+                            )}
+                            {item.order && (
+                              <Link
+                                to={`/orders/${item.order.id}`}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline mt-1"
+                              >
+                                Заказ №{item.order.orderNumber}
+                                <ExternalLink className="w-3 h-3" />
+                              </Link>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -1217,6 +1521,21 @@ export const AdminUserDetailPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* MODAL 3: Admin Adjust Balance */}
+      {userDetail && (
+        <AdminAdjustBalanceModal
+          isOpen={isBalanceModalOpen}
+          onClose={() => setIsBalanceModalOpen(false)}
+          user={{
+            id: userDetail.id,
+            email: userDetail.email,
+            companyName: userDetail.companyName,
+            balance: userDetail.balance,
+          }}
+          onSuccess={handleBalanceAdjustSuccess}
+        />
       )}
     </div>
   );

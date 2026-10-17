@@ -192,6 +192,7 @@ model PricingSettings {
   key                  String   @unique @default("GLOBAL")
   ssccPrice            Decimal  @default(5.0)     @db.Decimal(12, 2)
   stickerLayoutPrice   Decimal  @default(5000.0)  @db.Decimal(12, 2)
+  selfLayoutPrice      Decimal  @default(1000.0)  @db.Decimal(12, 2)
   urgentPercent        Decimal  @default(20.0)    @db.Decimal(12, 2)
   expressDeliveryPrice Decimal  @default(15000.0) @db.Decimal(12, 2)
   volumeTier1          Int      @default(20000)
@@ -241,6 +242,8 @@ model UserStickerTemplate {
   heightMm      Float          @default(40)
   elements      Json           @default("[]")
   previewUrl    String?
+  isPaid        Boolean        @default(false)
+  paidAt        DateTime?
   sourceOrderId String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt

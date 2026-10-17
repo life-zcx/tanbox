@@ -31,6 +31,7 @@ const formatPricingSettings = (s: any) => ({
   key: s.key,
   ssccPrice: Number(s.ssccPrice) || 0,
   stickerLayoutPrice: Number(s.stickerLayoutPrice) || 0,
+  selfLayoutPrice: Number(s.selfLayoutPrice) || 1000,
   urgentPercent: Number(s.urgentPercent) || 0,
   expressDeliveryPrice: Number(s.expressDeliveryPrice) || 0,
   volumeTier1: Math.floor(Number(s.volumeTier1) || 20000),
@@ -55,6 +56,7 @@ export const getTariffs = async (req: Request, res: Response) => {
           key: 'GLOBAL',
           ssccPrice: 5,
           stickerLayoutPrice: 5000,
+          selfLayoutPrice: 1000,
           urgentPercent: 20,
           expressDeliveryPrice: 15000,
           volumeTier1: 20000,
@@ -122,18 +124,25 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
 
     // Update global pricing settings with bounds validation
     if (pricingSettings) {
-      const safeSscc = Math.max(0, Number(pricingSettings.ssccPrice) ?? 5);
-      const safeLayout = Math.max(0, Number(pricingSettings.stickerLayoutPrice) ?? 5000);
-      const safeUrgent = Math.min(200, Math.max(0, Number(pricingSettings.urgentPercent) ?? 20));
-      const safeExpress = Math.max(0, Number(pricingSettings.expressDeliveryPrice) ?? 15000);
-      const safeTier1 = Math.max(100, Math.floor(Number(pricingSettings.volumeTier1) || 20000));
-      const safeTier2 = Math.max(safeTier1 + 100, Math.floor(Number(pricingSettings.volumeTier2) || 100000));
+      const toSafeNum = (val: any, fallback: number) => {
+        const n = Number(val);
+        return Number.isFinite(n) ? n : fallback;
+      };
+
+      const safeSscc = Math.max(0, toSafeNum(pricingSettings.ssccPrice, 5));
+      const safeLayout = Math.max(0, toSafeNum(pricingSettings.stickerLayoutPrice, 5000));
+      const safeSelfLayout = Math.max(0, toSafeNum(pricingSettings.selfLayoutPrice, 1000));
+      const safeUrgent = Math.min(200, Math.max(0, toSafeNum(pricingSettings.urgentPercent, 20)));
+      const safeExpress = Math.max(0, toSafeNum(pricingSettings.expressDeliveryPrice, 15000));
+      const safeTier1 = Math.max(100, Math.floor(toSafeNum(pricingSettings.volumeTier1, 20000)));
+      const safeTier2 = Math.max(safeTier1 + 100, Math.floor(toSafeNum(pricingSettings.volumeTier2, 100000)));
 
       await prisma.pricingSettings.upsert({
         where: { key: 'GLOBAL' },
         update: {
           ssccPrice: safeSscc,
           stickerLayoutPrice: safeLayout,
+          selfLayoutPrice: safeSelfLayout,
           urgentPercent: safeUrgent,
           expressDeliveryPrice: safeExpress,
           volumeTier1: safeTier1,
@@ -143,6 +152,7 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
           key: 'GLOBAL',
           ssccPrice: safeSscc,
           stickerLayoutPrice: safeLayout,
+          selfLayoutPrice: safeSelfLayout,
           urgentPercent: safeUrgent,
           expressDeliveryPrice: safeExpress,
           volumeTier1: safeTier1,

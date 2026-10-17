@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, Link, useLocation } 
 import { LayoutDashboard, FileText, Plus, Tag, User, Menu } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Sidebar } from './components/common/Sidebar';
+import { Header } from './components/common/Header';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -11,8 +12,10 @@ import { CreateOrderPage } from './pages/CreateOrderPage';
 import { OrderDetailPage } from './pages/OrderDetailPage';
 import { LabelsRegistryPage } from './pages/LabelsRegistryPage';
 import { InvoicesPage } from './pages/InvoicesPage';
+import { PaymentsPage } from './pages/PaymentsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { MarkirovkaPage } from './pages/MarkirovkaPage';
+import { LabelDesignerPage } from './pages/LabelDesignerPage';
 import { MaintenanceScreen } from './components/common/MaintenanceScreen';
 import { apiClient } from './api/client';
 
@@ -33,11 +36,28 @@ const LoadingScreen: React.FC = () => (
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('tanbox:lk:sidebar-collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const location = useLocation();
 
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  const handleToggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('tanbox:lk:sidebar-collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   if (loading) {
     return <LoadingScreen />;
@@ -54,33 +74,19 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
         onLogout={logout}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={handleToggleSidebar}
       />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* Mobile Top Header */}
-        <header className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200/80 px-4 h-14 flex items-center justify-between shrink-0 shadow-xs">
-          <Link to="/dashboard" className="flex items-center">
-            <img src="/tanbox-dark.svg" alt="tanbox" className="h-6 w-auto" />
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <Link
-              to="/profile"
-              title="Профиль"
-              className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-[#475569] transition-colors"
-            >
-              <User className="w-4 h-4" />
-            </Link>
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-[#475569] transition-colors cursor-pointer"
-              aria-label="Открыть меню"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-          </div>
-        </header>
+        {/* Top Header with Page Title, Subtitle, Balance & Company Profile Dropdown */}
+        <Header
+          user={user}
+          onLogout={logout}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={handleToggleSidebar}
+          onOpenMobileMenu={() => setMobileMenuOpen(true)}
+        />
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-28 md:pb-8 overflow-y-auto max-w-full">
@@ -226,6 +232,15 @@ const LkRouter: React.FC = () => {
         />
 
         <Route
+          path="/designer"
+          element={
+            <ProtectedLayout>
+              <LabelDesignerPage />
+            </ProtectedLayout>
+          }
+        />
+
+        <Route
           path="/orders/:id"
           element={
             <ProtectedLayout>
@@ -248,6 +263,15 @@ const LkRouter: React.FC = () => {
           element={
             <ProtectedLayout>
               <LabelsRegistryPage />
+            </ProtectedLayout>
+          }
+        />
+
+        <Route
+          path="/payments"
+          element={
+            <ProtectedLayout>
+              <PaymentsPage />
             </ProtectedLayout>
           }
         />

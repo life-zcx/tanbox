@@ -4,7 +4,7 @@ import fs from 'fs';
 import http from 'http';
 import { prisma } from '../config/db';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { OrderCategory, TariffType, OrderStatus, PaymentStatus, StickerApprovalStatus, CodeItemStatus, MarkirovkaOrderStatus } from '@prisma/client';
+import { OrderCategory, TariffType, OrderStatus, PaymentStatus, StickerApprovalStatus, CodeItemStatus, MarkirovkaOrderStatus, OnlinePaymentStatus, OnlinePaymentType } from '@prisma/client';
 import { computeOrderPricing } from '../utils/pricing';
 import { pdfQueue } from '../services/pdfQueue.service';
 import { renderHtmlToPdf } from '../services/pdfRenderer.service';
@@ -25,6 +25,7 @@ import { syncOrderInvoices } from './invoices.controller';
 import { syncOrderPositionsFromNkt, resolveNktProduct } from '../services/nktCatalog.service';
 import { getNktSettings } from '../services/nktSettings.service';
 import { clientTelegramBot } from '../services/clientTelegram.service';
+import { advanceOrderStatus } from '../utils/orderLifecycle';
 export { getDefaultStickerLayout };
 
 function isSafeUrl(url?: string | null): boolean {
@@ -212,6 +213,11 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         resolvedTemplateId = template.id;
         stickerWidth = template.widthMm;
         stickerHeight = template.heightMm;
+
+        // Auto-include layout approval service if template was unpaid and no designer service was requested
+        if (!template.isPaid && !hasRequestedDesignService && !servicesList.includes('STICKER_LAYOUT_APPROVAL')) {
+          servicesList.push('STICKER_LAYOUT_APPROVAL');
+        }
       }
     }
 
@@ -304,6 +310,14 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     // Automatically generate invoice record in DB for client order
     syncOrderInvoices(newOrder.userId).catch(() => {});
+
+    // If order includes layout approval for user template, unlock it in library
+    if (resolvedTemplateId && servicesList.includes('STICKER_LAYOUT_APPROVAL')) {
+      prisma.userStickerTemplate.update({
+        where: { id: resolvedTemplateId },
+        data: { isPaid: true, paidAt: new Date() },
+      }).catch((e) => console.warn('Could not mark template as paid on order creation:', e));
+    }
 
     // Process turnkey automatic Markirovka emission if requested
     const { markirovkaMode, markirovkaAccountId, markirovkaGtin } = req.body;
@@ -1145,9 +1159,13 @@ export const uploadOrderCodesFile = async (req: AuthRequest, res: Response) => {
       message = `Успешно загружено новых кодов: ${acceptedItems.length} шт. (${details.join(', ')}).`;
     }
 
+    // Auto-advance order status based on lifecycle rules
+    await advanceOrderStatus(existing.id, 'CODES_ATTACHED').catch(() => {});
+    const finalOrder = await findOrderByIdOrNumber(existing.id);
+
     return res.json({
       message,
-      order: updatedOrder,
+      order: finalOrder || updatedOrder,
       totalInFile: rows.length,
       loadedCount: acceptedItems.length,
       skippedDbCount,
@@ -1670,6 +1688,9 @@ export const submitOrderUtilisationReport = async (req: AuthRequest, res: Respon
           submittedAt: new Date(),
         },
       });
+
+      // Advance order status upon IS MPT acceptance
+      await advanceOrderStatus(order.id, 'UTILISATION_REPORT_ACCEPTED').catch(() => {});
 
       const updatedOrder = await findOrderByIdOrNumber(order.id);
       return res.json({
@@ -2221,6 +2242,7 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
       }
 
       if (!isRoll) {
+        await advanceOrderStatus(existing.id, 'PDF_GENERATED').catch(() => {});
         const stat = fs.statSync(targetPdfFile);
         const sizeMb = parseFloat((stat.size / (1024 * 1024)).toFixed(2));
         telegram.sendPdfReadyNotification(
@@ -3240,6 +3262,8 @@ export const triggerAsyncOrderPdfGeneration = async (req: AuthRequest, res: Resp
                     data: { pdfUrl: `/api/orders/${order.id}/pdf` },
                   });
 
+                  await advanceOrderStatus(order.id, 'PDF_GENERATED').catch(() => {});
+
                   telegram.sendPdfReadyNotification(
                     order.orderNumber,
                     rows.length,
@@ -3400,7 +3424,7 @@ export const syncOrderNkt = async (req: AuthRequest, res: Response) => {
 
     const nktSettings = getNktSettings();
     if (!nktSettings.enabled) {
-      return res.status(400).json({
+      return res.status(200).json({
         success: false,
         disabled: true,
         message: 'Поиск и синхронизация с Национальным Каталогом (НКТ) временно отключены в настройках платформы.',
@@ -3429,6 +3453,121 @@ export const syncOrderNkt = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ message: err.message || 'Ошибка синхронизации с НКТ' });
   }
 };
+
+/**
+ * POST /api/orders/:id/pay-balance
+ * Client pays order using personal balance in LK
+ */
+export async function payOrderWithBalance(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Требуется авторизация' });
+    }
+
+    const { id } = req.params;
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: { invoices: true },
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Заказ не найден' });
+    }
+
+    if (order.userId !== userId && req.user?.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Нет доступа к данному заказу' });
+    }
+
+    if (order.paymentStatus === PaymentStatus.PAID) {
+      return res.status(400).json({ message: 'Заказ уже полностью оплачен' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, balance: true, companyName: true, email: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+
+    const orderAmount = Number(order.totalPrice);
+    const currentBalance = Number(user.balance);
+
+    if (currentBalance < orderAmount) {
+      return res.status(400).json({
+        message: `Недостаточно средств на балансе. Требуется: ${orderAmount.toLocaleString('ru-RU')} ₸, на балансе: ${currentBalance.toLocaleString('ru-RU')} ₸`,
+        requiredAmount: orderAmount,
+        currentBalance,
+        difference: orderAmount - currentBalance,
+      });
+    }
+
+    // Process payment in transaction
+    const [updatedUser, updatedOrder] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          balance: { decrement: orderAmount },
+        },
+      }),
+      prisma.order.update({
+        where: { id: order.id },
+        data: {
+          paymentStatus: PaymentStatus.PAID,
+          printAllowed: true,
+        },
+      }),
+    ]);
+
+    // Advance order lifecycle status on payment
+    await advanceOrderStatus(order.id, 'PAYMENT_RECEIVED').catch(() => {});
+
+    // Also mark associated invoices as PAID
+    await prisma.invoice.updateMany({
+      where: { orderId: order.id },
+      data: { status: 'PAID' },
+    }).catch((e) => logger.warn(`Failed to update linked invoice status: ${e}`));
+
+    clientTelegramBot.notifyPaymentStatusChanged(order.id, 'PAID').catch(() => {});
+
+    // Create OnlinePayment record for accounting & history
+    const timestamp = Date.now().toString().slice(-8);
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const paymentNumber = `TB-BAL-${timestamp}-${randomSuffix}`;
+
+    await prisma.onlinePayment.create({
+      data: {
+        paymentNumber,
+        userId,
+        orderId: order.id,
+        type: OnlinePaymentType.ORDER,
+        amount: orderAmount,
+        currency: 'KZT',
+        status: OnlinePaymentStatus.PAID,
+        description: `Оплата заказа маркировки #${order.orderNumber} с баланса ЛК`,
+        pgPaymentDate: new Date(),
+        metadata: {
+          paidVia: 'BALANCE',
+          companyName: user.companyName,
+        },
+      },
+    }).catch((e) => logger.warn(`Failed to create OnlinePayment record for balance pay: ${e}`));
+
+    return res.json({
+      success: true,
+      message: 'Заказ успешно оплачен с баланса',
+      newBalance: Number(updatedUser.balance),
+      order: updatedOrder,
+    });
+  } catch (error) {
+    logger.error('Error paying order with balance:', error);
+    return res.status(500).json({ message: 'Ошибка при оплате заказа с баланса' });
+  }
+}
+
 
 
 

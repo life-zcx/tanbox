@@ -5,6 +5,7 @@ import { freedomPayService } from '../services/freedomPay.service';
 import { telegram } from '../services/telegram.service';
 import { logger } from '../utils/logger';
 import { OnlinePaymentStatus, OnlinePaymentType, PaymentStatus, InvoiceStatus, StickerApprovalStatus } from '@prisma/client';
+import { advanceOrderStatus } from '../utils/orderLifecycle';
 
 /**
  * 1. Initialize Online Payment with Freedom Pay
@@ -104,7 +105,7 @@ export async function initPayment(req: AuthRequest, res: Response) {
         return res.status(400).json({ message: 'Счет уже оплачен' });
       }
       if (!paymentAmount || paymentAmount <= 0) {
-        paymentAmount = Number(targetInvoice.amount);
+        paymentAmount = Number(targetInvoice.totalAmount || (targetInvoice as any).amount || 0);
       }
       if (!finalDescription) {
         finalDescription = `Оплата счета #${targetInvoice.invoiceNumber} (${user.companyName})`;
@@ -313,6 +314,9 @@ export async function freedomResultWebhook(req: Request, res: Response) {
           },
         });
 
+        // Advance order status (e.g. NEW -> PROCESSING or COMPLETED if DIGITAL & codes/pdf ready)
+        await advanceOrderStatus(payment.orderId, 'PAYMENT_RECEIVED').catch(() => {});
+
         // Also mark any associated Invoice as PAID
         await prisma.invoice.updateMany({
           where: { orderId: payment.orderId },
@@ -329,6 +333,8 @@ export async function freedomResultWebhook(req: Request, res: Response) {
             where: { id: payment.orderId },
             data: { paymentStatus: PaymentStatus.PAID, printAllowed: true },
           });
+
+          await advanceOrderStatus(payment.orderId, 'PAYMENT_RECEIVED').catch(() => {});
         }
       } else if (payment.type === OnlinePaymentType.STICKER_LAYOUT && payment.orderId) {
         await prisma.order.update({
@@ -455,5 +461,77 @@ export async function getUserBalance(req: AuthRequest, res: Response) {
   } catch (err: any) {
     logger.error('Error in getUserBalance:', { error: err });
     return res.status(500).json({ message: 'Ошибка получения баланса: ' + err.message });
+  }
+}
+
+/**
+ * 6. Get Current User's Full Balance & Payment History
+ * GET /api/payments/history
+ */
+export async function getMyBalanceHistory(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Требуется авторизация' });
+    }
+
+    const payments = await prisma.onlinePayment.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: {
+        order: {
+          select: {
+            id: true,
+            orderNumber: true,
+            totalPrice: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    const history = payments.map((p) => {
+      const meta = (p.metadata as any) || {};
+      const isManual = Boolean(meta.manualByAdmin);
+      const isBalanceDebit = meta.paidVia === 'BALANCE' || meta.paidViaBalance === true || meta.action === 'DEBIT';
+      const isBalanceCredit = p.type === OnlinePaymentType.BALANCE && meta.action !== 'DEBIT';
+
+      let direction: 'IN' | 'OUT' = isBalanceCredit ? 'IN' : 'OUT';
+      if (!isBalanceCredit && !isBalanceDebit) {
+        direction = 'IN';
+      }
+
+      let category = 'OTHER';
+      if (isManual) {
+        category = meta.action === 'DEBIT' ? 'ADMIN_DEBIT' : 'ADMIN_TOPUP';
+      } else if (p.type === OnlinePaymentType.BALANCE) {
+        category = 'ONLINE_TOPUP';
+      } else if (p.type === OnlinePaymentType.ORDER) {
+        category = 'ORDER_PAYMENT';
+      } else if (p.type === OnlinePaymentType.STICKER_LAYOUT) {
+        category = 'LAYOUT_PAYMENT';
+      }
+
+      return {
+        id: p.id,
+        paymentNumber: p.paymentNumber,
+        type: p.type,
+        amount: Number(p.amount),
+        currency: p.currency,
+        status: p.status,
+        description: p.description,
+        createdAt: p.createdAt,
+        direction,
+        category,
+        order: p.order,
+        metadata: meta,
+      };
+    });
+
+    return res.json({ history });
+  } catch (err: any) {
+    logger.error('Error in getMyBalanceHistory:', { error: err });
+    return res.status(500).json({ message: 'Ошибка получения истории баланса: ' + err.message });
   }
 }

@@ -132,15 +132,21 @@ export function parseOrderNotes(notes?: string | null): ParsedOrderNotes {
     };
   }
 
-  // 5. Extract warehouse address
-  const addressMatch = remaining.match(/Адрес склада(?: в РК)?:?\s*([\s\S]*?)(?=(?:Примечания?:|=== СКЛАДСКИЕ|=== УТВЕРЖДЕННАЯ|$))/i);
+  // 5. Extract warehouse or delivery address
+  const addressMatch = remaining.match(/(?:Адрес склада(?: в РК)?|Адрес доставки(?: рулонов)?):\s*([^\n\r]+)/i);
   if (addressMatch) {
     const rawAddr = addressMatch[1].trim();
-    if (rawAddr) {
+    if (rawAddr && !/не требуется/i.test(rawAddr)) {
       address = rawAddr;
     }
-    remaining = remaining.replace(/Адрес склада(?: в РК)?:?[\s\S]*?(?=(?:Примечания?:|=== СКЛАДСКИЕ|=== УТВЕРЖДЕННАЯ|$))/i, '').trim();
+    remaining = remaining.replace(/(?:Адрес склада(?: в РК)?|Адрес доставки(?: рулонов)?):\s*[^\n\r]+/gi, '').trim();
   }
+
+  // Strip non-delivery boilerplate lines
+  remaining = remaining.replace(/Адрес \/ доставка:\s*Не требуется[^\n\r]*/gi, '').trim();
+
+  // Strip auto-generated template lines
+  remaining = remaining.replace(/Макет этикетки:\s*Шаблон[^\n\r]*/gi, '').trim();
 
   // 6. Extract client note
   const notesMatch = remaining.match(/Примечания?:?\s*([\s\S]*)/i);
@@ -150,7 +156,11 @@ export function parseOrderNotes(notes?: string | null): ParsedOrderNotes {
       clientNote = rawNote;
     }
   } else if (remaining.trim()) {
-    clientNote = remaining.trim();
+    const clean = remaining.trim();
+    // Do not treat auto-generated system prefixes as client notes
+    if (!/^(?:Адрес|Макет этикетки|===)/i.test(clean)) {
+      clientNote = clean;
+    }
   }
 
   return {

@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "PricingSettings" ADD COLUMN IF NOT EXISTS "selfLayoutPrice" DECIMAL(12,2) NOT NULL DEFAULT 1000.00;
+
+-- AlterTable
+ALTER TABLE "UserStickerTemplate" ADD COLUMN IF NOT EXISTS "isPaid" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "UserStickerTemplate" ADD COLUMN IF NOT EXISTS "paidAt" TIMESTAMP(3);

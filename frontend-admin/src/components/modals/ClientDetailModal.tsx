@@ -315,7 +315,7 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
                     Сумма заказов
                   </span>
                   <span className="text-lg font-black text-emerald-600">
-                    {(userDetail.totalSpent || 0).toLocaleString('ru-RU')} ₸
+                    {Number(userDetail.totalSpent || 0).toLocaleString('ru-RU')} ₸
                   </span>
                 </div>
 
@@ -600,10 +600,10 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
                                 {ord.itemsCount.toLocaleString('ru-RU')} шт.
                               </td>
                               <td className="py-3 px-4 text-right font-black text-emerald-600">
-                                {ord.totalPrice.toLocaleString('ru-RU')} ₸
+                                {Number(ord.totalPrice || 0).toLocaleString('ru-RU')} ₸
                               </td>
                               <td className="py-3 px-4 text-center">
-                                <StatusBadge status={ord.status} />
+                                <StatusBadge status={ord.status} tariffType={ord.tariffType} paymentStatus={ord.paymentStatus} />
                               </td>
                               <td className="py-3 px-4 text-right">
                                 <Link

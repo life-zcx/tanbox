@@ -3,10 +3,22 @@ import React from 'react';
 export interface StatusBadgeProps {
   status: string;
   tariffType?: string;
+  paymentStatus?: string;
+  hasUtilisationReport?: boolean;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, tariffType }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = ({
+  status,
+  tariffType,
+  paymentStatus,
+  hasUtilisationReport,
+}) => {
+  const isUnpaid = paymentStatus === 'UNPAID';
+
   const getBadgeStyle = (st: string) => {
+    if (st === 'NEW' && isUnpaid) {
+      return 'bg-amber-50 text-amber-800 border-amber-200/90';
+    }
     switch (st) {
       case 'NEW':
         return 'bg-slate-100 text-slate-700 border-slate-200';
@@ -28,18 +40,23 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, tariffType }) 
   const getBadgeLabel = (st: string, tariff?: string) => {
     const t = tariff?.toUpperCase() || '';
 
+    if (st === 'NEW') {
+      if (isUnpaid) {
+        return 'Ожидает оплаты';
+      }
+      return 'Оплачен • Ожидает коды';
+    }
+
     if (t.includes('DIGITAL') || t.includes('ЦИФР')) {
       switch (st) {
-        case 'NEW':
-          return 'Новый';
         case 'PROCESSING':
-          return 'В обработке';
+          return 'Обработка кодов';
         case 'PRINTING':
           return 'Генерация макетов';
         case 'STICKERING':
           return 'Подготовка файлов';
         case 'COMPLETED':
-          return 'Готов к выгрузке';
+          return 'Готов к скачиванию';
         case 'CANCELLED':
           return 'Отменен';
         default:
@@ -49,12 +66,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, tariffType }) 
 
     if (t.includes('PRINT') || t.includes('ПЕЧАТ')) {
       switch (st) {
-        case 'NEW':
-          return 'Новый';
         case 'PROCESSING':
-          return 'Подготовка';
+          return 'Подготовка к печати';
         case 'PRINTING':
-          return 'Печать рулонов';
+          return 'Печать этикеток';
         case 'STICKERING':
           return 'Упаковка партии';
         case 'COMPLETED':
@@ -68,8 +83,6 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, tariffType }) 
 
     if (t.includes('PRO') || t.includes('ПРО')) {
       switch (st) {
-        case 'NEW':
-          return 'Новый';
         case 'PROCESSING':
           return 'Сверка и приемка';
         case 'PRINTING':
@@ -87,8 +100,6 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, tariffType }) 
 
     // Default / STANDARD
     switch (st) {
-      case 'NEW':
-        return 'Новый';
       case 'PROCESSING':
         return 'В обработке';
       case 'PRINTING':
@@ -105,8 +116,15 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, tariffType }) 
   };
 
   return (
-    <span className={`inline-flex items-center text-[11px] font-extrabold px-2.5 py-1 rounded-lg border ${getBadgeStyle(status)}`}>
-      {getBadgeLabel(status, tariffType)}
+    <span className="inline-flex items-center gap-1.5 flex-wrap">
+      <span className={`inline-flex items-center text-[11px] font-extrabold px-2.5 py-1 rounded-lg border ${getBadgeStyle(status)}`}>
+        {getBadgeLabel(status, tariffType)}
+      </span>
+      {hasUtilisationReport && (
+        <span className="inline-flex items-center text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-100/90 text-emerald-800 border border-emerald-300">
+          ИС МПТ: Введено
+        </span>
+      )}
     </span>
   );
 };

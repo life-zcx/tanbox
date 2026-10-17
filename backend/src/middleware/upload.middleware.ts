@@ -34,3 +34,36 @@ export const orderCodesUpload = multer({
     }
   },
 });
+
+const bugReportsDir = path.resolve(process.cwd(), 'uploads/bug-reports');
+if (!fs.existsSync(bugReportsDir)) {
+  fs.mkdirSync(bugReportsDir, { recursive: true });
+}
+
+const bugReportStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, bugReportsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const cleanName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_\-]/g, '_');
+    cb(null, `bug_${Date.now()}_${cleanName}${ext}`);
+  },
+});
+
+export const bugReportUpload = multer({
+  storage: bugReportStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedExts = ['.png', '.jpg', '.jpeg', '.webp', '.pdf'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedExts.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Разрешены только изображения (PNG, JPG, WEBP) или файлы PDF'));
+    }
+  },
+});
+

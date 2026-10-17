@@ -1,10 +1,11 @@
 import { Response } from 'express';
 import { prisma } from '../config/db';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { InvoiceStatus } from '@prisma/client';
+import { InvoiceStatus, OnlinePaymentStatus, OnlinePaymentType, PaymentStatus } from '@prisma/client';
 import { renderCustomInvoicePdf, generateCustomInvoiceHtml } from '../services/orderDocuments.service';
 import { clientTelegramBot } from '../services/clientTelegram.service';
 import { logger } from '../utils/logger';
+import { advanceOrderStatus } from '../utils/orderLifecycle';
 
 /**
  * Auto-synchronizes orders with Invoice records.
@@ -449,3 +450,126 @@ export async function getInvoicePdf(req: AuthRequest, res: Response) {
     return res.status(500).json({ message: 'Ошибка при генерации PDF счета' });
   }
 }
+
+/**
+ * POST /api/invoices/:id/pay-balance
+ * Client pays invoice using personal balance in LK
+ */
+export async function payInvoiceWithBalance(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Требуется авторизация' });
+    }
+
+    const { id } = req.params;
+
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      include: { order: true },
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ message: 'Счет не найден' });
+    }
+
+    if (invoice.userId !== userId && req.user?.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Нет доступа к данному счету' });
+    }
+
+    if (invoice.status === InvoiceStatus.PAID) {
+      return res.status(400).json({ message: 'Счет уже оплачен' });
+    }
+
+    if (invoice.status === InvoiceStatus.CANCELLED) {
+      return res.status(400).json({ message: 'Аннулированный счет нельзя оплатить' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, balance: true, companyName: true, email: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+
+    const invoiceAmount = Number(invoice.totalAmount);
+    const currentBalance = Number(user.balance);
+
+    if (currentBalance < invoiceAmount) {
+      return res.status(400).json({
+        message: `Недостаточно средств на балансе. Требуется: ${invoiceAmount.toLocaleString('ru-RU')} ₸, на балансе: ${currentBalance.toLocaleString('ru-RU')} ₸`,
+        requiredAmount: invoiceAmount,
+        currentBalance,
+        difference: invoiceAmount - currentBalance,
+      });
+    }
+
+    // Process payment in transaction
+    const [updatedUser, updatedInvoice] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          balance: { decrement: invoiceAmount },
+        },
+      }),
+      prisma.invoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: InvoiceStatus.PAID,
+        },
+      }),
+    ]);
+
+    // If invoice is linked to an order, update order payment status & printAllowed
+    if (invoice.orderId) {
+      await prisma.order.update({
+        where: { id: invoice.orderId },
+        data: {
+          paymentStatus: PaymentStatus.PAID,
+          printAllowed: true,
+        },
+      }).catch((e) => logger.warn(`Failed to update linked order payment status: ${e}`));
+
+      await advanceOrderStatus(invoice.orderId, 'PAYMENT_RECEIVED').catch(() => {});
+
+      clientTelegramBot.notifyPaymentStatusChanged(invoice.orderId, 'PAID').catch(() => {});
+    }
+
+    // Create an OnlinePayment record for accounting & history
+    const timestamp = Date.now().toString().slice(-8);
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const paymentNumber = `TB-BAL-${timestamp}-${randomSuffix}`;
+
+    await prisma.onlinePayment.create({
+      data: {
+        paymentNumber,
+        userId,
+        invoiceId: invoice.id,
+        orderId: invoice.orderId || null,
+        type: OnlinePaymentType.INVOICE,
+        amount: invoiceAmount,
+        currency: 'KZT',
+        status: OnlinePaymentStatus.PAID,
+        description: `Оплата счета #${invoice.invoiceNumber} с баланса ЛК`,
+        pgPaymentDate: new Date(),
+        metadata: {
+          paidVia: 'BALANCE',
+          companyName: user.companyName,
+        },
+      },
+    }).catch((e) => logger.warn(`Failed to create OnlinePayment record for balance pay: ${e}`));
+
+    return res.json({
+      success: true,
+      message: 'Счет успешно оплачен с баланса',
+      newBalance: Number(updatedUser.balance),
+      invoice: updatedInvoice,
+    });
+  } catch (error) {
+    logger.error('Error paying invoice with balance:', error);
+    return res.status(500).json({ message: 'Ошибка при оплате счета с баланса' });
+  }
+}
+

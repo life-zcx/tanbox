@@ -7,7 +7,6 @@ import {
   ShieldCheck, ArrowUpRight, Loader2, RefreshCw
 } from 'lucide-react';
 
-import { PageHeader } from '@shared';
 import { apiClient } from '../api/client';
 import { ConnectMarkirovkaModal } from '../components/modals/ConnectMarkirovkaModal';
 
@@ -397,10 +396,6 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      <PageHeader
-        title="Профиль компании"
-        description="Управление данными организации, адресами складов и настройками безопасности"
-      />
 
       {/* CARD 1: USER / COMPANY HEADER CARD (Как на макете) */}
       <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">

@@ -2,7 +2,7 @@ import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../config/db';
 import { AuthRequest, invalidateUserBlockCache } from '../middleware/auth.middleware';
-import { Role } from '@prisma/client';
+import { Role, OnlinePaymentType, OnlinePaymentStatus, OrderStatus } from '@prisma/client';
 import { logger } from '../utils/logger';
 
 export const getUsers = async (req: AuthRequest, res: Response) => {
@@ -15,6 +15,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
         binIin: true,
         phone: true,
         role: true,
+        balance: true,
         isBlocked: true,
         blockedReason: true,
         createdAt: true,
@@ -48,6 +49,7 @@ export const getUserById = async (req: AuthRequest, res: Response) => {
         binIin: true,
         phone: true,
         role: true,
+        balance: true,
         isBlocked: true,
         blockedReason: true,
         createdAt: true,
@@ -95,10 +97,27 @@ export const getUserById = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
-    const totalSpent = user.orders.reduce((acc, curr) => acc + (Number(curr.totalPrice) || 0), 0);
+    // Accurate aggregate across ALL client orders (not capped by pagination/take: 30)
+    const totalSpentAgg = await prisma.order.aggregate({
+      where: {
+        userId: id,
+        status: { not: OrderStatus.CANCELLED },
+      },
+      _sum: {
+        totalPrice: true,
+      },
+    });
+
+    const totalSpent = Number(totalSpentAgg._sum.totalPrice || 0);
+
+    const safeOrders = user.orders.map((o) => ({
+      ...o,
+      totalPrice: Number(o.totalPrice || 0),
+    }));
 
     return res.json({
       ...user,
+      orders: safeOrders,
       totalSpent,
     });
   } catch (error: any) {
@@ -355,5 +374,173 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     logger.error('deleteUser error:', error);
     return res.status(500).json({ message: 'Ошибка при удалении аккаунта пользователя' });
+  }
+};
+
+/**
+ * POST /api/users/:id/balance
+ * Admin adjusts (tops up or decrements) user balance with audit trail
+ */
+export const adjustUserBalance = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== Role.ADMIN) {
+      return res.status(403).json({ message: 'Доступ разрешен только администраторам' });
+    }
+
+    const { id } = req.params;
+    const { amount, action = 'ADD', comment } = req.body;
+
+    const numAmount = Math.round(Number(amount));
+    if (!numAmount || numAmount <= 0 || isNaN(numAmount)) {
+      return res.status(400).json({ message: 'Сумма операции должна быть положительным числом' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, balance: true, email: true, companyName: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+
+    const currentBalance = Number(user.balance);
+    if (action === 'SUBTRACT' && currentBalance < numAmount) {
+      return res.status(400).json({
+        message: `Невозможно списать ${numAmount.toLocaleString('ru-RU')} ₸. Текущий баланс пользователя: ${currentBalance.toLocaleString('ru-RU')} ₸`,
+      });
+    }
+
+    const isAdd = action === 'ADD';
+    const timestamp = Date.now().toString().slice(-8);
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const paymentNumber = `TB-ADM-${timestamp}-${randomSuffix}`;
+    const cleanComment = typeof comment === 'string' && comment.trim()
+      ? comment.trim().slice(0, 300)
+      : (isAdd ? 'Ручное пополнение администратором' : 'Ручное списание администратором');
+
+    const [updatedUser, paymentRecord] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id },
+        data: {
+          balance: isAdd ? { increment: numAmount } : { decrement: numAmount },
+        },
+        select: {
+          id: true,
+          email: true,
+          companyName: true,
+          balance: true,
+        },
+      }),
+      prisma.onlinePayment.create({
+        data: {
+          paymentNumber,
+          userId: id,
+          type: OnlinePaymentType.BALANCE,
+          amount: numAmount,
+          currency: 'KZT',
+          status: OnlinePaymentStatus.PAID,
+          description: `${isAdd ? 'Пополнение баланса' : 'Списание с баланса'}: ${cleanComment}`,
+          pgPaymentDate: new Date(),
+          metadata: {
+            manualByAdmin: true,
+            action: isAdd ? 'CREDIT' : 'DEBIT',
+            adminId: req.user.id,
+            adminEmail: req.user.email,
+            comment: cleanComment,
+            previousBalance: currentBalance,
+            newBalance: isAdd ? currentBalance + numAmount : currentBalance - numAmount,
+          },
+        },
+      }),
+    ]);
+
+    logger.info(`[Admin Balance] Admin ${req.user.email} adjusted balance for user ${user.email}: ${action} ${numAmount} KZT. New balance: ${updatedUser.balance}`);
+
+    return res.json({
+      success: true,
+      message: `Баланс успешно ${isAdd ? 'пополнен на' : 'уменьшен на'} ${numAmount.toLocaleString('ru-RU')} ₸`,
+      newBalance: Number(updatedUser.balance),
+      user: updatedUser,
+      payment: paymentRecord,
+    });
+  } catch (error: any) {
+    logger.error('adjustUserBalance error:', error);
+    return res.status(500).json({ message: 'Ошибка при корректировке баланса: ' + error.message });
+  }
+};
+
+/**
+ * GET /api/users/:id/balance-history
+ * Returns full transaction history for a user
+ */
+export const getUserBalanceHistory = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== Role.ADMIN) {
+      return res.status(403).json({ message: 'Доступ разрешен только администраторам' });
+    }
+
+    const { id } = req.params;
+
+    const payments = await prisma.onlinePayment.findMany({
+      where: { userId: id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        order: {
+          select: {
+            id: true,
+            orderNumber: true,
+            totalPrice: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    const formatted = payments.map((p) => {
+      const meta = (p.metadata as any) || {};
+      const isManual = Boolean(meta.manualByAdmin);
+      const isBalanceDebit = meta.paidVia === 'BALANCE' || meta.paidViaBalance === true || meta.action === 'DEBIT';
+      const isBalanceCredit = p.type === OnlinePaymentType.BALANCE && meta.action !== 'DEBIT';
+
+      let direction: 'IN' | 'OUT' = isBalanceCredit ? 'IN' : 'OUT';
+      if (!isBalanceCredit && !isBalanceDebit) {
+        // Direct card payments
+        direction = 'IN';
+      }
+
+      let category = 'OTHER';
+      if (isManual) {
+        category = meta.action === 'DEBIT' ? 'ADMIN_DEBIT' : 'ADMIN_TOPUP';
+      } else if (p.type === OnlinePaymentType.BALANCE) {
+        category = 'ONLINE_TOPUP';
+      } else if (p.type === OnlinePaymentType.ORDER) {
+        category = 'ORDER_PAYMENT';
+      } else if (p.type === OnlinePaymentType.STICKER_LAYOUT) {
+        category = 'LAYOUT_PAYMENT';
+      }
+
+      return {
+        id: p.id,
+        paymentNumber: p.paymentNumber,
+        type: p.type,
+        amount: Number(p.amount),
+        currency: p.currency,
+        status: p.status,
+        description: p.description,
+        createdAt: p.createdAt,
+        direction,
+        category,
+        order: p.order,
+        metadata: meta,
+      };
+    });
+
+    return res.json({
+      history: formatted,
+    });
+  } catch (error: any) {
+    logger.error('getUserBalanceHistory error:', error);
+    return res.status(500).json({ message: 'Ошибка при получении истории баланса: ' + error.message });
   }
 };

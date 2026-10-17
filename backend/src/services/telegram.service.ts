@@ -39,9 +39,9 @@ class TelegramService {
   }
 
   public reloadConfig() {
-    this.botToken = process.env.TELEGRAM_BOT_TOKEN;
+    this.botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_CLIENT_BOT_TOKEN;
     this.leadsChatId = process.env.TELEGRAM_LEADS_CHAT_ID;
-    this.alertsChatId = process.env.TELEGRAM_ALERTS_CHAT_ID;
+    this.alertsChatId = process.env.TELEGRAM_ALERTS_CHAT_ID || this.leadsChatId;
   }
 
   /**
@@ -592,6 +592,15 @@ class TelegramService {
           res.on('data', (c) => (body += c));
           res.on('end', () => {
             if (res.statusCode && res.statusCode >= 400) {
+              try {
+                const parsed = JSON.parse(body);
+                if (parsed.parameters?.migrate_to_chat_id) {
+                  const newChatId = String(parsed.parameters.migrate_to_chat_id);
+                  if (this.alertsChatId === chatId) this.alertsChatId = newChatId;
+                  if (this.leadsChatId === chatId) this.leadsChatId = newChatId;
+                  return this.sendRaw(newChatId, textHtml, options).then(() => resolve());
+                }
+              } catch {}
               console.warn(`[TelegramService] Warning: Telegram API responded with ${res.statusCode}: ${body.slice(0, 150)}`);
             }
             resolve();
@@ -659,6 +668,48 @@ class TelegramService {
     };
 
     await this.sendRaw(this.leadsChatId, msg, { replyMarkup: keyboard });
+  }
+
+  /**
+   * Уведомление о баг-репорте / ошибке от клиента из ЛК
+   */
+  public async sendBugReportNotification(report: {
+    category: string;
+    description: string;
+    pageUrl?: string;
+    companyName: string;
+    phone: string;
+    email: string;
+    binIin?: string | null;
+    userAgent?: string;
+    screenResolution?: string;
+    hasScreenshot?: boolean;
+    screenshotFileName?: string;
+  }) {
+    const targetChatId = this.alertsChatId || this.leadsChatId;
+    if (!targetChatId) return;
+
+    const msg = [
+      `🐞 <b>БАГ-РЕПОРТ / СООБЩЕНИЕ ОБ ОШИБКЕ</b>`,
+      `──────────────────────────────`,
+      `🏷️ <b>Категория:</b> ${this.escapeHtml(report.category)}`,
+      `🏢 <b>Компания:</b> ${this.escapeHtml(report.companyName)}`,
+      `📞 <b>Телефон:</b> <code>${this.escapeHtml(report.phone)}</code>`,
+      `✉️ <b>Email:</b> ${this.escapeHtml(report.email)}`,
+      report.binIin ? `🔢 <b>БИН/ИИН:</b> <code>${this.escapeHtml(report.binIin)}</code>` : null,
+      report.pageUrl ? `🌐 <b>Страница:</b> <code>${this.escapeHtml(report.pageUrl)}</code>` : null,
+      report.screenResolution ? `💻 <b>Разрешение:</b> ${this.escapeHtml(report.screenResolution)}` : null,
+      `──────────────────────────────`,
+      `📝 <b>Описание проблемы:</b>`,
+      `<i>${this.escapeHtml(report.description)}</i>`,
+      report.hasScreenshot ? `\n📎 <i>Прикреплен скриншот / файл: ${this.escapeHtml(report.screenshotFileName || 'файл')}</i>` : null,
+      `──────────────────────────────`,
+      `⏰ <i>${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Almaty' })} (Алматы)</i>`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    await this.sendRaw(targetChatId, msg);
   }
 
   /**

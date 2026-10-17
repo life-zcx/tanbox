@@ -20,11 +20,13 @@ import {
   CheckCircle2,
   X,
   AlertCircle,
+  Wallet,
 } from 'lucide-react';
 import { PageHeader } from '@shared';
 import { UserClient } from '../types';
 import { apiClient } from '../api/client';
 import { ClientDetailModal } from '../components/modals/ClientDetailModal';
+import { AdminAdjustBalanceModal } from '../components/modals/AdminAdjustBalanceModal';
 
 export const AdminUsersPage: React.FC = () => {
   const { users: initialUsers, loading } = useAdminUsers();
@@ -46,6 +48,9 @@ export const AdminUsersPage: React.FC = () => {
   // Delete Modal state
   const [deleteModalUser, setDeleteModalUser] = useState<UserClient | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+
+  // Balance adjustment modal state
+  const [balanceModalUser, setBalanceModalUser] = useState<UserClient | null>(null);
 
   // Notification message
   const [toastMsg, setToastMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -74,6 +79,14 @@ export const AdminUsersPage: React.FC = () => {
     setUsers((prev) =>
       prev.map((u) => (u.id === updatedUser.id ? { ...u, ...updatedUser } : u))
     );
+  };
+
+  const handleBalanceAdjustSuccess = (newBalance: number) => {
+    if (!balanceModalUser) return;
+    setUsers((prev) =>
+      prev.map((u) => (u.id === balanceModalUser.id ? { ...u, balance: newBalance } : u))
+    );
+    showToast(`Баланс ${balanceModalUser.companyName} успешно обновлен: ${newBalance.toLocaleString('ru-RU')} ₸`, 'success');
   };
 
   // Execute Block / Unblock
@@ -273,6 +286,7 @@ export const AdminUsersPage: React.FC = () => {
                   <th className="py-3.5 px-4">БИН / ИИН</th>
                   <th className="py-3.5 px-4">E-mail</th>
                   <th className="py-3.5 px-4">Телефон</th>
+                  <th className="py-3.5 px-4">Баланс</th>
                   <th className="py-3.5 px-4">Статус</th>
                   <th className="py-3.5 px-4">Роль</th>
                   <th className="py-3.5 px-4 text-center">Заказов</th>
@@ -330,6 +344,23 @@ export const AdminUsersPage: React.FC = () => {
 
                       <td className="py-4 px-4 text-xs text-gray-600 font-mono">
                         {u.phone}
+                      </td>
+
+                      {/* Balance */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <span className="font-mono font-black text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shadow-2xs">
+                            {Number(u.balance || 0).toLocaleString('ru-RU')} ₸
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setBalanceModalUser(u)}
+                            className="p-1 rounded-lg bg-white hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-300 transition-all cursor-pointer shadow-2xs active:scale-95"
+                            title="Пополнить или списать баланс"
+                          >
+                            <Wallet className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
 
                       {/* Status */}
@@ -580,6 +611,21 @@ export const AdminUsersPage: React.FC = () => {
         onClose={handleCloseModal}
         onUserUpdated={handleUserUpdated}
       />
+
+      {/* Admin Adjust Balance Modal */}
+      {balanceModalUser && (
+        <AdminAdjustBalanceModal
+          isOpen={Boolean(balanceModalUser)}
+          onClose={() => setBalanceModalUser(null)}
+          user={{
+            id: balanceModalUser.id,
+            email: balanceModalUser.email,
+            companyName: balanceModalUser.companyName,
+            balance: balanceModalUser.balance,
+          }}
+          onSuccess={handleBalanceAdjustSuccess}
+        />
+      )}
     </div>
   );
 };

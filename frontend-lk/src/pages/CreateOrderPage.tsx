@@ -5,7 +5,6 @@ import { useAuth } from '../hooks/useAuth';
 import { OrderCategory, TariffType, UserStickerTemplate } from '../types';
 import { apiClient } from '../api/client';
 import { CATEGORIES_LIST, CATEGORY_MAP, getCategoryLabel } from '../data/categories';
-import { PageHeader } from '@shared';
 import { StickerCanvasPreview } from '../components/common/StickerCanvasPreview';
 import { TariffHelpModal } from '../components/modals/TariffHelpModal';
 import { ConnectMarkirovkaModal } from '../components/modals/ConnectMarkirovkaModal';
@@ -36,6 +35,7 @@ import {
   Trash2,
   FileSpreadsheet,
   RefreshCw,
+  ExternalLink,
 } from 'lucide-react';
 
 import { CategoryStickerSpecs, getCategoryStickerSpecs } from '../data/categoryStickerSpecs';
@@ -143,14 +143,22 @@ export const CreateOrderPage: React.FC = () => {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
+        const queryTemplateId = searchParams.get('templateId');
+        const queryCategory = searchParams.get('category');
+        if (queryCategory && CATEGORY_MAP[queryCategory as OrderCategory]) {
+          setCategory(queryCategory as OrderCategory);
+        }
+
         const res = await apiClient.get('/user-templates');
         const list: UserStickerTemplate[] = res.data.templates || [];
         setSavedTemplates(list);
         if (list.length > 0) {
-          setSelectedTemplateId(list[0].id);
+          const matched = queryTemplateId ? list.find((t) => t.id === queryTemplateId) : null;
+          const target = matched || list[0];
+          setSelectedTemplateId(target.id);
           setTemplateChoice('SAVED');
-          setLabelWidth(String(list[0].widthMm));
-          setLabelHeight(String(list[0].heightMm));
+          setLabelWidth(String(target.widthMm));
+          setLabelHeight(String(target.heightMm));
         }
       } catch (err) {
         console.warn('Could not load user templates:', err);
@@ -159,7 +167,7 @@ export const CreateOrderPage: React.FC = () => {
       }
     };
     fetchTemplates();
-  }, []);
+  }, [searchParams]);
 
   // Active tariffs & pricing settings from database (managed in admin panel)
   const [dbTariffs, setDbTariffs] = useState<any[]>([]);
@@ -192,6 +200,19 @@ export const CreateOrderPage: React.FC = () => {
     [savedTemplates, selectedTemplateId]
   );
 
+  // Automatically add or remove layout approval charge (1 000 ₸) when template is draft vs already paid
+  useEffect(() => {
+    if (templateChoice === 'SAVED' && selectedTemplate && !selectedTemplate.isPaid) {
+      if (!extraServices.includes('STICKER_LAYOUT_APPROVAL')) {
+        setExtraServices((prev) => [...prev.filter((s) => s !== 'STICKER_LAYOUT_DESIGN'), 'STICKER_LAYOUT_APPROVAL']);
+      }
+    } else {
+      if (extraServices.includes('STICKER_LAYOUT_APPROVAL')) {
+        setExtraServices((prev) => prev.filter((s) => s !== 'STICKER_LAYOUT_APPROVAL'));
+      }
+    }
+  }, [templateChoice, selectedTemplate]);
+
   const handleTemplateChoiceChange = (choice: 'SAVED' | 'NEW' | 'NONE') => {
     setTemplateChoice(choice);
     if (choice === 'SAVED') {
@@ -202,11 +223,40 @@ export const CreateOrderPage: React.FC = () => {
         setLabelHeight(String(savedTemplates[0].heightMm));
       }
     } else if (choice === 'NEW') {
-      if (!extraServices.includes('STICKER_LAYOUT_DESIGN')) {
-        setExtraServices((prev) => [...prev, 'STICKER_LAYOUT_DESIGN']);
-      }
+      setExtraServices((prev) => [
+        ...prev.filter((s) => s !== 'STICKER_LAYOUT_APPROVAL'),
+        'STICKER_LAYOUT_DESIGN',
+      ]);
     } else {
-      setExtraServices((prev) => prev.filter((s) => s !== 'STICKER_LAYOUT_DESIGN'));
+      setExtraServices((prev) =>
+        prev.filter((s) => s !== 'STICKER_LAYOUT_DESIGN' && s !== 'STICKER_LAYOUT_APPROVAL')
+      );
+    }
+  };
+
+  const handleSelectTemplate = (id: string) => {
+    setSelectedTemplateId(id);
+    const found = savedTemplates.find((t) => t.id === id);
+    if (found) {
+      setLabelWidth(String(found.widthMm));
+      setLabelHeight(String(found.heightMm));
+    }
+  };
+
+  const refreshSavedTemplates = async () => {
+    try {
+      const res = await apiClient.get('/user-templates');
+      const list: UserStickerTemplate[] = res.data.templates || [];
+      setSavedTemplates(list);
+      if (list.length > 0) {
+        if (!selectedTemplateId || !list.some((t) => t.id === selectedTemplateId)) {
+          setSelectedTemplateId(list[0].id);
+          setLabelWidth(String(list[0].widthMm));
+          setLabelHeight(String(list[0].heightMm));
+        }
+      }
+    } catch (err) {
+      console.warn('Could not refresh templates:', err);
     }
   };
 
@@ -382,15 +432,6 @@ export const CreateOrderPage: React.FC = () => {
       alert('Ошибка при чтении файла спецификации: ' + err.message);
     } finally {
       if (e.target) e.target.value = '';
-    }
-  };
-
-  const handleSelectTemplate = (id: string) => {
-    setSelectedTemplateId(id);
-    const found = savedTemplates.find((t) => t.id === id);
-    if (found) {
-      setLabelWidth(String(found.widthMm));
-      setLabelHeight(String(found.heightMm));
     }
   };
 
@@ -951,6 +992,13 @@ export const CreateOrderPage: React.FC = () => {
       return;
     }
 
+    // Шаг 4: Проверка выбора макета стикера
+    if (templateChoice === 'SAVED' && savedTemplates.length === 0) {
+      setErrorMsg('В вашей библиотеке пока нет макетов. Создайте макет в конструкторе или выберите другой вариант (заказать у дизайнера / без макета).');
+      document.getElementById('step-sticker-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     executeSubmit(itemsCount);
   };
 
@@ -1046,16 +1094,17 @@ export const CreateOrderPage: React.FC = () => {
         ].filter(Boolean).join('\n')
       : '';
 
-    const addressNote = tariffType === 'DIGITAL'
-      ? 'Адрес / доставка: Не требуется (электронный заказ, выгрузка кодов в ЛК)'
-      : (warehouseAddress ? `${tariffType === 'PRINT' ? 'Адрес доставки рулонов' : 'Адрес склада в РК'}: ${warehouseAddress}` : '');
+    const addressNote = (tariffType !== 'DIGITAL' && warehouseAddress.trim())
+      ? `${tariffType === 'PRINT' ? 'Адрес доставки рулонов' : 'Адрес склада в РК'}: ${warehouseAddress.trim()}`
+      : '';
+
+    const cleanUserNotes = notes.trim();
 
     const fullNotes = [
       addressNote,
       warehouseConditionsPayload,
       labelDesignPayload,
-      usedTemplate ? `Макет этикетки: Шаблон «${usedTemplate.name}» (${usedTemplate.widthMm}×${usedTemplate.heightMm} мм)` : '',
-      notes ? `Примечания: ${notes}` : '',
+      cleanUserNotes ? `Примечания: ${cleanUserNotes}` : '',
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -1150,13 +1199,6 @@ export const CreateOrderPage: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-16">
-      
-      {/* Page Header */}
-      <PageHeader
-        title="Создать новый заказ"
-        description="Параметры партии товара для автоматического расчёта стоимости и эмиссии кодов ИС Танба"
-      />
-
       <form onSubmit={handleFormSubmit} className="w-full space-y-8">
         
         {/* Step 1: Category Selection */}
@@ -1817,399 +1859,370 @@ export const CreateOrderPage: React.FC = () => {
           </div>
 
           {/* 1. Макет этикетки (стикера) */}
-          {savedTemplates.length > 0 ? (
-            <div className="w-full bg-[#F8FAFC] border border-gray-200/90 rounded-2xl p-5 space-y-4">
-              {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-gray-200/80">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
-                    <Palette className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-[#111827] uppercase tracking-wider block">
-                      Макет этикетки (стикера)
-                    </span>
-                    <span className="text-[11px] text-[#64748B]">
-                      Печать по готовому шаблону или разработка нового макета
-                    </span>
-                  </div>
+          <div id="step-sticker-section" className="w-full bg-[#F8FAFC] border border-gray-200/90 rounded-2xl p-5 space-y-4">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-200/80 gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+                  <Palette className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-[#111827] uppercase tracking-wider block">
+                    Макет этикетки (стикера)
+                  </span>
+                  <span className="text-[11px] text-[#64748B]">
+                    Выберите способ подготовки товарного стикера для печати
+                  </span>
                 </div>
               </div>
 
-              {/* 3 Clean Native Radio Options */}
-              <div className="space-y-2">
-                {/* Option 1: Saved Template */}
-                <label
-                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    templateChoice === 'SAVED'
-                      ? 'border-[#0082FB] bg-blue-50/40 shadow-2xs'
-                      : 'border-gray-200/90 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <input
-                      type="radio"
-                      name="templateChoice"
-                      checked={templateChoice === 'SAVED'}
-                      onChange={() => handleTemplateChoiceChange('SAVED')}
-                      className="w-4 h-4 text-[#0082FB] focus:ring-[#0082FB] cursor-pointer shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold text-[#111827]">
-                          {selectedTemplate ? selectedTemplate.name : 'Использовать готовый макет'}
-                        </span>
+              <a
+                href="/designer"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0082FB] hover:text-[#0070DA] hover:underline self-start sm:self-auto"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Онлайн-конструктор макетов</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
+            {/* 3 Clear Visual Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Card 1: Библиотека */}
+              <button
+                type="button"
+                onClick={() => handleTemplateChoiceChange('SAVED')}
+                className={`text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                  templateChoice === 'SAVED'
+                    ? 'border-[#0082FB] bg-blue-50/50 shadow-xs ring-1 ring-[#0082FB]/20'
+                    : 'border-gray-200/90 bg-white hover:border-gray-300 hover:bg-gray-50/60'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+                      selectedTemplate && !selectedTemplate.isPaid
+                        ? 'text-amber-800 bg-amber-100/80'
+                        : 'text-emerald-700 bg-emerald-100/70'
+                    }`}>
+                      {selectedTemplate && !selectedTemplate.isPaid
+                        ? `+${Number(dbPricingSettings?.selfLayoutPrice || 1000).toLocaleString()} ₸ • Черновик`
+                        : '0 ₸ • Мгновенно'}
+                    </span>
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                      templateChoice === 'SAVED' ? 'border-[#0082FB] bg-[#0082FB]' : 'border-gray-300 bg-white'
+                    }`}>
+                      {templateChoice === 'SAVED' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold text-[#111827]">
+                    Макет из библиотеки
+                  </div>
+                  <div className="text-[11px] text-[#64748B] mt-0.5 leading-snug">
+                    {savedTemplates.length > 0
+                      ? `Сохранённый шаблон (${savedTemplates.length} в базе)`
+                      : 'Использовать свой готовый шаблон'}
+                  </div>
+                </div>
+              </button>
+
+              {/* Card 2: Дизайнер */}
+              <button
+                type="button"
+                onClick={() => handleTemplateChoiceChange('NEW')}
+                className={`text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                  templateChoice === 'NEW'
+                    ? 'border-[#0082FB] bg-blue-50/50 shadow-xs ring-1 ring-[#0082FB]/20'
+                    : 'border-gray-200/90 bg-white hover:border-gray-300 hover:bg-gray-50/60'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#0082FB] bg-blue-100/70 px-2 py-0.5 rounded">
+                      +{Number(dbPricingSettings?.stickerLayoutPrice || 5000).toLocaleString()} ₸
+                    </span>
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                      templateChoice === 'NEW' ? 'border-[#0082FB] bg-[#0082FB]' : 'border-gray-300 bg-white'
+                    }`}>
+                      {templateChoice === 'NEW' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold text-[#111827]">
+                    Заказать у дизайнера
+                  </div>
+                  <div className="text-[11px] text-[#64748B] mt-0.5 leading-snug">
+                    Верстка под ключ по стандартам РК с сохранением в библиотеку
+                  </div>
+                </div>
+              </button>
+
+              {/* Card 3: Без стикера */}
+              <button
+                type="button"
+                onClick={() => handleTemplateChoiceChange('NONE')}
+                className={`text-left p-3.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                  templateChoice === 'NONE'
+                    ? 'border-[#0082FB] bg-blue-50/50 shadow-xs ring-1 ring-[#0082FB]/20'
+                    : 'border-gray-200/90 bg-white hover:border-gray-300 hover:bg-gray-50/60'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                      0 ₸ • Только коды
+                    </span>
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                      templateChoice === 'NONE' ? 'border-[#0082FB] bg-[#0082FB]' : 'border-gray-300 bg-white'
+                    }`}>
+                      {templateChoice === 'NONE' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold text-[#111827]">
+                    Без макета стикера
+                  </div>
+                  <div className="text-[11px] text-[#64748B] mt-0.5 leading-snug">
+                    Печать только Data Matrix кодов без товарной этикетки
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Content panel for selected option */}
+            {templateChoice === 'SAVED' && (
+              <div className="animate-in fade-in duration-150">
+                {savedTemplates.length > 0 ? (
+                  <div className="bg-white border border-gray-200/90 rounded-xl p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <label className="text-xs font-bold text-gray-700 shrink-0">
+                          Шаблон:
+                        </label>
+                        <select
+                          value={selectedTemplateId || ''}
+                          onChange={(e) => handleSelectTemplate(e.target.value)}
+                          className="w-full text-xs font-semibold bg-[#F8FAFC] border border-gray-200 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:border-[#0082FB]"
+                        >
+                          {savedTemplates.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name} ({t.widthMm} × {t.heightMm} мм)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
                         {selectedTemplate && (
-                          <span className="text-[10px] font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
-                            {selectedTemplate.widthMm} × {selectedTemplate.heightMm} мм
+                          <a
+                            href={`/designer?templateId=${selectedTemplate.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-bold text-[#0082FB] hover:underline"
+                          >
+                            <span>Редактировать</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                        <span className="text-gray-300">•</span>
+                        <a
+                          href="/designer"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Новый</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={refreshSavedTemplates}
+                          title="Обновить список шаблонов"
+                          className="text-gray-400 hover:text-gray-700 p-1 cursor-pointer"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {selectedTemplate && (
+                      <div className="flex items-center gap-3 text-[11px] text-[#64748B] pt-2 border-t border-gray-100 flex-wrap">
+                        <span>Размер: <strong className="text-gray-900">{selectedTemplate.widthMm} × {selectedTemplate.heightMm} мм</strong></span>
+                        <span>•</span>
+                        <span>Элементов: <strong className="text-gray-900">{selectedTemplate.elements?.length || 0}</strong></span>
+                        <span>•</span>
+                        <span>Категория: <strong className="text-gray-900">{getCategoryLabel(selectedTemplate.category || 'OTHER')}</strong></span>
+                        <span>•</span>
+                        {selectedTemplate.isPaid ? (
+                          <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-bold border border-emerald-200/50 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Утвержден (0 ₸ • сразу в печать)</span>
+                          </span>
+                        ) : (
+                          <span className="text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-lg font-bold border border-amber-200/80 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Черновик • К заказу добавится утверждение (+{Number(dbPricingSettings?.selfLayoutPrice || 1000).toLocaleString()} ₸)</span>
                           </span>
                         )}
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded">
-                          Утверждён
-                        </span>
                       </div>
-                      <span className="text-[11px] text-[#64748B] block mt-0.5">
-                        Сохранённый шаблон из вашей библиотеки
-                      </span>
-                    </div>
+                    )}
                   </div>
-
-                  <span className="text-xs font-extrabold text-emerald-600 shrink-0 ml-3">
-                    0 ₸
-                  </span>
-                </label>
-
-                {/* If more than 1 saved template, allow choosing which one */}
-                {templateChoice === 'SAVED' && savedTemplates.length > 1 && (
-                  <div className="pl-7 pr-2 py-1">
-                    <select
-                      value={selectedTemplateId || ''}
-                      onChange={(e) => handleSelectTemplate(e.target.value)}
-                      className="w-full text-xs font-medium bg-white border border-gray-200 rounded-lg px-3 py-2 text-[#111827] focus:outline-none focus:border-[#0082FB]"
-                    >
-                      {savedTemplates.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name} ({t.widthMm} × {t.heightMm} мм)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Option 2: New Design */}
-                <label
-                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    templateChoice === 'NEW'
-                      ? 'border-[#0082FB] bg-blue-50/40 shadow-2xs'
-                      : 'border-gray-200/90 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="templateChoice"
-                      checked={templateChoice === 'NEW'}
-                      onChange={() => handleTemplateChoiceChange('NEW')}
-                      className="w-4 h-4 text-[#0082FB] focus:ring-[#0082FB] cursor-pointer shrink-0"
-                    />
-                    <div>
-                      <span className="text-xs font-bold text-[#111827] block">
-                        Заказать разработку нового макета
-                      </span>
-                      <span className="text-[11px] text-[#64748B] block mt-0.5">
-                        Дизайнер подготовит макет под ваши требования и стандарты маркировки
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-3">
-                    +{Number(dbPricingSettings?.stickerLayoutPrice || 5000).toLocaleString()} ₸
-                  </span>
-                </label>
-
-                {/* Option 3: None */}
-                <label
-                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    templateChoice === 'NONE'
-                      ? 'border-[#0082FB] bg-blue-50/40 shadow-2xs'
-                      : 'border-gray-200/90 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="templateChoice"
-                      checked={templateChoice === 'NONE'}
-                      onChange={() => handleTemplateChoiceChange('NONE')}
-                      className="w-4 h-4 text-[#0082FB] focus:ring-[#0082FB] cursor-pointer shrink-0"
-                    />
-                    <div>
-                      <span className="text-xs font-bold text-[#111827] block">
-                        Без макета стикера
-                      </span>
-                      <span className="text-[11px] text-[#64748B] block mt-0.5">
-                        Печать только кодов Data Matrix без товарной этикетки
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-medium text-gray-400 shrink-0 ml-3">
-                    0 ₸
-                  </span>
-                </label>
-              </div>
-
-                {/* Tab 2: NEW DESIGN FORM */}
-                {templateChoice === 'NEW' && (
-                  <div className="pt-3 border-t border-gray-200/80 space-y-3.5 animate-in fade-in duration-150">
-                    {/* Size selection */}
-                    <div>
-                      <label className="text-[11px] font-bold text-[#475569] block mb-1.5">
-                        Размер стикера (мм)
-                      </label>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {[
-                          { w: '58', h: '40', label: '58 × 40' },
-                          { w: '60', h: '60', label: '60 × 60' },
-                          { w: '40', h: '30', label: '40 × 30' },
-                          { w: '75', h: '120', label: '75 × 120' },
-                        ].map((preset) => {
-                          const isPreset = String(labelWidth) === preset.w && String(labelHeight) === preset.h;
-                          return (
-                            <button
-                              key={preset.label}
-                              type="button"
-                              onClick={() => {
-                                setLabelWidth(preset.w);
-                                setLabelHeight(preset.h);
-                              }}
-                              className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer border ${
-                                isPreset
-                                  ? 'border-[#0082FB] bg-blue-50 text-[#0082FB] font-bold shadow-2xs'
-                                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                              }`}
-                            >
-                              {preset.label} мм
-                            </button>
-                          );
-                        })}
-
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500 pl-1">
-                          <span className="text-[11px] text-[#64748B] font-medium whitespace-nowrap">или вручную:</span>
-                          <input
-                            type="number"
-                            min="10"
-                            max="300"
-                            value={labelWidth}
-                            onChange={(e) => setLabelWidth(e.target.value)}
-                            placeholder="Ш"
-                            className="w-12 text-center py-1 px-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0082FB]"
-                          />
-                          <span>×</span>
-                          <input
-                            type="number"
-                            min="10"
-                            max="300"
-                            value={labelHeight}
-                            onChange={(e) => setLabelHeight(e.target.value)}
-                            placeholder="В"
-                            className="w-12 text-center py-1 px-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0082FB]"
-                          />
-                          <span className="text-gray-400">мм</span>
+                ) : (
+                  <div className="bg-white border border-amber-200/90 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs font-bold text-gray-900">
+                          В вашей библиотеке пока нет сохранённых макетов
+                        </div>
+                        <div className="text-[11px] text-gray-500 mt-0.5">
+                          Создайте макет в конструкторе или выберите заказ у дизайнера выше
                         </div>
                       </div>
                     </div>
-
-
-                    {/* Informational note about nomenclature */}
-                    <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl flex items-start gap-2.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#0082FB] mt-1.5 shrink-0" />
-                      <p className="text-[11px] text-[#475569] leading-relaxed">
-                        Данные о товарах (наименования на каз. и рус. языках, артикулы, составы, бренды) берутся автоматически из спецификации вашего заказа (Шаг 2). Дизайнер согласует макет перед запуском в печать.
-                      </p>
-                    </div>
-
-                    {/* Extra details / wishes */}
-                    <div>
-                      <label className="text-[11px] font-bold text-[#475569] block mb-1">
-                        Пожелания к макету и реквизиты (опционально)
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={labelExtraDetails}
-                        onChange={(e) => setLabelExtraDetails(e.target.value)}
-                        placeholder="Укажите реквизиты производителя/импортера в РК, знаки ухода, логотип или особые требования к этикетке..."
-                        className="w-full text-xs bg-white border border-gray-200/90 rounded-xl p-2.5 text-[#111827] focus:outline-none focus:border-[#0082FB] resize-none"
-                      />
-                    </div>
-
-                    {/* Signs & Barcode */}
-                    <div className="pt-1">
-                      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
-                          <input
-                            type="checkbox"
-                            checked={labelHasBarcode}
-                            onChange={(e) => setLabelHasBarcode(e.target.checked)}
-                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
-                          />
-                          <span>Штрихкод EAN-13 (из CSV)</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
-                          <input
-                            type="checkbox"
-                            checked={labelHasEac}
-                            onChange={(e) => setLabelHasEac(e.target.checked)}
-                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
-                          />
-                          <span>Знак обращения EAC</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="w-full bg-[#F8FAFC] border border-gray-200/90 rounded-2xl p-5 space-y-4">
-                <label
-                  className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer border transition-all ${
-                    extraServices.includes('STICKER_LAYOUT_DESIGN')
-                      ? 'border-[#0082FB] bg-blue-50/40 shadow-sm'
-                      : 'border-gray-200/90 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={extraServices.includes('STICKER_LAYOUT_DESIGN')}
-                      onChange={() => toggleService('STICKER_LAYOUT_DESIGN')}
-                      className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB] cursor-pointer"
-                    />
-                    <div>
-                      <span className="text-xs font-bold text-[#111827] block">
-                        Разработка макета стикера
-                      </span>
-                      <span className="text-[11px] text-[#64748B]">
-                        Дизайн этикетки под требования ваших стандартов. Сохранится в библиотеку для повторных заказов!
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-3">
-                    +{Number(dbPricingSettings?.stickerLayoutPrice || 5000).toLocaleString()} ₸
-                  </span>
-                </label>
-
-                {/* Custom Sticker Layout Input Form */}
-                {extraServices.includes('STICKER_LAYOUT_DESIGN') && (
-                  <div className="pt-3 border-t border-gray-200/80 space-y-3.5 animate-in fade-in duration-150">
-                    {/* Size selection */}
-                    <div>
-                      <label className="text-[11px] font-bold text-[#475569] block mb-1.5">
-                        Размер стикера (мм)
-                      </label>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {[
-                          { w: '58', h: '40', label: '58 × 40' },
-                          { w: '60', h: '60', label: '60 × 60' },
-                          { w: '40', h: '30', label: '40 × 30' },
-                          { w: '75', h: '120', label: '75 × 120' },
-                        ].map((preset) => {
-                          const isPreset = String(labelWidth) === preset.w && String(labelHeight) === preset.h;
-                          return (
-                            <button
-                              key={preset.label}
-                              type="button"
-                              onClick={() => {
-                                setLabelWidth(preset.w);
-                                setLabelHeight(preset.h);
-                              }}
-                              className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer border ${
-                                isPreset
-                                  ? 'border-[#0082FB] bg-blue-50 text-[#0082FB] font-bold shadow-2xs'
-                                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                              }`}
-                            >
-                              {preset.label} мм
-                            </button>
-                          );
-                        })}
-
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500 pl-1">
-                          <span className="text-[11px] text-[#64748B] font-medium whitespace-nowrap">или вручную:</span>
-                          <input
-                            type="number"
-                            min="10"
-                            max="300"
-                            value={labelWidth}
-                            onChange={(e) => setLabelWidth(e.target.value)}
-                            placeholder="Ш"
-                            className="w-12 text-center py-1 px-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0082FB]"
-                          />
-                          <span>×</span>
-                          <input
-                            type="number"
-                            min="10"
-                            max="300"
-                            value={labelHeight}
-                            onChange={(e) => setLabelHeight(e.target.value)}
-                            placeholder="В"
-                            className="w-12 text-center py-1 px-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0082FB]"
-                          />
-                          <span className="text-gray-400">мм</span>
-                        </div>
-                      </div>
-                    </div>
-
-
-                    {/* Informational note about nomenclature */}
-                    <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl flex items-start gap-2.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#0082FB] mt-1.5 shrink-0" />
-                      <p className="text-[11px] text-[#475569] leading-relaxed">
-                        Данные о товарах (наименования на каз. и рус. языках, артикулы, составы, бренды) берутся автоматически из спецификации вашего заказа (Шаг 2). Дизайнер согласует макет перед запуском в печать.
-                      </p>
-                    </div>
-
-                    {/* Extra details / wishes */}
-                    <div>
-                      <label className="text-[11px] font-bold text-[#475569] block mb-1">
-                        Пожелания к макету и реквизиты (опционально)
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={labelExtraDetails}
-                        onChange={(e) => setLabelExtraDetails(e.target.value)}
-                        placeholder="Укажите реквизиты производителя/импортера в РК, знаки ухода, логотип или особые требования к этикетке..."
-                        className="w-full text-xs bg-white border border-gray-200/90 rounded-xl p-2.5 text-[#111827] focus:outline-none focus:border-[#0082FB] resize-none"
-                      />
-                    </div>
-
-                    {/* Signs & Barcode */}
-                    <div className="pt-1">
-                      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
-                          <input
-                            type="checkbox"
-                            checked={labelHasBarcode}
-                            onChange={(e) => setLabelHasBarcode(e.target.checked)}
-                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
-                          />
-                          <span>Штрихкод EAN-13 (из CSV)</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
-                          <input
-                            type="checkbox"
-                            checked={labelHasEac}
-                            onChange={(e) => setLabelHasEac(e.target.checked)}
-                            className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
-                          />
-                          <span>Знак обращения EAC</span>
-                        </label>
-                      </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <a
+                        href="/designer"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-2xs"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>Создать в Конструкторе</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={refreshSavedTemplates}
+                        title="Обновить список"
+                        className="text-xs text-gray-600 hover:text-gray-900 border border-gray-200 px-2 py-1.5 rounded-lg bg-gray-50 cursor-pointer"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
             )}
+
+            {/* Form for NEW DESIGN */}
+            {templateChoice === 'NEW' && (
+              <div className="bg-white border border-gray-200/90 rounded-xl p-4 space-y-3.5 animate-in fade-in duration-150">
+                {/* Size selection */}
+                <div>
+                  <label className="text-[11px] font-bold text-[#475569] block mb-1.5">
+                    Размер стикера (мм)
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {[
+                      { w: '58', h: '40', label: '58 × 40' },
+                      { w: '60', h: '60', label: '60 × 60' },
+                      { w: '40', h: '30', label: '40 × 30' },
+                      { w: '75', h: '120', label: '75 × 120' },
+                    ].map((preset) => {
+                      const isPreset = String(labelWidth) === preset.w && String(labelHeight) === preset.h;
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            setLabelWidth(preset.w);
+                            setLabelHeight(preset.h);
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer border ${
+                            isPreset
+                              ? 'border-[#0082FB] bg-blue-50 text-[#0082FB] font-bold shadow-2xs'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                          }`}
+                        >
+                          {preset.label} мм
+                        </button>
+                      );
+                    })}
+
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 pl-1">
+                      <span className="text-[11px] text-[#64748B] font-medium whitespace-nowrap">или вручную:</span>
+                      <input
+                        type="number"
+                        min="10"
+                        max="300"
+                        value={labelWidth}
+                        onChange={(e) => setLabelWidth(e.target.value)}
+                        placeholder="Ш"
+                        className="w-12 text-center py-1 px-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0082FB]"
+                      />
+                      <span>×</span>
+                      <input
+                        type="number"
+                        min="10"
+                        max="300"
+                        value={labelHeight}
+                        onChange={(e) => setLabelHeight(e.target.value)}
+                        placeholder="В"
+                        className="w-12 text-center py-1 px-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#0082FB]"
+                      />
+                      <span className="text-gray-400">мм</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Informational note about nomenclature */}
+                <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl flex items-start gap-2.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#0082FB] mt-1.5 shrink-0" />
+                  <p className="text-[11px] text-[#475569] leading-relaxed">
+                    Данные о товарах (наименования на каз. и рус. языках, артикулы, составы, бренды) берутся автоматически из спецификации вашего заказа (Шаг 2). Дизайнер согласует макет перед запуском в печать.
+                  </p>
+                </div>
+
+                {/* Extra details / wishes */}
+                <div>
+                  <label className="text-[11px] font-bold text-[#475569] block mb-1">
+                    Пожелания к макету и реквизиты (опционально)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={labelExtraDetails}
+                    onChange={(e) => setLabelExtraDetails(e.target.value)}
+                    placeholder="Укажите реквизиты производителя/импортера в РК, знаки ухода, логотип или особые требования к этикетке..."
+                    className="w-full text-xs bg-white border border-gray-200/90 rounded-xl p-2.5 text-[#111827] focus:outline-none focus:border-[#0082FB] resize-none"
+                  />
+                </div>
+
+                {/* Signs & Barcode */}
+                <div className="pt-1">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
+                      <input
+                        type="checkbox"
+                        checked={labelHasBarcode}
+                        onChange={(e) => setLabelHasBarcode(e.target.checked)}
+                        className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
+                      />
+                      <span>Штрихкод EAN-13 (из CSV)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#111827]">
+                      <input
+                        type="checkbox"
+                        checked={labelHasEac}
+                        onChange={(e) => setLabelHasEac(e.target.checked)}
+                        className="w-4 h-4 rounded text-[#0082FB] focus:ring-[#0082FB]"
+                      />
+                      <span>Знак обращения EAC</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Form for NONE */}
+            {templateChoice === 'NONE' && (
+              <div className="bg-white border border-gray-200/90 rounded-xl p-3.5 flex items-center gap-2.5 text-xs text-[#64748B] animate-in fade-in duration-150">
+                <CheckCircle2 className="w-4 h-4 text-gray-400 shrink-0" />
+                <span>Будет выполнена печать только кодов Data Matrix без стикера с характеристиками товара.</span>
+              </div>
+            )}
+          </div>
 
           {/* 2. Сопутствующие складские и логистические услуги */}
           <div className="space-y-3 pt-2 border-t border-gray-100">
@@ -2669,6 +2682,22 @@ export const CreateOrderPage: React.FC = () => {
                   <span>•</span>
                   <span>
                     Цена: <strong className="text-[#111827]">{calculated.unitPrice} ₸ / шт.</strong>
+                  </span>
+                </>
+              )}
+              {extraServices.includes('STICKER_LAYOUT_APPROVAL') && (
+                <>
+                  <span>•</span>
+                  <span className="text-amber-800 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded font-bold text-[11px]">
+                    + Утверждение макета ({Number(dbPricingSettings?.selfLayoutPrice || 1000).toLocaleString()} ₸)
+                  </span>
+                </>
+              )}
+              {extraServices.includes('STICKER_LAYOUT_DESIGN') && (
+                <>
+                  <span>•</span>
+                  <span className="text-purple-800 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded font-bold text-[11px]">
+                    + Разработка макета ({Number(dbPricingSettings?.stickerLayoutPrice || 5000).toLocaleString()} ₸)
                   </span>
                 </>
               )}

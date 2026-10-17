@@ -30,6 +30,7 @@ import {
   generateTestCodesForOrder,
   submitOrderUtilisationReport,
   syncOrderNkt,
+  payOrderWithBalance,
 } from '../controllers/orders.controller';
 import { authenticateJWT, requireAdmin } from '../middleware/auth.middleware';
 import { orderCodesUpload } from '../middleware/upload.middleware';
@@ -49,6 +50,7 @@ router.get('/registry/codes', getCodesRegistry);
 router.get('/:id/pdf-status', getOrderPdfStatus);
 router.post('/:id/generate-async', triggerAsyncOrderPdfGeneration);
 router.get('/:id', getOrderById);
+router.post('/:id/pay-balance', payOrderWithBalance);
 router.patch('/:id/status', requireAdmin, updateOrderStatus);
 router.patch('/:id/print-permission', requireAdmin, updateOrderPrintPermission);
 router.patch('/:id/sticker-layout', requireAdmin, updateStickerLayout);

@@ -76,6 +76,7 @@ const TARIFF_NAMES: Record<string, string> = {
 const SERVICE_NAMES: Record<string, string> = {
   ON_SITE_STICKERING: 'Стикеровка на складе',
   STICKER_LAYOUT_DESIGN: 'Разработка макета стикера',
+  STICKER_LAYOUT_APPROVAL: 'Согласование макета стикера',
   URGENT_PROCESSING: 'Срочное исполнение (24ч)',
   EXPRESS_DELIVERY: 'Экспресс-доставка рулонов',
   SSCC_AGGREGATION: 'SSCC Агрегация коробов',
@@ -1095,7 +1096,12 @@ export const AdminOrderDetailPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <StatusBadge status={order.status} tariffType={order.tariffType} />
+            <StatusBadge
+              status={order.status}
+              tariffType={order.tariffType}
+              paymentStatus={order.paymentStatus}
+              hasUtilisationReport={Boolean((order as any).markirovkaReports?.some((r: any) => r.status === 'ACCEPTED'))}
+            />
           </div>
         </div>
 
@@ -1141,8 +1147,12 @@ export const AdminOrderDetailPage: React.FC = () => {
             <CreditCard className="w-4 h-4 text-[#64748B] shrink-0 mt-0.5" />
             <div>
               <span className="text-[#64748B] block text-[11px]">Сумма партии</span>
-              <span className="font-extrabold text-[#111827] text-sm">{order.totalPrice.toLocaleString()} ₸</span>
-              <span className="block text-[10px] text-gray-500">{order.itemsCount.toLocaleString()} шт. × {order.pricePerItem} ₸</span>
+              <span className="font-extrabold text-[#111827] text-sm">{Number(order.totalPrice || 0).toLocaleString('ru-RU')} ₸</span>
+              <span className="block text-[10px] text-gray-500">
+                {order.tariffType === 'DIGITAL'
+                  ? `${Number(order.itemsCount || 0).toLocaleString('ru-RU')} кодов`
+                  : `${Number(order.itemsCount || 0).toLocaleString('ru-RU')} шт. × ${Number(order.pricePerItem || 0).toLocaleString('ru-RU')} ₸`}
+              </span>
             </div>
           </div>
         </div>
@@ -1401,7 +1411,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                           <div className="bg-gray-50/70 border border-gray-200/80 p-3.5 rounded-xl">
                             <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Сумма партии</span>
                             <span className="font-extrabold text-[#111827] mt-1 block text-sm">
-                              {(parsed.confirmedEstimate.totalPrice || order.totalPrice).toLocaleString()} ₸
+                              {Number(parsed.confirmedEstimate?.totalPrice ?? order.totalPrice ?? 0).toLocaleString('ru-RU')} ₸
                             </span>
                           </div>
                         </div>

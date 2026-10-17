@@ -6,6 +6,7 @@ import {
   freedomResultWebhook,
   getMyPayments,
   getUserBalance,
+  getMyBalanceHistory,
 } from '../controllers/payments.controller';
 
 const router = Router();
@@ -24,5 +25,6 @@ router.all('/freedom/result.php', freedomResultWebhook);
 // 4. Client payment history & balance
 router.get('/my', authenticateJWT, getMyPayments);
 router.get('/balance', authenticateJWT, getUserBalance);
+router.get('/history', authenticateJWT, getMyBalanceHistory);
 
 export default router;

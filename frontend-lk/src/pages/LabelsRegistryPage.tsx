@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
-import { PageHeader } from '@shared';
 import { getCategoryLabel } from '../data/categories';
 import {
   Tag,
@@ -174,22 +173,6 @@ export const LabelsRegistryPage: React.FC = () => {
 
   return (
     <div className="w-full space-y-6">
-      {/* Top Header */}
-      <PageHeader
-        title="Реестр этикеток"
-        description="Сквозной каталог Data Matrix кодов маркировки и стикеров по всем вашим заказам"
-        action={
-          <div className="flex items-center gap-2.5">
-            <Link
-              to="/orders/new"
-              className="inline-flex items-center gap-1.5 h-10 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs px-5 rounded-xl transition-all shadow-md shadow-blue-500/20 cursor-pointer active:scale-95"
-            >
-              <PackagePlus className="w-4 h-4" />
-              Создать заказ
-            </Link>
-          </div>
-        }
-      />
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
@@ -201,29 +184,24 @@ export const LabelsRegistryPage: React.FC = () => {
           <div className="text-xl sm:text-2xl font-black text-[#111827] mt-1.5 font-mono">
             {stats.totalCodes.toLocaleString('ru-RU')}
           </div>
-          <div className="text-[10px] text-gray-400 mt-0.5">В текущей выборке</div>
         </div>
 
         <div className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-[#64748B] font-bold">
-            <span>Новые</span>
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
+          <div className="text-xs text-[#64748B] font-bold">
+            Новые
           </div>
           <div className="text-xl sm:text-2xl font-black text-[#0082FB] mt-1.5 font-mono">
             {stats.newCodes.toLocaleString('ru-RU')}
           </div>
-          <div className="text-[10px] text-gray-400 mt-0.5">Готовы к печати</div>
         </div>
 
         <div className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-[#64748B] font-bold">
-            <span>Распечатано</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          <div className="text-xs text-[#64748B] font-bold">
+            Распечатано
           </div>
           <div className="text-xl sm:text-2xl font-black text-emerald-600 mt-1.5 font-mono">
             {stats.printedCodes.toLocaleString('ru-RU')}
           </div>
-          <div className="text-[10px] text-gray-400 mt-0.5">Сформированы в PDF</div>
         </div>
 
         <div className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-xs">
@@ -234,7 +212,6 @@ export const LabelsRegistryPage: React.FC = () => {
           <div className="text-xl sm:text-2xl font-black text-[#111827] mt-1.5 font-mono">
             {stats.totalOrders.toLocaleString('ru-RU')}
           </div>
-          <div className="text-[10px] text-gray-400 mt-0.5">С активными кодами</div>
         </div>
       </div>
 

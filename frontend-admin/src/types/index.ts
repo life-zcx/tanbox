@@ -8,6 +8,7 @@ export interface UserClient {
   binIin: string;
   phone: string;
   role: 'CLIENT' | 'ADMIN';
+  balance?: number;
   isBlocked?: boolean;
   blockedReason?: string | null;
   createdAt: string;
@@ -15,6 +16,26 @@ export interface UserClient {
     orders: number;
     stickerTemplates?: number;
   };
+}
+
+export interface BalanceHistoryItem {
+  id: string;
+  paymentNumber: string;
+  type: string;
+  amount: number;
+  currency: string;
+  status: string;
+  description: string;
+  createdAt: string;
+  direction: 'IN' | 'OUT';
+  category: string;
+  order?: {
+    id: string;
+    orderNumber: string;
+    totalPrice: number;
+    status: string;
+  } | null;
+  metadata?: any;
 }
 
 export interface UserOrderBrief {
@@ -240,6 +261,7 @@ export interface PricingSettingsItem {
   key?: string;
   ssccPrice: number;
   stickerLayoutPrice: number;
+  selfLayoutPrice?: number;
   urgentPercent: number;
   expressDeliveryPrice: number;
   volumeTier1: number;
@@ -255,6 +277,8 @@ export interface UserStickerTemplate {
   heightMm: number;
   elements: any[];
   previewUrl?: string | null;
+  isPaid?: boolean;
+  paidAt?: string | null;
   sourceOrderId?: string | null;
   createdAt: string;
   updatedAt: string;
