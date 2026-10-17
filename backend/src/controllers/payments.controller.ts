@@ -316,12 +316,12 @@ export async function freedomResultWebhook(req: Request, res: Response) {
         // Also mark any associated Invoice as PAID
         await prisma.invoice.updateMany({
           where: { orderId: payment.orderId },
-          data: { status: InvoiceStatus.PAID, paidAt: new Date() },
+          data: { status: InvoiceStatus.PAID },
         });
       } else if (payment.type === OnlinePaymentType.INVOICE && payment.invoiceId) {
         await prisma.invoice.update({
           where: { id: payment.invoiceId },
-          data: { status: InvoiceStatus.PAID, paidAt: new Date() },
+          data: { status: InvoiceStatus.PAID },
         });
 
         if (payment.orderId) {
