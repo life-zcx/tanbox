@@ -89,6 +89,7 @@ model User {
   markirovkaAccounts MarkirovkaAccount[]
   invoices         Invoice[]
   onlinePayments   OnlinePayment[]
+  productCards     MarkirovkaProductCard[]
 }
 
 model Order {
@@ -304,6 +305,7 @@ model MarkirovkaAccount {
   orders            MarkirovkaOrder[]
   reports           MarkirovkaUtilisationReport[]
   operations        MarkirovkaOperation[]
+  productCards      MarkirovkaProductCard[]
 
   @@index([userId])
   @@index([environment])
@@ -515,5 +517,48 @@ model OnlinePayment {
   @@index([status])
   @@index([createdAt])
 }
+
+enum MarkirovkaCardStatus {
+  DRAFT
+  PENDING_MODERATION
+  APPROVED
+  REJECTED
+}
+
+model MarkirovkaProductCard {
+  id                String               @id @default(uuid())
+  userId            String
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId         String?
+  account           MarkirovkaAccount?   @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  category          OrderCategory
+  name              String
+  brand             String?
+  article           String?
+  tnved             String?
+  country           String?              @default("Казахстан")
+  producerName      String?
+  targetGender      String?
+  size              String?
+  color             String?
+  composition       String?
+  packageType       String               @default("UNIT")
+  gtin              String?
+  status            MarkirovkaCardStatus @default(DRAFT)
+  moderationComment String?
+  nktRequestId      String?
+  mptCardId         String?
+  attributes        Json                 @default("{}")
+  photos            String[]             @default([])
+  documents         String[]             @default([])
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@index([userId])
+  @@index([category])
+  @@index([status])
+  @@index([gtin])
+}
+
 
 

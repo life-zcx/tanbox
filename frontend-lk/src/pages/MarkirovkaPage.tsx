@@ -21,6 +21,7 @@ import {
   KeyRound,
   ShieldAlert,
   PackagePlus,
+  Package,
   Wallet,
 } from 'lucide-react';
 import { apiClient } from '../api/client';
@@ -34,8 +35,10 @@ import { OperationReceiptModal } from '../components/markirovka/OperationReceipt
 import { PartyAndCatalogModal } from '../components/markirovka/PartyAndCatalogModal';
 import { ConnectMarkirovkaModal } from '../components/modals/ConnectMarkirovkaModal';
 import { TopUpBalanceModal } from '../components/modals/TopUpBalanceModal';
+import { ProductCardsSection } from '../components/markirovka/ProductCardsSection';
 
 export const MarkirovkaPage: React.FC = () => {
+  const [mainTab, setMainTab] = useState<'CARDS' | 'OPERATIONS'>('CARDS');
   const [operations, setOperations] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -142,8 +145,41 @@ export const MarkirovkaPage: React.FC = () => {
         </div>
       )}
 
-      {/* Connected Accounts Section */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 p-4 sm:p-5 shadow-2xs space-y-4">
+      {/* Main Mode Navigation (Cards vs Operations) */}
+      <div className="bg-white rounded-2xl border border-gray-200/80 p-2 shadow-2xs flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setMainTab('CARDS')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+            mainTab === 'CARDS'
+              ? 'bg-[#0082FB] text-white shadow-md shadow-blue-500/10'
+              : 'bg-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+          }`}
+        >
+          <Package className="w-4 h-4" />
+          <span>Карточки товаров (НКТ / Каталог)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainTab('OPERATIONS')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+            mainTab === 'OPERATIONS'
+              ? 'bg-[#0082FB] text-white shadow-md shadow-blue-500/10'
+              : 'bg-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+          }`}
+        >
+          <FileCheck2 className="w-4 h-4" />
+          <span>Операции и документооборот (СУЗ / True API)</span>
+        </button>
+      </div>
+
+      {mainTab === 'CARDS' ? (
+        <ProductCardsSection />
+      ) : (
+        <>
+          {/* Connected Accounts Section */}
+          <div className="bg-white rounded-2xl border border-gray-200/80 p-4 sm:p-5 shadow-2xs space-y-4">
         {/* Unified Card Header with Actions */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-gray-100 pb-3">
           <div className="flex items-center gap-2">
@@ -450,6 +486,8 @@ export const MarkirovkaPage: React.FC = () => {
         currentBalance={userBalance}
         onSuccess={() => fetchData()}
       />
+        </>
+      )}
     </div>
   );
 };

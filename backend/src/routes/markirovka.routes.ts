@@ -30,6 +30,17 @@ import {
   getAuthChallenge,
   authSimpleSignIn,
 } from '../controllers/markirovkaOperations.controller';
+import {
+  getCardsHandler,
+  getCardByIdHandler,
+  createCardHandler,
+  updateCardHandler,
+  deleteCardHandler,
+  submitCardToNktHandler,
+  checkCardStatusHandler,
+  getCategorySchemaHandler,
+  listCategoriesHandler,
+} from '../controllers/markirovkaCards.controller';
 
 const router = Router();
 
@@ -50,6 +61,17 @@ router.put('/nkt-settings', requireAdmin, updateNktSettingsHandler);
 router.post('/nkt-test', requireAdmin, testNktConnectionHandler);
 router.get('/party/status', checkPartyStatus);
 router.get('/products/search-by-gtin', getProductByGtin);
+
+// Product Cards & Catalog Registration (NKT & IS MPT)
+router.get('/cards/categories', listCategoriesHandler);
+router.get('/cards/categories/:category/schema', getCategorySchemaHandler);
+router.get('/cards', getCardsHandler);
+router.post('/cards', createCardHandler);
+router.get('/cards/:id', getCardByIdHandler);
+router.put('/cards/:id', updateCardHandler);
+router.delete('/cards/:id', deleteCardHandler);
+router.post('/cards/:id/submit-nkt', submitCardToNktHandler);
+router.get('/cards/:id/check-status', checkCardStatusHandler);
 
 // Operations routes (True API & OMS)
 router.get('/operations', getOperations);
