@@ -150,54 +150,80 @@ export async function saveNktSettings(updates: Partial<NktSettings>, updatedBy?:
   return next;
 }
 
-export async function testNktApiConnection(apiKey?: string, gtin: string = '0200120931509'): Promise<{
+export async function testNktApiConnection(
+  apiKey?: string,
+  baseUrl?: string,
+  gtin: string = '0200120931509'
+): Promise<{
   success: boolean;
   message: string;
   sampleProduct?: any;
   latencyMs?: number;
 }> {
   const settings = getNktSettings();
-  const keyToUse = (apiKey && apiKey.trim()) || settings.apiKey;
+  let rawKey = (apiKey && apiKey.trim()) || settings.apiKey || '';
+  // Sanitize key: eliminate any bullet points (like •), unicode dots, or non-ASCII chars
+  rawKey = rawKey.replace(/[^\x20-\x7E]/g, '').trim();
+
+  const effectiveBaseUrl =
+    (baseUrl && baseUrl.trim()) ||
+    settings.baseUrl ||
+    'https://nationalcatalog.kz/gwp';
+  const cleanBaseUrl = effectiveBaseUrl.replace(/\/+$/, '');
+
+  if (!rawKey) {
+    return {
+      success: false,
+      message: 'API-KEY не указан или содержит недопустимые символы маскирования.',
+    };
+  }
+
   const start = Date.now();
 
   try {
-    const url = `${settings.baseUrl}/portal/api/v1/products/${encodeURIComponent(gtin)}`;
+    const url = `${cleanBaseUrl}/portal/api/v1/dictionaries`;
     const res = await fetch(url, {
       method: 'GET',
       headers: {
-        'X-API-KEY': keyToUse,
+        'X-API-KEY': rawKey,
         'Accept': 'application/json',
       },
-      signal: AbortSignal.timeout(7000),
+      signal: AbortSignal.timeout(8000),
     });
     const latencyMs = Date.now() - start;
 
     if (res.ok) {
-      const data: any = await res.json();
+      const data: any = await res.json().catch(() => ([]));
+      const count = Array.isArray(data) ? data.length : Object.keys(data || {}).length;
       return {
         success: true,
-        message: `Связь с сервером НКТ установлена (${latencyMs} мс). Товар получен: "${data.nameRu || data.nameKk || data.id}".`,
-        sampleProduct: {
-          gtin: data.gtin || gtin,
-          name: data.nameRu || data.nameKk || data.id,
-          brand: data.brandName || data.brand,
-          status: data.status || 'OK',
-        },
+        message: `Связь с сервером НКТ успешно установлена (${latencyMs} мс). API-KEY действителен (справочников доступно: ${count}).`,
+        latencyMs,
+      };
+    } else if (res.status === 401 || res.status === 403) {
+      const isDev = cleanBaseUrl.includes('developer') || cleanBaseUrl.includes('test');
+      const envHint = isDev
+        ? 'Ключ не принят тестовым сервером developer.nct.kz. Если вы получили ключ на боевом nationalcatalog.kz — переключите контур на «Боевой (PROD)». Для тестового контура ключ получается отдельно в кабинете developer.nct.kz.'
+        : 'Ключ не принят боевым сервером nationalcatalog.kz. Если вы тестируете на developer.nct.kz — переключите контур на «Тестовый (DEV)».';
+      return {
+        success: false,
+        message: `Ошибка авторизации НКТ (HTTP ${res.status}): ${envHint}`,
         latencyMs,
       };
     } else {
-      const text = await res.text();
+      const text = await res.text().catch(() => '');
       return {
         success: false,
-        message: `НКТ ответил ошибкой HTTP ${res.status}: ${text.slice(0, 200)}`,
+        message: `НКТ ответил кодом HTTP ${res.status}: ${text.slice(0, 150)}`,
         latencyMs,
       };
     }
   } catch (err: any) {
     return {
       success: false,
-      message: `Не удалось связаться с сервером НКТ: ${err.message}`,
+      message: `Не удалось связаться с сервером НКТ (${cleanBaseUrl}): ${err.message}`,
       latencyMs: Date.now() - start,
     };
   }
 }
+

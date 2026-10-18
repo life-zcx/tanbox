@@ -24,7 +24,11 @@ import {
 import { apiClient } from '../../api/client';
 import { CreateProductCardModal } from './CreateProductCardModal';
 
-export const ProductCardsSection: React.FC = () => {
+interface ProductCardsSectionProps {
+  createModalTrigger?: number;
+}
+
+export const ProductCardsSection: React.FC<ProductCardsSectionProps> = ({ createModalTrigger }) => {
   const navigate = useNavigate();
   const [cards, setCards] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -57,6 +61,13 @@ export const ProductCardsSection: React.FC = () => {
     setToast({ text, type });
     setTimeout(() => setToast(null), 4000);
   };
+
+  useEffect(() => {
+    if (createModalTrigger) {
+      setCardToEdit(null);
+      setShowCreateModal(true);
+    }
+  }, [createModalTrigger]);
 
   // Load filter options (accounts & categories)
   useEffect(() => {
@@ -197,66 +208,41 @@ export const ProductCardsSection: React.FC = () => {
         </div>
       )}
 
-      {/* Top Action Header */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0082FB] flex items-center justify-center border border-blue-100 shrink-0">
-              <Package className="w-5 h-5 text-[#0082FB]" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-gray-900">Реестр карточек товаров (НКТ / Маркировка)</h2>
-              <p className="text-xs text-gray-500">
-                Создание описаний товаров для получения официальных GTIN и заказа DataMatrix
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
+      {/* Filter and Status Controls Card (Analogous to IS MPT operations) */}
+      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden space-y-0">
+        {/* Status Tabs */}
+        <div className="flex border-b border-gray-200 overflow-x-auto px-4 pt-2">
+          {[
+            { id: 'ALL', label: 'Все карточки', count: counts.ALL },
+            { id: 'DRAFT', label: 'Черновики', count: counts.DRAFT },
+            { id: 'PENDING_MODERATION', label: 'На модерации', count: counts.PENDING_MODERATION },
+            { id: 'APPROVED', label: 'Одобренные', count: counts.APPROVED },
+            { id: 'REJECTED', label: 'Отклоненные', count: counts.REJECTED },
+          ].map((tab) => (
             <button
+              key={tab.id}
               type="button"
-              onClick={() => fetchCards()}
-              disabled={loading}
-              className="p-2 text-gray-500 hover:text-[#0082FB] hover:bg-blue-50 border border-gray-200 rounded-xl transition-colors cursor-pointer"
-              title="Обновить список"
+              onClick={() => setStatusFilter(tab.id)}
+              className={`pb-3 px-3.5 text-xs font-bold border-b-2 whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
+                statusFilter === tab.id
+                  ? 'border-[#0082FB] text-[#0082FB]'
+                  : 'border-transparent text-gray-500 hover:text-gray-900'
+              }`}
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#0082FB]' : ''}`} />
+              <span>{tab.label}</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  statusFilter === tab.id ? 'bg-blue-100 text-[#0082FB]' : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {tab.count}
+              </span>
             </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setCardToEdit(null);
-                setShowCreateModal(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#0082FB] hover:bg-[#0070D8] text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer shadow-md shadow-blue-500/10"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Создать карточку товара</span>
-            </button>
-          </div>
+          ))}
         </div>
 
-        {/* Filter Controls Row: Account + Category + Search */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-100">
-          <div>
-            <label className="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wider">
-              Аккаунт маркировки
-            </label>
-            <select
-              value={accountFilter}
-              onChange={(e) => setAccountFilter(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-[#0082FB] focus:ring-1 focus:ring-[#0082FB] transition-all"
-            >
-              <option value="ALL">Все аккаунты клиентов</option>
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name} ({acc.login})
-                </option>
-              ))}
-            </select>
-          </div>
-
+        {/* Filter Controls Row: Category + Search */}
+        <div className="p-3.5 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50/40">
           <div>
             <label className="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wider">
               Товарная группа
@@ -264,7 +250,7 @@ export const ProductCardsSection: React.FC = () => {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-[#0082FB] focus:ring-1 focus:ring-[#0082FB] transition-all"
+              className="w-full px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-xl focus:border-[#0082FB] focus:ring-1 focus:ring-[#0082FB] transition-all"
             >
               <option value="ALL">Все товарные категории</option>
               {categories.map((c) => (
@@ -286,41 +272,10 @@ export const ProductCardsSection: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Поиск по названию, GTIN, ТН ВЭД..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-[#0082FB] focus:ring-1 focus:ring-[#0082FB] transition-all"
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-gray-200 rounded-xl focus:border-[#0082FB] focus:ring-1 focus:ring-[#0082FB] transition-all"
               />
             </div>
           </div>
-        </div>
-
-        {/* Status Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-t border-gray-100 pt-3">
-          {[
-            { id: 'ALL', label: 'Все карточки', count: counts.ALL },
-            { id: 'DRAFT', label: 'Черновики', count: counts.DRAFT },
-            { id: 'PENDING_MODERATION', label: 'На модерации', count: counts.PENDING_MODERATION },
-            { id: 'APPROVED', label: 'Одобренные', count: counts.APPROVED },
-            { id: 'REJECTED', label: 'Отклоненные', count: counts.REJECTED },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setStatusFilter(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-                statusFilter === tab.id
-                  ? 'bg-[#0082FB] text-white shadow-2xs'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <span>{tab.label}</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  statusFilter === tab.id ? 'bg-white/20 text-white' : 'bg-gray-200/70 text-gray-600'
-                }`}
-              >
-                {tab.count}
-              </span>
-            </button>
-          ))}
         </div>
       </div>
 
@@ -331,7 +286,7 @@ export const ProductCardsSection: React.FC = () => {
             <Package className="w-6 h-6 text-[#0082FB]" />
           </div>
           <h3 className="text-sm font-bold text-gray-900">
-            {searchQuery || categoryFilter !== 'ALL' || accountFilter !== 'ALL'
+            {searchQuery || categoryFilter !== 'ALL'
               ? 'Ничего не найдено по выбранным фильтрам'
               : 'У вас пока нет созданных карточек товаров'}
           </h3>

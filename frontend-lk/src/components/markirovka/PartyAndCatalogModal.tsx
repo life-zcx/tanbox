@@ -14,10 +14,11 @@ import { apiClient } from '../../api/client';
 
 interface PartyAndCatalogModalProps {
   onClose: () => void;
+  mode?: 'PARTY' | 'GTIN' | 'ALL';
 }
 
-export const PartyAndCatalogModal: React.FC<PartyAndCatalogModalProps> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'PARTY' | 'GTIN'>('PARTY');
+export const PartyAndCatalogModal: React.FC<PartyAndCatalogModalProps> = ({ onClose, mode = 'ALL' }) => {
+  const [activeTab, setActiveTab] = useState<'PARTY' | 'GTIN'>(mode === 'GTIN' ? 'GTIN' : 'PARTY');
 
   // Party state
   const [tin, setTin] = useState('');
@@ -96,13 +97,27 @@ export const PartyAndCatalogModal: React.FC<PartyAndCatalogModalProps> = ({ onCl
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-3 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 text-[#0082FB] flex items-center justify-center shrink-0">
-              <Search className="w-4 h-4 text-[#0082FB]" />
+            <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${
+              mode === 'GTIN'
+                ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                : 'bg-blue-50 border-blue-100 text-[#0082FB]'
+            }`}>
+              {mode === 'GTIN' ? <Barcode className="w-4 h-4" /> : <Search className="w-4 h-4" />}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-900">Реестры ИС МПТ</h3>
+              <h3 className="text-sm font-bold text-gray-900">
+                {mode === 'GTIN'
+                  ? 'Поиск товара по GTIN (НКТ)'
+                  : mode === 'PARTY'
+                  ? 'Проверка участника по БИН (ИС МПТ)'
+                  : 'Реестры ИС МПТ и НКТ'}
+              </h3>
               <p className="text-[11px] text-gray-500">
-                Проверка статуса контрагента по БИН и поиск товара в НКТ
+                {mode === 'GTIN'
+                  ? 'Поиск описания и характеристик товара по GTIN в Национальном каталоге'
+                  : mode === 'PARTY'
+                  ? 'Проверка статуса подключения контрагента к ИС МПТ по БИН / ИИН'
+                  : 'Проверка статуса контрагента по БИН и поиск товара в НКТ'}
               </p>
             </div>
           </div>
@@ -116,33 +131,35 @@ export const PartyAndCatalogModal: React.FC<PartyAndCatalogModalProps> = ({ onCl
           </button>
         </div>
 
-        {/* Standard Tabs */}
-        <div className="flex border-b border-gray-200 shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('PARTY')}
-            className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'PARTY'
-                ? 'border-[#0082FB] text-[#0082FB]'
-                : 'border-transparent text-gray-500 hover:text-gray-800'
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            Проверка по БИН
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('GTIN')}
-            className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'GTIN'
-                ? 'border-[#0082FB] text-[#0082FB]'
-                : 'border-transparent text-gray-500 hover:text-gray-800'
-            }`}
-          >
-            <Barcode className="w-3.5 h-3.5" />
-            Поиск товара по GTIN
-          </button>
-        </div>
+        {/* Standard Tabs (only if mode === 'ALL') */}
+        {mode === 'ALL' && (
+          <div className="flex border-b border-gray-200 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('PARTY')}
+              className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'PARTY'
+                  ? 'border-[#0082FB] text-[#0082FB]'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              Проверка по БИН
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('GTIN')}
+              className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'GTIN'
+                  ? 'border-[#0082FB] text-[#0082FB]'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              <Barcode className="w-3.5 h-3.5" />
+              Поиск товара по GTIN
+            </button>
+          </div>
+        )}
 
         {/* Content */}
         <div className="overflow-y-auto pr-1 flex-1 space-y-3.5 text-xs">

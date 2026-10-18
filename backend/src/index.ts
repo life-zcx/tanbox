@@ -84,8 +84,8 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Note: /uploads static directory is intentionally not served publicly to prevent unauthenticated data leaks.
-// All order files are accessible only via authenticated endpoints with ownership checks.
+// Public static serving for uploaded product images
+app.use('/api/uploads/product-cards', express.static(path.resolve(process.cwd(), 'uploads/product-cards')));
 
 // Apply general API rate limiting
 app.use('/api/', generalApiLimiter);

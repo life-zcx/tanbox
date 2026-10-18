@@ -78,10 +78,21 @@ export class MarkirovkaCardsService {
       }
     }
 
+    let targetAccountId = data.accountId || null;
+    if (!targetAccountId) {
+      const userAccount = await prisma.markirovkaAccount.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (userAccount) {
+        targetAccountId = userAccount.id;
+      }
+    }
+
     const card = await prisma.markirovkaProductCard.create({
       data: {
         userId,
-        accountId: data.accountId || null,
+        accountId: targetAccountId,
         category: data.category,
         name: data.name.trim(),
         nameKk: data.nameKk?.trim() || null,
@@ -230,6 +241,11 @@ export class MarkirovkaCardsService {
     if (!card.tnved || card.tnved.length < 4) {
       throw new Error('Укажите корректный код ТН ВЭД (минимум 4 цифры)');
     }
+    if (!card.gtin || !card.gtin.trim()) {
+      throw new Error(
+        'Для отправки карточки в Национальный каталог необходимо указать штрихкод GTIN (13 или 14 цифр). Заполните GTIN при редактировании карточки.'
+      );
+    }
 
     const customAttrs = (card.attributes as any) || {};
     const validation = this.validateCardAttributes(card.category, customAttrs);
@@ -237,10 +253,25 @@ export class MarkirovkaCardsService {
       throw new Error(`Заполните обязательные атрибуты: ${validation.missing.join(', ')}`);
     }
 
+    let account = card.account;
+    if (!account) {
+      account = await prisma.markirovkaAccount.findFirst({
+        where: { userId: card.userId },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (account) {
+        await prisma.markirovkaProductCard.update({
+          where: { id: card.id },
+          data: { accountId: account.id },
+        });
+      }
+    }
+
     const settings = getNktSettings();
-    const effectiveApiKey = (card.account?.nktApiKey && card.account.nktApiKey.trim()) || settings.apiKey;
+    const cleanUserKey = account?.nktApiKey ? account.nktApiKey.replace(/[^\x20-\x7E]/g, '').trim() : '';
+    const effectiveApiKey = cleanUserKey || settings.apiKey;
     const effectiveBaseUrl =
-      (card.account?.nktBaseUrl && card.account.nktBaseUrl.trim()) ||
+      (account?.nktBaseUrl && account.nktBaseUrl.trim()) ||
       settings.baseUrl ||
       'https://nationalcatalog.kz/gwp';
 
@@ -250,10 +281,86 @@ export class MarkirovkaCardsService {
       );
     }
 
+    const DEFAULT_CATEGORY_OKTRU: Record<string, string> = {
+      SHOES: '1082-0003-0007-100117541',
+      CLOTHES: '1082-0003-0007-100117541',
+      PERFUMES: '1088-0017-0002-100117545',
+      TOBACCO: '1061-0001-0001-100117542',
+      MEDICINE: '1089-0002-0056-100121609',
+      TIRES: '1113-0049-0001-100121921',
+      DAIRY: '1078-0015-0001-100117538',
+      WATER: '1078-0015-0001-100117538',
+      OTHER: '1078-0015-0001-100117538',
+    };
+
+    const effectiveOktru =
+      (customAttrs.oktru && String(customAttrs.oktru).trim()) ||
+      DEFAULT_CATEGORY_OKTRU[card.category] ||
+      '1082-0003-0007-100117541';
+
+    // Clean quantity: NKT strictly requires a valid number with dot (e.g. '1' or '2.5'), no text units like 'г' or 'кг'
+    let cleanQuantity = '1';
+    if (customAttrs.quantity) {
+      const parsed = String(customAttrs.quantity).replace(',', '.').replace(/[^0-9.]/g, '');
+      if (parsed && !isNaN(Number(parsed)) && Number(parsed) > 0) {
+        cleanQuantity = parsed;
+      }
+    }
+
+    // Map country to NCT dictionary code (ISO-2)
+    const rawCountry = (card.country || '').trim().toUpperCase();
+    let countryCode = 'KZ';
+    if (rawCountry.includes('РОССИ') || rawCountry === 'RU' || rawCountry === 'RUS') {
+      countryCode = 'RU';
+    } else if (rawCountry.includes('КИТА') || rawCountry === 'CN' || rawCountry === 'CHN') {
+      countryCode = 'CN';
+    } else if (rawCountry.includes('УЗБЕК') || rawCountry === 'UZ') {
+      countryCode = 'UZ';
+    } else if (rawCountry.includes('ТУРЦ') || rawCountry === 'TR') {
+      countryCode = 'TR';
+    } else if (rawCountry.length === 2) {
+      countryCode = rawCountry;
+    }
+
+    const producerTitle = card.producerName || card.user.companyName || 'ТОО';
+
+    // Standard attributes expected by NCT Open API
+    const attributesList: Array<{ code: string; value: string }> = [
+      { code: 'name_kk', value: card.nameKk || card.name },
+      { code: 'name_ru', value: card.name },
+      { code: 'short_name_ru', value: card.name.slice(0, 35) },
+      { code: 'short_name_kk', value: (card.nameKk || card.name).slice(0, 35) },
+      { code: 'quantity', value: cleanQuantity },
+      { code: 'measure_unit', value: '796' },
+      { code: 'country', value: countryCode },
+      { code: 'a4282e5d', value: producerTitle }, // Official NKT code for 'Наименование производителя'
+    ];
+
+    if (card.tnved) {
+      attributesList.push({ code: 'tnved', value: card.tnved });
+    }
+    if (card.gtin) {
+      attributesList.push({ code: 'gtin', value: card.gtin });
+    }
+    if (card.brand) {
+      attributesList.push({ code: 'brand', value: card.brand });
+    }
+    if (producerTitle) {
+      attributesList.push({ code: 'producer_name', value: producerTitle });
+    }
+
+    // Append custom category attributes
+    for (const [code, val] of Object.entries(customAttrs)) {
+      if (code !== 'oktru' && val && !attributesList.some((a) => a.code === code)) {
+        attributesList.push({ code, value: String(val) });
+      }
+    }
+
     // Build payload according to NKT Open API format
     const nktPayload: any = {
       productName: card.name,
       productNameKz: card.nameKk || card.name,
+      oktru: effectiveOktru,
       tradeMark: card.brand || '',
       vendorCode: card.article || '',
       model: card.model || '',
@@ -271,10 +378,7 @@ export class MarkirovkaCardsService {
       shelfLife: card.shelfLife || '',
       packageType: card.packageType,
       categoryCode: CATEGORY_SCHEMAS[card.category]?.code || 'other',
-      attributes: Object.entries(customAttrs).map(([code, value]) => ({
-        code,
-        value: String(value),
-      })),
+      attributes: attributesList,
       photos: card.photos,
       documents: card.documents,
     };
@@ -345,10 +449,25 @@ export class MarkirovkaCardsService {
       return card;
     }
 
+    let account = card.account;
+    if (!account && card.userId) {
+      account = await prisma.markirovkaAccount.findFirst({
+        where: { userId: card.userId },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (account) {
+        await prisma.markirovkaProductCard.update({
+          where: { id: card.id },
+          data: { accountId: account.id },
+        });
+      }
+    }
+
     const settings = getNktSettings();
-    const effectiveApiKey = (card.account?.nktApiKey && card.account.nktApiKey.trim()) || settings.apiKey;
+    const cleanUserKey = account?.nktApiKey ? account.nktApiKey.replace(/[^\x20-\x7E]/g, '').trim() : '';
+    const effectiveApiKey = cleanUserKey || settings.apiKey;
     const effectiveBaseUrl =
-      (card.account?.nktBaseUrl && card.account.nktBaseUrl.trim()) ||
+      (account?.nktBaseUrl && account.nktBaseUrl.trim()) ||
       settings.baseUrl ||
       'https://nationalcatalog.kz/gwp';
 

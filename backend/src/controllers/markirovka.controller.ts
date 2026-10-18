@@ -205,8 +205,12 @@ export async function updateAccount(req: Request, res: Response) {
       updateData.categories = categories;
     }
     if (nktApiKey !== undefined) {
-      updateData.nktApiKey = nktApiKey ? nktApiKey.trim() : null;
-      updateData.nktStatus = nktApiKey?.trim() ? 'ACTIVE' : 'NOT_CONFIGURED';
+      if (typeof nktApiKey === 'string' && (nktApiKey.includes('•') || !nktApiKey.trim())) {
+        // User didn't change masked key or left empty: preserve existing
+      } else {
+        updateData.nktApiKey = nktApiKey ? nktApiKey.trim() : null;
+        updateData.nktStatus = nktApiKey?.trim() ? 'ACTIVE' : 'NOT_CONFIGURED';
+      }
     }
     if (nktBaseUrl !== undefined) {
       updateData.nktBaseUrl = nktBaseUrl ? nktBaseUrl.trim() : 'https://nationalcatalog.kz/gwp';
@@ -277,9 +281,10 @@ export async function testConnection(req: Request, res: Response) {
     }
 
     if (serviceType === 'NKT') {
-      const apiKeyToTest = nktApiKey || accountRecord?.nktApiKey;
+      const isMasked = typeof nktApiKey === 'string' && (nktApiKey.includes('•') || nktApiKey.includes('&#8226;'));
+      const apiKeyToTest = (!isMasked && nktApiKey && nktApiKey.trim()) || accountRecord?.nktApiKey;
       const baseUrlToTest = nktBaseUrl || accountRecord?.nktBaseUrl || 'https://nationalcatalog.kz/gwp';
-      if (!apiKeyToTest || !apiKeyToTest.trim()) {
+      if (!apiKeyToTest || !apiKeyToTest.trim() || apiKeyToTest.includes('•')) {
         return res.status(400).json({
           success: false,
           message: 'Укажите API-KEY для проверки связи с Национальным каталогом',
@@ -721,8 +726,8 @@ export async function updateNktSettingsHandler(req: Request, res: Response) {
  */
 export async function testNktConnectionHandler(req: Request, res: Response) {
   try {
-    const { apiKey, gtin } = req.body;
-    const result = await testNktApiConnection(apiKey, gtin);
+    const { apiKey, baseUrl, gtin } = req.body;
+    const result = await testNktApiConnection(apiKey, baseUrl, gtin);
     return res.json(result);
   } catch (err: any) {
     logger.error('Failed to test NKT connection:', err);

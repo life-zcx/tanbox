@@ -13,6 +13,7 @@ import {
   Tag, 
   X, 
   FileCheck2, 
+  Package,
   Palette, 
   CreditCard, 
   Bug,
@@ -52,7 +53,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { to: '/orders', label: 'Мои заказы', icon: FileText },
         { to: '/labels', label: 'Реестр этикеток', icon: Tag },
         { to: '/designer', label: 'Конструктор макетов', icon: Palette },
-        { to: '/markirovka', label: 'Маркировка ИС МПТ', icon: FileCheck2 },
+        { to: '/markirovka', label: 'ИС МПТ', icon: FileCheck2 },
+        { to: '/product-cards', label: 'Описания товаров', icon: Package },
       ],
     },
     {

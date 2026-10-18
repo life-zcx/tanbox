@@ -62,11 +62,20 @@ router.post('/nkt-test', requireAdmin, testNktConnectionHandler);
 router.get('/party/status', checkPartyStatus);
 router.get('/products/search-by-gtin', getProductByGtin);
 
+import { productCardImageUpload } from '../middleware/upload.middleware';
+
 // Product Cards & Catalog Registration (NKT & IS MPT)
 router.get('/cards/categories', listCategoriesHandler);
 router.get('/cards/categories/:category/schema', getCategorySchemaHandler);
 router.get('/cards', getCardsHandler);
 router.post('/cards', createCardHandler);
+router.post('/cards/upload-photo', productCardImageUpload.single('file'), (req: any, res: any) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'Файл изображения не загружен' });
+  }
+  const url = `/api/uploads/product-cards/${req.file.filename}`;
+  return res.json({ success: true, url, filename: req.file.filename });
+});
 router.get('/cards/:id', getCardByIdHandler);
 router.put('/cards/:id', updateCardHandler);
 router.delete('/cards/:id', deleteCardHandler);

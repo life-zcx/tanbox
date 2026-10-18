@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -16,6 +16,8 @@ import {
   Camera,
   CheckCircle2,
   Filter,
+  Upload,
+  Loader2,
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
@@ -98,8 +100,11 @@ export const CreateProductCardModal: React.FC<CreateProductCardModalProps> = ({
   // Photos
   const [photoUrl, setPhotoUrl] = useState('');
   const [photos, setPhotos] = useState<string[]>(cardToEdit?.photos || []);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Category specific attributes
+  // Category specific attributes & OKTRU
+  const [oktru, setOktru] = useState(cardToEdit?.attributes?.oktru || '');
   const [customAttributes, setCustomAttributes] = useState<Record<string, any>>(cardToEdit?.attributes || {});
 
   const [loadingSchema, setLoadingSchema] = useState(false);
@@ -118,12 +123,9 @@ export const CreateProductCardModal: React.FC<CreateProductCardModalProps> = ({
       const cats = catRes.data?.categories || [];
       setCategories(cats);
 
-      // Auto-select first account if not editing
+      // Auto-select first account if not editing (without forcing category)
       if (!cardToEdit && accs.length > 0 && !selectedAccountId) {
         setSelectedAccountId(accs[0].id);
-        if (accs[0].categories && accs[0].categories.length > 0) {
-          setSelectedCategory(accs[0].categories[0]);
-        }
       }
     });
   }, []);
@@ -134,17 +136,11 @@ export const CreateProductCardModal: React.FC<CreateProductCardModalProps> = ({
   // When account changes, optionally auto-fill importer details
   useEffect(() => {
     if (currentAccount && !cardToEdit) {
-      if (!importerName) setImporterName(currentAccount.name || '');
+      if (!importerName && currentAccount.name && currentAccount.name !== 'щ') {
+        setImporterName(currentAccount.name);
+      }
       if (!importerBin && /^\d{12}$/.test(currentAccount.login)) {
         setImporterBin(currentAccount.login);
-      }
-      // If account has assigned categories and current category isn't in it, switch
-      if (
-        currentAccount.categories &&
-        currentAccount.categories.length > 0 &&
-        !currentAccount.categories.includes(selectedCategory)
-      ) {
-        setSelectedCategory(currentAccount.categories[0]);
       }
     }
   }, [selectedAccountId]);
@@ -209,6 +205,13 @@ export const CreateProductCardModal: React.FC<CreateProductCardModalProps> = ({
       setActiveTab('BASE');
       return;
     }
+    if (submitToNktDirectly && !gtin.trim()) {
+      setError(
+        'Для отправки в Национальный каталог (НКТ) обязательно укажите штрихкод GTIN (13 или 14 цифр). Если штрихкода пока нет, сохраните карточку как «Черновик».'
+      );
+      setActiveTab('BASE');
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -236,9 +239,11 @@ export const CreateProductCardModal: React.FC<CreateProductCardModalProps> = ({
       gostOrTu: gostOrTu.trim() || undefined,
       netWeight: netWeight.trim() || undefined,
       grossWeight: grossWeight.trim() || undefined,
-      shelfLife: shelfLife.trim() || undefined,
       photos,
-      attributes: customAttributes,
+      attributes: {
+        ...customAttributes,
+        ...(oktru.trim() ? { oktru: oktru.trim() } : {}),
+      },
     };
 
     try {
@@ -340,67 +345,48 @@ export const CreateProductCardModal: React.FC<CreateProductCardModalProps> = ({
           {/* TAB 1: BASE FIELDS */}
           {activeTab === 'BASE' && (
             <div className="space-y-5">
-              {/* Account & Category Selector Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-blue-50/40 border border-blue-100">
-                {/* Account Selection */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Аккаунт организации (Юрлицо / ИП в ИС МПТ)
-                  </label>
-                  <select
-                    value={selectedAccountId}
-                    onChange={(e) => setSelectedAccountId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:border-[#0082FB] focus:ring-2 focus:ring-[#0082FB]/10 text-gray-900 font-medium text-xs transition-all"
-                  >
-                    <option value="">Без привязки к аккаунту (общий)</option>
-                    {accounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.name} ({acc.login})
-                      </option>
-                    ))}
-                  </select>
-                  {currentAccount?.categories && currentAccount.categories.length > 0 && (
-                    <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-[#0082FB]">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>
-                        Категории этого аккаунта: {currentAccount.categories.join(', ')}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Category Selection */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-gray-700">
+              {/* Category Selector (and optional organization selector if multiple) */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/50 via-white to-white border border-blue-100/80">
+                <div className={`grid grid-cols-1 ${accounts.length > 1 ? 'sm:grid-cols-2' : ''} gap-4`}>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-800 mb-1.5">
                       Товарная группа маркировки <span className="text-rose-500">*</span>
                     </label>
-                    {currentAccount?.categories?.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowOnlyAccountCategories(!showOnlyAccountCategories)}
-                        className="text-[11px] text-gray-500 hover:text-[#0082FB] flex items-center gap-1 cursor-pointer"
-                      >
-                        <Filter className="w-3 h-3" />
-                        {showOnlyAccountCategories ? 'Показать все' : 'Только для аккаунта'}
-                      </button>
-                    )}
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => {
+                        setSelectedCategory(e.target.value);
+                        setCustomAttributes({});
+                      }}
+                      disabled={Boolean(cardToEdit)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:border-[#0082FB] focus:ring-2 focus:ring-[#0082FB]/10 text-gray-900 font-semibold text-xs transition-all cursor-pointer shadow-xs"
+                    >
+                      {categories.map((c) => (
+                        <option key={c.category} value={c.category}>
+                          {c.nameRu} ({c.nameKk})
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => {
-                      setSelectedCategory(e.target.value);
-                      setCustomAttributes({});
-                    }}
-                    disabled={Boolean(cardToEdit)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:border-[#0082FB] focus:ring-2 focus:ring-[#0082FB]/10 text-gray-900 font-medium text-xs transition-all"
-                  >
-                    {visibleCategories.map((c) => (
-                      <option key={c.category} value={c.category}>
-                        {c.nameRu} ({c.nameKk})
-                      </option>
-                    ))}
-                  </select>
+
+                  {accounts.length > 1 && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-800 mb-1.5">
+                        Организация-заявитель
+                      </label>
+                      <select
+                        value={selectedAccountId}
+                        onChange={(e) => setSelectedAccountId(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:border-[#0082FB] focus:ring-2 focus:ring-[#0082FB]/10 text-gray-900 font-medium text-xs transition-all cursor-pointer shadow-xs"
+                      >
+                        {accounts.map((acc) => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.name && acc.name !== 'щ' ? acc.name : 'Основная организация'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -495,16 +481,35 @@ export const CreateProductCardModal: React.FC<CreateProductCardModalProps> = ({
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Код ОКТРУ (Каталог НКТ)
+                  </label>
+                  <input
+                    type="text"
+                    value={oktru}
+                    onChange={(e) => setOktru(e.target.value)}
+                    placeholder="Авто для категории"
+                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:border-[#0082FB] focus:ring-2 focus:ring-[#0082FB]/10 text-gray-900 font-mono transition-all text-xs"
+                  />
+                  <p className="mt-1 text-[10px] text-gray-400">
+                    Оставьте пустым для автоопределения
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Штрихкод GTIN (EAN-13)
                   </label>
                   <input
                     type="text"
                     value={gtin}
                     onChange={(e) => setGtin(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Если есть (иначе присвоит НКТ)"
+                    placeholder="13 или 14 цифр"
                     maxLength={14}
                     className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:border-[#0082FB] focus:ring-2 focus:ring-[#0082FB]/10 text-gray-900 font-mono transition-all text-xs"
                   />
+                  <p className="mt-1 text-[10px] text-amber-600 font-medium">
+                    Обязателен при отправке в НКТ
+                  </p>
                 </div>
 
                 <div>
@@ -827,21 +832,83 @@ export const CreateProductCardModal: React.FC<CreateProductCardModalProps> = ({
                 Национальный Каталог требует минимум 1 фотографию товара (лицевая сторона и этикетка с маркировкой).
               </p>
 
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={photoUrl}
-                  onChange={(e) => setPhotoUrl(e.target.value)}
-                  placeholder="Вставьте прямую ссылку на фото (https://...)"
-                  className="flex-1 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:border-[#0082FB] focus:ring-2 focus:ring-[#0082FB]/10 text-gray-900 transition-all text-xs"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddPhoto}
-                  className="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 font-semibold text-xs text-gray-700 transition-colors cursor-pointer"
-                >
-                  Добавить фото
-                </button>
+              {/* Device File Upload Dropzone */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                multiple
+                onChange={async (e) => {
+                  const files = e.target.files;
+                  if (!files || files.length === 0) return;
+                  setUploadingPhoto(true);
+                  setError(null);
+                  try {
+                    const uploadedUrls: string[] = [];
+                    for (let i = 0; i < files.length; i++) {
+                      const file = files[i];
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      const res = await apiClient.post('/markirovka/cards/upload-photo', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' },
+                      });
+                      if (res.data?.url) {
+                        uploadedUrls.push(res.data.url);
+                      }
+                    }
+                    setPhotos((prev) => [...prev, ...uploadedUrls]);
+                  } catch (err: any) {
+                    setError(err.response?.data?.message || 'Ошибка загрузки фото');
+                  } finally {
+                    setUploadingPhoto(false);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }
+                }}
+                className="hidden"
+              />
+
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-300 hover:border-[#0082FB] bg-gray-50/70 hover:bg-blue-50/30 rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 group"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-white border border-gray-200 group-hover:border-blue-200 flex items-center justify-center text-[#0082FB] shadow-xs">
+                  {uploadingPhoto ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-[#0082FB]" />
+                  ) : (
+                    <Upload className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-800">
+                    {uploadingPhoto ? 'Загрузка фотографий на сервер...' : 'Нажмите для выбора фото с компьютера / телефона'}
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Форматы: JPG, PNG, WEBP (до 10 МБ). Можно выбрать сразу несколько фото.
+                  </p>
+                </div>
+              </div>
+
+              {/* Or Add by URL */}
+              <div className="pt-2">
+                <label className="block text-[11px] font-semibold text-gray-500 mb-1">
+                  Или добавить фото по прямой интернет-ссылке:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={photoUrl}
+                    onChange={(e) => setPhotoUrl(e.target.value)}
+                    placeholder="https://example.com/photo.jpg"
+                    className="flex-1 px-3.5 py-2 bg-white border border-gray-200 rounded-xl focus:border-[#0082FB] text-gray-900 transition-all text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddPhoto}
+                    className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 font-semibold text-xs text-gray-700 transition-colors cursor-pointer"
+                  >
+                    Добавить ссылку
+                  </button>
+                </div>
               </div>
 
               {photos.length > 0 && (

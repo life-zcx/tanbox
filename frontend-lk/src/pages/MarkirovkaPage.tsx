@@ -25,20 +25,15 @@ import {
   Wallet,
 } from 'lucide-react';
 import { apiClient } from '../api/client';
-import { NCALayerBadge } from '../components/markirovka/NCALayerBadge';
+import { MarkirovkaHeaderBar } from '../components/markirovka/MarkirovkaHeaderBar';
 import {
-  MarkirovkaOperationsButton,
   MarkirovkaOpChoice,
 } from '../components/markirovka/MarkirovkaOperationsButton';
 import { OperationModal } from '../components/markirovka/OperationModal';
 import { OperationReceiptModal } from '../components/markirovka/OperationReceiptModal';
-import { PartyAndCatalogModal } from '../components/markirovka/PartyAndCatalogModal';
-import { ConnectMarkirovkaModal } from '../components/modals/ConnectMarkirovkaModal';
 import { TopUpBalanceModal } from '../components/modals/TopUpBalanceModal';
-import { ProductCardsSection } from '../components/markirovka/ProductCardsSection';
 
 export const MarkirovkaPage: React.FC = () => {
-  const [mainTab, setMainTab] = useState<'CARDS' | 'OPERATIONS'>('CARDS');
   const [operations, setOperations] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,9 +43,6 @@ export const MarkirovkaPage: React.FC = () => {
   // Modals state
   const [modalOp, setModalOp] = useState<MarkirovkaOpChoice | null>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
-  const [showToolsModal, setShowToolsModal] = useState<boolean>(false);
-  const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
-  const [accountToEdit, setAccountToEdit] = useState<any | null>(null);
   const [showTopUpModal, setShowTopUpModal] = useState<boolean>(false);
   const [userBalance, setUserBalance] = useState<number>(0);
 
@@ -145,188 +137,25 @@ export const MarkirovkaPage: React.FC = () => {
         </div>
       )}
 
-      {/* Main Mode Navigation (Cards vs Operations) */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 p-2 shadow-2xs flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setMainTab('CARDS')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-            mainTab === 'CARDS'
-              ? 'bg-[#0082FB] text-white shadow-md shadow-blue-500/10'
-              : 'bg-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-          }`}
-        >
-          <Package className="w-4 h-4" />
-          <span>Карточки товаров (НКТ / Каталог)</span>
-        </button>
+      {/* Unified Compact Bar: Account Status, Actions, and Working Modals */}
+      <MarkirovkaHeaderBar
+        mode="MPT"
+        accounts={accounts}
+        loading={loading}
+        onRefresh={fetchData}
+        onSelectOperation={(op) => setModalOp(op)}
+      />
 
-        <button
-          type="button"
-          onClick={() => setMainTab('OPERATIONS')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-            mainTab === 'OPERATIONS'
-              ? 'bg-[#0082FB] text-white shadow-md shadow-blue-500/10'
-              : 'bg-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-          }`}
-        >
-          <FileCheck2 className="w-4 h-4" />
-          <span>Операции и документооборот (СУЗ / True API)</span>
-        </button>
-      </div>
-
-      {mainTab === 'CARDS' ? (
-        <ProductCardsSection />
-      ) : (
-        <>
-          {/* Connected Accounts Section */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 p-4 sm:p-5 shadow-2xs space-y-4">
-        {/* Unified Card Header with Actions */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-gray-100 pb-3">
-          <div className="flex items-center gap-2">
-            <Server className="w-4 h-4 text-[#0082FB]" />
-            <h2 className="text-sm font-bold text-gray-900">Подключенные станции СУЗ / ИС МПТ</h2>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
-            <NCALayerBadge />
-
-            <button
-              type="button"
-              onClick={() => setShowToolsModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
-            >
-              <Search className="w-3.5 h-3.5 text-gray-500" />
-              <span>Реестры (БИН / GTIN)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => fetchData()}
-              disabled={loading}
-              className="p-1.5 text-gray-500 hover:text-[#0082FB] hover:bg-blue-50 border border-gray-200 rounded-xl transition-colors cursor-pointer shrink-0"
-              title="Обновить данные"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#0082FB]' : ''}`} />
-            </button>
-
-            {accounts.length === 0 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setAccountToEdit(null);
-                  setShowConnectModal(true);
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#0082FB] hover:bg-blue-50 border border-blue-200 rounded-xl transition-colors cursor-pointer whitespace-nowrap"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Подключить организацию</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setAccountToEdit(accounts[0]);
-                  setShowConnectModal(true);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-colors cursor-pointer whitespace-nowrap"
-              >
-                <Edit2 className="w-3.5 h-3.5 text-[#0082FB]" />
-                <span>Настроить аккаунт</span>
-              </button>
-            )}
-
-            <MarkirovkaOperationsButton
-              onSelectOperation={(op) => setModalOp(op)}
-              disabled={loading}
-            />
+      {accounts.length === 0 && (
+        <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div>
+            <p className="font-bold text-gray-900">Станция СУЗ / ИС МПТ еще не подключена</p>
+            <p className="text-gray-600 text-[11px]">
+              Подключите станцию, чтобы формировать заказы кодов, отчеты о нанесении и агрегацию.
+            </p>
           </div>
         </div>
-
-        {accounts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-            {accounts.map((acc) => (
-              <div
-                key={acc.id}
-                className="p-4 rounded-2xl border border-gray-200 hover:border-[#0082FB]/50 transition-all bg-gray-50/50 flex flex-col justify-between space-y-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="text-xs font-bold text-gray-900">{acc.name}</h3>
-                    <p className="text-[11px] font-mono text-gray-500">БИН / Логин: {acc.login}</p>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                      acc.environment === 'PROD'
-                        ? 'bg-blue-50 text-[#0082FB] border border-blue-200'
-                        : 'bg-amber-50 text-amber-800 border border-amber-200'
-                    }`}
-                  >
-                    {acc.environment === 'PROD' ? 'ПРОМ' : 'ТЕСТ'}
-                  </span>
-                </div>
-
-                {/* Integration statuses */}
-                <div className="grid grid-cols-2 gap-2 text-[11px] bg-white p-2.5 rounded-xl border border-gray-100">
-                  <div>
-                    <span className="text-gray-400 block text-[10px] font-semibold">ИС МПТ</span>
-                    <span className={`font-bold ${acc.status === 'ACTIVE' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {acc.status === 'ACTIVE' ? '✓ Подключен' : '✗ Ошибка'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400 block text-[10px] font-semibold">НКТ Каталог</span>
-                    <span className="font-bold text-emerald-600">
-                      {acc.hasNktApiKey ? '✓ Свой API-KEY' : '✓ Шлюз Tanbox'}
-                    </span>
-                  </div>
-                </div>
-
-                {acc.categories && acc.categories.length > 0 && (
-                  <div className="text-[11px] text-gray-600">
-                    <span className="text-gray-400 text-[10px] block">Товарные группы:</span>
-                    <span className="font-medium text-gray-800">{acc.categories.join(', ')}</span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between pt-2 border-t border-gray-200/60 text-[11px]">
-                  <span className="text-gray-400 text-[10px]">1 аккаунт на профиль</span>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAccountToEdit(acc);
-                      setShowConnectModal(true);
-                    }}
-                    className="flex items-center gap-1 text-[#0082FB] hover:underline font-semibold cursor-pointer"
-                  >
-                    <Edit2 className="w-3 h-3" />
-                    Редактировать
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="space-y-0.5">
-              <p className="font-bold text-gray-900">У вас еще не подключена станция СУЗ / ИС МПТ</p>
-              <p className="text-gray-600 text-[11px]">
-                Подключите станцию, чтобы напрямую отправлять отчеты о нанесении и агрегации кодов маркировки.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setAccountToEdit(null);
-                setShowConnectModal(true);
-              }}
-              className="px-4 py-2 bg-[#0082FB] hover:bg-[#0072de] text-white font-bold rounded-xl shrink-0 transition-colors cursor-pointer"
-            >
-              + Подключить ИС МПТ
-            </button>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Operations History Section */}
       <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden">
@@ -348,10 +177,10 @@ export const MarkirovkaPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Table with Vertical & Horizontal Scroll and Sticky Header */}
+        <div className="overflow-x-auto overflow-y-auto max-h-[560px]">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#F8FAFC] border-b border-gray-200 text-[#64748B] font-bold text-[11px] uppercase tracking-wider">
+            <thead className="bg-[#F8FAFC] border-b border-gray-200 text-[#64748B] font-bold text-[11px] uppercase tracking-wider sticky top-0 z-10 shadow-xs">
               <tr>
                 <th className="py-3 px-4">Документ</th>
                 <th className="py-3 px-4">Тип операции</th>
@@ -487,20 +316,6 @@ export const MarkirovkaPage: React.FC = () => {
         onOperationUpdated={() => fetchData()}
       />
 
-      {/* Tools Modal (Party & GTIN lookup) */}
-      {showToolsModal && <PartyAndCatalogModal onClose={() => setShowToolsModal(false)} />}
-
-      {/* Connect Account Modal */}
-      <ConnectMarkirovkaModal
-        isOpen={showConnectModal}
-        initialAccount={accountToEdit}
-        onClose={() => setShowConnectModal(false)}
-        onSuccess={() => {
-          showToast('Аккаунт ИС МПТ сохранен!', 'success');
-          fetchData();
-        }}
-      />
-
       {/* Top Up Balance Modal */}
       <TopUpBalanceModal
         isOpen={showTopUpModal}
@@ -508,8 +323,6 @@ export const MarkirovkaPage: React.FC = () => {
         currentBalance={userBalance}
         onSuccess={() => fetchData()}
       />
-        </>
-      )}
     </div>
   );
 };

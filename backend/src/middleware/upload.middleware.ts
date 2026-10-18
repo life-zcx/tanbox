@@ -67,3 +67,36 @@ export const bugReportUpload = multer({
   },
 });
 
+const productCardsDir = path.resolve(process.cwd(), 'uploads/product-cards');
+if (!fs.existsSync(productCardsDir)) {
+  fs.mkdirSync(productCardsDir, { recursive: true });
+}
+
+const productCardStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, productCardsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const cleanName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_\-]/g, '_');
+    cb(null, `card_${Date.now()}_${cleanName}${ext}`);
+  },
+});
+
+export const productCardImageUpload = multer({
+  storage: productCardStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedExts = ['.png', '.jpg', '.jpeg', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedExts.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Разрешены только форматы изображений: PNG, JPG, JPEG, WEBP'));
+    }
+  },
+});
+
+
