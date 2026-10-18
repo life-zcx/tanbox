@@ -41,6 +41,7 @@ export async function getAccounts(req: Request, res: Response) {
       baseUrl: acc.baseUrl || getDefaultBaseUrl(acc.environment),
       login: acc.login,
       omsId: acc.omsId,
+      categories: acc.categories || [],
       status: acc.status,
       tokenExpiresAt: acc.tokenExpiresAt,
       lastCheckedAt: acc.lastCheckedAt,
@@ -67,7 +68,7 @@ export async function getAccounts(req: Request, res: Response) {
 export async function createAccount(req: Request, res: Response) {
   try {
     const user = (req as any).user;
-    const { name, environment, baseUrl, login, password, omsId, userId: targetUserId } = req.body;
+    const { name, environment, baseUrl, login, password, omsId, categories, userId: targetUserId } = req.body;
 
     if (!name || !login || !password) {
       return res.status(400).json({ message: 'Название, логин и пароль обязательны' });
@@ -93,6 +94,7 @@ export async function createAccount(req: Request, res: Response) {
         login: login.trim(),
         encryptedPassword,
         omsId: omsId?.trim() || null,
+        categories: Array.isArray(categories) ? categories : [],
       },
     });
 
@@ -103,6 +105,7 @@ export async function createAccount(req: Request, res: Response) {
       baseUrl: account.baseUrl || getDefaultBaseUrl(account.environment),
       login: account.login,
       omsId: account.omsId,
+      categories: account.categories,
       status: account.status,
       message: 'Аккаунт успешно добавлен',
     });
@@ -116,7 +119,7 @@ export async function updateAccount(req: Request, res: Response) {
   try {
     const user = (req as any).user;
     const { id } = req.params;
-    const { name, environment, baseUrl, login, password, omsId, status } = req.body;
+    const { name, environment, baseUrl, login, password, omsId, categories, status } = req.body;
 
     const existing = await prisma.markirovkaAccount.findUnique({ where: { id } });
     if (!existing) {
@@ -150,6 +153,9 @@ export async function updateAccount(req: Request, res: Response) {
       updateData.tokenExpiresAt = null;
     }
     if (omsId !== undefined) updateData.omsId = omsId ? omsId.trim() : null;
+    if (Array.isArray(categories)) {
+      updateData.categories = categories;
+    }
     if (status) updateData.status = status;
 
     const updated = await prisma.markirovkaAccount.update({
@@ -164,6 +170,7 @@ export async function updateAccount(req: Request, res: Response) {
       baseUrl: updated.baseUrl || getDefaultBaseUrl(updated.environment),
       login: updated.login,
       omsId: updated.omsId,
+      categories: updated.categories,
       status: updated.status,
       message: 'Аккаунт обновлен',
     });

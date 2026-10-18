@@ -8,16 +8,30 @@ export interface CreateCardInput {
   accountId?: string;
   category: OrderCategory;
   name: string;
+  nameKk?: string;
   brand?: string;
   article?: string;
+  model?: string;
   tnved?: string;
   country?: string;
   producerName?: string;
+  producerAddress?: string;
+  importerName?: string;
+  importerBin?: string;
   targetGender?: string;
   size?: string;
   color?: string;
   composition?: string;
   packageType?: string;
+  gtin?: string;
+  gostOrTu?: string;
+  certificateType?: string;
+  certificateNumber?: string;
+  certificateDate?: string | Date;
+  certificateExpiryDate?: string | Date;
+  netWeight?: string;
+  grossWeight?: string;
+  shelfLife?: string;
   attributes?: Record<string, any>;
   photos?: string[];
   documents?: string[];
@@ -70,16 +84,30 @@ export class MarkirovkaCardsService {
         accountId: data.accountId || null,
         category: data.category,
         name: data.name.trim(),
+        nameKk: data.nameKk?.trim() || null,
         brand: data.brand?.trim() || null,
         article: data.article?.trim() || null,
+        model: data.model?.trim() || null,
         tnved: data.tnved ? data.tnved.replace(/\D/g, '') : null,
         country: data.country?.trim() || 'Казахстан',
         producerName: data.producerName?.trim() || null,
+        producerAddress: data.producerAddress?.trim() || null,
+        importerName: data.importerName?.trim() || null,
+        importerBin: data.importerBin?.trim() || null,
         targetGender: data.targetGender?.trim() || null,
         size: data.size?.trim() || null,
         color: data.color?.trim() || null,
         composition: data.composition?.trim() || null,
         packageType: data.packageType || 'UNIT',
+        gtin: data.gtin?.trim() || null,
+        gostOrTu: data.gostOrTu?.trim() || null,
+        certificateType: data.certificateType?.trim() || null,
+        certificateNumber: data.certificateNumber?.trim() || null,
+        certificateDate: data.certificateDate ? new Date(data.certificateDate) : null,
+        certificateExpiryDate: data.certificateExpiryDate ? new Date(data.certificateExpiryDate) : null,
+        netWeight: data.netWeight?.trim() || null,
+        grossWeight: data.grossWeight?.trim() || null,
+        shelfLife: data.shelfLife?.trim() || null,
         attributes: data.attributes || {},
         photos: data.photos || [],
         documents: data.documents || [],
@@ -109,17 +137,36 @@ export class MarkirovkaCardsService {
     }
 
     const updateData: any = {};
+    if (data.accountId !== undefined) updateData.accountId = data.accountId || null;
     if (data.name !== undefined) updateData.name = data.name.trim();
+    if (data.nameKk !== undefined) updateData.nameKk = data.nameKk?.trim() || null;
     if (data.brand !== undefined) updateData.brand = data.brand?.trim() || null;
     if (data.article !== undefined) updateData.article = data.article?.trim() || null;
+    if (data.model !== undefined) updateData.model = data.model?.trim() || null;
     if (data.tnved !== undefined) updateData.tnved = data.tnved ? data.tnved.replace(/\D/g, '') : null;
     if (data.country !== undefined) updateData.country = data.country?.trim() || null;
     if (data.producerName !== undefined) updateData.producerName = data.producerName?.trim() || null;
+    if (data.producerAddress !== undefined) updateData.producerAddress = data.producerAddress?.trim() || null;
+    if (data.importerName !== undefined) updateData.importerName = data.importerName?.trim() || null;
+    if (data.importerBin !== undefined) updateData.importerBin = data.importerBin?.trim() || null;
     if (data.targetGender !== undefined) updateData.targetGender = data.targetGender?.trim() || null;
     if (data.size !== undefined) updateData.size = data.size?.trim() || null;
     if (data.color !== undefined) updateData.color = data.color?.trim() || null;
     if (data.composition !== undefined) updateData.composition = data.composition?.trim() || null;
     if (data.packageType !== undefined) updateData.packageType = data.packageType;
+    if (data.gtin !== undefined) updateData.gtin = data.gtin?.trim() || null;
+    if (data.gostOrTu !== undefined) updateData.gostOrTu = data.gostOrTu?.trim() || null;
+    if (data.certificateType !== undefined) updateData.certificateType = data.certificateType?.trim() || null;
+    if (data.certificateNumber !== undefined) updateData.certificateNumber = data.certificateNumber?.trim() || null;
+    if (data.certificateDate !== undefined) {
+      updateData.certificateDate = data.certificateDate ? new Date(data.certificateDate) : null;
+    }
+    if (data.certificateExpiryDate !== undefined) {
+      updateData.certificateExpiryDate = data.certificateExpiryDate ? new Date(data.certificateExpiryDate) : null;
+    }
+    if (data.netWeight !== undefined) updateData.netWeight = data.netWeight?.trim() || null;
+    if (data.grossWeight !== undefined) updateData.grossWeight = data.grossWeight?.trim() || null;
+    if (data.shelfLife !== undefined) updateData.shelfLife = data.shelfLife?.trim() || null;
     if (data.attributes !== undefined) updateData.attributes = data.attributes;
     if (data.photos !== undefined) updateData.photos = data.photos;
     if (data.documents !== undefined) updateData.documents = data.documents;
@@ -198,21 +245,35 @@ export class MarkirovkaCardsService {
     // Build payload according to NKT Open API format
     const nktPayload: any = {
       productName: card.name,
+      productNameKz: card.nameKk || card.name,
       tradeMark: card.brand || '',
       vendorCode: card.article || '',
+      model: card.model || '',
       tnvedCode: card.tnved,
       countryOfOrigin: card.country || 'Казахстан',
       producerName: card.producerName || card.user.companyName,
+      producerAddress: card.producerAddress || '',
+      importerName: card.importerName || card.account?.name || card.user.companyName,
+      importerBin: card.importerBin || card.user.binIin,
+      gostOrTu: card.gostOrTu || '',
+      certificateType: card.certificateType || '',
+      certificateNumber: card.certificateNumber || '',
+      netWeight: card.netWeight || '',
+      grossWeight: card.grossWeight || '',
+      shelfLife: card.shelfLife || '',
       packageType: card.packageType,
       categoryCode: CATEGORY_SCHEMAS[card.category]?.code || 'other',
       attributes: Object.entries(customAttrs).map(([code, value]) => ({
         code,
         value: String(value),
       })),
+      photos: card.photos,
+      documents: card.documents,
     };
 
     if (card.size) nktPayload.size = card.size;
     if (card.color) nktPayload.color = card.color;
+    if (card.gtin) nktPayload.gtin = card.gtin;
 
     try {
       const url = `${settings.baseUrl}/portal/api/v1/products/requests`;
@@ -331,6 +392,7 @@ export class MarkirovkaCardsService {
     limit?: number;
     status?: string;
     category?: string;
+    accountId?: string;
     search?: string;
     targetUserId?: string;
   }) {
@@ -343,6 +405,10 @@ export class MarkirovkaCardsService {
       where.userId = userId;
     } else if (query.targetUserId) {
       where.userId = query.targetUserId;
+    }
+
+    if (query.accountId) {
+      where.accountId = query.accountId;
     }
 
     if (query.status && Object.values(MarkirovkaCardStatus).includes(query.status as any)) {
@@ -376,7 +442,7 @@ export class MarkirovkaCardsService {
             select: { id: true, companyName: true, binIin: true, email: true },
           },
           account: {
-            select: { id: true, name: true, login: true },
+            select: { id: true, name: true, login: true, categories: true },
           },
         },
       }),

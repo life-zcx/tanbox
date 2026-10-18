@@ -292,6 +292,7 @@ model MarkirovkaAccount {
   login             String
   encryptedPassword String
   omsId             String?
+  categories        OrderCategory[]         @default([])
   status            MarkirovkaAccountStatus @default(ACTIVE)
   token             String?                 @db.Text
   tokenExpiresAt    DateTime?
@@ -526,35 +527,49 @@ enum MarkirovkaCardStatus {
 }
 
 model MarkirovkaProductCard {
-  id                String               @id @default(uuid())
-  userId            String
-  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountId         String?
-  account           MarkirovkaAccount?   @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  category          OrderCategory
-  name              String
-  brand             String?
-  article           String?
-  tnved             String?
-  country           String?              @default("Казахстан")
-  producerName      String?
-  targetGender      String?
-  size              String?
-  color             String?
-  composition       String?
-  packageType       String               @default("UNIT")
-  gtin              String?
-  status            MarkirovkaCardStatus @default(DRAFT)
-  moderationComment String?
-  nktRequestId      String?
-  mptCardId         String?
-  attributes        Json                 @default("{}")
-  photos            String[]             @default([])
-  documents         String[]             @default([])
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  id                    String               @id @default(uuid())
+  userId                String
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String?
+  account               MarkirovkaAccount?   @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  category              OrderCategory
+  name                  String
+  nameKk                String?
+  brand                 String?
+  article               String?
+  model                 String?
+  tnved                 String?
+  country               String?              @default("Казахстан")
+  producerName          String?
+  producerAddress       String?
+  importerName          String?
+  importerBin           String?
+  targetGender          String?
+  size                  String?
+  color                 String?
+  composition           String?
+  packageType           String               @default("UNIT")
+  gtin                  String?
+  gostOrTu              String?
+  certificateType       String?
+  certificateNumber     String?
+  certificateDate       DateTime?
+  certificateExpiryDate DateTime?
+  netWeight             String?
+  grossWeight           String?
+  shelfLife             String?
+  status                MarkirovkaCardStatus @default(DRAFT)
+  moderationComment     String?
+  nktRequestId          String?
+  mptCardId             String?
+  attributes            Json                 @default("{}")
+  photos                String[]             @default([])
+  documents             String[]             @default([])
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
   @@index([userId])
+  @@index([accountId])
   @@index([category])
   @@index([status])
   @@index([gtin])

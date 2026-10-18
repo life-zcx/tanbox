@@ -33,6 +33,9 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
   const [environment, setEnvironment] = useState<'TEST' | 'PROD'>(
     initialAccount?.environment || (isDevOrTest ? 'TEST' : 'PROD')
   );
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    initialAccount?.categories || []
+  );
 
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -45,11 +48,13 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
       setLogin(initialAccount.login || '');
       setPassword('');
       setEnvironment(initialAccount.environment || (isDevOrTest ? 'TEST' : 'PROD'));
+      setSelectedCategories(initialAccount.categories || []);
     } else {
       setName('');
       setLogin('');
       setPassword('');
       setEnvironment(isDevOrTest ? 'TEST' : 'PROD');
+      setSelectedCategories([]);
     }
     setTestResult(null);
     setErrorMsg(null);
@@ -138,6 +143,7 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
           name: name.trim(),
           login: login.trim(),
           environment,
+          categories: selectedCategories,
         };
         if (password.trim()) {
           updatePayload.password = password.trim();
@@ -150,6 +156,7 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
           login: login.trim(),
           password: password.trim(),
           environment,
+          categories: selectedCategories,
         });
         onSuccess(res.data);
       }
@@ -301,6 +308,57 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
             <p className="mt-1 text-[11px] text-gray-400">
               Пароль сохраняется в зашифрованном виде и используется исключительно для взаимодействия с API ИС МПТ.
             </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">
+              Товарные группы аккаунта в ИС МПТ (специфика клиента)
+            </label>
+            <p className="text-[11px] text-gray-400 mb-2">
+              Выберите категории товаров, для которых открыт доступ у этого аккаунта/юрлица:
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { id: 'SHOES', label: 'Обувь', icon: '👟' },
+                { id: 'TEXTILE', label: 'Легпром / Одежда', icon: '👕' },
+                { id: 'WATER', label: 'Вода и напитки', icon: '💧' },
+                { id: 'MEDICINE', label: 'Лекарства', icon: '💊' },
+                { id: 'TOBACCO', label: 'Табак', icon: '🚬' },
+                { id: 'BEER', label: 'Пиво / Алкоголь', icon: '🍺' },
+                { id: 'DIETARY_SUPPLEMENTS', label: 'БАДы', icon: '🌿' },
+                { id: 'OILS', label: 'Моторные масла', icon: '🛢️' },
+                { id: 'JEWELRY', label: 'Ювелирные изделия', icon: '💍' },
+                { id: 'SAIGA', label: 'Дериваты сайгака', icon: '🦌' },
+                { id: 'OTHER', label: 'Прочие товары', icon: '📦' },
+              ].map((cat) => {
+                const isSelected = selectedCategories.includes(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategories((prev) =>
+                        isSelected ? prev.filter((c) => c !== cat.id) : [...prev, cat.id]
+                      );
+                    }}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#0082FB]/10 border-[#0082FB] text-[#0082FB] font-semibold shadow-2xs'
+                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+                    }`}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.label}</span>
+                    {isSelected && <span className="text-[10px] ml-0.5 font-bold">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedCategories.length === 0 && (
+              <p className="mt-1.5 text-[11px] text-amber-600">
+                ⚠️ Не выбрано ни одной категории — будут доступны все категории по умолчанию.
+              </p>
+            )}
           </div>
 
           <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
