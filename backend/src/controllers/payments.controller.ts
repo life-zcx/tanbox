@@ -42,7 +42,7 @@ export async function initPayment(req: AuthRequest, res: Response) {
     let targetOrder: any = null;
     let targetInvoice: any = null;
 
-    // Type-specific validations and descriptions
+    // Type-specific validations, authoritative server-side pricing, and descriptions
     if (paymentType === OnlinePaymentType.ORDER) {
       if (!orderId) {
         return res.status(400).json({ message: 'Не указан orderId для оплаты заказа' });
@@ -60,10 +60,12 @@ export async function initPayment(req: AuthRequest, res: Response) {
         return res.status(400).json({ message: 'Заказ уже полностью оплачен' });
       }
 
-      // If amount not passed or invalid, use order totalPrice
+      // Authoritative server-side price (tamper-proof: client cannot pass custom amount)
+      paymentAmount = Number(targetOrder.totalPrice);
       if (!paymentAmount || paymentAmount <= 0) {
-        paymentAmount = Number(targetOrder.totalPrice);
+        return res.status(400).json({ message: 'Некорректная сумма заказа' });
       }
+
       if (!finalDescription) {
         finalDescription = `Оплата заказа маркировки #${targetOrder.orderNumber} (клиент: ${user.companyName})`;
       }
@@ -80,10 +82,11 @@ export async function initPayment(req: AuthRequest, res: Response) {
       if (targetOrder.userId !== userId && req.user?.role !== 'ADMIN') {
         return res.status(403).json({ message: 'Нет доступа к данному заказу' });
       }
-      // Fixed cost for sticker layout preparation if not specified: 5 000 KZT
-      if (!paymentAmount || paymentAmount <= 0) {
-        paymentAmount = 5000;
-      }
+
+      // Authoritative cost for sticker layout from system settings (default: 5 000 KZT)
+      const settings = await prisma.pricingSettings.findUnique({ where: { key: 'GLOBAL' } });
+      paymentAmount = Number(settings?.stickerLayoutPrice) || 5000;
+
       if (!finalDescription) {
         finalDescription = `Разработка и согласование макета этикетки к заказу #${targetOrder.orderNumber}`;
       }
@@ -104,16 +107,23 @@ export async function initPayment(req: AuthRequest, res: Response) {
       if (targetInvoice.status === InvoiceStatus.PAID) {
         return res.status(400).json({ message: 'Счет уже оплачен' });
       }
+
+      // Authoritative server-side invoice total amount (tamper-proof)
+      paymentAmount = Number(targetInvoice.totalAmount);
       if (!paymentAmount || paymentAmount <= 0) {
-        paymentAmount = Number(targetInvoice.totalAmount || (targetInvoice as any).amount || 0);
+        return res.status(400).json({ message: 'Некорректная сумма счета на оплату' });
       }
+
       if (!finalDescription) {
         finalDescription = `Оплата счета #${targetInvoice.invoiceNumber} (${user.companyName})`;
       }
     } else if (paymentType === OnlinePaymentType.BALANCE) {
-      if (!paymentAmount || paymentAmount < 500) {
-        return res.status(400).json({ message: 'Минимальная сумма пополнения баланса — 500 ₸' });
+      const parsedBalanceAmount = Math.floor(Number(amount));
+      if (isNaN(parsedBalanceAmount) || parsedBalanceAmount < 500 || parsedBalanceAmount > 10000000) {
+        return res.status(400).json({ message: 'Сумма пополнения баланса должна составлять от 500 ₸ до 10 000 000 ₸' });
       }
+      paymentAmount = parsedBalanceAmount;
+
       if (!finalDescription) {
         finalDescription = `Пополнение лицевого счета в TANBOX.KZ (${user.companyName})`;
       }
@@ -187,7 +197,10 @@ export async function initPayment(req: AuthRequest, res: Response) {
     });
   } catch (err: any) {
     logger.error('Error in initPayment handler:', { error: err });
-    return res.status(500).json({ message: 'Внутренняя ошибка при создании платежа: ' + err.message });
+    const message = process.env.NODE_ENV === 'production'
+      ? 'Внутренняя ошибка при создании платежа. Попробуйте позже.'
+      : ('Внутренняя ошибка при создании платежа: ' + err.message);
+    return res.status(500).json({ message });
   }
 }
 
@@ -292,68 +305,85 @@ export async function freedomResultWebhook(req: Request, res: Response) {
     }
 
     if (isSuccess) {
-      // 1. Update Payment status to PAID
-      await prisma.onlinePayment.update({
-        where: { id: payment.id },
-        data: {
-          status: OnlinePaymentStatus.PAID,
-          pgPaymentId: pgPaymentId || payment.pgPaymentId,
-          pgCardPan,
-          pgPaymentDate,
-          rawResponse: params,
-        },
-      });
-
-      // 2. Perform business logic depending on payment type
-      if (payment.type === OnlinePaymentType.ORDER && payment.orderId) {
-        await prisma.order.update({
-          where: { id: payment.orderId },
+      // 1. Atomic status transition: ensure only ONE webhook process executes the credit/status change
+      const wasUpdated = await prisma.$transaction(async (tx) => {
+        const updateResult = await tx.onlinePayment.updateMany({
+          where: {
+            id: payment.id,
+            status: { not: OnlinePaymentStatus.PAID },
+          },
           data: {
-            paymentStatus: PaymentStatus.PAID,
-            printAllowed: true, // Allow printing once paid
+            status: OnlinePaymentStatus.PAID,
+            pgPaymentId: pgPaymentId || payment.pgPaymentId,
+            pgCardPan,
+            pgPaymentDate,
+            rawResponse: params,
           },
         });
 
-        // Advance order status (e.g. NEW -> PROCESSING or COMPLETED if DIGITAL & codes/pdf ready)
-        await advanceOrderStatus(payment.orderId, 'PAYMENT_RECEIVED').catch(() => {});
+        if (updateResult.count === 0) {
+          // Already transitioned to PAID by a concurrent webhook call
+          return false;
+        }
 
-        // Also mark any associated Invoice as PAID
-        await prisma.invoice.updateMany({
-          where: { orderId: payment.orderId },
-          data: { status: InvoiceStatus.PAID },
-        });
-      } else if (payment.type === OnlinePaymentType.INVOICE && payment.invoiceId) {
-        await prisma.invoice.update({
-          where: { id: payment.invoiceId },
-          data: { status: InvoiceStatus.PAID },
-        });
-
-        if (payment.orderId) {
-          await prisma.order.update({
+        // 2. Perform business logic depending on payment type atomically
+        if (payment.type === OnlinePaymentType.ORDER && payment.orderId) {
+          await tx.order.update({
             where: { id: payment.orderId },
-            data: { paymentStatus: PaymentStatus.PAID, printAllowed: true },
+            data: {
+              paymentStatus: PaymentStatus.PAID,
+              printAllowed: true,
+            },
           });
 
-          await advanceOrderStatus(payment.orderId, 'PAYMENT_RECEIVED').catch(() => {});
-        }
-      } else if (payment.type === OnlinePaymentType.STICKER_LAYOUT && payment.orderId) {
-        await prisma.order.update({
-          where: { id: payment.orderId },
-          data: {
-            stickerApprovalStatus: StickerApprovalStatus.APPROVED,
-            printAllowed: true,
-          },
-        });
-      } else if (payment.type === OnlinePaymentType.BALANCE) {
-        // Increment user balance
-        await prisma.user.update({
-          where: { id: payment.userId },
-          data: {
-            balance: {
-              increment: payment.amount,
+          await tx.invoice.updateMany({
+            where: { orderId: payment.orderId },
+            data: { status: InvoiceStatus.PAID },
+          });
+        } else if (payment.type === OnlinePaymentType.INVOICE && payment.invoiceId) {
+          await tx.invoice.update({
+            where: { id: payment.invoiceId },
+            data: { status: InvoiceStatus.PAID },
+          });
+
+          if (payment.orderId) {
+            await tx.order.update({
+              where: { id: payment.orderId },
+              data: { paymentStatus: PaymentStatus.PAID, printAllowed: true },
+            });
+          }
+        } else if (payment.type === OnlinePaymentType.STICKER_LAYOUT && payment.orderId) {
+          await tx.order.update({
+            where: { id: payment.orderId },
+            data: {
+              stickerApprovalStatus: StickerApprovalStatus.APPROVED,
+              printAllowed: true,
             },
-          },
-        });
+          });
+        } else if (payment.type === OnlinePaymentType.BALANCE) {
+          // Increment user balance atomically inside transaction
+          await tx.user.update({
+            where: { id: payment.userId },
+            data: {
+              balance: {
+                increment: payment.amount,
+              },
+            },
+          });
+        }
+
+        return true;
+      });
+
+      if (!wasUpdated) {
+        // Concurrency guard: already processed by parallel request
+        const xml = freedomPayService.buildXmlResponse(scriptName, 'ok', 'Платеж уже был успешно учтен');
+        return res.type('application/xml').send(xml);
+      }
+
+      // Non-blocking asynchronous follow-ups
+      if (payment.orderId) {
+        advanceOrderStatus(payment.orderId, 'PAYMENT_RECEIVED').catch(() => {});
       }
 
       // 3. Send Telegram Notification to Admin Leads Chat
@@ -424,7 +454,10 @@ export async function getMyPayments(req: AuthRequest, res: Response) {
     return res.json(payments);
   } catch (err: any) {
     logger.error('Error in getMyPayments:', { error: err });
-    return res.status(500).json({ message: 'Ошибка получения платежей: ' + err.message });
+    const message = process.env.NODE_ENV === 'production'
+      ? 'Ошибка при получении списка платежей'
+      : ('Ошибка получения платежей: ' + err.message);
+    return res.status(500).json({ message });
   }
 }
 
@@ -460,7 +493,10 @@ export async function getUserBalance(req: AuthRequest, res: Response) {
     });
   } catch (err: any) {
     logger.error('Error in getUserBalance:', { error: err });
-    return res.status(500).json({ message: 'Ошибка получения баланса: ' + err.message });
+    const message = process.env.NODE_ENV === 'production'
+      ? 'Ошибка при получении баланса'
+      : ('Ошибка получения баланса: ' + err.message);
+    return res.status(500).json({ message });
   }
 }
 
@@ -532,6 +568,9 @@ export async function getMyBalanceHistory(req: AuthRequest, res: Response) {
     return res.json({ history });
   } catch (err: any) {
     logger.error('Error in getMyBalanceHistory:', { error: err });
-    return res.status(500).json({ message: 'Ошибка получения истории баланса: ' + err.message });
+    const message = process.env.NODE_ENV === 'production'
+      ? 'Ошибка при получении истории операций'
+      : ('Ошибка получения истории баланса: ' + err.message);
+    return res.status(500).json({ message });
   }
 }

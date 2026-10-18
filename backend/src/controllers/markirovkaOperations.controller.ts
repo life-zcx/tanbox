@@ -76,7 +76,7 @@ function mapOrderToOperation(ord: any) {
     responsePayload: {
       orderId: ord.id,
       externalOrderId: ord.externalOrderId,
-      codes: ord.codes || [],
+      codes: Array.isArray(ord.codes) ? ord.codes.slice(0, 5) : [],
       details: {
         gtin: ord.gtin,
         category: ord.category,
@@ -203,18 +203,22 @@ export async function getOperations(req: AuthRequest, res: Response) {
       });
     }
 
-    // 3. ALL operations (including orders)
+    // 3. ALL operations (including orders) - memory-safe bounded fetch
     const [opTotal, orderTotal] = await Promise.all([
       prisma.markirovkaOperation.count({ where }),
       prisma.markirovkaOrder.count({ where: orderWhere }),
     ]);
     const total = opTotal + orderTotal;
 
+    const safeTake = Math.min(take, 100);
+    const safeSkip = Math.max(0, skip);
+    const fetchLimit = Math.min(safeSkip + safeTake, 300);
+
     const [items, orders] = await Promise.all([
       prisma.markirovkaOperation.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        take: skip + take,
+        take: fetchLimit,
         include: {
           account: {
             select: {
@@ -229,7 +233,7 @@ export async function getOperations(req: AuthRequest, res: Response) {
       prisma.markirovkaOrder.findMany({
         where: orderWhere,
         orderBy: { createdAt: 'desc' },
-        take: skip + take,
+        take: fetchLimit,
         include: {
           account: {
             select: {
@@ -253,7 +257,7 @@ export async function getOperations(req: AuthRequest, res: Response) {
       ...orders.map(mapOrderToOperation),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    const pagedOperations = combined.slice(skip, skip + take);
+    const pagedOperations = combined.slice(safeSkip, safeSkip + safeTake);
 
     return res.json({
       total,

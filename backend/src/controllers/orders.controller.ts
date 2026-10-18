@@ -309,7 +309,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     }
 
     // Automatically generate invoice record in DB for client order
-    syncOrderInvoices(newOrder.userId).catch(() => {});
+    syncOrderInvoices(newOrder.userId).catch((err) => logger.warn(`Failed to auto-sync invoices for order ${newOrder.orderNumber}: ${err.message}`));
 
     // If order includes layout approval for user template, unlock it in library
     if (resolvedTemplateId && servicesList.includes('STICKER_LAYOUT_APPROVAL')) {
@@ -3505,25 +3505,69 @@ export async function payOrderWithBalance(req: AuthRequest, res: Response) {
       });
     }
 
-    // Process payment in transaction
-    const [updatedUser, updatedOrder] = await prisma.$transaction([
-      prisma.user.update({
-        where: { id: userId },
-        data: {
-          balance: { decrement: orderAmount },
-        },
-      }),
-      prisma.order.update({
-        where: { id: order.id },
-        data: {
-          paymentStatus: PaymentStatus.PAID,
-          printAllowed: true,
-        },
-      }),
-    ]);
+    // Process payment atomically in an interactive transaction with SQL-level balance checks
+    let txResult: { updatedUser: any; updatedOrder: any };
+    try {
+      txResult = await prisma.$transaction(async (tx) => {
+        // 1. Atomic decrement with strict balance check directly in DB
+        const userUpdateRes = await tx.user.updateMany({
+          where: {
+            id: userId,
+            balance: { gte: orderAmount },
+          },
+          data: {
+            balance: { decrement: orderAmount },
+          },
+        });
+
+        if (userUpdateRes.count === 0) {
+          throw new Error('INSUFFICIENT_BALANCE');
+        }
+
+        // 2. Atomic order update verifying it hasn't been paid yet
+        const orderUpdateRes = await tx.order.updateMany({
+          where: {
+            id: order.id,
+            paymentStatus: { not: PaymentStatus.PAID },
+          },
+          data: {
+            paymentStatus: PaymentStatus.PAID,
+            printAllowed: true,
+          },
+        });
+
+        if (orderUpdateRes.count === 0) {
+          throw new Error('ALREADY_PAID');
+        }
+
+        const freshUser = await tx.user.findUnique({
+          where: { id: userId },
+          select: { id: true, balance: true, companyName: true, email: true },
+        });
+
+        const freshOrder = await tx.order.findUnique({
+          where: { id: order.id },
+        });
+
+        return { updatedUser: freshUser, updatedOrder: freshOrder };
+      });
+    } catch (txErr: any) {
+      if (txErr.message === 'INSUFFICIENT_BALANCE') {
+        return res.status(400).json({
+          message: `Недостаточно средств на балансе. Требуется: ${orderAmount.toLocaleString('ru-RU')} ₸`,
+          requiredAmount: orderAmount,
+        });
+      }
+      if (txErr.message === 'ALREADY_PAID') {
+        return res.status(400).json({ message: 'Заказ уже был оплачен ранее' });
+      }
+      throw txErr;
+    }
+
+    const { updatedUser, updatedOrder } = txResult;
 
     // Advance order lifecycle status on payment
-    await advanceOrderStatus(order.id, 'PAYMENT_RECEIVED').catch(() => {});
+    await advanceOrderStatus(order.id, 'PAYMENT_RECEIVED').catch((err) => logger.warn(`Failed to advance order status on balance payment: ${err.message}`));
 
     // Also mark associated invoices as PAID
     await prisma.invoice.updateMany({
@@ -3531,7 +3575,7 @@ export async function payOrderWithBalance(req: AuthRequest, res: Response) {
       data: { status: 'PAID' },
     }).catch((e) => logger.warn(`Failed to update linked invoice status: ${e}`));
 
-    clientTelegramBot.notifyPaymentStatusChanged(order.id, 'PAID').catch(() => {});
+    clientTelegramBot.notifyPaymentStatusChanged(order.id, 'PAID').catch((err) => logger.warn(`Failed to dispatch payment telegram alert: ${err.message}`));
 
     // Create OnlinePayment record for accounting & history
     const timestamp = Date.now().toString().slice(-8);

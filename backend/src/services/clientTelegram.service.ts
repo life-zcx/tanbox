@@ -1,4 +1,5 @@
 import https from 'https';
+import crypto from 'crypto';
 import { prisma } from '../config/db';
 import { logger } from '../utils/logger';
 
@@ -162,12 +163,16 @@ export class ClientTelegramBotService {
    * Генерация уникальной ссылки привязки для пользователя в личном кабинете
    */
   public async generateAuthLink(userId: string): Promise<{ link: string; token: string }> {
-    const randomHex = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    const randomHex = crypto.randomBytes(16).toString('hex');
     const token = `bind_${randomHex}`;
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes TTL
 
     await (prisma as any).user.update({
       where: { id: userId },
-      data: { telegramAuthToken: token },
+      data: {
+        telegramAuthToken: token,
+        telegramAuthTokenExpiresAt: expiresAt,
+      },
     });
 
     const link = `https://t.me/${this.botUsername}?start=${token}`;
@@ -420,13 +425,19 @@ export class ClientTelegramBotService {
    */
   private async handleAuthToken(chatId: number, token: string, username: string): Promise<void> {
     const user = await (prisma as any).user.findFirst({
-      where: { telegramAuthToken: token },
+      where: {
+        telegramAuthToken: token,
+        OR: [
+          { telegramAuthTokenExpiresAt: null },
+          { telegramAuthTokenExpiresAt: { gte: new Date() } },
+        ],
+      },
     });
 
     if (!user) {
       await this.sendMessage(
         chatId,
-        `⚠️ <b>Ссылка привязки недействительна или устарела.</b>\n\n` +
+        `⚠️ <b>Ссылка привязки недействительна или устарела (срок действия 15 минут).</b>\n\n` +
         `Пожалуйста, вернитесь в личный кабинет на сайте lk.tanbox.kz и нажмите кнопку «Получать уведомления о заказах» для создания новой ссылки.`
       );
       return;
@@ -439,6 +450,7 @@ export class ClientTelegramBotService {
         telegramChatId: String(chatId),
         telegramUsername: username || null,
         telegramAuthToken: null,
+        telegramAuthTokenExpiresAt: null,
         telegramLinkedAt: new Date(),
       },
     });

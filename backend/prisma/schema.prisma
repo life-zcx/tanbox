@@ -76,11 +76,13 @@ model User {
   blockedReason String?
   telegramChatId    String?   @unique
   telegramUsername  String?
-  telegramAuthToken String?   @unique
-  telegramLinkedAt  DateTime?
-  balance           Decimal   @default(0.0) @db.Decimal(12, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  telegramAuthToken          String?   @unique
+  telegramAuthTokenExpiresAt DateTime?
+  telegramLinkedAt           DateTime?
+  balance                    Decimal   @default(0.0) @db.Decimal(12, 2)
+  tokenVersion               Int       @default(0)
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
 
   orders           Order[]
   stickerTemplates UserStickerTemplate[]

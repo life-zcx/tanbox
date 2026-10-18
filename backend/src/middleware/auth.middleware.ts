@@ -19,6 +19,7 @@ import { prisma } from '../config/db';
 interface CachedUserStatus {
   isBlocked: boolean;
   blockedReason: string | null;
+  tokenVersion: number;
   cachedAt: number;
 }
 
@@ -45,7 +46,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
     const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as any;
     req.user = decoded;
 
-    // Verify account active status in DB (blocked or deleted users are rejected)
+    // Verify account active status and token version in DB (blocked or invalidated sessions are rejected)
     if (decoded?.id) {
       const now = Date.now();
       const cached = userBlockCache.get(decoded.id);
@@ -59,10 +60,16 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
               : 'Ваш аккаунт заблокирован администратором платформы',
           });
         }
+        if (typeof decoded.tokenVersion === 'number' && decoded.tokenVersion !== cached.tokenVersion) {
+          return res.status(401).json({
+            code: 'SESSION_REVOKED',
+            message: 'Сессия аннулирована в связи со сменой пароля. Пожалуйста, выполните вход повторно.',
+          });
+        }
       } else {
         const dbUser = await prisma.user.findUnique({
           where: { id: decoded.id },
-          select: { id: true, isBlocked: true, blockedReason: true },
+          select: { id: true, isBlocked: true, blockedReason: true, tokenVersion: true },
         });
 
         if (!dbUser) {
@@ -72,6 +79,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
         userBlockCache.set(decoded.id, {
           isBlocked: dbUser.isBlocked,
           blockedReason: dbUser.blockedReason,
+          tokenVersion: dbUser.tokenVersion,
           cachedAt: now,
         });
 
@@ -81,6 +89,13 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
             message: dbUser.blockedReason
               ? `Ваш аккаунт заблокирован. Причина: ${dbUser.blockedReason}`
               : 'Ваш аккаунт заблокирован администратором платформы',
+          });
+        }
+
+        if (typeof decoded.tokenVersion === 'number' && decoded.tokenVersion !== dbUser.tokenVersion) {
+          return res.status(401).json({
+            code: 'SESSION_REVOKED',
+            message: 'Сессия аннулирована в связи со сменой пароля. Пожалуйста, выполните вход повторно.',
           });
         }
       }

@@ -53,6 +53,13 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       ALLOW_SELF_SIGNED_SMTP: ${ALLOW_SELF_SIGNED_SMTP:-true}
+      FREEDOM_PAY_MERCHANT_ID: ${FREEDOM_PAY_MERCHANT_ID:-}
+      FREEDOM_PAY_SECRET_KEY: ${FREEDOM_PAY_SECRET_KEY:-}
+      FREEDOM_PAY_API_URL: ${FREEDOM_PAY_API_URL:-https://api.freedompay.kz}
+      FREEDOM_PAY_TEST_MODE: ${FREEDOM_PAY_TEST_MODE:-1}
+      APP_URL: ${APP_URL:-https://tanbox.kz}
+      LK_URL: ${LK_URL:-https://lk.tanbox.kz}
+      API_URL: ${API_URL:-https://api.tanbox.kz}
     depends_on:
       postgres:
         condition: service_healthy

@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { prisma } from '../config/db';
 import { env } from '../config/env';
-import { AuthRequest } from '../middleware/auth.middleware';
+import { AuthRequest, invalidateUserBlockCache } from '../middleware/auth.middleware';
 import { sendVerificationOtpEmail, sendPasswordResetOtpEmail, sendAdminLoginOtpEmail } from '../services/email.service';
 import { clientTelegramBot } from '../services/clientTelegram.service';
 import { logger } from '../utils/logger';
@@ -244,6 +244,7 @@ export const register = async (req: Request, res: Response) => {
         role: newUser.role,
         companyName: newUser.companyName,
         binIin: newUser.binIin,
+        tokenVersion: newUser.tokenVersion ?? 0,
       },
       env.JWT_SECRET,
       { expiresIn: '7d' }
@@ -386,6 +387,7 @@ export const login = async (req: Request, res: Response) => {
         role: user.role,
         companyName: user.companyName,
         binIin: user.binIin,
+        tokenVersion: user.tokenVersion ?? 0,
       },
       env.JWT_SECRET,
       { expiresIn: '7d' }
@@ -488,6 +490,8 @@ export const updateMe = async (req: AuthRequest, res: Response) => {
       }
 
       updateData.password = await bcrypt.hash(newPassword, 10);
+      updateData.tokenVersion = { increment: 1 };
+      invalidateUserBlockCache(req.user.id);
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -629,8 +633,12 @@ export const resetPasswordWithCode = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(String(newPassword).trim(), 10);
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: hashedPassword },
+      data: {
+        password: hashedPassword,
+        tokenVersion: { increment: 1 },
+      },
     });
+    invalidateUserBlockCache(user.id);
 
     await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
     memoryAttempts.delete(cleanEmail);

@@ -506,21 +506,65 @@ export async function payInvoiceWithBalance(req: AuthRequest, res: Response) {
       });
     }
 
-    // Process payment in transaction
-    const [updatedUser, updatedInvoice] = await prisma.$transaction([
-      prisma.user.update({
-        where: { id: userId },
-        data: {
-          balance: { decrement: invoiceAmount },
-        },
-      }),
-      prisma.invoice.update({
-        where: { id: invoice.id },
-        data: {
-          status: InvoiceStatus.PAID,
-        },
-      }),
-    ]);
+    // Process payment atomically in an interactive transaction with SQL-level balance checks
+    let txResult: { updatedUser: any; updatedInvoice: any };
+    try {
+      txResult = await prisma.$transaction(async (tx) => {
+        // 1. Atomic decrement with strict balance check directly in DB
+        const userUpdateRes = await tx.user.updateMany({
+          where: {
+            id: userId,
+            balance: { gte: invoiceAmount },
+          },
+          data: {
+            balance: { decrement: invoiceAmount },
+          },
+        });
+
+        if (userUpdateRes.count === 0) {
+          throw new Error('INSUFFICIENT_BALANCE');
+        }
+
+        // 2. Atomic invoice update verifying it is not already PAID
+        const invoiceUpdateRes = await tx.invoice.updateMany({
+          where: {
+            id: invoice.id,
+            status: { not: InvoiceStatus.PAID },
+          },
+          data: {
+            status: InvoiceStatus.PAID,
+          },
+        });
+
+        if (invoiceUpdateRes.count === 0) {
+          throw new Error('ALREADY_PAID');
+        }
+
+        const freshUser = await tx.user.findUnique({
+          where: { id: userId },
+          select: { id: true, balance: true, companyName: true, email: true },
+        });
+
+        const freshInvoice = await tx.invoice.findUnique({
+          where: { id: invoice.id },
+        });
+
+        return { updatedUser: freshUser, updatedInvoice: freshInvoice };
+      });
+    } catch (txErr: any) {
+      if (txErr.message === 'INSUFFICIENT_BALANCE') {
+        return res.status(400).json({
+          message: `Недостаточно средств на балансе. Требуется: ${invoiceAmount.toLocaleString('ru-RU')} ₸`,
+          requiredAmount: invoiceAmount,
+        });
+      }
+      if (txErr.message === 'ALREADY_PAID') {
+        return res.status(400).json({ message: 'Счет уже был оплачен ранее' });
+      }
+      throw txErr;
+    }
+
+    const { updatedUser, updatedInvoice } = txResult;
 
     // If invoice is linked to an order, update order payment status & printAllowed
     if (invoice.orderId) {

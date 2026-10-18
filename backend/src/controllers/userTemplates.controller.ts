@@ -18,6 +18,25 @@ function isSafeUrl(url?: string | null): boolean {
   }
 }
 
+export function sanitizeTemplateElements(elements: any): any {
+  if (!Array.isArray(elements)) return [];
+  return elements.map((el) => {
+    if (!el || typeof el !== 'object') return el;
+    const sanitized = { ...el };
+    for (const [key, val] of Object.entries(sanitized)) {
+      if (typeof val === 'string') {
+        sanitized[key] = val
+          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+          .replace(/javascript:/gi, '')
+          .replace(/onload\s*=/gi, '')
+          .replace(/onerror\s*=/gi, '')
+          .replace(/data:text\/html/gi, '');
+      }
+    }
+    return sanitized;
+  });
+}
+
 export const getUserTemplates = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
@@ -129,7 +148,7 @@ export const createUserTemplate = async (req: AuthRequest, res: Response) => {
         category: category && Object.values(OrderCategory).includes(category) ? category : null,
         widthMm: Number(widthMm) || 58,
         heightMm: Number(heightMm) || 40,
-        elements: elements || [],
+        elements: sanitizeTemplateElements(elements),
         previewUrl: previewUrl || null,
         isPaid: req.user.role === 'ADMIN',
         paidAt: req.user.role === 'ADMIN' ? new Date() : null,
@@ -187,7 +206,7 @@ export const updateUserTemplate = async (req: AuthRequest, res: Response) => {
     }
     if (widthMm !== undefined) updateData.widthMm = Number(widthMm) || 58;
     if (heightMm !== undefined) updateData.heightMm = Number(heightMm) || 40;
-    if (elements !== undefined) updateData.elements = elements;
+    if (elements !== undefined) updateData.elements = sanitizeTemplateElements(elements);
     if (previewUrl !== undefined) updateData.previewUrl = previewUrl;
 
     const updated = await prisma.userStickerTemplate.update({
@@ -351,38 +370,83 @@ export const payUserTemplate = async (req: AuthRequest, res: Response) => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const paymentNumber = `TB-TMP-${timestamp}-${randomSuffix}`;
 
-    const [updatedUser, updatedTemplate, payment] = await prisma.$transaction([
-      prisma.user.update({
-        where: { id: user.id },
-        data: {
-          balance: { decrement: layoutPrice },
-        },
-      }),
-      prisma.userStickerTemplate.update({
-        where: { id },
-        data: {
-          isPaid: true,
-          paidAt: new Date(),
-        },
-      }),
-      prisma.onlinePayment.create({
-        data: {
-          paymentNumber,
-          userId: user.id,
-          type: OnlinePaymentType.STICKER_LAYOUT,
-          amount: layoutPrice,
-          currency: 'KZT',
-          status: OnlinePaymentStatus.PAID,
-          description: `Оплата макета этикетки «${template.name}» (${template.widthMm}×${template.heightMm} мм)`,
-          metadata: {
-            templateId: template.id,
-            templateName: template.name,
-            dimensions: `${template.widthMm}x${template.heightMm} мм`,
-            paidViaBalance: true,
+    let txResult: { updatedUser: any; updatedTemplate: any };
+    try {
+      txResult = await prisma.$transaction(async (tx) => {
+        // 1. Атомарное списание баланса с валидацией остатка
+        const userUpdateRes = await tx.user.updateMany({
+          where: {
+            id: user.id,
+            balance: { gte: layoutPrice },
           },
-        },
-      }),
-    ]);
+          data: {
+            balance: { decrement: layoutPrice },
+          },
+        });
+
+        if (userUpdateRes.count === 0) {
+          throw new Error('INSUFFICIENT_BALANCE');
+        }
+
+        // 2. Атомарная пометка макета как оплаченного
+        const templateUpdateRes = await tx.userStickerTemplate.updateMany({
+          where: {
+            id,
+            isPaid: false,
+          },
+          data: {
+            isPaid: true,
+            paidAt: new Date(),
+          },
+        });
+
+        if (templateUpdateRes.count === 0) {
+          throw new Error('ALREADY_PAID');
+        }
+
+        await tx.onlinePayment.create({
+          data: {
+            paymentNumber,
+            userId: user.id,
+            type: OnlinePaymentType.STICKER_LAYOUT,
+            amount: layoutPrice,
+            currency: 'KZT',
+            status: OnlinePaymentStatus.PAID,
+            description: `Оплата макета этикетки «${template.name}» (${template.widthMm}×${template.heightMm} мм)`,
+            metadata: {
+              templateId: template.id,
+              templateName: template.name,
+              dimensions: `${template.widthMm}x${template.heightMm} мм`,
+              paidViaBalance: true,
+            },
+          },
+        });
+
+        const freshUser = await tx.user.findUnique({
+          where: { id: user.id },
+          select: { id: true, balance: true, companyName: true, email: true, phone: true },
+        });
+
+        const freshTemplate = await tx.userStickerTemplate.findUnique({
+          where: { id },
+        });
+
+        return { updatedUser: freshUser, updatedTemplate: freshTemplate };
+      });
+    } catch (txErr: any) {
+      if (txErr.message === 'INSUFFICIENT_BALANCE') {
+        return res.status(400).json({
+          error: 'INSUFFICIENT_BALANCE',
+          message: `Недостаточно средств на балансе. Требуется: ${layoutPrice.toLocaleString('ru-RU')} ₸`,
+        });
+      }
+      if (txErr.message === 'ALREADY_PAID') {
+        return res.status(400).json({ message: 'Макет уже был оплачен ранее' });
+      }
+      throw txErr;
+    }
+
+    const { updatedUser, updatedTemplate } = txResult;
 
     // Уведомление в Telegram
     telegram.sendOnlinePaymentNotification({
@@ -398,7 +462,7 @@ export const payUserTemplate = async (req: AuthRequest, res: Response) => {
     return res.json({
       message: `Макет «${template.name}» успешно оплачен и утвержден!`,
       template: updatedTemplate,
-      newBalance: Number(updatedUser.balance),
+      newBalance: Number(updatedUser?.balance || 0),
     });
   } catch (error: any) {
     console.error('payUserTemplate error:', error);
@@ -453,40 +517,70 @@ export const orderDesignerLayout = async (req: AuthRequest, res: Response) => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const paymentNumber = `TB-DSN-${timestamp}-${randomSuffix}`;
 
-    const [updatedUser, newTemplate, payment] = await prisma.$transaction([
-      prisma.user.update({
-        where: { id: user.id },
-        data: { balance: { decrement: designerPrice } },
-      }),
-      prisma.userStickerTemplate.create({
-        data: {
-          userId: user.id,
-          name: cleanName,
-          category: category && Object.values(OrderCategory).includes(category) ? category : null,
-          widthMm: Number(widthMm) || 58,
-          heightMm: Number(heightMm) || 40,
-          elements: [],
-          isPaid: true,
-          paidAt: new Date(),
-        },
-      }),
-      prisma.onlinePayment.create({
-        data: {
-          paymentNumber,
-          userId: user.id,
-          type: OnlinePaymentType.STICKER_LAYOUT,
-          amount: designerPrice,
-          currency: 'KZT',
-          status: OnlinePaymentStatus.PAID,
-          description: `Заказ профессионального дизайна макета TANBOX: «${cleanName}»`,
-          metadata: {
-            service: 'DESIGNER_LAYOUT',
-            userNotes: description || '',
-            sampleFileUrl: sampleFileUrl || '',
+    let txDesignerResult: { updatedUser: any; newTemplate: any };
+    try {
+      txDesignerResult = await prisma.$transaction(async (tx) => {
+        // 1. Атомарное списание баланса
+        const userUpdateRes = await tx.user.updateMany({
+          where: {
+            id: user.id,
+            balance: { gte: designerPrice },
           },
-        },
-      }),
-    ]);
+          data: { balance: { decrement: designerPrice } },
+        });
+
+        if (userUpdateRes.count === 0) {
+          throw new Error('INSUFFICIENT_BALANCE');
+        }
+
+        const createdTemplate = await tx.userStickerTemplate.create({
+          data: {
+            userId: user.id,
+            name: cleanName,
+            category: category && Object.values(OrderCategory).includes(category) ? category : null,
+            widthMm: Number(widthMm) || 58,
+            heightMm: Number(heightMm) || 40,
+            elements: [],
+            isPaid: true,
+            paidAt: new Date(),
+          },
+        });
+
+        await tx.onlinePayment.create({
+          data: {
+            paymentNumber,
+            userId: user.id,
+            type: OnlinePaymentType.STICKER_LAYOUT,
+            amount: designerPrice,
+            currency: 'KZT',
+            status: OnlinePaymentStatus.PAID,
+            description: `Заказ профессионального дизайна макета TANBOX: «${cleanName}»`,
+            metadata: {
+              service: 'DESIGNER_LAYOUT',
+              userNotes: description || '',
+              sampleFileUrl: sampleFileUrl || '',
+            },
+          },
+        });
+
+        const freshUser = await tx.user.findUnique({
+          where: { id: user.id },
+          select: { id: true, balance: true, companyName: true, email: true, phone: true },
+        });
+
+        return { updatedUser: freshUser, newTemplate: createdTemplate };
+      });
+    } catch (txErr: any) {
+      if (txErr.message === 'INSUFFICIENT_BALANCE') {
+        return res.status(400).json({
+          error: 'INSUFFICIENT_BALANCE',
+          message: `Недостаточно средств на балансе для заказа дизайна. Стоимость: ${designerPrice.toLocaleString('ru-RU')} ₸`,
+        });
+      }
+      throw txErr;
+    }
+
+    const { updatedUser, newTemplate } = txDesignerResult;
 
     // Уведомление в Telegram отделу дизайна
     telegram.sendOnlinePaymentNotification({
