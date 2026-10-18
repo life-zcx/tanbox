@@ -209,17 +209,31 @@ export const MarkirovkaPage: React.FC = () => {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#0082FB]' : ''}`} />
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setAccountToEdit(null);
-                setShowConnectModal(true);
-              }}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#0082FB] hover:bg-blue-50 border border-blue-200 rounded-xl transition-colors cursor-pointer whitespace-nowrap"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Подключить станцию</span>
-            </button>
+            {accounts.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountToEdit(null);
+                  setShowConnectModal(true);
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#0082FB] hover:bg-blue-50 border border-blue-200 rounded-xl transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Подключить организацию</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountToEdit(accounts[0]);
+                  setShowConnectModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-[#0082FB]" />
+                <span>Настроить аккаунт</span>
+              </button>
+            )}
 
             <MarkirovkaOperationsButton
               onSelectOperation={(op) => setModalOp(op)}
@@ -229,16 +243,16 @@ export const MarkirovkaPage: React.FC = () => {
         </div>
 
         {accounts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pt-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
             {accounts.map((acc) => (
               <div
                 key={acc.id}
-                className="p-3.5 rounded-xl border border-gray-200 hover:border-[#0082FB]/50 transition-all bg-gray-50/50 flex flex-col justify-between space-y-2.5"
+                className="p-4 rounded-2xl border border-gray-200 hover:border-[#0082FB]/50 transition-all bg-gray-50/50 flex flex-col justify-between space-y-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <h3 className="text-xs font-bold text-gray-900">{acc.name}</h3>
-                    <p className="text-[11px] font-mono text-gray-500">Логин / БИН: {acc.login}</p>
+                    <p className="text-[11px] font-mono text-gray-500">БИН / Логин: {acc.login}</p>
                   </div>
                   <span
                     className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
@@ -251,23 +265,31 @@ export const MarkirovkaPage: React.FC = () => {
                   </span>
                 </div>
 
+                {/* Integration statuses */}
+                <div className="grid grid-cols-2 gap-2 text-[11px] bg-white p-2.5 rounded-xl border border-gray-100">
+                  <div>
+                    <span className="text-gray-400 block text-[10px] font-semibold">ИС МПТ</span>
+                    <span className={`font-bold ${acc.status === 'ACTIVE' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {acc.status === 'ACTIVE' ? '✓ Подключен' : '✗ Ошибка'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block text-[10px] font-semibold">НКТ Каталог</span>
+                    <span className="font-bold text-emerald-600">
+                      {acc.hasNktApiKey ? '✓ Свой API-KEY' : '✓ Шлюз Tanbox'}
+                    </span>
+                  </div>
+                </div>
+
+                {acc.categories && acc.categories.length > 0 && (
+                  <div className="text-[11px] text-gray-600">
+                    <span className="text-gray-400 text-[10px] block">Товарные группы:</span>
+                    <span className="font-medium text-gray-800">{acc.categories.join(', ')}</span>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between pt-2 border-t border-gray-200/60 text-[11px]">
-                  <span
-                    className={`inline-flex items-center gap-1 font-semibold ${
-                      acc.status === 'ACTIVE'
-                        ? 'text-emerald-700'
-                        : acc.status === 'AUTH_ERROR'
-                        ? 'text-rose-700'
-                        : 'text-gray-500'
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        acc.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'
-                      }`}
-                    />
-                    {acc.status === 'ACTIVE' ? 'Активен' : 'Требует проверки'}
-                  </span>
+                  <span className="text-gray-400 text-[10px]">1 аккаунт на профиль</span>
 
                   <button
                     type="button"
@@ -275,10 +297,10 @@ export const MarkirovkaPage: React.FC = () => {
                       setAccountToEdit(acc);
                       setShowConnectModal(true);
                     }}
-                    className="flex items-center gap-1 text-[#0082FB] hover:underline font-medium cursor-pointer"
+                    className="flex items-center gap-1 text-[#0082FB] hover:underline font-semibold cursor-pointer"
                   >
                     <Edit2 className="w-3 h-3" />
-                    Настроить
+                    Редактировать
                   </button>
                 </div>
               </div>

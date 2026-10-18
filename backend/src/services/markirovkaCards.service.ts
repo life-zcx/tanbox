@@ -238,8 +238,16 @@ export class MarkirovkaCardsService {
     }
 
     const settings = getNktSettings();
-    if (!settings.enabled || !settings.apiKey) {
-      throw new Error('Интеграция с Национальным Каталогом (НКТ) временно не настроена в системе (отсутствует API-KEY). Обратитесь к администратору.');
+    const effectiveApiKey = (card.account?.nktApiKey && card.account.nktApiKey.trim()) || settings.apiKey;
+    const effectiveBaseUrl =
+      (card.account?.nktBaseUrl && card.account.nktBaseUrl.trim()) ||
+      settings.baseUrl ||
+      'https://nationalcatalog.kz/gwp';
+
+    if (!effectiveApiKey) {
+      throw new Error(
+        'Отсутствует API-KEY Национального Каталога (НКТ). Укажите API-KEY в настройках аккаунта маркировки или обратитесь к администратору для подключения шлюза Tanbox.'
+      );
     }
 
     // Build payload according to NKT Open API format
@@ -276,13 +284,13 @@ export class MarkirovkaCardsService {
     if (card.gtin) nktPayload.gtin = card.gtin;
 
     try {
-      const url = `${settings.baseUrl}/portal/api/v1/products/requests`;
-      logger.info(`[NKT Request] Submitting product card ${card.id} to ${url}`);
+      const url = `${effectiveBaseUrl}/portal/api/v1/products/requests`;
+      logger.info(`[NKT Request] Submitting product card ${card.id} to ${url} with ${card.account?.nktApiKey ? 'user personal' : 'system'} key`);
 
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          'X-API-KEY': settings.apiKey,
+          'X-API-KEY': effectiveApiKey,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
@@ -330,6 +338,7 @@ export class MarkirovkaCardsService {
   public async checkNktStatus(cardId: string) {
     const card = await prisma.markirovkaProductCard.findUnique({
       where: { id: cardId },
+      include: { account: true },
     });
 
     if (!card || !card.nktRequestId) {
@@ -337,15 +346,21 @@ export class MarkirovkaCardsService {
     }
 
     const settings = getNktSettings();
-    if (!settings.enabled || !settings.apiKey) {
+    const effectiveApiKey = (card.account?.nktApiKey && card.account.nktApiKey.trim()) || settings.apiKey;
+    const effectiveBaseUrl =
+      (card.account?.nktBaseUrl && card.account.nktBaseUrl.trim()) ||
+      settings.baseUrl ||
+      'https://nationalcatalog.kz/gwp';
+
+    if (!effectiveApiKey) {
       return card;
     }
 
     try {
-      const url = `${settings.baseUrl}/portal/api/v1/products/requests/${encodeURIComponent(card.nktRequestId)}`;
+      const url = `${effectiveBaseUrl}/portal/api/v1/products/requests/${encodeURIComponent(card.nktRequestId)}`;
       const res = await fetch(url, {
         headers: {
-          'X-API-KEY': settings.apiKey,
+          'X-API-KEY': effectiveApiKey,
           'Accept': 'application/json',
         },
         signal: AbortSignal.timeout(10000),

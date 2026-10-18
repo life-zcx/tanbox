@@ -300,6 +300,11 @@ model MarkirovkaAccount {
   trueApiExpiresAt  DateTime?
   lastCheckedAt     DateTime?
   lastError         String?
+  nktApiKey         String?
+  nktBaseUrl        String?                 @default("https://nationalcatalog.kz/gwp")
+  nktStatus         String?                 @default("NOT_CONFIGURED")
+  nktLastCheckedAt  DateTime?
+  nktLastError      String?
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useAuth } from '../hooks/useAuth';
 import { 
-  Building2, Phone, Mail, MapPin, Save, Edit3, Plus, Trash2, Star, Check,
+  Building2, Phone, Mail, MapPin, Save, Edit3, Edit2, Plus, Trash2, Star, Check,
   Lock, KeyRound, Eye, EyeOff, CheckCircle, AlertCircle, Clock, Calendar, User, X,
   ShieldCheck, ArrowUpRight, Loader2, RefreshCw
 } from 'lucide-react';
@@ -343,6 +343,7 @@ export const ProfilePage: React.FC = () => {
   const [markirovkaAccounts, setMarkirovkaAccounts] = useState<any[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState<boolean>(true);
   const [isConnectModalOpen, setIsConnectModalOpen] = useState<boolean>(false);
+  const [editingMarkirovkaAccount, setEditingMarkirovkaAccount] = useState<any | null>(null);
   const [testingAccountId, setTestingAccountId] = useState<string | null>(null);
   const [accountStatusMsg, setAccountStatusMsg] = useState<{ id: string; success: boolean; message: string } | null>(null);
 
@@ -668,13 +669,29 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsConnectModalOpen(true)}
-            className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shrink-0 active:scale-95 cursor-pointer"
-          >
-            <Plus className="w-4 h-4 text-emerald-600" /> Подключить аккаунт
-          </button>
+          {markirovkaAccounts.length === 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingMarkirovkaAccount(null);
+                setIsConnectModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shrink-0 active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-4 h-4 text-emerald-600" /> Подключить аккаунт
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingMarkirovkaAccount(markirovkaAccounts[0]);
+                setIsConnectModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold px-4 py-2.5 rounded-xl transition-all shrink-0 active:scale-95 cursor-pointer"
+            >
+              <Edit2 className="w-4 h-4 text-gray-600" /> Настроить аккаунт
+            </button>
+          )}
         </div>
 
         {/* Status Notification */}
@@ -753,6 +770,18 @@ export const ProfilePage: React.FC = () => {
                 <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                   <button
                     type="button"
+                    onClick={() => {
+                      setEditingMarkirovkaAccount(acc);
+                      setIsConnectModalOpen(true);
+                    }}
+                    title="Редактировать параметры подключения"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-300 hover:bg-white text-gray-700 text-xs font-semibold transition-all cursor-pointer"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-[#0082FB]" />
+                    <span>Настроить</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleTestAccount(acc.id)}
                     disabled={testingAccountId === acc.id}
                     title="Проверить соединение с ИС МПТ"
@@ -763,7 +792,7 @@ export const ProfilePage: React.FC = () => {
                     ) : (
                       <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
                     )}
-                    <span>Проверить связь</span>
+                    <span>Проверить</span>
                   </button>
                   <button
                     type="button"
@@ -1152,9 +1181,13 @@ export const ProfilePage: React.FC = () => {
       {/* MODAL WINDOW FOR CONNECTING MARKIROVKA ACCOUNT */}
       <ConnectMarkirovkaModal
         isOpen={isConnectModalOpen}
-        onClose={() => setIsConnectModalOpen(false)}
-        onSuccess={(newAcc) => {
-          setMarkirovkaAccounts((prev) => [newAcc, ...prev]);
+        onClose={() => {
+          setIsConnectModalOpen(false);
+          setEditingMarkirovkaAccount(null);
+        }}
+        initialAccount={editingMarkirovkaAccount}
+        onSuccess={() => {
+          fetchAccounts();
         }}
       />
 

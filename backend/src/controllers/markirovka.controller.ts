@@ -46,6 +46,12 @@ export async function getAccounts(req: Request, res: Response) {
       tokenExpiresAt: acc.tokenExpiresAt,
       lastCheckedAt: acc.lastCheckedAt,
       lastError: acc.lastError,
+      nktApiKey: acc.nktApiKey ? '••••••••' + acc.nktApiKey.slice(-4) : '',
+      hasNktApiKey: Boolean(acc.nktApiKey),
+      nktBaseUrl: acc.nktBaseUrl || 'https://nationalcatalog.kz/gwp',
+      nktStatus: acc.nktStatus || (acc.nktApiKey ? 'ACTIVE' : 'NOT_CONFIGURED'),
+      nktLastCheckedAt: acc.nktLastCheckedAt,
+      nktLastError: acc.nktLastError,
       createdAt: acc.createdAt,
       ordersCount: acc._count.orders,
       reportsCount: acc._count.reports,
@@ -68,10 +74,36 @@ export async function getAccounts(req: Request, res: Response) {
 export async function createAccount(req: Request, res: Response) {
   try {
     const user = (req as any).user;
-    const { name, environment, baseUrl, login, password, omsId, categories, userId: targetUserId } = req.body;
+    const {
+      name,
+      environment,
+      baseUrl,
+      login,
+      password,
+      omsId,
+      categories,
+      nktApiKey,
+      nktBaseUrl,
+      userId: targetUserId,
+    } = req.body;
 
     if (!name || !login || !password) {
       return res.status(400).json({ message: 'Название, логин и пароль обязательны' });
+    }
+
+    const effectiveUserId = user?.role === 'ADMIN' ? (targetUserId || null) : user?.id;
+
+    // Strict constraint: Regular clients can have at most ONE Markirovka & NKT account
+    if (user?.role !== 'ADMIN' && effectiveUserId) {
+      const existingCount = await prisma.markirovkaAccount.count({
+        where: { userId: effectiveUserId },
+      });
+      if (existingCount >= 1) {
+        return res.status(400).json({
+          message:
+            'К вашему профилю уже подключен аккаунт ИС МПТ и НКТ. Разрешено не более одного подключения на профиль. Вы можете отредактировать параметры существующего аккаунта.',
+        });
+      }
     }
 
     const envEnum = environment === 'PROD' ? MarkirovkaEnvironment.PROD : MarkirovkaEnvironment.TEST;
@@ -87,7 +119,7 @@ export async function createAccount(req: Request, res: Response) {
 
     const account = await prisma.markirovkaAccount.create({
       data: {
-        userId: user?.role === 'ADMIN' ? (targetUserId || null) : user?.id,
+        userId: effectiveUserId,
         name: name.trim(),
         environment: envEnum,
         baseUrl: sanitizedBaseUrl,
@@ -95,6 +127,9 @@ export async function createAccount(req: Request, res: Response) {
         encryptedPassword,
         omsId: omsId?.trim() || null,
         categories: Array.isArray(categories) ? categories : [],
+        nktApiKey: nktApiKey ? nktApiKey.trim() : null,
+        nktBaseUrl: nktBaseUrl ? nktBaseUrl.trim() : 'https://nationalcatalog.kz/gwp',
+        nktStatus: nktApiKey?.trim() ? 'ACTIVE' : 'NOT_CONFIGURED',
       },
     });
 
@@ -106,6 +141,8 @@ export async function createAccount(req: Request, res: Response) {
       login: account.login,
       omsId: account.omsId,
       categories: account.categories,
+      hasNktApiKey: Boolean(account.nktApiKey),
+      nktStatus: account.nktStatus,
       status: account.status,
       message: 'Аккаунт успешно добавлен',
     });
@@ -119,7 +156,18 @@ export async function updateAccount(req: Request, res: Response) {
   try {
     const user = (req as any).user;
     const { id } = req.params;
-    const { name, environment, baseUrl, login, password, omsId, categories, status } = req.body;
+    const {
+      name,
+      environment,
+      baseUrl,
+      login,
+      password,
+      omsId,
+      categories,
+      nktApiKey,
+      nktBaseUrl,
+      status,
+    } = req.body;
 
     const existing = await prisma.markirovkaAccount.findUnique({ where: { id } });
     if (!existing) {
@@ -156,6 +204,13 @@ export async function updateAccount(req: Request, res: Response) {
     if (Array.isArray(categories)) {
       updateData.categories = categories;
     }
+    if (nktApiKey !== undefined) {
+      updateData.nktApiKey = nktApiKey ? nktApiKey.trim() : null;
+      updateData.nktStatus = nktApiKey?.trim() ? 'ACTIVE' : 'NOT_CONFIGURED';
+    }
+    if (nktBaseUrl !== undefined) {
+      updateData.nktBaseUrl = nktBaseUrl ? nktBaseUrl.trim() : 'https://nationalcatalog.kz/gwp';
+    }
     if (status) updateData.status = status;
 
     const updated = await prisma.markirovkaAccount.update({
@@ -171,6 +226,8 @@ export async function updateAccount(req: Request, res: Response) {
       login: updated.login,
       omsId: updated.omsId,
       categories: updated.categories,
+      hasNktApiKey: Boolean(updated.nktApiKey),
+      nktStatus: updated.nktStatus,
       status: updated.status,
       message: 'Аккаунт обновлен',
     });
@@ -205,7 +262,7 @@ export async function deleteAccount(req: Request, res: Response) {
 export async function testConnection(req: Request, res: Response) {
   try {
     const user = (req as any).user;
-    const { id, environment, baseUrl, login, password, omsId } = req.body;
+    const { id, environment, baseUrl, login, password, omsId, serviceType, nktApiKey, nktBaseUrl } = req.body;
 
     let accountRecord: any;
 
@@ -217,7 +274,32 @@ export async function testConnection(req: Request, res: Response) {
       if (user?.role !== 'ADMIN' && accountRecord.userId !== user?.id) {
         return res.status(403).json({ success: false, message: 'Нет доступа к данному аккаунту' });
       }
-    } else {
+    }
+
+    if (serviceType === 'NKT') {
+      const apiKeyToTest = nktApiKey || accountRecord?.nktApiKey;
+      const baseUrlToTest = nktBaseUrl || accountRecord?.nktBaseUrl || 'https://nationalcatalog.kz/gwp';
+      if (!apiKeyToTest || !apiKeyToTest.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Укажите API-KEY для проверки связи с Национальным каталогом',
+        });
+      }
+      const nktResult = await testNktApiConnection(apiKeyToTest.trim(), baseUrlToTest.trim());
+      if (accountRecord && accountRecord.id !== 'temp-check') {
+        await prisma.markirovkaAccount.update({
+          where: { id: accountRecord.id },
+          data: {
+            nktStatus: nktResult.success ? 'ACTIVE' : 'ERROR',
+            nktLastCheckedAt: new Date(),
+            nktLastError: nktResult.success ? null : nktResult.message,
+          },
+        });
+      }
+      return res.json(nktResult);
+    }
+
+    if (!accountRecord) {
       if (!login || !password) {
         return res.status(400).json({ success: false, message: 'Укажите логин и пароль для проверки' });
       }

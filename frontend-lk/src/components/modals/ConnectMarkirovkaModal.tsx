@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff, Barcode } from 'lucide-react';
+import {
+  X,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Barcode,
+  Globe,
+  KeyRound,
+  Check,
+} from 'lucide-react';
 import { apiClient } from '../../api/client';
 
 interface ConnectMarkirovkaModalProps {
@@ -16,7 +28,7 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
   onSuccess,
   initialAccount,
 }) => {
-  const isDevOrTest = typeof window !== 'undefined' && (
+  const isDevOrTest = Boolean(
     Boolean(import.meta.env.DEV) ||
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1' ||
@@ -37,9 +49,15 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
     initialAccount?.categories || []
   );
 
-  const [testing, setTesting] = useState(false);
+  // NKT (National Catalog) Fields
+  const [nktApiKey, setNktApiKey] = useState(initialAccount?.nktApiKey || '');
+  const [showNktApiKey, setShowNktApiKey] = useState(false);
+  const [testingNkt, setTestingNkt] = useState(false);
+  const [nktTestResult, setNktTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const [testingMpt, setTestingMpt] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [mptTestResult, setMptTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,14 +67,17 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
       setPassword('');
       setEnvironment(initialAccount.environment || (isDevOrTest ? 'TEST' : 'PROD'));
       setSelectedCategories(initialAccount.categories || []);
+      setNktApiKey(initialAccount.nktApiKey || '');
     } else {
       setName('');
       setLogin('');
       setPassword('');
       setEnvironment(isDevOrTest ? 'TEST' : 'PROD');
       setSelectedCategories([]);
+      setNktApiKey('');
     }
-    setTestResult(null);
+    setMptTestResult(null);
+    setNktTestResult(null);
     setErrorMsg(null);
   }, [initialAccount, isOpen, isDevOrTest]);
 
@@ -79,14 +100,15 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleTestConnection = async () => {
+  // Test IS MPT (markirovka.kz)
+  const handleTestMptConnection = async () => {
     if (!initialAccount && (!login.trim() || !password.trim())) {
-      setErrorMsg('Укажите логин и пароль для проверки соединения');
+      setErrorMsg('Укажите логин и пароль для проверки соединения с ИС МПТ');
       return;
     }
     setErrorMsg(null);
-    setTesting(true);
-    setTestResult(null);
+    setTestingMpt(true);
+    setMptTestResult(null);
 
     try {
       const testPayload: any = {
@@ -102,35 +124,69 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
       const res = await apiClient.post('/markirovka/test-connection', testPayload);
 
       if (res.data?.success) {
-        setTestResult({
+        setMptTestResult({
           success: true,
-          message: res.data.message || 'Подключение успешно! Токен ИС МПТ получен.',
+          message: res.data.message || 'Связь с ИС МПТ (Маркировка КЗ) подтверждена! Токен активен.',
         });
       } else {
-        setTestResult({
+        setMptTestResult({
           success: false,
           message: res.data?.message || 'Не удалось авторизоваться в ИС МПТ',
         });
       }
     } catch (err: any) {
-      setTestResult({
+      setMptTestResult({
         success: false,
-        message: err.response?.data?.message || err.message || 'Ошибка связи с сервером маркировки',
+        message: err.response?.data?.message || err.message || 'Ошибка связи с сервером ИС МПТ',
       });
     } finally {
-      setTesting(false);
+      setTestingMpt(false);
+    }
+  };
+
+  // Test NKT (nationalcatalog.kz)
+  const handleTestNktConnection = async () => {
+    if (!nktApiKey.trim() && !initialAccount?.hasNktApiKey) {
+      setErrorMsg('Укажите API-KEY для проверки связи с Национальным каталогом (НКТ)');
+      return;
+    }
+    setErrorMsg(null);
+    setTestingNkt(true);
+    setNktTestResult(null);
+
+    try {
+      const testPayload: any = {
+        serviceType: 'NKT',
+        nktApiKey: nktApiKey.trim() || undefined,
+      };
+      if (initialAccount?.id) {
+        testPayload.id = initialAccount.id;
+      }
+
+      const res = await apiClient.post('/markirovka/test-connection', testPayload);
+      setNktTestResult({
+        success: res.data?.success ?? true,
+        message: res.data?.message || 'Связь с Национальным каталогом (НКТ) подтверждена! Ключ действителен.',
+      });
+    } catch (err: any) {
+      setNktTestResult({
+        success: false,
+        message: err.response?.data?.message || err.message || 'Ошибка проверки API-KEY Национального каталога',
+      });
+    } finally {
+      setTestingNkt(false);
     }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !login.trim()) {
-      setErrorMsg('Пожалуйста, заполните название и логин');
+      setErrorMsg('Пожалуйста, заполните название организации и логин');
       return;
     }
 
     if (!initialAccount && !password.trim()) {
-      setErrorMsg('Пожалуйста, укажите пароль');
+      setErrorMsg('Пожалуйста, укажите пароль от личного кабинета ИС МПТ');
       return;
     }
 
@@ -144,6 +200,7 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
           login: login.trim(),
           environment,
           categories: selectedCategories,
+          nktApiKey: nktApiKey.trim() || undefined,
         };
         if (password.trim()) {
           updatePayload.password = password.trim();
@@ -157,6 +214,7 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
           password: password.trim(),
           environment,
           categories: selectedCategories,
+          nktApiKey: nktApiKey.trim() || undefined,
         });
         onSuccess(res.data);
       }
@@ -172,213 +230,296 @@ export const ConnectMarkirovkaModal: React.FC<ConnectMarkirovkaModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity" 
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity" 
         onClick={onClose} 
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-10 flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden z-10 flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50/60 via-white to-white shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0 border border-blue-100 shadow-2xs">
               <Barcode className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-[#111827]">Подключение Markirovka.kz</h3>
-              <p className="text-xs text-[#64748B]">Прямая интеграция с личным кабинетом ИС МПТ</p>
+              <h3 className="text-sm sm:text-base font-extrabold text-[#111827]">
+                {initialAccount ? 'Настройка подключения (ИС МПТ и НКТ)' : 'Подключение организации (ИС МПТ и НКТ)'}
+              </h3>
+              <p className="text-xs text-[#64748B]">
+                Интеграция с Markirovka.kz и NationalCatalog.kz (1 аккаунт на профиль)
+              </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSave} className="p-6 overflow-y-auto space-y-4">
+        <form onSubmit={handleSave} className="p-6 overflow-y-auto space-y-5 text-xs">
           {errorMsg && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-xs text-rose-700">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
               <span>{errorMsg}</span>
             </div>
           )}
 
-          {testResult && (
-            <div className={`p-3 rounded-xl flex items-start gap-2.5 text-xs border ${
-              testResult.success 
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-                : 'bg-amber-50 border-amber-200 text-amber-800'
-            }`}>
-              {testResult.success ? (
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
-              )}
-              <span>{testResult.message}</span>
+          {/* SECTION 1: General Info */}
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Название организации (Юрлицо / ИП) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Например: ТОО Ваша Компания или ИП Иванов"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#111827] focus:bg-white focus:border-[#0082FB] focus:outline-none transition-colors"
+                required
+              />
             </div>
-          )}
 
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">
-              Название подключения
-            </label>
-            <input
-              type="text"
-              placeholder="Например: Основной аккаунт ТОО"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#111827] focus:bg-white focus:border-[#0082FB] focus:outline-none transition-colors"
-              required
-            />
+            {isDevOrTest && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Контур интеграции
+                </label>
+                <div className="grid grid-cols-2 gap-1.5 bg-gray-100 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setEnvironment('PROD')}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                      environment === 'PROD'
+                        ? 'bg-white text-[#111827] shadow-xs'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    Боевой (markirovka.kz)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEnvironment('TEST')}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                      environment === 'TEST'
+                        ? 'bg-white text-[#111827] shadow-xs'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    Тестовый (песочница)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Categories of Client */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Товарные группы аккаунта (специфика вашего бизнеса)
+              </label>
+              <p className="text-[11px] text-gray-400 mb-2">
+                Выберите категории, с которыми работает ваша организация (будут предложены по умолчанию при создании карточек):
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { id: 'SHOES', label: 'Обувь', icon: '👟' },
+                  { id: 'TEXTILE', label: 'Легпром / Одежда', icon: '👕' },
+                  { id: 'WATER', label: 'Вода и напитки', icon: '💧' },
+                  { id: 'MEDICINE', label: 'Лекарства', icon: '💊' },
+                  { id: 'TOBACCO', label: 'Табак', icon: '🚬' },
+                  { id: 'BEER', label: 'Пиво / Напитки', icon: '🍺' },
+                  { id: 'DIETARY_SUPPLEMENTS', label: 'БАДы', icon: '🌿' },
+                  { id: 'OILS', label: 'Моторные масла', icon: '🛢️' },
+                  { id: 'JEWELRY', label: 'Ювелирные изделия', icon: '💍' },
+                  { id: 'SAIGA', label: 'Дериваты сайгака', icon: '🦌' },
+                  { id: 'OTHER', label: 'Прочие товары', icon: '📦' },
+                ].map((cat) => {
+                  const isSelected = selectedCategories.includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategories((prev) =>
+                          isSelected ? prev.filter((c) => c !== cat.id) : [...prev, cat.id]
+                        );
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#0082FB]/10 border-[#0082FB] text-[#0082FB] font-semibold shadow-2xs'
+                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+                      }`}
+                    >
+                      <span>{cat.icon}</span>
+                      <span>{cat.label}</span>
+                      {isSelected && <span className="text-[10px] ml-0.5 font-bold">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          {isDevOrTest && (
+          {/* SECTION 2: Markirovka.kz (ИС МПТ) */}
+          <div className="p-4 rounded-2xl bg-blue-50/40 border border-blue-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-blue-900 font-bold">
+                <Barcode className="w-4 h-4 text-[#0082FB]" />
+                <span>1. Авторизация в Markirovka.kz (ИС МПТ)</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleTestMptConnection}
+                disabled={testingMpt || !login || (!initialAccount && !password)}
+                className="px-2.5 py-1 text-[11px] font-semibold bg-white hover:bg-blue-50 text-[#0082FB] border border-blue-200 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+              >
+                {testingMpt ? 'Проверка...' : 'Проверить ИС МПТ'}
+              </button>
+            </div>
+
+            {mptTestResult && (
+              <div className={`p-2.5 rounded-xl flex items-start gap-2 text-[11px] border ${
+                mptTestResult.success
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}>
+                {mptTestResult.success ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600 mt-0.5" />
+                )}
+                <span>{mptTestResult.message}</span>
+              </div>
+            )}
+
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                Контур интеграции
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Логин в Markirovka.kz (БИН / ИИН организации) <span className="text-rose-500">*</span>
               </label>
-              <div className="grid grid-cols-2 gap-1.5 bg-gray-100 p-1 rounded-xl">
+              <input
+                type="text"
+                placeholder="12-значный БИН или логин ЛК"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-[#111827] font-mono focus:border-[#0082FB] focus:outline-none transition-colors"
+                required
+                autoComplete="off"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Пароль от личного кабинета Markirovka.kz
+                {initialAccount && <span className="font-normal text-gray-400 ml-1">(оставьте пустым, если не меняется)</span>}
+                {!initialAccount && <span className="text-rose-500">*</span>}
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={initialAccount ? '••••••••••••' : 'Пароль от кабинета ИС МПТ'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-3.5 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-[#111827] focus:border-[#0082FB] focus:outline-none transition-colors"
+                  required={!initialAccount}
+                  autoComplete="new-password"
+                />
                 <button
                   type="button"
-                  onClick={() => setEnvironment('PROD')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
-                    environment === 'PROD'
-                      ? 'bg-white text-[#111827] shadow-xs'
-                      : 'text-gray-500 hover:text-gray-800'
-                  }`}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                 >
-                  Боевой (markirovka.kz)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEnvironment('TEST')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
-                    environment === 'TEST'
-                      ? 'bg-white text-[#111827] shadow-xs'
-                      : 'text-gray-500 hover:text-gray-800'
-                  }`}
-                >
-                  Тестовый (песочница)
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
-          )}
-
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">
-              Логин в Markirovka.kz (ИС МПТ)
-            </label>
-            <input
-              type="text"
-              placeholder="Логин от личного кабинета (ИНН/БИН или логин)"
-              value={login}
-              onChange={(e) => setLogin(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#111827] font-mono focus:bg-white focus:border-[#0082FB] focus:outline-none transition-colors"
-              required
-              autoComplete="off"
-            />
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">
-              Пароль от кабинета Markirovka.kz
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder={initialAccount ? 'Оставьте пустым, если не меняется' : 'Пароль'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-3.5 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-[#111827] focus:bg-white focus:border-[#0082FB] focus:outline-none transition-colors"
-                required={!initialAccount}
-                autoComplete="new-password"
-              />
+          {/* SECTION 3: NationalCatalog.kz (НКТ) */}
+          <div className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-900 font-bold">
+                <Globe className="w-4 h-4 text-emerald-600" />
+                <span>2. Авторизация в NationalCatalog.kz (НКТ)</span>
+              </div>
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                onClick={handleTestNktConnection}
+                disabled={testingNkt || (!nktApiKey && !initialAccount?.hasNktApiKey)}
+                className="px-2.5 py-1 text-[11px] font-semibold bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg transition-all cursor-pointer disabled:opacity-50"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {testingNkt ? 'Проверка...' : 'Проверить НКТ'}
               </button>
             </div>
-            <p className="mt-1 text-[11px] text-gray-400">
-              Пароль сохраняется в зашифрованном виде и используется исключительно для взаимодействия с API ИС МПТ.
-            </p>
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">
-              Товарные группы аккаунта в ИС МПТ (специфика клиента)
-            </label>
-            <p className="text-[11px] text-gray-400 mb-2">
-              Выберите категории товаров, для которых открыт доступ у этого аккаунта/юрлица:
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { id: 'SHOES', label: 'Обувь', icon: '👟' },
-                { id: 'TEXTILE', label: 'Легпром / Одежда', icon: '👕' },
-                { id: 'WATER', label: 'Вода и напитки', icon: '💧' },
-                { id: 'MEDICINE', label: 'Лекарства', icon: '💊' },
-                { id: 'TOBACCO', label: 'Табак', icon: '🚬' },
-                { id: 'BEER', label: 'Пиво / Алкоголь', icon: '🍺' },
-                { id: 'DIETARY_SUPPLEMENTS', label: 'БАДы', icon: '🌿' },
-                { id: 'OILS', label: 'Моторные масла', icon: '🛢️' },
-                { id: 'JEWELRY', label: 'Ювелирные изделия', icon: '💍' },
-                { id: 'SAIGA', label: 'Дериваты сайгака', icon: '🦌' },
-                { id: 'OTHER', label: 'Прочие товары', icon: '📦' },
-              ].map((cat) => {
-                const isSelected = selectedCategories.includes(cat.id);
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategories((prev) =>
-                        isSelected ? prev.filter((c) => c !== cat.id) : [...prev, cat.id]
-                      );
-                    }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#0082FB]/10 border-[#0082FB] text-[#0082FB] font-semibold shadow-2xs'
-                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-                    }`}
-                  >
-                    <span>{cat.icon}</span>
-                    <span>{cat.label}</span>
-                    {isSelected && <span className="text-[10px] ml-0.5 font-bold">✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-            {selectedCategories.length === 0 && (
-              <p className="mt-1.5 text-[11px] text-amber-600">
-                ⚠️ Не выбрано ни одной категории — будут доступны все категории по умолчанию.
-              </p>
+            {nktTestResult && (
+              <div className={`p-2.5 rounded-xl flex items-start gap-2 text-[11px] border ${
+                nktTestResult.success
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}>
+                {nktTestResult.success ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600 mt-0.5" />
+                )}
+                <span>{nktTestResult.message}</span>
+              </div>
             )}
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                API-ключ Национального каталога товаров (X-API-KEY)
+              </label>
+              <div className="relative">
+                <input
+                  type={showNktApiKey ? 'text' : 'password'}
+                  placeholder={
+                    initialAccount?.hasNktApiKey
+                      ? initialAccount.nktApiKey || '••••••••••••••••'
+                      : 'Вставьте API-KEY из личного кабинета nationalcatalog.kz'
+                  }
+                  value={nktApiKey}
+                  onChange={(e) => setNktApiKey(e.target.value)}
+                  className="w-full pl-3.5 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-[#111827] font-mono focus:border-emerald-500 focus:outline-none transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNktApiKey(!showNktApiKey)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  {showNktApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="mt-1.5 text-[11px] text-gray-400 leading-relaxed">
+                Где взять: Личный кабинет <strong>nationalcatalog.kz</strong> → Настройки профиля → API ключи / Интеграция.
+                Если у вас нет отдельного ключа, оставьте поле пустым — создание карточек будет идти через общий защищенный шлюз TANBOX.
+              </p>
+            </div>
           </div>
 
+          {/* Submit Footer */}
           <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
             <button
               type="button"
-              onClick={handleTestConnection}
-              disabled={testing || !login || !password}
-              className="py-2 px-3.5 rounded-xl border border-gray-300 hover:bg-gray-50 font-semibold text-xs text-gray-700 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+              onClick={onClose}
+              disabled={saving}
+              className="py-2.5 px-4 rounded-xl border border-gray-300 hover:bg-gray-50 font-semibold text-xs text-gray-700 transition-all cursor-pointer"
             >
-              <Loader2 className={`w-3.5 h-3.5 ${testing ? 'animate-spin' : 'hidden'}`} />
-              <span>{testing ? 'Проверка...' : 'Проверить связь'}</span>
+              Отмена
             </button>
 
             <button
               type="submit"
               disabled={saving}
-              className="py-2 px-4 rounded-xl bg-[#0082FB] hover:bg-[#0070DA] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+              className="py-2.5 px-5 rounded-xl bg-[#0082FB] hover:bg-[#0070DA] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
             >
-              {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>{saving ? 'Сохранение...' : 'Сохранить аккаунт'}</span>
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>{saving ? 'Сохранение...' : initialAccount ? 'Сохранить изменения' : 'Подключить аккаунт'}</span>
             </button>
           </div>
         </form>
