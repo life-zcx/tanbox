@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useOrders } from '../hooks/useOrders';
 import { useAuth } from '../hooks/useAuth';
 import { OrderCategory, TariffType, UserStickerTemplate } from '../types';
@@ -69,6 +69,42 @@ export const CreateOrderPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+
+  // Handle prefill from Markirovka product cards ("Заказать этикетки")
+  useEffect(() => {
+    const prefill = (location.state as any) || {};
+    if (prefill.prefillCategory) {
+      setCategory(prefill.prefillCategory as OrderCategory);
+    }
+    if (prefill.prefillGtin || prefill.prefillName || prefill.prefillArticle) {
+      const gtin = prefill.prefillGtin || '';
+      const name = prefill.prefillName || '';
+      const article = prefill.prefillArticle || '';
+      const brand = prefill.prefillBrand || '';
+
+      setPositions([
+        {
+          id: '1',
+          name,
+          article,
+          size: '',
+          color: '',
+          gtin,
+          quantity: 100,
+        },
+      ]);
+      setItemsCount(100);
+
+      if (name) setLabelProductName(name);
+      if (article) setLabelArticle(article);
+      if (brand) setLabelBrand(brand);
+      if (gtin) {
+        setLabelBarcode(gtin);
+        setMarkirovkaGtin(gtin);
+      }
+    }
+  }, [location.state]);
 
   // Initial values: null by default as requested (user must select manually)
   const [category, setCategory] = useState<OrderCategory | null>(null);

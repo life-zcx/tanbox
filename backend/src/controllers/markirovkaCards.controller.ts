@@ -126,6 +126,23 @@ export const checkCardStatusHandler = async (req: AuthRequest, res: Response) =>
   }
 };
 
+export const publishCardToNktHandler = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    const { id } = req.params;
+
+    const result = await markirovkaCardsService.publishToNkt(id, req.user.id, req.user.role === 'ADMIN');
+    return res.json({
+      success: true,
+      message: 'Карточка успешно опубликована в Национальном каталоге товаров',
+      ...result,
+    });
+  } catch (err: any) {
+    logger.error('publishCardToNktHandler error:', err);
+    return res.status(400).json({ message: err.message || 'Ошибка публикации карточки в НКТ' });
+  }
+};
+
 export const getCategorySchemaHandler = async (req: AuthRequest, res: Response) => {
   try {
     const category = req.params.category as OrderCategory;
@@ -154,3 +171,118 @@ export const listCategoriesHandler = async (req: AuthRequest, res: Response) => 
     return res.status(500).json({ message: 'Ошибка получения списка категорий' });
   }
 };
+
+const RU_KK_DICT: Record<string, string> = {
+  кроссовки: 'кроссовкалар',
+  кеды: 'кедылер',
+  ботинки: 'бәтеңкелер',
+  полуботинки: 'жартылай бәтеңкелер',
+  туфли: 'туфлилер',
+  сапоги: 'етіктер',
+  полусапоги: 'жартылай етіктер',
+  сандалии: 'сандалдар',
+  босоножки: 'босоножкалар',
+  мокасины: 'мокасиндер',
+  тапочки: 'тәпішкелер',
+  обувь: 'аяқ киім',
+  мужской: 'ерлер',
+  мужские: 'ерлерге арналған',
+  мужская: 'ерлерге арналған',
+  женский: 'әйелдер',
+  женские: 'әйелдерге арналған',
+  женская: 'әйелдерге арналған',
+  детский: 'балалар',
+  детские: 'балаларға арналған',
+  детская: 'балаларға арналған',
+  кожаный: 'былғары',
+  кожаные: 'былғары',
+  кожаная: 'былғары',
+  замша: 'күдері',
+  замшевые: 'күдері',
+  текстиль: 'тоқыма',
+  текстильные: 'тоқыма',
+  резиновые: 'резеңке',
+  зимний: 'қысқы',
+  зимние: 'қысқы',
+  летний: 'жазғы',
+  летние: 'жазғы',
+  демисезонный: 'маусымаралық',
+  демисезонные: 'маусымаралық',
+  масло: 'май',
+  моторное: 'мотор',
+  синтетическое: 'синтетикалық',
+  полусинтетическое: 'жартылай синтетикалық',
+  минеральное: 'минералды',
+  трансмиссионное: 'трансмиссиялық',
+  смазка: 'майлағыш',
+  жидкость: 'сұйықтық',
+  антифриз: 'антифриз',
+  одежда: 'киім',
+  куртка: 'күрте',
+  пальто: 'пальто',
+  пуховик: 'мамық күрте',
+  ветровка: 'желқағар',
+  брюки: 'шалбар',
+  джинсы: 'джинсылар',
+  шорты: 'шортылар',
+  рубашка: 'жейде',
+  футболка: 'футболка',
+  толстовка: 'толстовка',
+  джемпер: 'джемпер',
+  носки: 'шұлықтар',
+  вода: 'су',
+  напиток: 'сусын',
+  молоко: 'сүт',
+  сыр: 'ірімшік',
+  шина: 'шина',
+  шины: 'шиналар',
+  автошины: 'автошиналар',
+};
+
+export const translateToKazakhHandler = async (req: AuthRequest, res: Response) => {
+  try {
+    const text = String(req.body.text || '').trim();
+    if (!text) {
+      return res.status(400).json({ message: 'Текст для перевода не указан' });
+    }
+
+    let translated = '';
+
+    // 1. Try MyMemory API with native fetch
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=ru|kk`;
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const data = (await response.json()) as any;
+        const resText = data?.responseData?.translatedText;
+        if (resText && !resText.includes('MYMEMORY WARNING') && !resText.includes('<html>')) {
+          translated = resText;
+        }
+      }
+    } catch (e: any) {
+      logger.warn('Translation API error, using dictionary fallback:', e?.message);
+    }
+
+    // 2. Fallback: Dictionary replace word by word
+    if (!translated) {
+      const words = text.split(/\s+/);
+      const translatedWords = words.map((w) => {
+        const clean = w.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '');
+        if (RU_KK_DICT[clean]) {
+          return RU_KK_DICT[clean];
+        }
+        return w;
+      });
+      translated = translatedWords.join(' ');
+    }
+
+    return res.json({ success: true, text: translated || text });
+  } catch (err: any) {
+    logger.error('translateToKazakhHandler error:', err);
+    return res.status(500).json({ message: 'Ошибка перевода текста' });
+  }
+};
+

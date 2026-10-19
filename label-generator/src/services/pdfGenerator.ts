@@ -398,6 +398,9 @@ export class LabelPdfGenerator {
             let barcodePng = this.barcodeCache.get(val);
             if (!barcodePng) {
               barcodePng = await generateCode128Buffer(val);
+              if (this.barcodeCache.size >= 2000) {
+                this.barcodeCache.clear();
+              }
               this.barcodeCache.set(val, barcodePng);
             }
             const wPt = mmToPt(el.width);

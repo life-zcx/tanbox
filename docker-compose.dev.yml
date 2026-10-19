@@ -29,12 +29,16 @@ services:
       PORT: ${PORT:-5050}
       DATABASE_URL: ${DATABASE_URL:-postgresql://tanbox_user:tanbox_pass_2026@postgres:5432/tanbox_db?schema=public}
       JWT_SECRET: ${JWT_SECRET:-dev_only_local_secret_please_change_in_env_file}
+      ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:-tanbox_markirovka_encryption_secret_key_2026_32bytes!!}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-Admin_Tanbox_2026!Secure}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
       NODE_ENV: development
       NODE_OPTIONS: "--max-old-space-size=512"
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
       LABEL_GENERATOR_HOST: label-generator
       LABEL_GENERATOR_PORT: 5060
+      PDF_CONCURRENCY: ${PDF_CONCURRENCY:-2}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_LEADS_CHAT_ID: ${TELEGRAM_LEADS_CHAT_ID:-}
       TELEGRAM_ALERTS_CHAT_ID: ${TELEGRAM_ALERTS_CHAT_ID:-}
@@ -49,9 +53,11 @@ services:
       FREEDOM_PAY_SECRET_KEY: ${FREEDOM_PAY_SECRET_KEY:-}
       FREEDOM_PAY_API_URL: ${FREEDOM_PAY_API_URL:-https://api.freedompay.kz}
       FREEDOM_PAY_TEST_MODE: ${FREEDOM_PAY_TEST_MODE:-1}
-      APP_URL: ${APP_URL:-https://tanbox.kz}
-      LK_URL: ${LK_URL:-https://lk.tanbox.kz}
-      API_URL: ${API_URL:-https://api.tanbox.kz}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      LK_URL: ${LK_URL:-http://localhost:3001}
+      API_URL: ${API_URL:-http://localhost:5050}
+      NATIONAL_CATALOG_BASE_URL: ${NATIONAL_CATALOG_BASE_URL:-https://nationalcatalog.kz/gwp}
+      NATIONAL_CATALOG_API_KEY: ${NATIONAL_CATALOG_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -139,8 +145,8 @@ services:
     container_name: tanbox_caddy_dev
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "${CADDY_HTTP_PORT:-8080}:80"
+      - "${CADDY_HTTPS_PORT:-8443}:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data_dev:/data

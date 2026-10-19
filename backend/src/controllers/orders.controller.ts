@@ -153,30 +153,6 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Authoritative server-side price calculation (tamper-proof)
-    const pricing = await computeOrderPricing({
-      tariffType: tariffType as TariffType,
-      itemsCount: countNum,
-      extraServices: Array.isArray(extraServices) ? extraServices.map(String) : [],
-      ssccNeeded: Boolean(ssccNeeded),
-    });
-
-    // Find starting order sequence number
-    const lastOrder = await prisma.order.findFirst({
-      orderBy: { createdAt: 'desc' },
-      select: { orderNumber: true },
-    });
-    let baseNum = 1;
-    if (lastOrder?.orderNumber) {
-      const match = lastOrder.orderNumber.match(/\d+/);
-      if (match) {
-        baseNum = parseInt(match[0], 10) + 1;
-      }
-    } else {
-      const count = await prisma.order.count();
-      baseNum = count + 1;
-    }
-
     // Parse label size from request or notes if custom layout requested
     let stickerWidth = req.body.stickerWidth ? parseInt(req.body.stickerWidth, 10) : 58;
     let stickerHeight = req.body.stickerHeight ? parseInt(req.body.stickerHeight, 10) : 40;
@@ -241,6 +217,30 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       initialApprovalStatus = StickerApprovalStatus.APPROVED;
     }
 
+    // Authoritative server-side price calculation (tamper-proof)
+    const pricing = await computeOrderPricing({
+      tariffType: tariffType as TariffType,
+      itemsCount: countNum,
+      extraServices: servicesList,
+      ssccNeeded: Boolean(ssccNeeded),
+    });
+
+    // Find starting order sequence number
+    const lastOrder = await prisma.order.findFirst({
+      orderBy: { createdAt: 'desc' },
+      select: { orderNumber: true },
+    });
+    let baseNum = 1;
+    if (lastOrder?.orderNumber) {
+      const match = lastOrder.orderNumber.match(/\d+/);
+      if (match) {
+        baseNum = parseInt(match[0], 10) + 1;
+      }
+    } else {
+      const count = await prisma.order.count();
+      baseNum = count + 1;
+    }
+
     // Sanitize user-provided notes against tampering with official admin estimate blocks
     let sanitizedNotes = typeof notes === 'string' ? notes.slice(0, 5000) : '';
     sanitizedNotes = sanitizedNotes.replace(/=== УТВЕРЖДЕННАЯ СМЕТА ВЫЕЗДНОЙ ОКЛЕЙКИ ===[\s\S]*?(?:={20,}|$)/gi, '').trim();
@@ -263,7 +263,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
             itemsCount: pricing.safeItemsCount,
             pricePerItem: pricing.unitPrice,
             totalPrice: pricing.totalPrice,
-            extraServices: Array.isArray(extraServices) ? extraServices.map((s) => String(s).slice(0, 50)) : [],
+            extraServices: servicesList,
             ssccNeeded: Boolean(ssccNeeded),
             notes: sanitizedNotes,
             status: OrderStatus.NEW,
@@ -1172,6 +1172,9 @@ export const uploadOrderCodesFile = async (req: AuthRequest, res: Response) => {
       internalDupesCount,
     });
   } catch (error: any) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      try { fs.unlinkSync(req.file.path); } catch {}
+    }
     console.error('Upload order codes error:', error);
     return res.status(500).json({ message: 'Ошибка при сохранении файла кодов' });
   }
@@ -1302,6 +1305,15 @@ export const downloadOrderCodesFile = async (req: AuthRequest, res: Response) =>
       return res.status(403).json({ message: 'Нет доступа к данному заказу' });
     }
 
+    if (req.user.role !== 'ADMIN') {
+      const isPaidOrAllowed = (existing as any).printAllowed === true || (existing as any).paymentStatus === 'PAID';
+      if (!isPaidOrAllowed) {
+        return res.status(403).json({
+          message: 'Выгрузка файла кодов заблокирована: ожидается подтверждение оплаты заказа.',
+        });
+      }
+    }
+
     // If file is not present on disk, try auto-generating from OrderCodeItem in DB
     if (!existing.codesFileUrl || !fs.existsSync(path.resolve(process.cwd(), '.' + existing.codesFileUrl))) {
       const codeItemsCount = await prisma.orderCodeItem.count({ where: { orderId: existing.id } });
@@ -1345,6 +1357,15 @@ export const getOrderCodesContent = async (req: AuthRequest, res: Response) => {
 
     if (req.user.role !== 'ADMIN' && existing.userId !== req.user.id) {
       return res.status(403).json({ message: 'Нет доступа к данному заказу' });
+    }
+
+    if (req.user.role !== 'ADMIN') {
+      const isPaidOrAllowed = (existing as any).printAllowed === true || (existing as any).paymentStatus === 'PAID';
+      if (!isPaidOrAllowed) {
+        return res.status(403).json({
+          message: 'Доступ к кодам маркировки заблокирован: ожидается подтверждение оплаты заказа.',
+        });
+      }
     }
 
     // If codesFileUrl is missing or file does not exist, check if codes are in DB
@@ -1798,6 +1819,32 @@ export const adjustOrderItemsCount = async (req: AuthRequest, res: Response) => 
         },
       },
     });
+
+    // Sync any pending invoices and invoice items for this order so amounts remain consistent
+    try {
+      const pendingInvoices = await prisma.invoice.findMany({
+        where: { orderId: existing.id, status: 'PENDING' },
+        include: { items: true },
+      });
+      for (const inv of pendingInvoices) {
+        await prisma.invoice.update({
+          where: { id: inv.id },
+          data: { totalAmount: pricing.totalPrice },
+        });
+        if (inv.items.length === 1) {
+          await prisma.invoiceItem.update({
+            where: { id: inv.items[0].id },
+            data: {
+              quantity: pricing.safeItemsCount,
+              price: pricing.unitPrice,
+              totalPrice: pricing.totalPrice,
+            },
+          });
+        }
+      }
+    } catch (invErr) {
+      console.warn('Could not sync pending invoices after count adjustment:', invErr);
+    }
 
     return res.json({
       message: `Объем заказа успешно скорректирован до ${pricing.safeItemsCount.toLocaleString('ru-RU')} шт.`,
@@ -2336,6 +2383,15 @@ export const getOrderCodeItems = async (req: AuthRequest, res: Response) => {
     if (!existing) return res.status(404).json({ message: 'Заказ не найден' });
     if (req.user.role !== 'ADMIN' && existing.userId !== req.user.id) {
       return res.status(403).json({ message: 'Нет доступа к этому заказу' });
+    }
+
+    if (req.user.role !== 'ADMIN') {
+      const isPaidOrAllowed = (existing as any).printAllowed === true || (existing as any).paymentStatus === 'PAID';
+      if (!isPaidOrAllowed) {
+        return res.status(403).json({
+          message: 'Доступ к реестру кодов маркировки заблокирован: заказ ожидает подтверждения оплаты.',
+        });
+      }
     }
 
     await ensureOrderCodesPopulated(existing.id);

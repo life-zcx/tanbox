@@ -443,17 +443,43 @@ export class ClientTelegramBotService {
       return;
     }
 
-    // Успешно связываем
-    await (prisma as any).user.update({
-      where: { id: user.id },
-      data: {
-        telegramChatId: String(chatId),
-        telegramUsername: username || null,
-        telegramAuthToken: null,
-        telegramAuthTokenExpiresAt: null,
-        telegramLinkedAt: new Date(),
-      },
-    });
+    // 1. Снимаем привязку с других пользователей с этим же chatId во избежание P2002 коллизии уникального индекса
+    try {
+      await (prisma as any).user.updateMany({
+        where: {
+          telegramChatId: String(chatId),
+          id: { not: user.id },
+        },
+        data: {
+          telegramChatId: null,
+          telegramUsername: null,
+        },
+      });
+    } catch (cleanErr: any) {
+      logger.warn(`[Client TG Bot] Could not clean prior telegramChatId link: ${cleanErr.message}`);
+    }
+
+    // 2. Успешно связываем с текущим пользователем
+    try {
+      await (prisma as any).user.update({
+        where: { id: user.id },
+        data: {
+          telegramChatId: String(chatId),
+          telegramUsername: username || null,
+          telegramAuthToken: null,
+          telegramAuthTokenExpiresAt: null,
+          telegramLinkedAt: new Date(),
+        },
+      });
+    } catch (updateErr: any) {
+      logger.error(`[Client TG Bot] Failed to link chatId ${chatId} to user ${user.id}: ${updateErr.message}`);
+      await this.sendMessage(
+        chatId,
+        `⚠️ <b>Ошибка привязки аккаунта:</b> ${updateErr.message || 'Сбой базы данных'}.\n` +
+        `Пожалуйста, повторите попытку через минуту.`
+      );
+      return;
+    }
 
     logger.info(`[Client TG Bot] Successfully linked chatId ${chatId} to user ${user.email} (${user.companyName})`);
 

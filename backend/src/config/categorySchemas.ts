@@ -11,11 +11,18 @@ export interface CategoryFieldDefinition {
   hint?: string;
 }
 
+export interface OktruPreset {
+  code: string;
+  nameRu: string;
+}
+
 export interface CategorySchema {
   category: OrderCategory;
   nameRu: string;
   nameKk: string;
   code: string;
+  defaultOktru?: string;
+  oktruPresets?: OktruPreset[];
   tnvedExamples: string[];
   fields: CategoryFieldDefinition[];
 }
@@ -26,6 +33,14 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     nameRu: 'Обувные товары',
     nameKk: 'Аяқ киім тауарлары',
     code: 'shoes',
+    defaultOktru: '1078-0008-0008-100044039',
+    oktruPresets: [
+      { code: '1078-0008-0008-100044039', nameRu: 'Кроссовки и кеды' },
+      { code: '1078-0008-0006-100044029', nameRu: 'Обувь мужская (ботинки, полуботинки, туфли)' },
+      { code: '1078-0008-0006-100044030', nameRu: 'Обувь женская (туфли, полуботинки, босоножки)' },
+      { code: '1078-0008-0003-100044018', nameRu: 'Сапоги (зимние, демисезонные, рабочие)' },
+      { code: '1078-0008-0004-100044022', nameRu: 'Тапочки и домашняя обувь' },
+    ],
     tnvedExamples: ['6401', '6402', '6403', '6404', '6405'],
     fields: [
       {
@@ -216,6 +231,16 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     nameRu: 'Товары легпрома и текстиль',
     nameKk: 'Жеңіл өнеркәсіп және тоқыма тауарлары',
     code: 'clothes',
+    defaultOktru: '1078-0009-0008-100044079',
+    oktruPresets: [
+      { code: '1078-0009-0008-100044079', nameRu: 'Футболки, майки и толстовки' },
+      { code: '1078-0005-0005-100078490', nameRu: 'Куртки и верхняя одежда' },
+      { code: '1078-0004-0001-100043890', nameRu: 'Костюмы и комплекты' },
+      { code: '1078-0004-0002-100043900', nameRu: 'Брюки и шорты' },
+      { code: '1078-0004-0003-100043910', nameRu: 'Рубашки и блузки' },
+      { code: '1078-0004-0004-100043920', nameRu: 'Платья и юбки' },
+      { code: '1078-0007-0001-100043950', nameRu: 'Белье нательное и трикотаж' },
+    ],
     tnvedExamples: ['6101', '6102', '6103', '6104', '6105', '6201', '6202', '6302'],
     fields: [
       {
@@ -371,6 +396,11 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     nameRu: 'Упакованная вода и напитки',
     nameKk: 'Қапталған су және сусындар',
     code: 'water',
+    defaultOktru: '1107-0001-0001-100117538',
+    oktruPresets: [
+      { code: '1107-0001-0001-100117538', nameRu: 'Вода питьевая и минеральная упакованная' },
+      { code: '1107-0001-0002-100117539', nameRu: 'Безалкогольные напитки и соки' },
+    ],
     tnvedExamples: ['2201', '2202'],
     fields: [
       {
@@ -486,6 +516,10 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     nameRu: 'Лекарственные средства',
     nameKk: 'Дәрілік заттар',
     code: 'pharma',
+    defaultOktru: '2120-0001-0001-100121609',
+    oktruPresets: [
+      { code: '2120-0001-0001-100121609', nameRu: 'Лекарственные препараты и средства' },
+    ],
     tnvedExamples: ['3004'],
     fields: [
       {
@@ -597,6 +631,11 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     nameRu: 'Табачная и никотинсодержащая продукция',
     nameKk: 'Темекі және никотин өнімдері',
     code: 'tobacco',
+    defaultOktru: '1200-0001-0001-100117542',
+    oktruPresets: [
+      { code: '1200-0001-0001-100117542', nameRu: 'Сигареты и папиросы' },
+      { code: '1200-0001-0002-100117543', nameRu: 'Стики табачные нагреваемые и вейпы' },
+    ],
     tnvedExamples: ['2402', '2404'],
     fields: [
       {
@@ -679,6 +718,11 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     nameRu: 'Пиво и пивные напитки',
     nameKk: 'Сыра және сыра сусындары',
     code: 'beer',
+    defaultOktru: '1105-0001-0001-100117539',
+    oktruPresets: [
+      { code: '1105-0001-0001-100117539', nameRu: 'Пиво и пивные напитки' },
+      { code: '1105-0001-0002-100117540', nameRu: 'Сидр, пуаре, медовуха' },
+    ],
     tnvedExamples: ['2203', '2206'],
     fields: [
       {
@@ -793,6 +837,10 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     nameRu: 'Биологически активные добавки (БАД)',
     nameKk: 'Биологиялық белсенді қоспалар (ББҚ)',
     code: 'dietary_supplements',
+    defaultOktru: '1089-0001-0001-100121610',
+    oktruPresets: [
+      { code: '1089-0001-0001-100121610', nameRu: 'Биологически активные добавки к пище (БАД)' },
+    ],
     tnvedExamples: ['2106'],
     fields: [
       {
@@ -889,6 +937,14 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     nameRu: 'Моторные масла и спецжидкости',
     nameKk: 'Мотор майлары және арнайы сұйықтықтар',
     code: 'autofluids',
+    defaultOktru: '1087-0001-0001-100045841',
+    oktruPresets: [
+      { code: '1087-0001-0001-100045841', nameRu: 'Моторные масла (для бензиновых и дизельных двигателей)' },
+      { code: '1087-0001-0001-100045846', nameRu: 'Масла трансмиссионные и редукторные' },
+      { code: '1087-0001-0001-100045853', nameRu: 'Рабочие масла для гидросистем (гидравлические)' },
+      { code: '1087-0001-0001-100045848', nameRu: 'Масла индустриальные' },
+      { code: '1087-0001-0002-100045860', nameRu: 'Пластичные смазки' },
+    ],
     tnvedExamples: ['2710', '3403'],
     fields: [
       {
@@ -1016,6 +1072,10 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     nameRu: 'Ювелирные изделия',
     nameKk: 'Зергерлік бұйымдар',
     code: 'jewelry',
+    defaultOktru: '3212-0001-0001-100117550',
+    oktruPresets: [
+      { code: '3212-0001-0001-100117550', nameRu: 'Ювелирные изделия и драгоценности' },
+    ],
     tnvedExamples: ['7113'],
     fields: [
       {
@@ -1146,6 +1206,10 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     nameRu: 'Дериваты сайгака',
     nameKk: 'Ақбөкен дериваттары',
     code: 'saiga',
+    defaultOktru: '1011-0001-0001-100117510',
+    oktruPresets: [
+      { code: '1011-0001-0001-100117510', nameRu: 'Рога и дериваты сайгака' },
+    ],
     tnvedExamples: ['0507'],
     fields: [
       {
@@ -1193,6 +1257,10 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     nameRu: 'Прочие маркируемые товары',
     nameKk: 'Басқа таңбаланатын тауарлар',
     code: 'other',
+    defaultOktru: '1089-0001-0001-100121610',
+    oktruPresets: [
+      { code: '1089-0001-0001-100121610', nameRu: 'Товары потребительские прочие' },
+    ],
     tnvedExamples: [],
     fields: [
       {

@@ -1521,33 +1521,86 @@ export async function checkPartyStatus(req: AuthRequest, res: Response) {
       return res.status(400).json({ message: 'Укажите ИИН/БИН участника для проверки' });
     }
 
-    let account = await resolveAccountForUser(req.user, accountId ? String(accountId) : undefined);
-
-    if (!account) {
-      return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден' });
+    const cleanTin = String(tin).replace(/\D/g, '').trim();
+    if (!cleanTin || cleanTin.length < 10) {
+      return res.status(400).json({ message: 'Некорректный формат ИИН/БИН (ожидается 12 цифр)' });
     }
 
-    const client = new MarkirovkaClient(account);
-    const result = await client.checkPartyStatus(String(tin));
+    // 1. Check local registered accounts
+    const localAccount = await prisma.markirovkaAccount.findFirst({
+      where: {
+        OR: [
+          { login: cleanTin },
+          { name: { contains: cleanTin } },
+        ],
+      },
+    });
 
-    const isRegistered = !!(result.party && result.party.tin);
+    if (localAccount) {
+      return res.json({
+        success: true,
+        registered: true,
+        tin: cleanTin,
+        party: {
+          tin: cleanTin,
+          name: { ru: localAccount.name },
+          fullName: { ru: localAccount.name },
+          productGroups: localAccount.categories,
+        },
+        data: {
+          status: localAccount.status || 'ACTIVE',
+          tin: cleanTin,
+          nameRu: localAccount.name,
+          nameKz: localAccount.name,
+          productGroups: localAccount.categories || [],
+        },
+        message: 'Участник найден и зарегистрирован в системе маркировки РК',
+      });
+    }
+
+    // 2. Query IS MPT if active account is configured
+    let account = await resolveAccountForUser(req.user, accountId ? String(accountId) : undefined);
+    if (!account) {
+      account = await prisma.markirovkaAccount.findFirst({ where: { status: 'ACTIVE' } });
+    }
+
+    if (account && account.login && account.encryptedPassword) {
+      try {
+        const client = new MarkirovkaClient(account);
+        const result = await client.checkPartyStatus(cleanTin);
+        const isRegistered = !!(result?.party && (result.party.tin || result.party.name));
+
+        return res.json({
+          success: true,
+          registered: isRegistered,
+          tin: cleanTin,
+          party: result?.party || null,
+          data: isRegistered
+            ? {
+                status: 'ACTIVE',
+                tin: result.party.tin || cleanTin,
+                nameRu: result.party.name?.ru || result.party.fullName?.ru || '',
+                nameKz: result.party.name?.kz || result.party.fullName?.kz || '',
+                productGroups: result.party.productGroups || [],
+              }
+            : null,
+          message: isRegistered
+            ? 'Участник найден и зарегистрирован в ИС МПТ'
+            : 'Участник с данным БИН/ИИН не найден в реестре ИС МПТ',
+        });
+      } catch (clientErr: any) {
+        logger.warn(`[Party Check] IS MPT lookup failed: ${clientErr.message}`);
+      }
+    }
+
+    // Default if not found in local registry and external service not reachable
     return res.json({
       success: true,
-      registered: isRegistered,
-      tin: String(tin),
-      party: result.party,
-      data: isRegistered
-        ? {
-            status: 'ACTIVE',
-            tin: result.party.tin,
-            nameRu: result.party.name?.ru || result.party.fullName?.ru || '',
-            nameKz: result.party.name?.kz || result.party.fullName?.kz || '',
-            productGroups: result.party.productGroups || [],
-          }
-        : null,
-      message: isRegistered
-        ? 'Участник найден и зарегистрирован в ИС МПТ'
-        : 'Участник с данным БИН/ИИН не найден в реестре ИС МПТ',
+      registered: false,
+      tin: cleanTin,
+      party: null,
+      data: null,
+      message: 'Участник с данным БИН/ИИН не найден в реестре маркировки',
     });
   } catch (err: any) {
     logger.error('Error checking party status:', err);

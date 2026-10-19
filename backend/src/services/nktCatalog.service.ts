@@ -110,6 +110,16 @@ export function normalizeNktProduct(raw: any, gtin: string): NormalizedNktProduc
     country,
     producer,
     composition,
+    productName: { ru: name, kz: raw?.nameKk || undefined },
+    status: {
+      code: raw?.status?.code || raw?.status || 'PUBLISHED',
+      name: { ru: raw?.status?.nameRu || raw?.status?.name?.ru || 'Опубликован в НКТ' },
+    },
+    productGroup: {
+      code: raw?.productGroup?.code || raw?.category || '',
+      name: { ru: raw?.productGroup?.nameRu || raw?.productGroup?.name?.ru || raw?.productGroup || '' },
+    },
+    inn: raw?.inn || raw?.applicantInn || raw?.producerBin || raw?.importerBin || undefined,
     raw,
   };
 }
@@ -117,13 +127,7 @@ export function normalizeNktProduct(raw: any, gtin: string): NormalizedNktProduc
 /**
  * Look up product in Kazakhstan National Catalog using official nationalcatalog.kz Open API
  */
-async function queryNationalCatalogApi(tin: string): Promise<any | null> {
-  const settings = getNktSettings();
-  if (!settings.enabled) {
-    logger.info(`[NKT Open API] Поиск по НКТ отключен в настройках админки (GTIN: ${tin})`);
-    return null;
-  }
-
+async function queryNationalCatalogApi(tin: string, account?: any): Promise<any | null> {
   const clean = tin.replace(/\D/g, '');
   if (!clean || clean.length < 8) return null;
 
@@ -140,26 +144,39 @@ async function queryNationalCatalogApi(tin: string): Promise<any | null> {
     candidates.push(unpadded);
   }
 
-  for (const candidate of candidates) {
-    try {
-      const url = `${settings.baseUrl}/portal/api/v1/products/${encodeURIComponent(candidate)}`;
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'X-API-KEY': settings.apiKey,
-          'Accept': 'application/json',
-        },
-        signal: AbortSignal.timeout(8000),
-      });
+  // Targets: user account NKT settings first, then global settings
+  const targets: { baseUrl: string; apiKey: string }[] = [];
+  if (account?.nktApiKey && account?.nktBaseUrl) {
+    targets.push({ baseUrl: account.nktBaseUrl.replace(/\/+$/, ''), apiKey: account.nktApiKey.trim() });
+  }
 
-      if (res.ok) {
-        const data = await res.json().catch(() => null);
-        if (data && (data.nameRu || data.nameKk || data.gtin || data.ntin || data.id)) {
-          return data;
+  const settings = getNktSettings();
+  if (settings.enabled && settings.apiKey && settings.baseUrl) {
+    targets.push({ baseUrl: settings.baseUrl.replace(/\/+$/, ''), apiKey: settings.apiKey.trim() });
+  }
+
+  for (const target of targets) {
+    for (const candidate of candidates) {
+      try {
+        const url = `${target.baseUrl}/portal/api/v1/products/${encodeURIComponent(candidate)}`;
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'X-API-KEY': target.apiKey,
+            'Accept': 'application/json',
+          },
+          signal: AbortSignal.timeout(6000),
+        });
+
+        if (res.ok) {
+          const data = await res.json().catch(() => null);
+          if (data && (data.nameRu || data.nameKk || data.gtin || data.ntin || data.id)) {
+            return data;
+          }
         }
+      } catch (e: any) {
+        logger.warn(`[NKT Open API] Request error for ${candidate}: ${e.message}`);
       }
-    } catch (e: any) {
-      logger.warn(`[NKT Open API] Request error for ${candidate}: ${e.message}`);
     }
   }
 
@@ -180,13 +197,59 @@ export async function resolveNktProduct(
     throw new Error('Указан некорректный GTIN');
   }
 
-  // 1. Query official Kazakhstan National Catalog (nationalcatalog.kz) via Open API Key
-  const nktData = await queryNationalCatalogApi(cleanGtin);
-  if (nktData) {
-    return normalizeNktProduct(nktData, cleanGtin);
+  // 0. Check Tanbox local product cards first
+  try {
+    const localCard = await prisma.markirovkaProductCard.findFirst({
+      where: {
+        OR: [
+          { gtin: cleanGtin },
+          { gtin: cleanGtin.padStart(14, '0') },
+          { gtin: cleanGtin.replace(/^0+/, '') },
+          { nktRequestId: cleanGtin },
+        ],
+      },
+      include: { account: true },
+    });
+
+    if (localCard) {
+      return {
+        gtin: (localCard.gtin || cleanGtin).padStart(14, '0'),
+        name: localCard.name,
+        brand: localCard.brand || undefined,
+        article: localCard.article || undefined,
+        size: localCard.size || undefined,
+        color: localCard.color || undefined,
+        tnved: localCard.tnved || undefined,
+        country: localCard.country || undefined,
+        producer: localCard.producerName || undefined,
+        composition: localCard.composition || undefined,
+        productName: { ru: localCard.name, kz: localCard.nameKk || undefined },
+        status: {
+          code: localCard.status,
+          name: {
+            ru:
+              localCard.status === 'APPROVED'
+                ? 'Опубликован в НКТ'
+                : localCard.status === 'PENDING_MODERATION'
+                ? 'На модерации в НКТ'
+                : localCard.status === 'REJECTED'
+                ? 'На доработке'
+                : 'Черновик',
+          },
+        },
+        productGroup: {
+          code: localCard.category,
+          name: { ru: localCard.category },
+        },
+        inn: localCard.importerBin || localCard.account?.login || undefined,
+        raw: localCard,
+      };
+    }
+  } catch (err: any) {
+    logger.warn(`[Local Card Lookup] Error for GTIN ${cleanGtin}: ${err.message}`);
   }
 
-  // 2. Fallback to markirovka.kz (ИС МПТ / True API) if user has active account connected
+  // Find user account if available
   let account = null;
   if (userId) {
     account = await prisma.markirovkaAccount.findFirst({
@@ -199,7 +262,14 @@ export async function resolveNktProduct(
     });
   }
 
-  if (account) {
+  // 1. Query official Kazakhstan National Catalog via Open API Key
+  const nktData = await queryNationalCatalogApi(cleanGtin, account);
+  if (nktData) {
+    return normalizeNktProduct(nktData, cleanGtin);
+  }
+
+  // 2. Fallback to markirovka.kz (ИС МПТ / True API) if user has active account connected
+  if (account && account.login && account.encryptedPassword) {
     try {
       const client = new MarkirovkaClient(account);
       const productGroup = category ? String(category).toLowerCase() : undefined;

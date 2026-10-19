@@ -232,6 +232,8 @@ const LkRouter: React.FC = () => {
           }
         />
 
+        <Route path="/orders/create" element={<Navigate to="/orders/new" replace />} />
+
         <Route
           path="/designer"
           element={

@@ -38,8 +38,10 @@ import {
   deleteCardHandler,
   submitCardToNktHandler,
   checkCardStatusHandler,
+  publishCardToNktHandler,
   getCategorySchemaHandler,
   listCategoriesHandler,
+  translateToKazakhHandler,
 } from '../controllers/markirovkaCards.controller';
 
 const router = Router();
@@ -67,6 +69,7 @@ import { productCardImageUpload } from '../middleware/upload.middleware';
 // Product Cards & Catalog Registration (NKT & IS MPT)
 router.get('/cards/categories', listCategoriesHandler);
 router.get('/cards/categories/:category/schema', getCategorySchemaHandler);
+router.post('/cards/translate-kk', translateToKazakhHandler);
 router.get('/cards', getCardsHandler);
 router.post('/cards', createCardHandler);
 router.post('/cards/upload-photo', productCardImageUpload.single('file'), (req: any, res: any) => {
@@ -81,6 +84,7 @@ router.put('/cards/:id', updateCardHandler);
 router.delete('/cards/:id', deleteCardHandler);
 router.post('/cards/:id/submit-nkt', submitCardToNktHandler);
 router.get('/cards/:id/check-status', checkCardStatusHandler);
+router.post('/cards/:id/publish-nkt', publishCardToNktHandler);
 
 // Operations routes (True API & OMS)
 router.get('/operations', getOperations);

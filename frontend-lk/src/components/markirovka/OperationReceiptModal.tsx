@@ -265,10 +265,7 @@ export const OperationReceiptModal: React.FC<OperationReceiptModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !loading) onClose();
-      }}
+      className="fixed inset-0 w-screen h-screen z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
     >
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-3xl w-full p-5 sm:p-6 space-y-4 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150">
         {/* Header */}
