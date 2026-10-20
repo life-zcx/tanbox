@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { X, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
-import { trackGoogleConversion } from '../../utils/analytics';
+import { trackModalOpenConversion, trackFormSubmitConversion } from '../../utils/analytics';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface ServiceOrderModalProps {
@@ -152,11 +152,24 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     } catch (err) {
       console.warn('Backend API submission warning:', err);
     } finally {
-      trackGoogleConversion({ value: 1.0, currency: 'USD' });
+      trackFormSubmitConversion();
       setSubmitted(true);
       setLoading(false);
     }
   };
+
+  const hasTrackedOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (!hasTrackedOpenRef.current) {
+        hasTrackedOpenRef.current = true;
+        trackModalOpenConversion();
+      }
+    } else {
+      hasTrackedOpenRef.current = false;
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (initialServiceTitle) {

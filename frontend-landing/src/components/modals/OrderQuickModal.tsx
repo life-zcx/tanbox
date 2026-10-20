@@ -5,7 +5,7 @@ import { X, CheckCircle2 } from 'lucide-react';
 import { TariffCode } from '../../types';
 import { apiClient } from '../../api/client';
 import { getLkUrl } from '../../utils/navigation';
-import { trackGoogleConversion } from '../../utils/analytics';
+import { trackGoogleConversion, trackModalOpenConversion } from '../../utils/analytics';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface OrderQuickModalProps {
@@ -32,6 +32,19 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
     phone: '',
     notes: '',
   });
+
+  const hasTrackedOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (!hasTrackedOpenRef.current) {
+        hasTrackedOpenRef.current = true;
+        trackModalOpenConversion();
+      }
+    } else {
+      hasTrackedOpenRef.current = false;
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {

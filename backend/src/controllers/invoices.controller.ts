@@ -13,94 +13,74 @@ import { advanceOrderStatus } from '../utils/orderLifecycle';
  */
 export async function syncOrderInvoices(userId?: string) {
   try {
-    const orders = await prisma.order.findMany({
+    // Only query orders that do NOT have an invoice yet (O(1) index lookup instead of full DB table scan)
+    const ordersWithoutInvoices = await prisma.order.findMany({
       where: {
         ...(userId ? { userId } : {}),
+        invoices: { none: {} },
       },
       include: {
         user: true,
-        invoices: true,
       },
     });
 
-    for (const order of orders) {
-      if (order.invoices.length === 0) {
-        const numPart = String(order.orderNumber).replace(/\D/g, '') || '0001';
-        const invoiceNumber = `СЧ-${numPart.padStart(4, '0')}`;
+    for (const order of ordersWithoutInvoices) {
+      const numPart = String(order.orderNumber).replace(/\D/g, '') || '0001';
+      const invoiceNumber = `СЧ-${numPart.padStart(4, '0')}`;
 
-        // Ensure uniqueness
-        const existingByNum = await prisma.invoice.findFirst({
-          where: { invoiceNumber },
-        });
-        const finalNumber = existingByNum ? `СЧ-${order.orderNumber}` : invoiceNumber;
+      // Ensure uniqueness
+      const existingByNum = await prisma.invoice.findFirst({
+        where: { invoiceNumber },
+      });
+      const finalNumber = existingByNum ? `СЧ-${order.orderNumber}` : invoiceNumber;
 
-        const tariffLabel = order.tariffType === 'DIGITAL'
-          ? 'Цифровой'
-          : order.tariffType === 'PRINT'
-          ? 'Печать'
-          : order.tariffType === 'STANDARD'
-          ? 'Стандарт'
-          : order.tariffType === 'PRO'
-          ? 'Про'
-          : order.tariffType;
+      const tariffLabel = order.tariffType === 'DIGITAL'
+        ? 'Цифровой'
+        : order.tariffType === 'PRINT'
+        ? 'Печать'
+        : order.tariffType === 'STANDARD'
+        ? 'Стандарт'
+        : order.tariffType === 'PRO'
+        ? 'Про'
+        : order.tariffType;
 
-        const itemTitle = `Услуги маркировки и генерации кодов Data Matrix (${order.category}) — Тариф «${tariffLabel}»`;
+      const itemTitle = `Услуги маркировки и генерации кодов Data Matrix (${order.category}) — Тариф «${tariffLabel}»`;
 
-        const invoiceStatus: InvoiceStatus =
-          order.paymentStatus === 'PAID'
-            ? 'PAID'
-            : order.status === 'CANCELLED'
-            ? 'CANCELLED'
-            : 'PENDING';
+      const invoiceStatus: InvoiceStatus =
+        order.paymentStatus === 'PAID'
+          ? 'PAID'
+          : order.status === 'CANCELLED'
+          ? 'CANCELLED'
+          : 'PENDING';
 
-        await prisma.invoice.create({
-          data: {
-            invoiceNumber: finalNumber,
-            date: order.createdAt,
-            status: invoiceStatus,
-            userId: order.userId,
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            customerName: order.user?.companyName || 'Клиент',
-            customerBinIin: order.user?.binIin || '—',
-            customerAddress: order.warehouseAddress || 'г. Алматы',
-            customerPhone: order.user?.phone || null,
-            totalAmount: order.totalPrice,
-            notes: order.notes || null,
-            items: {
-              create: [
-                {
-                  index: 1,
-                  name: itemTitle,
-                  unit: 'шт.',
-                  quantity: order.itemsCount,
-                  price: order.pricePerItem,
-                  totalPrice: order.totalPrice,
-                },
-              ],
-            },
+      await prisma.invoice.create({
+        data: {
+          invoiceNumber: finalNumber,
+          date: order.createdAt,
+          status: invoiceStatus,
+          userId: order.userId,
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          customerName: order.user?.companyName || 'Клиент',
+          customerBinIin: order.user?.binIin || '—',
+          customerAddress: order.warehouseAddress || 'г. Алматы',
+          customerPhone: order.user?.phone || null,
+          totalAmount: order.totalPrice,
+          notes: order.notes || null,
+          items: {
+            create: [
+              {
+                index: 1,
+                name: itemTitle,
+                unit: 'шт.',
+                quantity: order.itemsCount,
+                price: order.pricePerItem,
+                totalPrice: order.totalPrice,
+              },
+            ],
           },
-        });
-      } else {
-        // Sync invoice status with order paymentStatus if changed
-        const primaryInvoice = order.invoices[0];
-        const targetStatus: InvoiceStatus =
-          order.paymentStatus === 'PAID'
-            ? 'PAID'
-            : order.status === 'CANCELLED'
-            ? 'CANCELLED'
-            : primaryInvoice.status;
-
-        if (primaryInvoice.status !== targetStatus || Number(primaryInvoice.totalAmount) !== Number(order.totalPrice)) {
-          await prisma.invoice.update({
-            where: { id: primaryInvoice.id },
-            data: {
-              status: targetStatus,
-              totalAmount: order.totalPrice,
-            },
-          });
-        }
-      }
+        },
+      });
     }
   } catch (syncErr) {
     logger.warn(`Failed to auto-sync order invoices: ${syncErr}`);

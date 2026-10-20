@@ -14,6 +14,16 @@ const CATEGORY_NAMES: Record<string, string> = {
   OTHER: 'Другое',
 };
 
+function escapeHtml(str?: string | null): string {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export const submitBugReport = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
@@ -105,24 +115,35 @@ export const submitBugReport = async (req: AuthRequest, res: Response) => {
       })
       .catch((err) => logger.warn(`Failed to dispatch bug report to telegram: ${err.message}`));
 
+    // Escape all user inputs before embedding into email HTML to prevent HTML injection
+    const safeCategory = escapeHtml(categoryTitle);
+    const safeCompany = escapeHtml(user.companyName);
+    const safePhone = escapeHtml(user.phone);
+    const safeEmail = escapeHtml(user.email);
+    const safeBin = escapeHtml(user.binIin);
+    const safePageUrl = escapeHtml(cleanPageUrl);
+    const safeResolution = escapeHtml(cleanResolution);
+    const safeDescription = escapeHtml(cleanDescription);
+    const safeFilename = escapeHtml(screenshotFileName);
+
     // Also dispatch email notification to support@tanbox.kz
     const emailHtml = `
       <div style="font-family: sans-serif; max-width: 600px; color: #1e293b;">
         <h2 style="color: #e11d48; margin-top: 0;">🐞 Новый отчет об ошибке с платформы TANBOX.KZ</h2>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
-          <tr><td style="padding: 6px 0; color: #64748b; width: 140px;"><b>Категория:</b></td><td><b>${categoryTitle}</b></td></tr>
-          <tr><td style="padding: 6px 0; color: #64748b;"><b>Клиент:</b></td><td>${user.companyName}</td></tr>
-          <tr><td style="padding: 6px 0; color: #64748b;"><b>Телефон:</b></td><td>${user.phone}</td></tr>
-          <tr><td style="padding: 6px 0; color: #64748b;"><b>Email:</b></td><td>${user.email}</td></tr>
-          ${user.binIin ? `<tr><td style="padding: 6px 0; color: #64748b;"><b>БИН/ИИН:</b></td><td>${user.binIin}</td></tr>` : ''}
-          ${cleanPageUrl ? `<tr><td style="padding: 6px 0; color: #64748b;"><b>Страница:</b></td><td><a href="${cleanPageUrl}">${cleanPageUrl}</a></td></tr>` : ''}
-          ${cleanResolution ? `<tr><td style="padding: 6px 0; color: #64748b;"><b>Разрешение:</b></td><td>${cleanResolution}</td></tr>` : ''}
+          <tr><td style="padding: 6px 0; color: #64748b; width: 140px;"><b>Категория:</b></td><td><b>${safeCategory}</b></td></tr>
+          <tr><td style="padding: 6px 0; color: #64748b;"><b>Клиент:</b></td><td>${safeCompany}</td></tr>
+          <tr><td style="padding: 6px 0; color: #64748b;"><b>Телефон:</b></td><td>${safePhone}</td></tr>
+          <tr><td style="padding: 6px 0; color: #64748b;"><b>Email:</b></td><td>${safeEmail}</td></tr>
+          ${safeBin ? `<tr><td style="padding: 6px 0; color: #64748b;"><b>БИН/ИИН:</b></td><td>${safeBin}</td></tr>` : ''}
+          ${safePageUrl ? `<tr><td style="padding: 6px 0; color: #64748b;"><b>Страница:</b></td><td>${safePageUrl}</td></tr>` : ''}
+          ${safeResolution ? `<tr><td style="padding: 6px 0; color: #64748b;"><b>Разрешение:</b></td><td>${safeResolution}</td></tr>` : ''}
         </table>
         <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
           <h4 style="margin-top: 0; color: #0f172a; margin-bottom: 8px;">Описание ошибки от пользователя:</h4>
-          <p style="white-space: pre-wrap; margin: 0; color: #334155; line-height: 1.5;">${cleanDescription}</p>
+          <p style="white-space: pre-wrap; margin: 0; color: #334155; line-height: 1.5;">${safeDescription}</p>
         </div>
-        ${screenshotFileName ? `<p style="font-size: 13px; color: #64748b;">📎 <i>Прикреплен файл: ${screenshotFileName}</i></p>` : ''}
+        ${safeFilename ? `<p style="font-size: 13px; color: #64748b;">📎 <i>Прикреплен файл: ${safeFilename}</i></p>` : ''}
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
         <p style="font-size: 12px; color: #94a3b8; margin: 0;">Отправлено автоматически платформой TANBOX.KZ</p>
       </div>
@@ -130,7 +151,7 @@ export const submitBugReport = async (req: AuthRequest, res: Response) => {
 
     sendEmail({
       to: 'support@tanbox.kz',
-      subject: `[БАГ-РЕПОРТ] ${categoryTitle} — ${user.companyName}`,
+      subject: `[БАГ-РЕПОРТ] ${safeCategory} — ${safeCompany}`,
       html: emailHtml,
       attachments: req.file ? [{ filename: req.file.originalname, path: req.file.path }] : undefined,
     }).catch((err) => logger.warn(`Failed to dispatch bug report email: ${err.message}`));

@@ -15,6 +15,10 @@ export interface NormalizedNktProduct {
   country?: string;
   producer?: string;
   composition?: string;
+  productName?: { ru: string; kz?: string };
+  status?: { code: string; name: { ru: string } };
+  productGroup?: { code: string; name: { ru: string } };
+  inn?: string;
   raw?: any;
 }
 

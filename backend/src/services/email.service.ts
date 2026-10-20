@@ -50,6 +50,9 @@ export const sendEmail = async ({ to, subject, html, attachments }: SendEmailOpt
 
   if (!transporter) {
     logger.warn(`[SMTP NOT CONFIGURED] Email to ${to} skipped (SMTP_HOST/USER/PASS not set).`);
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Почтовый сервер (SMTP) не настроен. Пожалуйста, обратитесь к администратору платформы.');
+    }
     return { id: 'mock-not-configured-id', mock: true };
   }
 

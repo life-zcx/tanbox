@@ -38,6 +38,46 @@
     })();
   </script>
 
+  <!-- Event snippet for Открытие модалки conversion page -->
+  <script>
+    function gtag_report_modal_open(url) {
+      var callback = function () {
+        if (typeof(url) != 'undefined' && url) {
+          window.location = url;
+        }
+      };
+      if (typeof gtag === 'function') {
+        gtag('event', 'conversion', {
+          'send_to': 'AW-18368406368/ApjmCJPU_qIdEODG3rZE',
+          'value': 1.0,
+          'currency': 'USD',
+          'event_callback': callback
+        });
+      }
+      return false;
+    }
+  </script>
+
+  <!-- Event snippet for Отправка формы conversion page -->
+  <script>
+    function gtag_report_conversion(url) {
+      var callback = function () {
+        if (typeof(url) != 'undefined' && url) {
+          window.location = url;
+        }
+      };
+      if (typeof gtag === 'function') {
+        gtag('event', 'conversion', {
+          'send_to': 'AW-18368406368/ZnCBCJDU_qIdEODG3rZE',
+          'value': 1.0,
+          'currency': 'USD',
+          'event_callback': callback
+        });
+      }
+      return false;
+    }
+  </script>
+
   <meta charset="UTF-8" />
   <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />

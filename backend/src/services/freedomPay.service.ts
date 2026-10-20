@@ -79,12 +79,22 @@ export class FreedomPayService {
    */
   public verifyPgSig(candidateScripts: string | string[], params: Record<string, any>, incomingSig: string): boolean {
     if (!incomingSig) return false;
+    if (!this.secretKey || this.secretKey.trim() === '') {
+      logger.error('[FreedomPay] CRITICAL SECURITY WARNING: FREEDOM_PAY_SECRET_KEY is not configured! Rejecting webhook.');
+      return false;
+    }
+
     const scripts = Array.isArray(candidateScripts) ? candidateScripts : [candidateScripts];
     const normalizedIncoming = incomingSig.trim().toLowerCase();
+    const incomingBuf = Buffer.from(normalizedIncoming, 'utf-8');
 
     for (const script of scripts) {
       const calculated = this.generatePgSig(script, params, this.secretKey).toLowerCase();
-      if (calculated === normalizedIncoming) {
+      const calculatedBuf = Buffer.from(calculated, 'utf-8');
+      if (
+        calculatedBuf.length === incomingBuf.length &&
+        crypto.timingSafeEqual(calculatedBuf, incomingBuf)
+      ) {
         return true;
       }
     }

@@ -52,7 +52,7 @@ export async function reindexClientOrders(userId: string): Promise<void> {
     // Then, assign sequential indices starting from runningIndex
     await prisma.$executeRawUnsafe(
       `WITH ranked AS (
-         SELECT "orderId", "index" AS old_idx, (${runningIndex} - 1 + row_number() OVER (ORDER BY ABS("index") ASC))::integer AS new_idx
+         SELECT "orderId", "index" AS old_idx, ($2 - 1 + row_number() OVER (ORDER BY ABS("index") ASC))::integer AS new_idx
          FROM "OrderCodeItem"
          WHERE "orderId" = $1
        )
@@ -60,7 +60,8 @@ export async function reindexClientOrders(userId: string): Promise<void> {
        SET "index" = ranked.new_idx
        FROM ranked
        WHERE "OrderCodeItem"."orderId" = ranked."orderId" AND "OrderCodeItem"."index" = ranked.old_idx`,
-      ord.id
+      ord.id,
+      runningIndex
     );
 
     runningIndex += count;
