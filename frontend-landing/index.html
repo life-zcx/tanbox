@@ -78,6 +78,26 @@
     }
   </script>
 
+  <!-- Event snippet for Клик по WhatsApp conversion page -->
+  <script>
+    function gtag_report_whatsapp(url) {
+      var callback = function () {
+        if (typeof(url) != 'undefined' && url) {
+          window.location = url;
+        }
+      };
+      if (typeof gtag === 'function') {
+        gtag('event', 'conversion', {
+          'send_to': 'AW-18368406368/IF-ZCJPMhaMdEODG3rZE',
+          'value': 1.0,
+          'currency': 'USD',
+          'event_callback': callback
+        });
+      }
+      return false;
+    }
+  </script>
+
   <meta charset="UTF-8" />
   <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />

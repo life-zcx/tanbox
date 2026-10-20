@@ -5,6 +5,7 @@ import { Header } from './components/common/Header';
 import { Footer } from './components/common/Footer';
 import { CookieBanner } from './components/common/CookieBanner';
 import { ScrollToTopButton } from './components/common/ScrollToTopButton';
+import { WhatsAppWidget } from './components/common/WhatsAppWidget';
 import { HomePage } from './pages/HomePage';
 import { CalculatorPage } from './pages/CalculatorPage';
 import { ServicesPage } from './pages/ServicesPage';
@@ -142,6 +143,7 @@ const AppContent: React.FC = () => {
 
       <Footer />
       <CookieBanner />
+      <WhatsAppWidget />
       <ScrollToTopButton duration={1000} />
     </div>
   );

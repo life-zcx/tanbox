@@ -133,7 +133,7 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
 
   return (
     <div
-      className={`fixed right-5 sm:right-8 z-[1002] transition-all duration-300 ease-out select-none ${
+      className={`fixed right-[78px] sm:right-[100px] z-[1000] transition-all duration-300 ease-out select-none ${
         cookieBannerVisible ? 'bottom-[150px] sm:bottom-8' : 'bottom-5 sm:bottom-8'
       } ${
         isVisible
@@ -146,11 +146,11 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
         onClick={scrollToTop}
         aria-label={lang === 'kz' ? 'Беттің басына шығу' : lang === 'en' ? 'Scroll to top' : 'Наверх страницы'}
         title={lang === 'kz' ? 'Беттің басына шығу' : lang === 'en' ? 'Scroll to top' : 'Наверх страницы'}
-        className="group relative w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-[#0082FB] hover:bg-[#0070DA] text-white flex items-center justify-center shadow-[0_0_20px_rgba(0,130,251,0.55)] hover:shadow-[0_0_28px_rgba(0,130,251,0.8)] hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer focus:outline-none ring-2 ring-white/30"
+        className="group relative w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#0082FB] hover:bg-[#0070DA] text-white flex items-center justify-center shadow-[0_4px_22px_rgba(0,130,251,0.55)] hover:shadow-[0_6px_30px_rgba(0,130,251,0.8)] hover:scale-108 active:scale-95 transition-all duration-300 cursor-pointer focus:outline-none ring-4 ring-blue-400/25"
       >
         {/* SVG Circular Progress Ring */}
         <svg
-          className="absolute inset-0 w-12 h-12 sm:w-13 sm:h-13 -rotate-90 pointer-events-none"
+          className="absolute inset-0 w-13 h-13 sm:w-14 sm:h-14 -rotate-90 pointer-events-none"
           viewBox="0 0 52 52"
         >
           {/* Background track */}
