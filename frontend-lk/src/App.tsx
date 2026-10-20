@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FileText, Plus, Tag, User, Menu } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from '@shared';
 import { Sidebar } from './components/common/Sidebar';
 import { Header } from './components/common/Header';
 import { LoginPage } from './pages/LoginPage';
@@ -16,6 +17,7 @@ import { PaymentsPage } from './pages/PaymentsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { MarkirovkaPage } from './pages/MarkirovkaPage';
 import { ProductCardsPage } from './pages/ProductCardsPage';
+import { MyCardsMptPage } from './pages/MyCardsMptPage';
 import { LabelDesignerPage } from './pages/LabelDesignerPage';
 import { MaintenanceScreen } from './components/common/MaintenanceScreen';
 import { apiClient } from './api/client';
@@ -298,6 +300,15 @@ const LkRouter: React.FC = () => {
         />
 
         <Route
+          path="/mpt-cards"
+          element={
+            <ProtectedLayout>
+              <MyCardsMptPage />
+            </ProtectedLayout>
+          }
+        />
+
+        <Route
           path="/product-cards"
           element={
             <ProtectedLayout>
@@ -324,7 +335,9 @@ const LkRouter: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <LkRouter />
+      <ToastProvider>
+        <LkRouter />
+      </ToastProvider>
     </AuthProvider>
   );
 };

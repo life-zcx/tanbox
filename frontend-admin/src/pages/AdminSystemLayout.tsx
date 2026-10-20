@@ -9,7 +9,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Link, Outlet } from 'react-router-dom';
-import { PageHeader } from '@shared';
+import { PageHeader, toast } from '@shared';
 import { apiClient } from '../api/client';
 import { SystemNav } from '../components/system/SystemNav';
 
@@ -31,12 +31,12 @@ export const AdminSystemLayout: React.FC = () => {
   // Maintenance state
   const [maintenanceLoading, setMaintenanceLoading] = useState(false);
 
-  // Status toast message
-  const [actionMessage, setActionMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
-    setActionMessage({ text, type });
-    setTimeout(() => setActionMessage(null), 5000);
+    if (type === 'error') {
+      toast.error(text);
+    } else {
+      toast.success(text);
+    }
   };
 
   // 1. Fetch Health
@@ -101,20 +101,6 @@ export const AdminSystemLayout: React.FC = () => {
 
   return (
     <div className="w-full space-y-6 pb-12">
-      {/* Toast Alert */}
-      {actionMessage && (
-        <div
-          className={`p-4 rounded-xl text-xs font-bold flex items-center justify-between shadow-xs transition-all ${
-            actionMessage.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-              : 'bg-rose-50 text-rose-800 border border-rose-200'
-          }`}
-        >
-          <span>{actionMessage.text}</span>
-          <button onClick={() => setActionMessage(null)} className="opacity-70 hover:opacity-100 cursor-pointer">✕</button>
-        </div>
-      )}
-
       {/* Prominent Maintenance Alert Banner */}
       {health?.maintenance?.active && (
         <div className="bg-amber-50 border border-amber-200 text-amber-950 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">

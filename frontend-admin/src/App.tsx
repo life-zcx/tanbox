@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
+import { ToastProvider } from '@shared';
 import { AdminSidebar } from './components/common/AdminSidebar';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
@@ -65,200 +66,202 @@ const ProtectedAdminLayout: React.FC<{ children: React.ReactNode }> = ({ childre
 export const App: React.FC = () => {
   return (
     <AdminAuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<AdminLoginPage />} />
+      <ToastProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<AdminLoginPage />} />
 
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedAdminLayout>
-                <AdminDashboardPage />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminDashboardPage />
+                </ProtectedAdminLayout>
+              }
+            />
 
-          <Route
-            path="/labels"
-            element={
-              <ProtectedAdminLayout>
-                <AdminLabelsRegistryPage />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/labels"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminLabelsRegistryPage />
+                </ProtectedAdminLayout>
+              }
+            />
 
-          <Route
-            path="/label-designer"
-            element={
-              <ProtectedAdminLayout>
-                <AdminLabelDesignerPage />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/label-designer"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminLabelDesignerPage />
+                </ProtectedAdminLayout>
+              }
+            />
 
-          <Route
-            path="/leads"
-            element={
-              <ProtectedAdminLayout>
-                <AdminLeadsPage />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/leads"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminLeadsPage />
+                </ProtectedAdminLayout>
+              }
+            />
 
-          <Route
-            path="/orders"
-            element={
-              <ProtectedAdminLayout>
-                <AdminOrdersPage />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminOrdersPage />
+                </ProtectedAdminLayout>
+              }
+            />
 
-          <Route
-            path="/stickering-calc"
-            element={
-              <ProtectedAdminLayout>
-                <AdminStickeringCalcPage />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/stickering-calc"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminStickeringCalcPage />
+                </ProtectedAdminLayout>
+              }
+            />
 
-          <Route
-            path="/orders/:id"
-            element={
-              <ProtectedAdminLayout>
-                <AdminOrderDetailPage />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/orders/:id"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminOrderDetailPage />
+                </ProtectedAdminLayout>
+              }
+            />
 
-          <Route
-            path="/orders/:id/labels"
-            element={
-              <ProtectedAdminLayout>
-                <AdminOrderLabelsRedirect />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/orders/:id/labels"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminOrderLabelsRedirect />
+                </ProtectedAdminLayout>
+              }
+            />
 
-          <Route
-            path="/users"
-            element={
-              <ProtectedAdminLayout>
-                <AdminUsersPage />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/users"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminUsersPage />
+                </ProtectedAdminLayout>
+              }
+            />
 
-          <Route
-            path="/users/:id"
-            element={
-              <ProtectedAdminLayout>
-                <AdminUserDetailPage />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/users/:id"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminUserDetailPage />
+                </ProtectedAdminLayout>
+              }
+            />
 
-          <Route
-            path="/tariffs"
-            element={
-              <ProtectedAdminLayout>
-                <AdminTariffsPage />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/tariffs"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminTariffsPage />
+                </ProtectedAdminLayout>
+              }
+            />
 
-          <Route
-            path="/price-builder"
-            element={
-              <ProtectedAdminLayout>
-                <AdminPriceBuilderPage />
-              </ProtectedAdminLayout>
-            }
-          />
-          <Route path="/price-lists" element={<Navigate to="/price-builder" replace />} />
-          <Route path="/prices" element={<Navigate to="/price-builder" replace />} />
+            <Route
+              path="/price-builder"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminPriceBuilderPage />
+                </ProtectedAdminLayout>
+              }
+            />
+            <Route path="/price-lists" element={<Navigate to="/price-builder" replace />} />
+            <Route path="/prices" element={<Navigate to="/price-builder" replace />} />
 
-          <Route
-            path="/invoices"
-            element={
-              <ProtectedAdminLayout>
-                <AdminInvoicesPage />
-              </ProtectedAdminLayout>
-            }
-          />
-          <Route path="/invoice" element={<Navigate to="/invoices" replace />} />
+            <Route
+              path="/invoices"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminInvoicesPage />
+                </ProtectedAdminLayout>
+              }
+            />
+            <Route path="/invoice" element={<Navigate to="/invoices" replace />} />
 
-          <Route
-            path="/system"
-            element={
-              <ProtectedAdminLayout>
-                <AdminSystemLayout />
-              </ProtectedAdminLayout>
-            }
-          >
-            <Route index element={<Navigate to="/system/logs" replace />} />
-            <Route path="logs" element={<AdminSystemLogsPage />} />
-            <Route path="backups" element={<AdminSystemBackupsPage />} />
-            <Route path="telegram" element={<AdminSystemTelegramPage />} />
-            <Route path="storage" element={<AdminSystemStoragePage />} />
-            <Route path="pdf-queue" element={<AdminSystemPdfQueuePage />} />
-          </Route>
+            <Route
+              path="/system"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminSystemLayout />
+                </ProtectedAdminLayout>
+              }
+            >
+              <Route index element={<Navigate to="/system/logs" replace />} />
+              <Route path="logs" element={<AdminSystemLogsPage />} />
+              <Route path="backups" element={<AdminSystemBackupsPage />} />
+              <Route path="telegram" element={<AdminSystemTelegramPage />} />
+              <Route path="storage" element={<AdminSystemStoragePage />} />
+              <Route path="pdf-queue" element={<AdminSystemPdfQueuePage />} />
+            </Route>
 
-          <Route
-            path="/pdf-queue"
-            element={<Navigate to="/system/pdf-queue" replace />}
-          />
+            <Route
+              path="/pdf-queue"
+              element={<Navigate to="/system/pdf-queue" replace />}
+            />
 
-          <Route
-            path="/markirovka"
-            element={<Navigate to="/markirovka/accounts" replace />}
-          />
-          <Route
-            path="/markirovka/accounts"
-            element={
-              <ProtectedAdminLayout>
-                <AdminMarkirovkaAccountsPage />
-              </ProtectedAdminLayout>
-            }
-          />
-          <Route
-            path="/markirovka/nkt"
-            element={
-              <ProtectedAdminLayout>
-                <AdminMarkirovkaNktPage />
-              </ProtectedAdminLayout>
-            }
-          />
-          <Route
-            path="/markirovka/orders"
-            element={
-              <ProtectedAdminLayout>
-                <AdminMarkirovkaOrdersPage />
-              </ProtectedAdminLayout>
-            }
-          />
-          <Route
-            path="/markirovka/utilisation"
-            element={
-              <ProtectedAdminLayout>
-                <AdminMarkirovkaUtilisationPage />
-              </ProtectedAdminLayout>
-            }
-          />
-          <Route
-            path="/markirovka/activity"
-            element={
-              <ProtectedAdminLayout>
-                <AdminMarkirovkaActivityPage />
-              </ProtectedAdminLayout>
-            }
-          />
+            <Route
+              path="/markirovka"
+              element={<Navigate to="/markirovka/accounts" replace />}
+            />
+            <Route
+              path="/markirovka/accounts"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminMarkirovkaAccountsPage />
+                </ProtectedAdminLayout>
+              }
+            />
+            <Route
+              path="/markirovka/nkt"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminMarkirovkaNktPage />
+                </ProtectedAdminLayout>
+              }
+            />
+            <Route
+              path="/markirovka/orders"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminMarkirovkaOrdersPage />
+                </ProtectedAdminLayout>
+              }
+            />
+            <Route
+              path="/markirovka/utilisation"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminMarkirovkaUtilisationPage />
+                </ProtectedAdminLayout>
+              }
+            />
+            <Route
+              path="/markirovka/activity"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminMarkirovkaActivityPage />
+                </ProtectedAdminLayout>
+              }
+            />
 
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
     </AdminAuthProvider>
   );
 };

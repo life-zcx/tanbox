@@ -9,6 +9,7 @@ import {
 
 import { apiClient } from '../api/client';
 import { ConnectMarkirovkaModal } from '../components/modals/ConnectMarkirovkaModal';
+import { toast } from '@shared';
 
 export const formatPhoneNumber = (val: string): string => {
   let digits = val.replace(/\D/g, '');
@@ -390,8 +391,9 @@ export const ProfilePage: React.FC = () => {
     try {
       await apiClient.delete(`/markirovka/accounts/${id}`);
       setMarkirovkaAccounts((prev) => prev.filter((a) => a.id !== id));
+      toast.success('Привязка аккаунта удалена');
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Ошибка удаления аккаунта');
+      toast.error(err.response?.data?.message || 'Ошибка удаления аккаунта');
     }
   };
 

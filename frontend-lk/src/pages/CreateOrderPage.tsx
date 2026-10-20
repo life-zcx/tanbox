@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useOrders } from '../hooks/useOrders';
 import { useAuth } from '../hooks/useAuth';
+import { toast } from '@shared';
 import { OrderCategory, TariffType, UserStickerTemplate } from '../types';
 import { apiClient } from '../api/client';
 import { CATEGORIES_LIST, CATEGORY_MAP, getCategoryLabel } from '../data/categories';
@@ -413,7 +414,7 @@ export const CreateOrderPage: React.FC = () => {
       const text = await file.text();
       const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
       if (lines.length < 2) {
-        alert('Файл должен содержать строку заголовков и хотя бы одну строку с данными.');
+        toast.error('Файл должен содержать строку заголовков и хотя бы одну строку с данными.');
         return;
       }
 
@@ -460,12 +461,12 @@ export const CreateOrderPage: React.FC = () => {
         setPositionsMode('MULTI');
         const sum = parsedItems.reduce((acc, p) => acc + p.quantity, 0);
         setItemsCount(sum);
-        alert(`Успешно импортировано ${parsedItems.length} позиций на общий тираж ${sum.toLocaleString()} шт.!`);
+        toast.success(`Успешно импортировано ${parsedItems.length} позиций на общий тираж ${sum.toLocaleString()} шт.!`);
       } else {
-        alert('Не удалось распознать строки с позициями в файле. Проверьте формат.');
+        toast.error('Не удалось распознать строки с позициями в файле. Проверьте формат.');
       }
     } catch (err: any) {
-      alert('Ошибка при чтении файла спецификации: ' + err.message);
+      toast.error('Ошибка при чтении файла спецификации: ' + err.message);
     } finally {
       if (e.target) e.target.value = '';
     }

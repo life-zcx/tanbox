@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Download, Calendar, Layers, FileText, CheckCircle2, Building2, MapPin } from 'lucide-react';
 import { OrderItem } from '../../types';
 import { apiClient } from '../../api/client';
-import { StatusBadge, parseOrderNotes } from '@shared';
+import { StatusBadge, parseOrderNotes, toast, useModalBehavior } from '@shared';
 
 interface OrderDetailModalProps {
   order: OrderItem | null;
@@ -11,16 +11,19 @@ interface OrderDetailModalProps {
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) => {
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen: Boolean(order) });
+
   if (!order) return null;
 
   return createPortal(
     <div
+      {...backdropProps}
       className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
     >
-      <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-2xl w-full p-8 relative space-y-6 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
+      <div
+        {...dialogProps}
+        className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-2xl w-full p-8 relative space-y-6 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150"
+      >
         
         <button
           onClick={onClose}
@@ -131,7 +134,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
                   document.body.removeChild(link);
                   window.URL.revokeObjectURL(blobUrl);
                 } catch (err: any) {
-                  alert(err.response?.data?.message || 'Ошибка при скачивании PDF макетов');
+                  toast.error(err.response?.data?.message || 'Ошибка при скачивании PDF макетов');
                 }
               }}
               className="inline-flex items-center justify-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer"
@@ -149,7 +152,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClo
                   const blobUrl = window.URL.createObjectURL(new Blob([res.data], { type: 'text/html;charset=utf-8' }));
                   window.open(blobUrl, '_blank');
                 } catch (err: any) {
-                  alert(err.response?.data?.message || 'Ошибка при открытии акта');
+                  toast.error(err.response?.data?.message || 'Ошибка при открытии акта');
                 }
               }}
               className="inline-flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-[#111827] font-bold text-xs px-5 py-2.5 rounded-xl border border-gray-200/80 transition-all cursor-pointer"

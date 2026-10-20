@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { UserDetail, UserClient } from '../../types';
 import { apiClient } from '../../api/client';
-import { StatusBadge } from '@shared';
+import { StatusBadge, useModalBehavior } from '@shared';
 import { Link } from 'react-router-dom';
 import { StickerCanvasPreview } from '../common/StickerCanvasPreview';
 import { formatPhoneNumber, isValidPhoneNumber, getPhoneDigitsCount } from '../../utils/phone';
@@ -48,6 +48,8 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
   const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
 
   // Edit form state
   const [companyName, setCompanyName] = useState<string>('');
@@ -220,13 +222,15 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
     }
   };
 
+  if (!isOpen) return null;
+
   return createPortal(
     <div
-      onClick={onClose}
+      {...backdropProps}
       className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        {...dialogProps}
         className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-3xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-150"
       >
         {/* Header */}

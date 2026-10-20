@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { OrderAdminItem, OrderStatus } from '../types';
-import { StatusBadge, parseOrderNotes } from '@shared';
+import { StatusBadge, parseOrderNotes, useModalBehavior } from '@shared';
 import { downloadHtmlAsPdf } from '../utils/clientPdf';
 import {
   ArrowLeft,
@@ -163,6 +163,15 @@ export const AdminOrderDetailPage: React.FC = () => {
   const [isUtilisationModalOpen, setIsUtilisationModalOpen] = useState<boolean>(false);
   const [submittingUtilisation, setSubmittingUtilisation] = useState<boolean>(false);
   const [utilisationMsg, setUtilisationMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const { backdropProps: utilisationModalBackdropProps, dialogProps: utilisationModalDialogProps } = useModalBehavior({
+    isOpen: isUtilisationModalOpen && !!order,
+    onClose: () => {
+      if (!submittingUtilisation) {
+        setIsUtilisationModalOpen(false);
+      }
+    },
+  });
 
   const [utilisationReleaseType, setUtilisationReleaseType] = useState<'PRODUCTION' | 'IMPORT' | 'REMAINDER'>('PRODUCTION');
   const [utilisationCountry, setUtilisationCountry] = useState<string>('KZ');
@@ -2643,14 +2652,13 @@ export const AdminOrderDetailPage: React.FC = () => {
       {/* Modal: Отчет о нанесении кодов маркировки (ИС МПТ / СУЗ) */}
       {isUtilisationModalOpen && order && createPortal(
         <div
-          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !submittingUtilisation) {
-              setIsUtilisationModalOpen(false);
-            }
-          }}
+          {...utilisationModalBackdropProps}
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
         >
-          <div className="bg-white rounded-xl shadow-xl border border-gray-200 max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150">
+          <div
+            {...utilisationModalDialogProps}
+            className="bg-white rounded-xl shadow-xl border border-gray-200 max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150"
+          >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 shrink-0">
               <div className="flex items-center gap-2.5">

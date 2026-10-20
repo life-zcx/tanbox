@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { MarkirovkaHeaderBar } from '../components/markirovka/MarkirovkaHeaderBar';
+import { useToast } from '@shared';
 import {
   MarkirovkaOpChoice,
 } from '../components/markirovka/MarkirovkaOperationsButton';
@@ -45,13 +46,7 @@ export const MarkirovkaPage: React.FC = () => {
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
   const [showTopUpModal, setShowTopUpModal] = useState<boolean>(false);
   const [userBalance, setUserBalance] = useState<number>(0);
-
-  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-
-  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
-    setToast({ text, type });
-    setTimeout(() => setToast(null), 5000);
-  };
+  const { showToast } = useToast();
 
   const fetchData = useCallback(async () => {
     try {
@@ -124,18 +119,6 @@ export const MarkirovkaPage: React.FC = () => {
 
   return (
     <div className="space-y-6 w-full pb-12">
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg border text-sm font-medium transition-all ${
-            toast.type === 'success'
-              ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
-              : 'bg-rose-50 text-rose-900 border-rose-200'
-          }`}
-        >
-          {toast.text}
-        </div>
-      )}
 
       {/* Unified Compact Bar: Account Status, Actions, and Working Modals */}
       <MarkirovkaHeaderBar

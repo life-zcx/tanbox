@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { apiClient } from '../api/client';
-import { PageHeader } from '@shared';
+import { PageHeader, useModalBehavior } from '@shared';
 import html2pdf from 'html2pdf.js';
 import {
   Receipt,
@@ -214,6 +214,16 @@ export const AdminInvoicesPage: React.FC = () => {
   const [activeViewInvoice, setActiveViewInvoice] = useState<InvoiceRecord | null>(null);
   const printSheetRef = useRef<HTMLDivElement>(null);
   const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
+
+  const { backdropProps: createModalBackdropProps, dialogProps: createModalDialogProps } = useModalBehavior({
+    isOpen: isCreateModalOpen,
+    onClose: () => setIsCreateModalOpen(false),
+  });
+
+  const { backdropProps: viewModalBackdropProps, dialogProps: viewModalDialogProps } = useModalBehavior({
+    isOpen: !!activeViewInvoice,
+    onClose: () => setActiveViewInvoice(null),
+  });
 
   useEffect(() => {
     fetchInitialData();
@@ -893,8 +903,14 @@ export const AdminInvoicesPage: React.FC = () => {
         {/* MODAL 1: Create Invoice with ALL Tanbox Services */}
         {isCreateModalOpen &&
           createPortal(
-            <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-md no-print animate-in fade-in duration-150">
-              <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
+            <div
+              {...createModalBackdropProps}
+              className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-md no-print animate-in fade-in duration-150"
+            >
+              <div
+                {...createModalDialogProps}
+                className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden"
+              >
                 {/* Modal Header */}
                 <div className="p-4 sm:p-5 border-b border-gray-150 flex items-center justify-between bg-[#F8FAFC]">
                   <div className="flex items-center gap-2.5">
@@ -1257,8 +1273,14 @@ export const AdminInvoicesPage: React.FC = () => {
         {/* MODAL 2: Official Printable Kazakh 1C Invoice (Full-width clean sheet) */}
         {activeViewInvoice &&
           createPortal(
-            <div className="invoice-modal-overlay fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150 print:p-0 print:bg-white print:static print:block print:inset-auto print:z-auto print:backdrop-blur-none">
-              <div className="print-container-wrapper bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[96vh] flex flex-col overflow-hidden">
+            <div
+              {...viewModalBackdropProps}
+              className="invoice-modal-overlay fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150 print:p-0 print:bg-white print:static print:block print:inset-auto print:z-auto print:backdrop-blur-none"
+            >
+              <div
+                {...viewModalDialogProps}
+                className="print-container-wrapper bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[96vh] flex flex-col overflow-hidden"
+              >
                 {/* Top Bar with Print & Download */}
                 <div className="p-3 sm:p-4 border-b border-gray-150 flex items-center justify-between bg-[#F8FAFC] no-print">
                   <div className="flex items-center gap-2">

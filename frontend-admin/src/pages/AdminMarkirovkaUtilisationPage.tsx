@@ -9,7 +9,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { PageHeader } from '@shared';
+import { PageHeader, toast } from '@shared';
 import { apiClient } from '../api/client';
 import { MarkirovkaNav } from '../components/markirovka/MarkirovkaNav';
 
@@ -48,12 +48,12 @@ export const AdminMarkirovkaUtilisationPage: React.FC = () => {
     message: string;
   } | null>(null);
 
-  // Toast
-  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
-    setToast({ text, type });
-    setTimeout(() => setToast(null), 5000);
+    if (type === 'error') {
+      toast.error(text);
+    } else {
+      toast.success(text);
+    }
   };
 
   useEffect(() => {
@@ -186,24 +186,6 @@ export const AdminMarkirovkaUtilisationPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed top-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-bold transition-all animate-in fade-in slide-in-from-top-2 ${
-            toast.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              : 'bg-rose-50 text-rose-800 border-rose-200'
-          }`}
-        >
-          {toast.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          ) : (
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-          )}
-          <span>{toast.text}</span>
-        </div>
-      )}
-
       {/* Page Header */}
       <PageHeader
         title="Отчет о нанесении кодов маркировки (Утилизация)"

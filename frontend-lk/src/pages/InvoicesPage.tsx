@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { toast } from '@shared';
 import { apiClient } from '../api/client';
 import { PaymentChoiceModal } from '../components/modals/PaymentChoiceModal';
 import { TopUpBalanceModal } from '../components/modals/TopUpBalanceModal';
@@ -142,7 +143,7 @@ export const InvoicesPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Failed to download invoice PDF:', err);
-      alert('Не удалось скачать PDF счета');
+      toast.error('Не удалось скачать PDF счета');
     } finally {
       setDownloadingId(null);
     }
@@ -180,7 +181,7 @@ export const InvoicesPage: React.FC = () => {
       };
     } catch (err) {
       console.error('Failed to print invoice PDF:', err);
-      alert('Не удалось распечатать счет');
+      toast.error('Не удалось распечатать счет');
     } finally {
       setPrintingId(null);
     }

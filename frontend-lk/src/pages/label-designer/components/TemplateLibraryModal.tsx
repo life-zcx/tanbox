@@ -15,6 +15,7 @@ import {
 import { UserStickerTemplate } from '../../../types';
 import { getCategoryLabel } from '../../../data/categories';
 import { StickerCanvasPreview } from '../../../components/common/StickerCanvasPreview';
+import { useModalBehavior } from '@shared';
 
 interface TemplateLibraryModalProps {
   isOpen: boolean;
@@ -40,6 +41,8 @@ export const TemplateLibraryModal: React.FC<TemplateLibraryModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
 
   if (!isOpen) return null;
 
@@ -70,12 +73,11 @@ export const TemplateLibraryModal: React.FC<TemplateLibraryModalProps> = ({
 
   return createPortal(
     <div
-      onClick={onClose}
-      className="fixed inset-0 w-screen h-screen z-[99999] overflow-y-auto bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
-      style={{ top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] overflow-y-auto bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        {...dialogProps}
         className="bg-white rounded-3xl max-w-5xl w-full shadow-2xl border border-gray-100 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 text-[#111827]"
       >
         {/* Modal Header */}

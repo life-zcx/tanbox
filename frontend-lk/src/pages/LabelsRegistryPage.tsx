@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from '@shared';
 import { apiClient } from '../api/client';
 import { getCategoryLabel } from '../data/categories';
 import {
@@ -165,7 +166,7 @@ export const LabelsRegistryPage: React.FC = () => {
       console.error('Print single sticker error:', err);
       let msg = 'Не удалось сформировать стикер для печати.';
       if (err.response?.data?.message) msg = err.response.data.message;
-      alert(msg);
+      toast.error(msg);
     } finally {
       setPrintingId(null);
     }

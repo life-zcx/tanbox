@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { TopUpBalanceModal } from './TopUpBalanceModal';
+import { useModalBehavior } from '@shared';
 
 export interface PaymentChoiceModalProps {
   isOpen: boolean;
@@ -43,6 +44,8 @@ export const PaymentChoiceModal: React.FC<PaymentChoiceModalProps> = ({
   const [processing, setProcessing] = useState<boolean>(false);
   const [isTopUpOpen, setIsTopUpOpen] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
 
   const fetchBalance = async () => {
     setLoadingBalance(true);
@@ -109,10 +112,13 @@ export const PaymentChoiceModal: React.FC<PaymentChoiceModalProps> = ({
 
   return createPortal(
     <>
-      <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div
+        {...backdropProps}
+        className="fixed inset-0 z-[99999] overflow-y-auto bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+      >
         <div
+          {...dialogProps}
           className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-gray-100 overflow-hidden animate-in zoom-in-95 duration-200 relative text-[#111827]"
-          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-gray-100">

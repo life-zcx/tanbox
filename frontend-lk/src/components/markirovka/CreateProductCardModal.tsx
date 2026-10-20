@@ -24,6 +24,7 @@ import {
   Check,
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { useModalBehavior } from '@shared';
 
 interface CreateProductCardModalProps {
   onClose: () => void;
@@ -949,9 +950,17 @@ export const CreateProductCardModal: React.FC<CreateProductCardModalProps> = ({
     </div>
   );
 
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose });
+
   return createPortal(
-    <div className="fixed inset-0 w-screen h-screen z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150 select-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-4xl w-full max-h-[94vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+    <div
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150 select-auto"
+    >
+      <div
+        {...dialogProps}
+        className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-4xl w-full max-h-[94vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+      >
         
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50/70 via-white to-white shrink-0">

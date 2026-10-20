@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { toast, useModalBehavior } from '@shared';
 import { apiClient } from '../api/client';
 import { 
   QrCode, 
@@ -214,7 +215,7 @@ export const LabelDesignerPage: React.FC = () => {
       }
       await fetchSavedTemplates();
     } catch (err: any) {
-      alert('Ошибка при удалении шаблона: ' + (err.response?.data?.message || err.message));
+      toast.error('Ошибка при удалении шаблона: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -550,11 +551,10 @@ export const LabelDesignerPage: React.FC = () => {
           heightMm,
           elements,
         });
-        setSaveSuccessMsg('Изменения в макете успешно сохранены!');
-        setTimeout(() => setSaveSuccessMsg(null), 3000);
+        toast.success('Изменения в макете успешно сохранены!');
         await fetchSavedTemplates();
       } catch (err: any) {
-        alert('Ошибка при сохранении: ' + (err.response?.data?.message || err.message));
+        toast.error('Ошибка при сохранении: ' + (err.response?.data?.message || err.message));
       } finally {
         setSavingTemplate(false);
       }
@@ -586,11 +586,10 @@ export const LabelDesignerPage: React.FC = () => {
         setTemplatePaidAt(res.data.template.paidAt || null);
       }
       setShowSaveModal(false);
-      setSaveSuccessMsg('Шаблон успешно сохранен в вашу библиотеку!');
-      setTimeout(() => setSaveSuccessMsg(null), 3000);
+      toast.success('Шаблон успешно сохранен в вашу библиотеку!');
       await fetchSavedTemplates();
     } catch (err: any) {
-      alert('Ошибка при сохранении: ' + (err.response?.data?.message || err.message));
+      toast.error('Ошибка при сохранении: ' + (err.response?.data?.message || err.message));
     } finally {
       setSavingTemplate(false);
     }
@@ -635,7 +634,7 @@ export const LabelDesignerPage: React.FC = () => {
         setTopUpInitialAmount(selfLayoutPrice - userBalance);
         setShowTopUpModal(true);
       } else {
-        alert('Ошибка при оплате: ' + (err.response?.data?.message || err.message));
+        toast.error('Ошибка при оплате: ' + (err.response?.data?.message || err.message));
       }
     } finally {
       setPayingTemplate(false);
@@ -668,7 +667,7 @@ export const LabelDesignerPage: React.FC = () => {
       }
       setShowDesignerModal(false);
       setDesignerRequirements('');
-      alert('Заказ на разработку макета принят! Наш дизайнер свяжется с вами и подготовит векторный макет.');
+      toast.success('Заказ на разработку макета принят! Наш дизайнер свяжется с вами и подготовит векторный макет.');
       await fetchSavedTemplates();
     } catch (err: any) {
       if (err.response?.data?.error === 'INSUFFICIENT_BALANCE') {
@@ -676,7 +675,7 @@ export const LabelDesignerPage: React.FC = () => {
         setTopUpInitialAmount(stickerLayoutPrice - userBalance);
         setShowTopUpModal(true);
       } else {
-        alert('Ошибка при заказе дизайна: ' + (err.response?.data?.message || err.message));
+        toast.error('Ошибка при заказе дизайна: ' + (err.response?.data?.message || err.message));
       }
     } finally {
       setOrderingDesigner(false);
@@ -686,7 +685,7 @@ export const LabelDesignerPage: React.FC = () => {
   // Generate & Download vector PDF
   const handleDownloadPdf = async () => {
     if (!isTemplatePaid) {
-      alert('Для выгрузки чистого PDF без водяного знака сначала оплатите и утвердите макет (1 000 ₸).');
+      toast.warning('Для выгрузки чистого PDF без водяного знака сначала оплатите и утвердите макет (1 000 ₸).');
       handlePayTemplateClick();
       return;
     }
@@ -719,7 +718,7 @@ export const LabelDesignerPage: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert('Ошибка при генерации PDF: ' + (err.response?.data?.message || err.message));
+      toast.error('Ошибка при генерации PDF: ' + (err.response?.data?.message || err.message));
     } finally {
       setGenerating(false);
     }
@@ -940,160 +939,32 @@ export const LabelDesignerPage: React.FC = () => {
       />
 
       {/* Confirmation Modal: Pay 1 000 ₸ with balance */}
-      {showPayModal && createPortal(
-        <div
-          onClick={() => setShowPayModal(false)}
-          className="fixed inset-0 w-screen h-screen z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
-          style={{ top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 max-w-md w-full space-y-4 animate-in zoom-in-95 duration-150 relative z-10"
-          >
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="text-base font-black text-[#111827] flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                Оплата и утверждение макета
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowPayModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-lg leading-none cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-[#64748B] leading-relaxed">
-              С вашего лицевого счёта будет списана разовая плата за утверждение макета. Водяной знак «ОБРАЗЕЦ» будет удалён, и вы сможете скачивать чистый векторный PDF или сразу запускать этикетки в печать.
-            </p>
-
-            <div className="bg-[#F8FAFC] border border-gray-200 rounded-2xl p-4 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#64748B]">Макет:</span>
-                <span className="font-extrabold text-[#111827]">«{templateName}» ({widthMm}×{heightMm} мм)</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#64748B]">Стоимость услуги:</span>
-                <span className="font-black text-emerald-600 text-sm">{selfLayoutPrice.toLocaleString('ru-RU')} ₸</span>
-              </div>
-              <div className="pt-2 border-t border-gray-200/80 flex items-center justify-between text-xs">
-                <span className="text-[#64748B]">Ваш текущий баланс:</span>
-                <span className="font-bold text-[#111827]">{userBalance.toLocaleString('ru-RU')} ₸</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#64748B]">Баланс после списания:</span>
-                <span className="font-black text-[#111827]">{(userBalance - selfLayoutPrice).toLocaleString('ru-RU')} ₸</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowPayModal(false)}
-                className="flex-1 py-3 text-xs font-bold text-[#64748B] hover:text-[#111827] bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmPayTemplate}
-                disabled={payingTemplate}
-                className="flex-1 py-3 text-xs font-black text-white bg-[#0082FB] hover:bg-[#0070DA] disabled:opacity-50 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                {payingTemplate ? 'Обработка...' : `Оплатить ${selfLayoutPrice.toLocaleString('ru-RU')} ₸`}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      <PayConfirmModal
+        isOpen={showPayModal}
+        onClose={() => setShowPayModal(false)}
+        templateName={templateName}
+        widthMm={widthMm}
+        heightMm={heightMm}
+        selfLayoutPrice={selfLayoutPrice}
+        userBalance={userBalance}
+        payingTemplate={payingTemplate}
+        onConfirmPay={handleConfirmPayTemplate}
+      />
 
       {/* Modal: Order Designer 5 000 ₸ */}
-      {showDesignerModal && createPortal(
-        <div
-          onClick={() => setShowDesignerModal(false)}
-          className="fixed inset-0 w-screen h-screen z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
-          style={{ top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 max-w-md w-full space-y-4 animate-in zoom-in-95 duration-150 relative z-10"
-          >
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="text-base font-extrabold text-[#111827] flex items-center gap-2">
-                <Palette className="w-5 h-5 text-[#0082FB]" />
-                Заказ дизайна специалистом
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowDesignerModal(false)}
-                className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-black flex items-center justify-center transition-colors cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-[#64748B] leading-relaxed">
-              Специалист разработает макет по техническому регламенту ТР ТС и требованиям маркетплейсов (Kaspi, WB, Ozon).
-            </p>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-[#111827] uppercase tracking-wider block mb-1">
-                  Размер и категория
-                </label>
-                <div className="text-xs font-bold bg-[#F8FAFC] border border-gray-200 rounded-xl p-3 text-[#111827]">
-                  {widthMm} × {heightMm} мм • {templateCategory}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#111827] uppercase tracking-wider block mb-1">
-                  Пожелания к макету (текст, реквизиты, логотип)
-                </label>
-                <textarea
-                  rows={4}
-                  value={designerRequirements}
-                  onChange={(e) => setDesignerRequirements(e.target.value)}
-                  placeholder="Укажите артикул, производителя, обязательные знаки ухода или другие особенности..."
-                  className="w-full text-xs font-medium border border-gray-200 rounded-xl p-3 focus:outline-none focus:border-[#0082FB]"
-                />
-              </div>
-
-              <div className="bg-[#F8FAFC] border border-gray-200 rounded-2xl p-3.5 space-y-1 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#111827] font-bold">Стоимость разработки:</span>
-                  <span className="font-black text-[#0082FB] text-sm">{stickerLayoutPrice.toLocaleString('ru-RU')} ₸</span>
-                </div>
-                <div className="flex justify-between items-center text-[#64748B]">
-                  <span>Баланс кабинета:</span>
-                  <span className="font-bold text-[#111827]">{userBalance.toLocaleString('ru-RU')} ₸</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowDesignerModal(false)}
-                className="flex-1 py-3 text-xs font-bold text-[#64748B] hover:text-[#111827] bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmOrderDesigner}
-                disabled={orderingDesigner}
-                className="flex-1 py-3 text-xs font-black text-white bg-[#0082FB] hover:bg-[#0070DA] disabled:opacity-50 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                {orderingDesigner ? 'Оформление...' : `Заказать за ${stickerLayoutPrice.toLocaleString('ru-RU')} ₸`}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      <OrderDesignerModal
+        isOpen={showDesignerModal}
+        onClose={() => setShowDesignerModal(false)}
+        widthMm={widthMm}
+        heightMm={heightMm}
+        templateCategory={templateCategory}
+        designerRequirements={designerRequirements}
+        setDesignerRequirements={setDesignerRequirements}
+        stickerLayoutPrice={stickerLayoutPrice}
+        userBalance={userBalance}
+        orderingDesigner={orderingDesigner}
+        onConfirmOrder={handleConfirmOrderDesigner}
+      />
 
       {/* Template Library Modal */}
       <TemplateLibraryModal
@@ -1120,5 +991,217 @@ export const LabelDesignerPage: React.FC = () => {
         initialAmount={topUpInitialAmount}
       />
     </div>
+  );
+};
+
+interface PayConfirmModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  templateName: string;
+  widthMm: number;
+  heightMm: number;
+  selfLayoutPrice: number;
+  userBalance: number;
+  payingTemplate: boolean;
+  onConfirmPay: () => void;
+}
+
+const PayConfirmModal: React.FC<PayConfirmModalProps> = ({
+  isOpen,
+  onClose,
+  templateName,
+  widthMm,
+  heightMm,
+  selfLayoutPrice,
+  userBalance,
+  payingTemplate,
+  onConfirmPay,
+}) => {
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      {...backdropProps}
+      className="fixed inset-0 w-screen h-screen z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
+      style={{ top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+    >
+      <div
+        {...dialogProps}
+        className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 max-w-md w-full space-y-4 animate-in zoom-in-95 duration-150 relative z-10"
+      >
+        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+          <h3 className="text-base font-black text-[#111827] flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-emerald-600" />
+            Оплата и утверждение макета
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-lg leading-none cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        <p className="text-xs text-[#64748B] leading-relaxed">
+          С вашего лицевого счёта будет списана разовая плата за утверждение макета. Водяной знак «ОБРАЗЕЦ» будет удалён, и вы сможете скачивать чистый векторный PDF или сразу запускать этикетки в печать.
+        </p>
+
+        <div className="bg-[#F8FAFC] border border-gray-200 rounded-2xl p-4 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[#64748B]">Макет:</span>
+            <span className="font-extrabold text-[#111827]">«{templateName}» ({widthMm}×{heightMm} мм)</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[#64748B]">Стоимость услуги:</span>
+            <span className="font-black text-emerald-600 text-sm">{selfLayoutPrice.toLocaleString('ru-RU')} ₸</span>
+          </div>
+          <div className="pt-2 border-t border-gray-200/80 flex items-center justify-between text-xs">
+            <span className="text-[#64748B]">Ваш текущий баланс:</span>
+            <span className="font-bold text-[#111827]">{userBalance.toLocaleString('ru-RU')} ₸</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[#64748B]">Баланс после списания:</span>
+            <span className="font-black text-[#111827]">{(userBalance - selfLayoutPrice).toLocaleString('ru-RU')} ₸</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-3 text-xs font-bold text-[#64748B] hover:text-[#111827] bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={onConfirmPay}
+            disabled={payingTemplate}
+            className="flex-1 py-3 text-xs font-black text-white bg-[#0082FB] hover:bg-[#0070DA] disabled:opacity-50 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            {payingTemplate ? 'Обработка...' : `Оплатить ${selfLayoutPrice.toLocaleString('ru-RU')} ₸`}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+interface OrderDesignerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  widthMm: number;
+  heightMm: number;
+  templateCategory: string;
+  designerRequirements: string;
+  setDesignerRequirements: (val: string) => void;
+  stickerLayoutPrice: number;
+  userBalance: number;
+  orderingDesigner: boolean;
+  onConfirmOrder: () => void;
+}
+
+const OrderDesignerModal: React.FC<OrderDesignerModalProps> = ({
+  isOpen,
+  onClose,
+  widthMm,
+  heightMm,
+  templateCategory,
+  designerRequirements,
+  setDesignerRequirements,
+  stickerLayoutPrice,
+  userBalance,
+  orderingDesigner,
+  onConfirmOrder,
+}) => {
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      {...backdropProps}
+      className="fixed inset-0 w-screen h-screen z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
+      style={{ top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+    >
+      <div
+        {...dialogProps}
+        className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 max-w-md w-full space-y-4 animate-in zoom-in-95 duration-150 relative z-10"
+      >
+        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+          <h3 className="text-base font-extrabold text-[#111827] flex items-center gap-2">
+            <Palette className="w-5 h-5 text-[#0082FB]" />
+            Заказ дизайна специалистом
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-black flex items-center justify-center transition-colors cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        <p className="text-xs text-[#64748B] leading-relaxed">
+          Специалист разработает макет по техническому регламенту ТР ТС и требованиям маркетплейсов (Kaspi, WB, Ozon).
+        </p>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-bold text-[#111827] uppercase tracking-wider block mb-1">
+              Размер и категория
+            </label>
+            <div className="text-xs font-bold bg-[#F8FAFC] border border-gray-200 rounded-xl p-3 text-[#111827]">
+              {widthMm} × {heightMm} мм • {templateCategory}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-[#111827] uppercase tracking-wider block mb-1">
+              Пожелания к макету (текст, реквизиты, логотип)
+            </label>
+            <textarea
+              rows={4}
+              value={designerRequirements}
+              onChange={(e) => setDesignerRequirements(e.target.value)}
+              placeholder="Укажите артикул, производителя, обязательные знаки ухода или другие особенности..."
+              className="w-full text-xs font-medium border border-gray-200 rounded-xl p-3 focus:outline-none focus:border-[#0082FB]"
+            />
+          </div>
+
+          <div className="bg-[#F8FAFC] border border-gray-200 rounded-2xl p-3.5 space-y-1 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-[#111827] font-bold">Стоимость разработки:</span>
+              <span className="font-black text-[#0082FB] text-sm">{stickerLayoutPrice.toLocaleString('ru-RU')} ₸</span>
+            </div>
+            <div className="flex justify-between items-center text-[#64748B]">
+              <span>Баланс кабинета:</span>
+              <span className="font-bold text-[#111827]">{userBalance.toLocaleString('ru-RU')} ₸</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-3 text-xs font-bold text-[#64748B] hover:text-[#111827] bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={onConfirmOrder}
+            disabled={orderingDesigner}
+            className="flex-1 py-3 text-xs font-black text-white bg-[#0082FB] hover:bg-[#0070DA] disabled:opacity-50 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            {orderingDesigner ? 'Оформление...' : `Заказать за ${stickerLayoutPrice.toLocaleString('ru-RU')} ₸`}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };

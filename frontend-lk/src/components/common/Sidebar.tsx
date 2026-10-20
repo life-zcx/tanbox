@@ -1,24 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  PackagePlus, 
-  FileText, 
-  Receipt, 
-  User, 
-  ExternalLink, 
-  Phone, 
-  Mail, 
-  Send, 
-  Tag, 
-  X, 
-  FileCheck2, 
+import {
+  LayoutDashboard,
+  PackagePlus,
+  FileText,
+  Receipt,
+  User,
+  ExternalLink,
+  Phone,
+  Mail,
+  Send,
+  Tag,
+  X,
+  FileCheck2,
   Package,
-  Palette, 
-  CreditCard, 
+  Palette,
+  CreditCard,
   Bug,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Barcode,
 } from 'lucide-react';
 import { getLandingUrl, COMPANY_CONFIG } from '@shared';
 import { UserProfile } from '../../types';
@@ -33,10 +34,10 @@ interface SidebarProps {
   onToggleCollapse: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ 
-  user, 
-  onLogout, 
-  isOpen = false, 
+export const Sidebar: React.FC<SidebarProps> = ({
+  user,
+  onLogout,
+  isOpen = false,
   onClose,
   isCollapsed,
   onToggleCollapse
@@ -54,7 +55,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { to: '/labels', label: 'Реестр этикеток', icon: Tag },
         { to: '/designer', label: 'Конструктор макетов', icon: Palette },
         { to: '/markirovka', label: 'ИС МПТ', icon: FileCheck2 },
-        { to: '/product-cards', label: 'Описания товаров', icon: Package },
+        { to: '/mpt-cards', label: 'Мои карточки ИС МПТ', icon: Barcode },
+        { to: '/product-cards', label: 'Описания товаров НКТ', icon: Package },
       ],
     },
     {
@@ -142,13 +144,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   key={link.to}
                   to={link.to}
                   onClick={isMobile ? onClose : undefined}
-                  className={`flex items-center gap-3 ${
-                    isMobile ? 'px-4 py-3 text-sm rounded-2xl' : 'px-3 py-2.5 text-xs rounded-xl'
-                  } font-bold transition-all ${
-                    isActive
+                  className={`flex items-center gap-3 ${isMobile ? 'px-4 py-3 text-sm rounded-2xl' : 'px-3 py-2.5 text-xs rounded-xl'
+                    } font-bold transition-all ${isActive
                       ? 'bg-[#0082FB] text-white shadow-md shadow-[#0082FB]/20 font-extrabold'
                       : 'text-[#475569] hover:bg-[#EBF5FF]/60 hover:text-[#0082FB]'
-                  }`}
+                    }`}
                 >
                   <Icon className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'} ${isActive ? 'text-white' : 'text-[#64748B]'}`} />
                   <span>{link.label}</span>
@@ -226,11 +226,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div key={link.to} className="relative group flex justify-center">
                   <Link
                     to={link.to}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                      isActive
-                        ? 'bg-[#0082FB] text-white shadow-md shadow-[#0082FB]/20'
-                        : 'text-[#475569] hover:bg-[#EBF5FF]/80 hover:text-[#0082FB]'
-                    }`}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isActive
+                      ? 'bg-[#0082FB] text-white shadow-md shadow-[#0082FB]/20'
+                      : 'text-[#475569] hover:bg-[#EBF5FF]/80 hover:text-[#0082FB]'
+                      }`}
                   >
                     <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#64748B]'}`} />
                   </Link>
@@ -288,10 +287,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Desktop Sticky Sidebar (Collapsible) */}
-      <aside 
-        className={`hidden md:flex ${
-          isCollapsed ? 'w-20' : 'w-64'
-        } bg-white border-r border-gray-200/80 h-screen sticky top-0 flex-col justify-between shrink-0 z-30 transition-all duration-200 select-none overflow-x-hidden`}
+      <aside
+        className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'
+          } bg-white border-r border-gray-200/80 h-screen sticky top-0 flex-col justify-between shrink-0 z-30 transition-all duration-200 select-none overflow-x-hidden`}
       >
         {isCollapsed ? renderCollapsedContent() : renderExpandedContent(false)}
       </aside>

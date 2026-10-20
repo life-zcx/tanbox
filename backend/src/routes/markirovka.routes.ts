@@ -43,6 +43,10 @@ import {
   listCategoriesHandler,
   translateToKazakhHandler,
 } from '../controllers/markirovkaCards.controller';
+import {
+  getMptCatalogHandler,
+  syncMptCatalogHandler,
+} from '../controllers/markirovkaCatalog.controller';
 
 const router = Router();
 
@@ -85,6 +89,10 @@ router.delete('/cards/:id', deleteCardHandler);
 router.post('/cards/:id/submit-nkt', submitCardToNktHandler);
 router.get('/cards/:id/check-status', checkCardStatusHandler);
 router.post('/cards/:id/publish-nkt', publishCardToNktHandler);
+
+// User's IS MPT Catalog & Sync
+router.get('/catalog', getMptCatalogHandler);
+router.post('/catalog/sync', syncMptCatalogHandler);
 
 // Operations routes (True API & OMS)
 router.get('/operations', getOperations);

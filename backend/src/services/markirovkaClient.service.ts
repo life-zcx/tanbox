@@ -32,6 +32,109 @@ export const CATEGORY_LABELS: Record<OrderCategory, string> = {
   OTHER: 'Прочая продукция (other)',
 };
 
+/**
+ * Maps raw product group alias / code from Kazakhstan IS MPT to OrderCategory
+ */
+export function mapMptProductGroupToCategory(mptGroup: string): OrderCategory | null {
+  if (!mptGroup) return null;
+  const raw = String(mptGroup).trim().toLowerCase();
+  const normalized = raw.replace(/[-_]/g, '');
+
+  if (normalized.includes('shoe') || normalized.includes('обув')) {
+    return OrderCategory.SHOES;
+  }
+  if (
+    normalized.includes('cloth') ||
+    normalized.includes('textil') ||
+    normalized.includes('apparel') ||
+    normalized.includes('lightind') ||
+    normalized.includes('легпром') ||
+    normalized.includes('одежд') ||
+    normalized.includes('текстил')
+  ) {
+    return OrderCategory.TEXTILE;
+  }
+  if (
+    normalized.includes('pharm') ||
+    normalized.includes('medicin') ||
+    normalized.includes('лекарств') ||
+    normalized.includes('фарм')
+  ) {
+    return OrderCategory.MEDICINE;
+  }
+  if (
+    normalized.includes('water') ||
+    normalized.includes('milk') ||
+    normalized.includes('dairy') ||
+    normalized.includes('вод') ||
+    normalized.includes('молок')
+  ) {
+    return OrderCategory.WATER;
+  }
+  if (
+    normalized.includes('tobac') ||
+    normalized.includes('nicotin') ||
+    normalized.includes('табак') ||
+    normalized.includes('сигарет')
+  ) {
+    return OrderCategory.TOBACCO;
+  }
+  if (
+    normalized.includes('beer') ||
+    normalized.includes('пив') ||
+    normalized.includes('alcohol') ||
+    normalized.includes('алког')
+  ) {
+    return OrderCategory.BEER;
+  }
+  if (
+    normalized.includes('supplement') ||
+    normalized.includes('dietary') ||
+    normalized.includes('bad') ||
+    normalized.includes('бад')
+  ) {
+    return OrderCategory.DIETARY_SUPPLEMENTS;
+  }
+  if (
+    normalized.includes('oil') ||
+    normalized.includes('autofluid') ||
+    normalized.includes('lubricant') ||
+    normalized.includes('масл')
+  ) {
+    return OrderCategory.OILS;
+  }
+  if (normalized.includes('jewel') || normalized.includes('ювелир')) {
+    return OrderCategory.JEWELRY;
+  }
+  if (normalized.includes('saiga') || normalized.includes('сайга')) {
+    return OrderCategory.SAIGA;
+  }
+
+  // Check direct matches against CATEGORY_TO_OMS_EXTENSION values
+  for (const [cat, ext] of Object.entries(CATEGORY_TO_OMS_EXTENSION)) {
+    if (ext === raw || ext.replace(/[-_]/g, '') === normalized) {
+      return cat as OrderCategory;
+    }
+  }
+
+  return OrderCategory.OTHER;
+}
+
+/**
+ * Maps an array of product group strings from IS MPT to TANBOX OrderCategory[]
+ */
+export function mapMptProductGroupsToCategories(groups: string[]): OrderCategory[] {
+  if (!Array.isArray(groups)) return [];
+  const set = new Set<OrderCategory>();
+  for (const g of groups) {
+    const cat = mapMptProductGroupToCategory(g);
+    if (cat) {
+      set.add(cat);
+    }
+  }
+  return Array.from(set);
+}
+
 export function getDefaultBaseUrl(env: MarkirovkaEnvironment): string {
   if (env === MarkirovkaEnvironment.TEST) {
     return 'https://test.markirovka.kz';
@@ -258,6 +361,10 @@ export class MarkirovkaClient {
     this.decryptedPassword = decryptText(account.encryptedPassword);
   }
 
+  public getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   /**
    * Performs authentication using login and password against markirovka.kz endpoints.
    * Tries primary and fallback endpoints used by Kazakhstan IS MPT / True API / OMS.
@@ -481,15 +588,83 @@ export class MarkirovkaClient {
   }
 
   /**
-   * Test connection to the account
+   * Test connection to the account and auto-discover registered product groups from IS MPT
    */
-  public async testConnection(): Promise<{ success: boolean; message: string; expiresAt?: Date }> {
+  public async testConnection(): Promise<{
+    success: boolean;
+    message: string;
+    expiresAt?: Date;
+    categories?: OrderCategory[];
+    productGroups?: string[];
+    autoDetectedName?: string;
+    party?: any;
+  }> {
     try {
       const auth = await this.authenticate(true);
+
+      // Auto-query party info and product groups for the station's TIN/login
+      let categories: OrderCategory[] = [];
+      let productGroups: string[] = [];
+      let autoDetectedName: string | undefined;
+      let party: any = null;
+
+      const cleanTin = (this.account.login || '').replace(/\D/g, '').trim();
+      if (cleanTin && cleanTin.length >= 10) {
+        try {
+          const partyRes = await this.checkPartyStatus(cleanTin);
+          if (partyRes?.success && partyRes?.party) {
+            party = partyRes.party;
+            if (Array.isArray(party.productGroups)) {
+              productGroups = party.productGroups;
+              categories = mapMptProductGroupsToCategories(party.productGroups);
+            }
+            const foundName = party.name?.ru || party.fullName?.ru || party.name?.kz || party.fullName?.kz || party.name;
+            if (typeof foundName === 'string' && foundName.trim()) {
+              autoDetectedName = foundName.trim();
+            }
+          }
+        } catch (partyErr: any) {
+          logger.warn(`[testConnection] Auto party status lookup failed: ${partyErr.message}`);
+        }
+      }
+
+      // If account exists in DB, update categories and name if needed
+      if (this.account.id && this.account.id !== 'temp-check' && categories.length > 0) {
+        try {
+          const currentAcc = await prisma.markirovkaAccount.findUnique({
+            where: { id: this.account.id },
+            select: { categories: true, name: true },
+          });
+          if (currentAcc && (!currentAcc.categories || currentAcc.categories.length === 0)) {
+            await prisma.markirovkaAccount.update({
+              where: { id: this.account.id },
+              data: {
+                categories: categories,
+                name: (currentAcc.name === 'Станция маркировки' || !currentAcc.name) && autoDetectedName
+                  ? autoDetectedName
+                  : currentAcc.name,
+              },
+            });
+          }
+        } catch (dbErr: any) {
+          logger.warn(`[testConnection] Auto-updating account categories failed: ${dbErr.message}`);
+        }
+      }
+
+      let extraMsg = '';
+      if (categories.length > 0) {
+        const labels = categories.map((c) => CATEGORY_LABELS[c] || c).join(', ');
+        extraMsg = ` Товарная группа определена автоматически: ${labels}.`;
+      }
+
       return {
         success: true,
-        message: `Успешное подключение к ${this.baseUrl}! Токен получен.`,
+        message: `Успешное подключение к ${this.baseUrl}! Токен получен.${extraMsg}`,
         expiresAt: auth.expiresAt,
+        categories,
+        productGroups,
+        autoDetectedName,
+        party,
       };
     } catch (err: any) {
       const message = err.message || 'Ошибка подключения к серверу маркировки';
@@ -638,8 +813,9 @@ export class MarkirovkaClient {
    * Check status of emission order in Kazakhstan IS MPT
    */
   public async getOrderStatus(orderId: string, _category?: OrderCategory): Promise<{
-    status: 'READY' | 'PENDING' | 'FAILED';
+    status: 'READY' | 'PENDING' | 'FAILED' | 'REJECTED';
     availableCodesCount?: number;
+    rejectionReason?: string;
     raw: any;
   }> {
     const res = await this.fetchRawWithAuth(`/api/facade/orders/${orderId}`, {
@@ -653,11 +829,38 @@ export class MarkirovkaClient {
 
     const statusStr = (data?.status || '').toUpperCase();
     const isReady = statusStr === 'READY' || statusStr === 'CLOSED' || statusStr === 'COMPLETED';
+
+    let rejectionReason: string | undefined;
+    let isRejected =
+      statusStr === 'REJECTED' ||
+      statusStr === 'DECLINED' ||
+      statusStr === 'CANCELLED' ||
+      statusStr === 'FAILED';
+
+    if (data?.rejectionReason || data?.errorMessage || data?.error || data?.comment) {
+      rejectionReason = String(data.rejectionReason || data.errorMessage || data.error || data.comment);
+    }
+
+    if (Array.isArray(data?.buffers)) {
+      for (const b of data.buffers) {
+        const bStatus = String(b.status || b.bufferStatus || '').toUpperCase();
+        if (bStatus === 'REJECTED' || bStatus === 'FAILED' || bStatus === 'DECLINED') {
+          isRejected = true;
+          const reason = b.rejectionReason || b.errorMessage || b.error || b.comment;
+          if (reason) {
+            rejectionReason = String(reason);
+            break;
+          }
+        }
+      }
+    }
+
     const totalAvail = (data?.buffers || []).reduce((sum: number, b: any) => sum + (b.availableCodes || 0), 0);
 
     return {
-      status: isReady ? 'READY' : statusStr === 'FAILED' ? 'FAILED' : 'PENDING',
+      status: isReady ? 'READY' : isRejected ? 'REJECTED' : 'PENDING',
       availableCodesCount: totalAvail,
+      rejectionReason,
       raw: data,
     };
   }
@@ -749,21 +952,24 @@ export class MarkirovkaClient {
     quantity: number,
     timeoutMs: number = 10000,
     category?: OrderCategory
-  ): Promise<{ status: 'READY' | 'PENDING' | 'FAILED'; codes: string[] }> {
+  ): Promise<{ status: 'READY' | 'PENDING' | 'FAILED' | 'REJECTED'; codes: string[]; rejectionReason?: string }> {
     const startTime = Date.now();
-    let lastStatus: 'READY' | 'PENDING' | 'FAILED' = 'PENDING';
+    let lastStatus: 'READY' | 'PENDING' | 'FAILED' | 'REJECTED' = 'PENDING';
+    let lastReason: string | undefined;
 
     while (Date.now() - startTime < timeoutMs) {
       try {
         const orderStatus = await this.getOrderStatus(orderId, category);
         lastStatus = orderStatus.status;
+        lastReason = orderStatus.rejectionReason;
 
         if (orderStatus.status === 'READY') {
           // Codes are ready in buffer, fetch them
           const codes = await this.fetchCodes(orderId, gtin, quantity, category);
           return { status: 'READY', codes };
-        } else if (orderStatus.status === 'FAILED') {
-          return { status: 'FAILED', codes: [] };
+        } else if (orderStatus.status === 'REJECTED' || orderStatus.status === 'FAILED') {
+          logger.warn(`IS MPT emission order ${orderId} rejected by OMS: ${lastReason || 'REJECTED'}`);
+          return { status: orderStatus.status, codes: [], rejectionReason: lastReason };
         }
       } catch (err: any) {
         logger.warn(`Polling IS MPT order ${orderId}: ${err?.message}`);
@@ -771,6 +977,10 @@ export class MarkirovkaClient {
 
       // Wait 1.5 seconds before next poll
       await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+
+    if (lastStatus === 'REJECTED' || lastStatus === 'FAILED') {
+      return { status: lastStatus, codes: [], rejectionReason: lastReason };
     }
 
     // Try fetching one last time before giving up
@@ -783,7 +993,7 @@ export class MarkirovkaClient {
       // Still not ready
     }
 
-    return { status: lastStatus, codes: [] };
+    return { status: lastStatus, codes: [], rejectionReason: lastReason };
   }
 
   /**
@@ -1519,6 +1729,99 @@ export class MarkirovkaClient {
       httpStatus: foundProduct ? 200 : lastStatus,
       product: foundProduct,
     };
+  }
+
+  /**
+   * Fetch product cards directly from IS MPT Product Registry (markirovka.kz)
+   * GET /api/v1/product-registry/product?accessType=OWNED
+   */
+  public async getOwnedProductRegistryProducts(options?: {
+    status?: 'PUBLISHED' | 'DRAFT' | 'PENDING_MODERATION' | string;
+    limit?: number;
+    offset?: number;
+  }): Promise<any[]> {
+    let auth = await this.authenticate(false);
+    const limit = options?.limit || 100;
+    const offset = options?.offset || 0;
+
+    let targetUrl = `${this.baseUrl}/api/v1/product-registry/product?accessType=OWNED&limit=${limit}&offset=${offset}`;
+    if (options?.status) {
+      targetUrl += `&status=${encodeURIComponent(options.status)}`;
+    }
+
+    let res = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${auth.token}`,
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(20000),
+    }).catch(() => null);
+
+    if (res && res.status === 401) {
+      auth = await this.authenticate(true);
+      res = await fetch(targetUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(20000),
+      }).catch(() => null);
+    }
+
+    if (!res || !res.ok) {
+      return [];
+    }
+
+    const data: any = await res.json().catch(() => null);
+    if (Array.isArray(data)) {
+      return data;
+    }
+    if (data && Array.isArray(data.items)) {
+      return data.items;
+    }
+    if (data && Array.isArray(data.products)) {
+      return data.products;
+    }
+    return [];
+  }
+
+  /**
+   * Fetch full product details including attributes (brand, model, country, manufacturer)
+   * GET /api/v1/product-registry/product/:id
+   */
+  public async getProductRegistryProductDetails(productId: string): Promise<any> {
+    if (!productId) return null;
+    let auth = await this.authenticate(false);
+    const targetUrl = `${this.baseUrl}/api/v1/product-registry/product/${encodeURIComponent(productId)}`;
+
+    let res = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${auth.token}`,
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(15000),
+    }).catch(() => null);
+
+    if (res && res.status === 401) {
+      auth = await this.authenticate(true);
+      res = await fetch(targetUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(15000),
+      }).catch(() => null);
+    }
+
+    if (!res || !res.ok) {
+      return null;
+    }
+
+    return await res.json().catch(() => null);
   }
 
   /**

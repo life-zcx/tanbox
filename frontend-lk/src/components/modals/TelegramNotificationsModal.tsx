@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { apiClient } from '../../api/client';
 import { X, Send, CheckCircle2, Copy, Check, ExternalLink, Unlink, Bell, RefreshCw } from 'lucide-react';
+import { useModalBehavior } from '@shared';
 
 interface TelegramNotificationsModalProps {
   isOpen: boolean;
@@ -22,6 +23,8 @@ export const TelegramNotificationsModal: React.FC<TelegramNotificationsModalProp
   const [generatingLink, setGeneratingLink] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [unlinking, setUnlinking] = useState<boolean>(false);
+
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
 
   // Загрузка статуса привязки
   const fetchStatus = async () => {
@@ -96,18 +99,6 @@ export const TelegramNotificationsModal: React.FC<TelegramNotificationsModalProp
     return () => clearInterval(interval);
   }, [isOpen, isLinked]);
 
-  // Блокировка прокрутки страницы при открытой модалке
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
   // Копирование ссылки
   const handleCopyLink = () => {
     if (!authLink) return;
@@ -119,16 +110,13 @@ export const TelegramNotificationsModal: React.FC<TelegramNotificationsModalProp
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 overflow-y-auto">
-      {/* Полный оверлей на весь экран с блюром */}
+    <div
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 overflow-y-auto bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+    >
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity -z-10"
-        onClick={onClose}
-      />
-
-      <div
-        className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative overflow-hidden text-[#111827] z-10 my-auto animate-in fade-in zoom-in-95 duration-150"
-        onClick={(e) => e.stopPropagation()}
+        {...dialogProps}
+        className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative overflow-hidden text-[#111827] z-10 my-auto animate-in zoom-in-95 duration-150"
       >
         {/* Кнопка закрытия */}
         <button

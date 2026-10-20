@@ -11,6 +11,7 @@ import {
   Check,
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { useModalBehavior } from '@shared';
 
 interface PartyAndCatalogModalProps {
   onClose: () => void;
@@ -86,11 +87,17 @@ export const PartyAndCatalogModal: React.FC<PartyAndCatalogModalProps> = ({ onCl
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose });
+
   return createPortal(
     <div
-      className="fixed inset-0 w-screen h-screen z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
     >
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150">
+      <div
+        {...dialogProps}
+        className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-3 shrink-0">
           <div className="flex items-center gap-2.5">

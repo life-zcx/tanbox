@@ -2,19 +2,15 @@ import React, { useState } from 'react';
 import {
   Server,
   RefreshCw,
-  Search,
   Plus,
   Edit2,
   Package,
-  Barcode,
-  Building2,
 } from 'lucide-react';
-import { NCALayerBadge } from './NCALayerBadge';
+
 import {
   MarkirovkaOperationsButton,
   MarkirovkaOpChoice,
 } from './MarkirovkaOperationsButton';
-import { PartyAndCatalogModal } from './PartyAndCatalogModal';
 import { ConnectMarkirovkaModal } from '../modals/ConnectMarkirovkaModal';
 
 interface MarkirovkaHeaderBarProps {
@@ -36,7 +32,6 @@ export const MarkirovkaHeaderBar: React.FC<MarkirovkaHeaderBarProps> = ({
   onSelectOperation,
   onCreateCard,
 }) => {
-  const [showToolsModal, setShowToolsModal] = useState<boolean>(false);
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [accountToEdit, setAccountToEdit] = useState<any | null>(null);
 
@@ -89,25 +84,9 @@ export const MarkirovkaHeaderBar: React.FC<MarkirovkaHeaderBarProps> = ({
 
         {/* Right: Actions specific to this page */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
-          {isMpt && <NCALayerBadge />}
 
-          <button
-            type="button"
-            onClick={() => setShowToolsModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
-          >
-            {isMpt ? (
-              <>
-                <Building2 className="w-3.5 h-3.5 text-gray-500" />
-                <span>Поиск по БИН</span>
-              </>
-            ) : (
-              <>
-                <Barcode className="w-3.5 h-3.5 text-gray-500" />
-                <span>Поиск по GTIN</span>
-              </>
-            )}
-          </button>
+
+
 
           <button
             type="button"
@@ -165,13 +144,7 @@ export const MarkirovkaHeaderBar: React.FC<MarkirovkaHeaderBarProps> = ({
         </div>
       </div>
 
-      {/* Global Modals for this bar */}
-      {showToolsModal && (
-        <PartyAndCatalogModal
-          mode={isMpt ? 'PARTY' : 'GTIN'}
-          onClose={() => setShowToolsModal(false)}
-        />
-      )}
+
 
       <ConnectMarkirovkaModal
         targetService={isMpt ? 'MPT' : 'NKT'}

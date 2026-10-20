@@ -20,6 +20,7 @@ import {
 import { MarkirovkaOpChoice } from './MarkirovkaOperationsButton';
 import { apiClient } from '../../api/client';
 import { useNCALayer } from '../../hooks/useNCALayer';
+import { useModalBehavior } from '@shared';
 
 interface OperationModalProps {
   operationType: MarkirovkaOpChoice | null;
@@ -232,6 +233,7 @@ export const OperationModal: React.FC<OperationModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen: Boolean(operationType) });
   const { isRunning: isNcaRunning, checkStatus, sign } = useNCALayer();
 
   const [accountId, setAccountId] = useState<string>(selectedAccountId || '');
@@ -702,12 +704,13 @@ export const OperationModal: React.FC<OperationModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !loading) onClose();
-      }}
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
     >
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-2xl w-full p-5 sm:p-6 space-y-4 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150">
+      <div
+        {...dialogProps}
+        className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-2xl w-full p-5 sm:p-6 space-y-4 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-3 shrink-0">
           <div className="flex items-center gap-2.5">

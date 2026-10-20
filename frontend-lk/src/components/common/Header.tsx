@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Wallet, 
-  User, 
-  LogOut, 
-  ChevronDown, 
-  Bug, 
-  Menu, 
+import {
+  Wallet,
+  User,
+  LogOut,
+  ChevronDown,
+  Bug,
+  Menu,
   Building2
 } from 'lucide-react';
 import { UserProfile } from '../../types';
@@ -47,8 +47,12 @@ export const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = 
     title: 'ИС МПТ',
     subtitle: 'Операции, документооборот, заказ кодов и интеграция с СУЗ',
   },
+  '/mpt-cards': {
+    title: 'Мои карточки ИС МПТ',
+    subtitle: 'Реестр действующих карточек и GTIN вашей организации в ИС МПТ / СУЗ',
+  },
   '/product-cards': {
-    title: 'Описания товаров',
+    title: 'Описания товаров НКТ',
     subtitle: 'Создание описаний товаров для получения официальных GTIN в НКТ / Маркировка КЗ',
   },
   '/profile': {
@@ -90,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
               setCurrentBalance(Number(res.data.balance));
             }
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     };
 

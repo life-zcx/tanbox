@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { useNavigate } from 'react-router-dom';
+import { useModalBehavior } from '@shared';
 
 interface TopUpBalanceModalProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
   );
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
 
   useEffect(() => {
     if (isOpen) {
@@ -101,10 +104,13 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150">
+    <div
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+    >
       <div
+        {...dialogProps}
         className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-gray-100 space-y-5 animate-in zoom-in-95 duration-150 relative max-h-[90vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">

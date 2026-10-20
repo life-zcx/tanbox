@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { OrderItem } from '../types';
-import { StatusBadge, parseOrderNotes } from '@shared';
+import { StatusBadge, parseOrderNotes, toast, useModalBehavior } from '@shared';
 import { getCategoryLabel } from '../data/categories';
 import { downloadHtmlAsPdf } from '../utils/clientPdf';
 import {
@@ -207,7 +207,7 @@ export const OrderDetailPage: React.FC = () => {
 
     // If data is already filled, do not send redundant request
     if (allPositionsFilled) {
-      alert('Данные по всем позициям уже загружены из НКТ и актуальны.');
+      toast.info('Данные по всем позициям уже загружены из НКТ и актуальны.');
       return;
     }
 
@@ -220,10 +220,10 @@ export const OrderDetailPage: React.FC = () => {
         const refetched = await apiClient.get(`/orders/${order.id}`);
         if (refetched.data) setOrder(refetched.data);
       }
-      alert(res.data?.message || 'Данные позиций проверены в Национальном Каталоге (НКТ).');
+      toast.success(res.data?.message || 'Данные позиций проверены в Национальном Каталоге (НКТ).');
     } catch (err: any) {
       console.error('Failed to sync NKT:', err);
-      alert(err.response?.data?.message || 'Не удалось загрузить данные из НКТ');
+      toast.error(err.response?.data?.message || 'Не удалось загрузить данные из НКТ');
     } finally {
       setIsSyncingNkt(false);
     }
@@ -472,7 +472,7 @@ export const OrderDetailPage: React.FC = () => {
       setTimeout(() => setAdjustSuccessMsg(null), 5000);
     } catch (err: any) {
       console.error('Adjust order count error:', err);
-      alert(err.response?.data?.message || 'Ошибка при корректировке объема заказа');
+      toast.error(err.response?.data?.message || 'Ошибка при корректировке объема заказа');
     } finally {
       setAdjustingCount(false);
     }
@@ -646,9 +646,9 @@ export const OrderDetailPage: React.FC = () => {
       try {
         localStorage.setItem(`tanbox_sticker_approval_${id}`, JSON.stringify(data));
       } catch { }
-      alert('Макет успешно утвержден и сохранён в вашу библиотеку для повторных заказов!');
+      toast.success('Макет успешно утвержден и сохранён в вашу библиотеку для повторных заказов!');
     } catch (err: any) {
-      alert('Ошибка при согласовании макета: ' + (err.response?.data?.message || err.message));
+      toast.error('Ошибка при согласовании макета: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -669,15 +669,16 @@ export const OrderDetailPage: React.FC = () => {
       try {
         localStorage.setItem(`tanbox_sticker_approval_${id}`, JSON.stringify(data));
       } catch { }
+      toast.info('Правки к макету успешно отправлены дизайнеру');
     } catch (err: any) {
-      alert('Ошибка при отправке правок: ' + (err.response?.data?.message || err.message));
+      toast.error('Ошибка при отправке правок: ' + (err.response?.data?.message || err.message));
     }
   };
 
   const processCodesFile = async (file: File) => {
     if (!file || !order) return;
     if (!file.name.toLowerCase().endsWith('.csv')) {
-      alert('Поддерживаются только файлы выгрузки кодов в формате .CSV');
+      toast.error('Поддерживаются только файлы выгрузки кодов в формате .CSV');
       return;
     }
     setUploadingCodes(true);
@@ -691,7 +692,7 @@ export const OrderDetailPage: React.FC = () => {
       setCodesSuccessMsg(res.data.message || 'Файл с кодами маркировки успешно прикреплен к заказу!');
       setTimeout(() => setCodesSuccessMsg(null), 5000);
     } catch (err: any) {
-      alert('Ошибка при загрузке файла кодов: ' + (err.response?.data?.message || err.message));
+      toast.error('Ошибка при загрузке файла кодов: ' + (err.response?.data?.message || err.message));
     } finally {
       setUploadingCodes(false);
     }
@@ -754,7 +755,7 @@ export const OrderDetailPage: React.FC = () => {
       window.URL.revokeObjectURL(blobUrl);
     } catch (err: any) {
       console.error('Download codes error:', err);
-      alert('Ошибка при скачивании файла кодов: ' + (err.response?.data?.message || err.message));
+      toast.error('Ошибка при скачивании файла кодов: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingCodes(false);
     }
@@ -797,7 +798,7 @@ export const OrderDetailPage: React.FC = () => {
   const handleDownloadPdf = async () => {
     if (!order) return;
     if (!canPrintBatch) {
-      alert(printBlockReason || 'Печать партии заблокирована.');
+      toast.warning(printBlockReason || 'Печать партии заблокирована.');
       return;
     }
     if (!pdfStatus?.hasFullPdf) {
@@ -837,7 +838,7 @@ export const OrderDetailPage: React.FC = () => {
       } else if (err.response?.data?.message) {
         errMsg = err.response.data.message;
       }
-      alert(errMsg);
+      toast.error(errMsg);
     } finally {
       setDownloadingPdf(false);
       fetchPdfStatus();
@@ -847,11 +848,11 @@ export const OrderDetailPage: React.FC = () => {
   const handleTriggerAsyncGeneration = async () => {
     if (!order) return;
     if (!canPrintBatch) {
-      alert(printBlockReason || 'Печать партии заблокирована.');
+      toast.warning(printBlockReason || 'Печать партии заблокирована.');
       return;
     }
     if (order.itemsCount > 2000) {
-      alert(`Генерация единым файлом ограничена до 2 000 этикеток (в заказе ${order.itemsCount.toLocaleString()} шт.). Пожалуйста, используйте выгрузку по рулонам.`);
+      toast.warning(`Генерация единым файлом ограничена до 2 000 этикеток (в заказе ${order.itemsCount.toLocaleString()} шт.). Пожалуйста, используйте выгрузку по рулонам.`);
       setShowRollModal(true);
       return;
     }
@@ -863,7 +864,7 @@ export const OrderDetailPage: React.FC = () => {
         // non-blocking
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Ошибка запуска фоновой генерации');
+      toast.error(err.response?.data?.message || 'Ошибка запуска фоновой генерации');
     } finally {
       setTriggeringAsync(false);
       fetchPdfStatus();
@@ -888,7 +889,7 @@ export const OrderDetailPage: React.FC = () => {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     } catch (err: any) {
       console.error('Download act error:', err);
-      alert('Ошибка при формировании Акта выполненных работ: ' + (err.response?.data?.message || err.message));
+      toast.error('Ошибка при формировании Акта выполненных работ: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingDoc(null);
     }
@@ -912,7 +913,7 @@ export const OrderDetailPage: React.FC = () => {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     } catch (err: any) {
       console.error('Download invoice error:', err);
-      alert('Ошибка при формировании Счёта на оплату: ' + (err.response?.data?.message || err.message));
+      toast.error('Ошибка при формировании Счёта на оплату: ' + (err.response?.data?.message || err.message));
     } finally {
       setDownloadingDoc(null);
     }
@@ -930,11 +931,11 @@ export const OrderDetailPage: React.FC = () => {
       if (res.data?.redirectUrl) {
         window.location.href = res.data.redirectUrl;
       } else {
-        alert(res.data?.message || 'Не удалось получить ссылку на оплату');
+        toast.error(res.data?.message || 'Не удалось получить ссылку на оплату');
         setIsPayingOnline(false);
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || err.message || 'Ошибка запуска онлайн-оплаты');
+      toast.error(err.response?.data?.message || err.message || 'Ошибка запуска онлайн-оплаты');
       setIsPayingOnline(false);
     }
   };
@@ -961,7 +962,7 @@ export const OrderDetailPage: React.FC = () => {
       } else if (err.response?.data?.message) {
         errMsg = err.response.data.message;
       }
-      alert(errMsg);
+      toast.error(errMsg);
     } finally {
       setPrintingSample(false);
     }
@@ -2432,90 +2433,19 @@ export const OrderDetailPage: React.FC = () => {
       </div>
 
       {/* Full-Size Sticker Modal Preview */}
-      {showStickerModal &&
-        createPortal(
-          <div
-            onClick={() => setShowStickerModal(false)}
-            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-lg w-full p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-150"
-            >
-              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <Palette className="w-5 h-5 text-[#0082FB]" />
-                  <h3 className="text-base font-extrabold text-[#111827]">
-                    Макет стикера для заказа {order.orderNumber}
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowStickerModal(false)}
-                  className="text-gray-400 hover:text-black p-1 transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="text-xs text-[#64748B] flex items-center justify-between">
-                <span>
-                  Формат: <strong className="text-[#111827]">{layoutWidthMm} × {layoutHeightMm} мм</strong>
-                </span>
-              </div>
-
-              {/* High-res rendered sticker canvas/card */}
-              <div className="bg-gray-100 p-6 rounded-2xl flex items-center justify-center overflow-auto max-h-[60vh]">
-                <div id="sticker-sample-printable-card">
-                  <StickerCanvasPreview
-                    widthMm={layoutWidthMm}
-                    heightMm={layoutHeightMm}
-                    elements={layoutElements}
-                    scale={6.2}
-                    previewData={stickerPreviewData}
-                    className="shadow-2xl"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handlePrintSample}
-                  disabled={printingSample}
-                  className="inline-flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-[#111827] text-xs font-bold px-4 py-2.5 rounded-xl border border-gray-200 transition-all cursor-pointer disabled:opacity-60"
-                >
-                  <Printer className={`w-4 h-4 ${printingSample ? 'animate-bounce' : ''}`} />
-                  {printingSample ? 'Формирование...' : 'Распечатать образец (PDF)'}
-                </button>
-
-                <div className="flex items-center justify-end gap-2">
-                  {approvalStatus !== 'APPROVED' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleApproveSticker();
-                        setShowStickerModal(false);
-                      }}
-                      className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
-                    >
-                      <Check className="w-4 h-4" /> Утвердить макет
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setShowStickerModal(false)}
-                    className="inline-flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-[#111827] text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer"
-                  >
-                    Закрыть
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+      <StickerModalPreview
+        isOpen={showStickerModal}
+        onClose={() => setShowStickerModal(false)}
+        order={order}
+        layoutWidthMm={layoutWidthMm}
+        layoutHeightMm={layoutHeightMm}
+        layoutElements={layoutElements}
+        stickerPreviewData={stickerPreviewData}
+        handlePrintSample={handlePrintSample}
+        printingSample={printingSample}
+        approvalStatus={approvalStatus}
+        handleApproveSticker={handleApproveSticker}
+      />
 
       {/* Roll Splitting Modal for batches */}
       {order && (
@@ -2581,7 +2511,7 @@ export const OrderDetailPage: React.FC = () => {
         orderId={order?.id}
         onClose={() => setMarkirovkaOp(null)}
         onSuccess={() => {
-          alert('Операция успешно отправлена в ИС МПТ!');
+          toast.success('Операция успешно отправлена в ИС МПТ!');
           setMarkirovkaOp(null);
           if (id) {
             apiClient.get(`/orders/${id}`).then((res) => setOrder(res.data)).catch(() => {});
@@ -2590,81 +2520,26 @@ export const OrderDetailPage: React.FC = () => {
       />
 
       {/* Модальное окно предупреждения о регламенте нанесения */}
-      {showUtilisationNoticeModal &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setShowUtilisationNoticeModal(false);
-                setPendingOpAfterNotice(null);
-              }
-            }}
-          >
-            <div className="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-4 animate-in zoom-in-95 duration-150">
-              {/* Крестик закрытия */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowUtilisationNoticeModal(false);
-                  setPendingOpAfterNotice(null);
-                }}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-xl transition-colors cursor-pointer"
-                title="Закрыть"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-gray-900 pr-6">
-                  Сначала требуется отчет о нанесении КМ
-                </h3>
-                <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">
-                  По регламенту <strong>ИС МПТ РК</strong>, коды маркировки невозможно ввести в оборот, пока по ним не принят <strong>Отчет о нанесении</strong> (перевод в статус <em>APPLIED</em>). Иначе система вернет отказ (REJECTED).
-                </p>
-              </div>
-
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-700 space-y-1.5">
-                <div className="font-semibold text-gray-900">Рекомендуемый порядок:</div>
-                <p>1. Отправьте отчет о нанесении КМ прямо сейчас через СУЗ в 1 клик.</p>
-                <p>2. Либо, если отчет уже сдан на портале markirovka.kz вручную, вы можете продолжить ввод в оборот.</p>
-              </div>
-
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowUtilisationNoticeModal(false);
-                    setPendingOpAfterNotice(null);
-                    executeOpenOperation('UTILISATION');
-                  }}
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold bg-[#0082FB] hover:bg-[#0072de] text-white transition-all cursor-pointer shadow-xs"
-                >
-                  Отправить отчет о нанесении
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForceUtilisedOverride(true);
-                    setShowUtilisationNoticeModal(false);
-                    if (pendingOpAfterNotice) {
-                      executeOpenOperation(pendingOpAfterNotice);
-                      setPendingOpAfterNotice(null);
-                    }
-                  }}
-                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
-                >
-                  Я уже нанес — продолжить
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+      <UtilisationNoticeModal
+        isOpen={showUtilisationNoticeModal}
+        onClose={() => {
+          setShowUtilisationNoticeModal(false);
+          setPendingOpAfterNotice(null);
+        }}
+        onProceedNotice={() => {
+          setShowUtilisationNoticeModal(false);
+          setPendingOpAfterNotice(null);
+          executeOpenOperation('UTILISATION');
+        }}
+        onOverrideNotice={() => {
+          setForceUtilisedOverride(true);
+          setShowUtilisationNoticeModal(false);
+          if (pendingOpAfterNotice) {
+            executeOpenOperation(pendingOpAfterNotice);
+            setPendingOpAfterNotice(null);
+          }
+        }}
+      />
 
       {/* Payment Choice Modal (Balance or Card) */}
       {order && isPaymentChoiceOpen && (
@@ -2697,5 +2572,195 @@ export const OrderDetailPage: React.FC = () => {
       )}
 
     </div>
+  );
+};
+
+interface StickerModalPreviewProps {
+  isOpen: boolean;
+  onClose: () => void;
+  order: any;
+  layoutWidthMm: number;
+  layoutHeightMm: number;
+  layoutElements: any;
+  stickerPreviewData: any;
+  handlePrintSample: () => void;
+  printingSample: boolean;
+  approvalStatus: any;
+  handleApproveSticker: () => void;
+}
+
+const StickerModalPreview: React.FC<StickerModalPreviewProps> = ({
+  isOpen,
+  onClose,
+  order,
+  layoutWidthMm,
+  layoutHeightMm,
+  layoutElements,
+  stickerPreviewData,
+  handlePrintSample,
+  printingSample,
+  approvalStatus,
+  handleApproveSticker,
+}) => {
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+    >
+      <div
+        {...dialogProps}
+        className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-lg w-full p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-150"
+      >
+        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+          <div className="flex items-center gap-2">
+            <Palette className="w-5 h-5 text-[#0082FB]" />
+            <h3 className="text-base font-extrabold text-[#111827]">
+              Макет стикера для заказа {order?.orderNumber}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-black p-1 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="text-xs text-[#64748B] flex items-center justify-between">
+          <span>
+            Формат: <strong className="text-[#111827]">{layoutWidthMm} × {layoutHeightMm} мм</strong>
+          </span>
+        </div>
+
+        {/* High-res rendered sticker canvas/card */}
+        <div className="bg-gray-100 p-6 rounded-2xl flex items-center justify-center overflow-auto max-h-[60vh]">
+          <div id="sticker-sample-printable-card">
+            <StickerCanvasPreview
+              widthMm={layoutWidthMm}
+              heightMm={layoutHeightMm}
+              elements={layoutElements}
+              scale={6.2}
+              previewData={stickerPreviewData}
+              className="shadow-2xl"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handlePrintSample}
+            disabled={printingSample}
+            className="inline-flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-[#111827] text-xs font-bold px-4 py-2.5 rounded-xl border border-gray-200 transition-all cursor-pointer disabled:opacity-60"
+          >
+            <Printer className={`w-4 h-4 ${printingSample ? 'animate-bounce' : ''}`} />
+            {printingSample ? 'Формирование...' : 'Распечатать образец (PDF)'}
+          </button>
+
+          <div className="flex items-center justify-end gap-2">
+            {approvalStatus !== 'APPROVED' && (
+              <button
+                type="button"
+                onClick={() => {
+                  handleApproveSticker();
+                  onClose();
+                }}
+                className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-xs"
+              >
+                <Check className="w-4 h-4" /> Утвердить макет
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-[#111827] text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+interface UtilisationNoticeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onProceedNotice: () => void;
+  onOverrideNotice: () => void;
+}
+
+const UtilisationNoticeModal: React.FC<UtilisationNoticeModalProps> = ({
+  isOpen,
+  onClose,
+  onProceedNotice,
+  onOverrideNotice,
+}) => {
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+    >
+      <div
+        {...dialogProps}
+        className="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-4 animate-in zoom-in-95 duration-150"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-xl transition-colors cursor-pointer"
+          title="Закрыть"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
+          <AlertTriangle className="w-6 h-6" />
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-gray-900 pr-6">
+            Сначала требуется отчет о нанесении КМ
+          </h3>
+          <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">
+            По регламенту <strong>ИС МПТ РК</strong>, коды маркировки невозможно ввести в оборот, пока по ним не принят <strong>Отчет о нанесении</strong> (перевод в статус <em>APPLIED</em>). Иначе система вернет отказ (REJECTED).
+          </p>
+        </div>
+
+        <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-700 space-y-1.5">
+          <div className="font-semibold text-gray-900">Рекомендуемый порядок:</div>
+          <p>1. Отправьте отчет о нанесении КМ прямо сейчас через СУЗ в 1 клик.</p>
+          <p>2. Либо, если отчет уже сдан на портале markirovka.kz вручную, вы можете продолжить ввод в оборот.</p>
+        </div>
+
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onProceedNotice}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold bg-[#0082FB] hover:bg-[#0072de] text-white transition-all cursor-pointer shadow-xs"
+          >
+            Отправить отчет о нанесении
+          </button>
+
+          <button
+            type="button"
+            onClick={onOverrideNotice}
+            className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+          >
+            Я уже нанес — продолжить
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };

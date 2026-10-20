@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { useAdminAuth } from '../hooks/useAdminAuth';
@@ -22,7 +23,7 @@ import {
   AlertCircle,
   Wallet,
 } from 'lucide-react';
-import { PageHeader } from '@shared';
+import { PageHeader, toast, useModalBehavior } from '@shared';
 import { UserClient } from '../types';
 import { apiClient } from '../api/client';
 import { ClientDetailModal } from '../components/modals/ClientDetailModal';
@@ -52,16 +53,26 @@ export const AdminUsersPage: React.FC = () => {
   // Balance adjustment modal state
   const [balanceModalUser, setBalanceModalUser] = useState<UserClient | null>(null);
 
-  // Notification message
-  const [toastMsg, setToastMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { backdropProps: blockBackdropProps, dialogProps: blockDialogProps } = useModalBehavior({
+    onClose: () => setBlockModalUser(null),
+    isOpen: Boolean(blockModalUser),
+  });
+
+  const { backdropProps: deleteBackdropProps, dialogProps: deleteDialogProps } = useModalBehavior({
+    onClose: () => setDeleteModalUser(null),
+    isOpen: Boolean(deleteModalUser),
+  });
 
   useEffect(() => {
     setUsers(initialUsers);
   }, [initialUsers]);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
-    setToastMsg({ type, text });
-    setTimeout(() => setToastMsg(null), 4000);
+    if (type === 'error') {
+      toast.error(text);
+    } else {
+      toast.success(text);
+    }
   };
 
   const navigate = useNavigate();
@@ -174,24 +185,6 @@ export const AdminUsersPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Toast Notification */}
-      {toastMsg && (
-        <div
-          className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl text-xs font-bold transition-all animate-in fade-in slide-in-from-top-4 ${
-            toastMsg.type === 'success'
-              ? 'bg-black text-white border border-gray-800'
-              : 'bg-red-600 text-white border border-red-700'
-          }`}
-        >
-          {toastMsg.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          ) : (
-            <AlertCircle className="w-4 h-4 text-white shrink-0" />
-          )}
-          <span>{toastMsg.text}</span>
-        </div>
-      )}
-
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <PageHeader
           title="Реестр клиентов и организаций РК"
@@ -459,9 +452,15 @@ export const AdminUsersPage: React.FC = () => {
       </div>
 
       {/* MODAL 1: Block / Unblock Confirmation */}
-      {blockModalUser && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in zoom-in-95">
+      {blockModalUser && createPortal(
+        <div
+          {...blockBackdropProps}
+          className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150 select-auto"
+        >
+          <div
+            {...blockDialogProps}
+            className="bg-white border border-gray-200 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in zoom-in-95 duration-150"
+          >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div
@@ -548,13 +547,20 @@ export const AdminUsersPage: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 2: Delete Confirmation */}
-      {deleteModalUser && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in zoom-in-95">
+      {deleteModalUser && createPortal(
+        <div
+          {...deleteBackdropProps}
+          className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150 select-auto"
+        >
+          <div
+            {...deleteDialogProps}
+            className="bg-white border border-gray-200 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in zoom-in-95 duration-150"
+          >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
@@ -601,7 +607,8 @@ export const AdminUsersPage: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Client Detail & Edit Modal */}

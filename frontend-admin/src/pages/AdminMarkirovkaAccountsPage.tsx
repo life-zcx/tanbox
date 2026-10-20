@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ShieldCheck,
   AlertCircle,
@@ -16,9 +17,10 @@ import {
   ExternalLink,
   History,
   Database,
+  X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { PageHeader } from '@shared';
+import { PageHeader, toast, useModalBehavior } from '@shared';
 import { apiClient } from '../api/client';
 import { MarkirovkaNav } from '../components/markirovka/MarkirovkaNav';
 
@@ -59,16 +61,21 @@ export const AdminMarkirovkaAccountsPage: React.FC = () => {
   const [isModalTesting, setIsModalTesting] = useState(false);
   const [isModalSaving, setIsModalSaving] = useState(false);
 
+  const { backdropProps, dialogProps } = useModalBehavior({
+    onClose: () => setIsModalOpen(false),
+    isOpen: isModalOpen,
+  });
+
   // NKT status
   const [nktEnabled, setNktEnabled] = useState<boolean>(true);
   const [togglingNkt, setTogglingNkt] = useState<boolean>(false);
 
-  // Toast
-  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
-    setToast({ text, type });
-    setTimeout(() => setToast(null), 5000);
+    if (type === 'error') {
+      toast.error(text);
+    } else {
+      toast.success(text);
+    }
   };
 
   const fetchNktStatus = async () => {
@@ -257,24 +264,6 @@ export const AdminMarkirovkaAccountsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Toast Notification */}
-      {toast && (
-        <div
-          className={`fixed top-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-bold transition-all animate-in fade-in slide-in-from-top-2 ${
-            toast.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              : 'bg-rose-50 text-rose-800 border-rose-200'
-          }`}
-        >
-          {toast.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          ) : (
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-          )}
-          <span>{toast.text}</span>
-        </div>
-      )}
-
       {/* Page Header */}
       <PageHeader
         title="Подключенные аккаунты ИС МПТ"
@@ -521,12 +510,18 @@ export const AdminMarkirovkaAccountsPage: React.FC = () => {
       </div>
 
       {/* Modal Add / Edit */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 space-y-5">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center font-bold">
+      {isModalOpen && createPortal(
+        <div
+          {...backdropProps}
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in duration-150 select-auto"
+        >
+          <div
+            {...dialogProps}
+            className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-gray-100 space-y-5 animate-in zoom-in-95 duration-150"
+          >
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0082FB] border border-blue-100/60 flex items-center justify-center font-bold">
                   <Radio className="w-5 h-5" />
                 </div>
                 <div>
@@ -537,10 +532,11 @@ export const AdminMarkirovkaAccountsPage: React.FC = () => {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-black text-sm font-bold p-1"
+                className="w-8 h-8 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -699,7 +695,8 @@ export const AdminMarkirovkaAccountsPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

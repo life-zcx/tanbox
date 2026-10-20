@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../config/db';
 import { MarkirovkaOperationType, MarkirovkaOperationStatus } from '@prisma/client';
-import { MarkirovkaClient, CATEGORY_TO_OMS_EXTENSION, generateValidSscc18, normalizeSscc18, extractIdentificationCode } from '../services/markirovkaClient.service';
+import { MarkirovkaClient, CATEGORY_TO_OMS_EXTENSION, generateValidSscc18, normalizeSscc18, extractIdentificationCode, mapMptProductGroupsToCategories } from '../services/markirovkaClient.service';
 import { resolveNktProduct } from '../services/nktCatalog.service';
 import { logger } from '../utils/logger';
 
@@ -1537,6 +1537,7 @@ export async function checkPartyStatus(req: AuthRequest, res: Response) {
     });
 
     if (localAccount) {
+      const localCats = localAccount.categories || [];
       return res.json({
         success: true,
         registered: true,
@@ -1545,15 +1546,17 @@ export async function checkPartyStatus(req: AuthRequest, res: Response) {
           tin: cleanTin,
           name: { ru: localAccount.name },
           fullName: { ru: localAccount.name },
-          productGroups: localAccount.categories,
+          productGroups: localCats,
         },
         data: {
           status: localAccount.status || 'ACTIVE',
           tin: cleanTin,
           nameRu: localAccount.name,
           nameKz: localAccount.name,
-          productGroups: localAccount.categories || [],
+          productGroups: localCats,
+          categories: localCats,
         },
+        categories: localCats,
         message: 'Участник найден и зарегистрирован в системе маркировки РК',
       });
     }
@@ -1569,6 +1572,8 @@ export async function checkPartyStatus(req: AuthRequest, res: Response) {
         const client = new MarkirovkaClient(account);
         const result = await client.checkPartyStatus(cleanTin);
         const isRegistered = !!(result?.party && (result.party.tin || result.party.name));
+        const rawGroups = result?.party?.productGroups || [];
+        const mappedCategories = mapMptProductGroupsToCategories(rawGroups);
 
         return res.json({
           success: true,
@@ -1581,9 +1586,11 @@ export async function checkPartyStatus(req: AuthRequest, res: Response) {
                 tin: result.party.tin || cleanTin,
                 nameRu: result.party.name?.ru || result.party.fullName?.ru || '',
                 nameKz: result.party.name?.kz || result.party.fullName?.kz || '',
-                productGroups: result.party.productGroups || [],
+                productGroups: rawGroups,
+                categories: mappedCategories,
               }
             : null,
+          categories: mappedCategories,
           message: isRegistered
             ? 'Участник найден и зарегистрирован в ИС МПТ'
             : 'Участник с данным БИН/ИИН не найден в реестре ИС МПТ',

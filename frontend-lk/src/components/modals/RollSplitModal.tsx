@@ -23,6 +23,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { useModalBehavior } from '@shared';
 
 interface RollSplitModalProps {
   isOpen: boolean;
@@ -84,16 +85,7 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
   const [itemsTotalPages, setItemsTotalPages] = useState<number>(1);
   const [itemsTotal, setItemsTotal] = useState<number>(0);
 
-  // Lock body scroll while modal is visible
-  useEffect(() => {
-    if (isOpen) {
-      const original = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = original;
-      };
-    }
-  }, [isOpen]);
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
 
   // Fetch items when entering reprint tab or pagination/search changes
   useEffect(() => {
@@ -296,12 +288,13 @@ export const RollSplitModal: React.FC<RollSplitModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
     >
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 max-w-2xl w-full p-5 sm:p-6 space-y-4 animate-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col">
+      <div
+        {...dialogProps}
+        className="bg-white rounded-2xl shadow-xl border border-gray-200 max-w-2xl w-full p-5 sm:p-6 space-y-4 animate-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 pb-3 shrink-0">
           <div className="flex items-center gap-3">

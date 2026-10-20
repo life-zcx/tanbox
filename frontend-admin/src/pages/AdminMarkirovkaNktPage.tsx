@@ -16,7 +16,7 @@ import {
   Layers,
   Sparkles,
 } from 'lucide-react';
-import { PageHeader } from '@shared';
+import { PageHeader, toast } from '@shared';
 import { apiClient } from '../api/client';
 import { MarkirovkaNav } from '../components/markirovka/MarkirovkaNav';
 
@@ -49,12 +49,12 @@ export const AdminMarkirovkaNktPage: React.FC = () => {
     latencyMs?: number;
   } | null>(null);
 
-  // Toast message
-  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
-    setToast({ text, type });
-    setTimeout(() => setToast(null), 5000);
+    if (type === 'error') {
+      toast.error(text);
+    } else {
+      toast.success(text);
+    }
   };
 
   const fetchSettings = async () => {
@@ -157,24 +157,6 @@ export const AdminMarkirovkaNktPage: React.FC = () => {
 
   return (
     <div className="space-y-6 w-full">
-      {/* Toast Notification */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg border text-xs font-bold flex items-center gap-2.5 transition-all ${
-            toast.type === 'error'
-              ? 'bg-red-50 text-red-800 border-red-200'
-              : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-          }`}
-        >
-          {toast.type === 'error' ? (
-            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-          ) : (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          )}
-          <span>{toast.text}</span>
-        </div>
-      )}
-
       {/* Header */}
       <PageHeader
         title="Национальный Каталог Товаров (НКТ)"

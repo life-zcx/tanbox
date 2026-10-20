@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Check, Minus, HelpCircle, FileCode, Printer, Users, Box, ArrowRight } from 'lucide-react';
 import { TariffType } from '../../types';
+import { useModalBehavior } from '@shared';
 
 interface TariffHelpModalProps {
   isOpen: boolean;
@@ -18,25 +19,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
   currentTariff,
   allowDigital = true,
 }) => {
-  // Lock body scroll and listen for Escape key while modal is open
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [isOpen, onClose]);
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
 
   if (!isOpen) return null;
 
@@ -117,12 +100,13 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
     >
-      <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-4xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-150">
+      <div
+        {...dialogProps}
+        className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-4xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-150"
+      >
         
         {/* Sticky Header */}
         <div className="px-5 sm:px-7 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white z-10">

@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { Save, Tag } from 'lucide-react';
 import { LabelElement } from '../types';
+import { useModalBehavior } from '@shared';
 
 interface SaveTemplateModalProps {
   isOpen: boolean;
@@ -30,16 +31,17 @@ export const SaveTemplateModal: React.FC<SaveTemplateModalProps> = ({
   savingTemplate,
   onConfirmSave,
 }) => {
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
+
   if (!isOpen) return null;
 
   return createPortal(
     <div
-      onClick={onClose}
-      className="fixed inset-0 w-screen h-screen z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
-      style={{ top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        {...dialogProps}
         className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 max-w-md w-full space-y-4 animate-in zoom-in-95 duration-150"
       >
         <div className="flex items-center justify-between border-b border-gray-100 pb-3">

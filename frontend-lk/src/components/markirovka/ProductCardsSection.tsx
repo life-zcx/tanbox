@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { CreateProductCardModal } from './CreateProductCardModal';
+import { useModalBehavior, useToast } from '@shared';
 
 interface ProductCardsSectionProps {
   createModalTrigger?: number;
@@ -59,13 +60,7 @@ export const ProductCardsSection: React.FC<ProductCardsSectionProps> = ({ create
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [copiedGtin, setCopiedGtin] = useState<string | null>(null);
 
-  // Toast
-  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-
-  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
-    setToast({ text, type });
-    setTimeout(() => setToast(null), 4000);
-  };
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (createModalTrigger) {
@@ -234,18 +229,6 @@ export const ProductCardsSection: React.FC<ProductCardsSectionProps> = ({ create
 
   return (
     <div className="space-y-6">
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg border text-sm font-medium transition-all ${
-            toast.type === 'success'
-              ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
-              : 'bg-rose-50 text-rose-900 border-rose-200'
-          }`}
-        >
-          {toast.text}
-        </div>
-      )}
 
       {/* Filter and Status Controls Card (Analogous to IS MPT operations) */}
       <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden space-y-0">
@@ -864,131 +847,8 @@ export const ProductCardsSection: React.FC<ProductCardsSectionProps> = ({ create
       )}
 
       {/* Details Preview Modal */}
-      {cardToView &&
-        createPortal(
-          <div
-            className="fixed inset-0 w-screen h-screen z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setCardToView(null);
-            }}
-          >
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <div className="flex items-center gap-2.5">
-                <Package className="w-5 h-5 text-[#0082FB]" />
-                <h3 className="font-bold text-base text-gray-900">Реквизиты карточки товара</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCardToView(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto space-y-4 text-xs">
-              <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Наименование (RU / KZ)</p>
-                <p className="font-bold text-sm text-gray-900">{cardToView.name}</p>
-                {cardToView.nameKk && (
-                  <p className="text-gray-600 italic">Қазақша: {cardToView.nameKk}</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Товарная группа</span>
-                  <span className="font-semibold text-gray-900 text-xs">{cardToView.category}</span>
-                </div>
-                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Бренд / Артикул</span>
-                  <span className="font-semibold text-gray-900 text-xs">
-                    {cardToView.brand || '—'} {cardToView.article ? `(Арт: ${cardToView.article})` : ''}
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">ТН ВЭД ЕАЭС</span>
-                  <span className="font-mono font-semibold text-gray-900 text-xs">{cardToView.tnved || '—'}</span>
-                </div>
-                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">GTIN / EAN-13</span>
-                  <span className="font-mono font-semibold text-gray-900 text-xs">{cardToView.gtin || 'Присваивается НКТ'}</span>
-                </div>
-                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Страна происхождения</span>
-                  <span className="font-semibold text-gray-900 text-xs">{cardToView.country || 'Казахстан'}</span>
-                </div>
-                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Тип упаковки</span>
-                  <span className="font-semibold text-gray-900 text-xs">{cardToView.packageType || 'UNIT'}</span>
-                </div>
-              </div>
-
-              {/* Producer & Importer */}
-              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-1.5">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Изготовитель и Импортер</p>
-                <div className="grid grid-cols-2 gap-2 text-gray-700">
-                  <div>
-                    <span className="text-gray-400 block text-[10px]">Изготовитель:</span>
-                    <span>{cardToView.producerName || '—'}</span>
-                    {cardToView.producerAddress && (
-                      <span className="block text-[10px] text-gray-500">{cardToView.producerAddress}</span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-gray-400 block text-[10px]">Импортер в РК (БИН):</span>
-                    <span>{cardToView.importerName || '—'}</span>
-                    {cardToView.importerBin && (
-                      <span className="block text-[10px] font-mono text-gray-500">БИН: {cardToView.importerBin}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Certification & Standards */}
-              {(cardToView.certificateType || cardToView.certificateNumber || cardToView.gostOrTu) && (
-                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Разрешительные документы</p>
-                  <p className="text-gray-700">
-                    <strong>{cardToView.certificateType || 'Документ'}:</strong> {cardToView.certificateNumber || '—'}
-                  </p>
-                  {cardToView.gostOrTu && (
-                    <p className="text-gray-500 text-[11px]">Стандарт: {cardToView.gostOrTu}</p>
-                  )}
-                </div>
-              )}
-
-              {/* Dynamic Category Attributes */}
-              {cardToView.attributes && Object.keys(cardToView.attributes).length > 0 && (
-                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                    Специфические атрибуты ({cardToView.category})
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(cardToView.attributes).map(([key, value]) => (
-                      <div key={key}>
-                        <span className="text-gray-400 block text-[10px]">{key}:</span>
-                        <span className="font-medium text-gray-800">{String(value)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setCardToView(null)}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-semibold text-xs transition-colors"
-              >
-                Закрыть
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
+      {cardToView && (
+        <CardDetailModal card={cardToView} onClose={() => setCardToView(null)} />
       )}
 
       {/* Modal create/edit */}
@@ -1007,5 +867,136 @@ export const ProductCardsSection: React.FC<ProductCardsSectionProps> = ({ create
         />
       )}
     </div>
+  );
+};
+
+const CardDetailModal: React.FC<{ card: any; onClose: () => void }> = ({ card, onClose }) => {
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen: true });
+
+  return createPortal(
+    <div
+      {...backdropProps}
+      className="fixed inset-0 w-screen h-screen z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+    >
+      <div
+        {...dialogProps}
+        className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+      >
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <div className="flex items-center gap-2.5">
+            <Package className="w-5 h-5 text-[#0082FB]" />
+            <h3 className="font-bold text-base text-gray-900">Реквизиты карточки товара</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto space-y-4 text-xs">
+          <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Наименование (RU / KZ)</p>
+            <p className="font-bold text-sm text-gray-900">{card.name}</p>
+            {card.nameKk && (
+              <p className="text-gray-600 italic">Қазақша: {card.nameKk}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <span className="text-gray-400 block text-[10px] uppercase font-bold">Товарная группа</span>
+              <span className="font-semibold text-gray-900 text-xs">{card.category}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <span className="text-gray-400 block text-[10px] uppercase font-bold">Бренд / Артикул</span>
+              <span className="font-semibold text-gray-900 text-xs">
+                {card.brand || '—'} {card.article ? `(Арт: ${card.article})` : ''}
+              </span>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <span className="text-gray-400 block text-[10px] uppercase font-bold">ТН ВЭД ЕАЭС</span>
+              <span className="font-mono font-semibold text-gray-900 text-xs">{card.tnved || '—'}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <span className="text-gray-400 block text-[10px] uppercase font-bold">GTIN / EAN-13</span>
+              <span className="font-mono font-semibold text-gray-900 text-xs">{card.gtin || 'Присваивается НКТ'}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <span className="text-gray-400 block text-[10px] uppercase font-bold">Страна происхождения</span>
+              <span className="font-semibold text-gray-900 text-xs">{card.country || 'Казахстан'}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <span className="text-gray-400 block text-[10px] uppercase font-bold">Тип упаковки</span>
+              <span className="font-semibold text-gray-900 text-xs">{card.packageType || 'UNIT'}</span>
+            </div>
+          </div>
+
+          {/* Producer & Importer */}
+          <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Изготовитель и Импортер</p>
+            <div className="grid grid-cols-2 gap-2 text-gray-700">
+              <div>
+                <span className="text-gray-400 block text-[10px]">Изготовитель:</span>
+                <span>{card.producerName || '—'}</span>
+                {card.producerAddress && (
+                  <span className="block text-[10px] text-gray-500">{card.producerAddress}</span>
+                )}
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px]">Импортер в РК (БИН):</span>
+                <span>{card.importerName || '—'}</span>
+                {card.importerBin && (
+                  <span className="block text-[10px] font-mono text-gray-500">БИН: {card.importerBin}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Certification & Standards */}
+          {(card.certificateType || card.certificateNumber || card.gostOrTu) && (
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Разрешительные документы</p>
+              <p className="text-gray-700">
+                <strong>{card.certificateType || 'Документ'}:</strong> {card.certificateNumber || '—'}
+              </p>
+              {card.gostOrTu && (
+                <p className="text-gray-500 text-[11px]">Стандарт: {card.gostOrTu}</p>
+              )}
+            </div>
+          )}
+
+          {/* Dynamic Category Attributes */}
+          {card.attributes && Object.keys(card.attributes).length > 0 && (
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                Специфические атрибуты ({card.category})
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(card.attributes).map(([key, value]) => (
+                  <div key={key}>
+                    <span className="text-gray-400 block text-[10px]">{key}:</span>
+                    <span className="font-medium text-gray-800">{String(value)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-semibold text-xs transition-colors cursor-pointer"
+          >
+            Закрыть
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };

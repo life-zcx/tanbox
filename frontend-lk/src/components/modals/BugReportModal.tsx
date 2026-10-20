@@ -13,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { useModalBehavior } from '@shared';
 
 interface BugReportModalProps {
   isOpen: boolean;
@@ -42,6 +43,8 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose 
   const currentUrl = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '';
   const resolution = typeof window !== 'undefined' ? `${window.innerWidth}×${window.innerHeight}` : '';
 
+  const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
+
   useEffect(() => {
     if (isOpen) {
       setError(null);
@@ -52,17 +55,6 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose 
       setCategory('INTERFACE');
     }
   }, [isOpen]);
-
-  // Handle ESC key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !submitting) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, submitting, onClose]);
 
   if (!isOpen) return null;
 
@@ -139,12 +131,13 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !submitting) onClose();
-      }}
+      {...backdropProps}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
     >
-      <div className="bg-white rounded-3xl border border-gray-200/90 shadow-2xl max-w-lg w-full p-6 sm:p-7 relative space-y-5 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
+      <div
+        {...dialogProps}
+        className="bg-white rounded-3xl border border-gray-200/90 shadow-2xl max-w-lg w-full p-6 sm:p-7 relative space-y-5 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto"
+      >
         <button
           onClick={onClose}
           disabled={submitting}

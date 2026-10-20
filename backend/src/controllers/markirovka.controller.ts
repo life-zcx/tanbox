@@ -117,16 +117,45 @@ export async function createAccount(req: Request, res: Response) {
     }
     const encryptedPassword = encryptText(password.trim());
 
+    // Auto-detect product groups and name from IS MPT if categories not specified
+    let finalCategories = Array.isArray(categories) ? categories : [];
+    let finalName = name.trim();
+
+    if (finalCategories.length === 0 && login && password) {
+      try {
+        const tempClient = new MarkirovkaClient({
+          id: 'temp-check',
+          environment: envEnum,
+          baseUrl: sanitizedBaseUrl,
+          login: login.trim(),
+          encryptedPassword,
+          omsId: omsId?.trim() || null,
+          status: 'ACTIVE',
+          token: null,
+          tokenExpiresAt: null,
+        } as any);
+        const testRes = await tempClient.testConnection();
+        if (testRes.categories && testRes.categories.length > 0) {
+          finalCategories = testRes.categories;
+        }
+        if ((!finalName || finalName === 'Станция маркировки') && testRes.autoDetectedName) {
+          finalName = testRes.autoDetectedName;
+        }
+      } catch (autoErr: any) {
+        logger.warn(`Auto-detection of categories during account creation skipped: ${autoErr.message}`);
+      }
+    }
+
     const account = await prisma.markirovkaAccount.create({
       data: {
         userId: effectiveUserId,
-        name: name.trim(),
+        name: finalName,
         environment: envEnum,
         baseUrl: sanitizedBaseUrl,
         login: login.trim(),
         encryptedPassword,
         omsId: omsId?.trim() || null,
-        categories: Array.isArray(categories) ? categories : [],
+        categories: finalCategories,
         nktApiKey: nktApiKey ? nktApiKey.trim() : null,
         nktBaseUrl: nktBaseUrl ? nktBaseUrl.trim() : 'https://nationalcatalog.kz/gwp',
         nktStatus: nktApiKey?.trim() ? 'ACTIVE' : 'NOT_CONFIGURED',

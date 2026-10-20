@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { TariffItem, PricingSettingsItem } from '../types';
-import { PageHeader } from '@shared';
+import { PageHeader, useModalBehavior } from '@shared';
 import { downloadHtmlAsPdf } from '../utils/clientPdf';
 import {
   Save,
@@ -67,6 +67,11 @@ export const AdminTariffsPage: React.FC = () => {
   const [copiedText, setCopiedText] = useState<boolean>(false);
   const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
   const printDocRef = useRef<HTMLDivElement>(null);
+
+  const { backdropProps: priceModalBackdropProps, dialogProps: priceModalDialogProps } = useModalBehavior({
+    isOpen: showPriceModal,
+    onClose: () => setShowPriceModal(false),
+  });
 
   // Simulator state
   const [simTariff, setSimTariff] = useState<string>('STANDARD');
@@ -830,9 +835,13 @@ export const AdminTariffsPage: React.FC = () => {
         createPortal(
           <div
             id="tanbox-price-modal-portal"
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/65 backdrop-blur-md p-3 sm:p-5 overflow-y-auto"
+            {...priceModalBackdropProps}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-150"
           >
-            <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-gray-200 max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div
+              {...priceModalDialogProps}
+              className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-gray-200 max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            >
               {/* Modal Top Control Bar (Screen only, hidden on print) */}
               <div className="print:hidden flex items-center justify-between px-5 py-3.5 border-b border-gray-200 bg-gray-50/90 shrink-0">
                 <div className="flex items-center gap-2">

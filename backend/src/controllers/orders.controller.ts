@@ -245,6 +245,63 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     let sanitizedNotes = typeof notes === 'string' ? notes.slice(0, 5000) : '';
     sanitizedNotes = sanitizedNotes.replace(/=== УТВЕРЖДЕННАЯ СМЕТА ВЫЕЗДНОЙ ОКЛЕЙКИ ===[\s\S]*?(?:={20,}|$)/gi, '').trim();
 
+    // Pre-validation for turnkey IS MPT emission
+    const { markirovkaMode, markirovkaAccountId, markirovkaGtin } = req.body;
+    const gtinPositions = rawPositions.filter((p: any) => p.gtin && String(p.gtin).trim().length >= 8);
+
+    if (markirovkaMode === 'EMISSION') {
+      if (!markirovkaAccountId) {
+        return res.status(400).json({ message: 'Пожалуйста, выберите подключенный аккаунт / станцию ИС МПТ' });
+      }
+
+      const targetGtins = (
+        gtinPositions.length > 0
+          ? gtinPositions.map((p: any) => String(p.gtin).trim().replace(/\D/g, ''))
+          : [String(markirovkaGtin || '').trim().replace(/\D/g, '')]
+      ).filter((g) => g.length >= 8);
+
+      if (targetGtins.length === 0) {
+        return res.status(400).json({ message: 'Для эмиссии через ИС МПТ укажите хотя бы один корректный GTIN товара' });
+      }
+
+      // Check if user has cards in local catalog
+      const userCardsCount = await prisma.markirovkaProductCard.count({
+        where: { userId: req.user.id },
+      });
+
+      if (userCardsCount > 0) {
+        const foundCards = await prisma.markirovkaProductCard.findMany({
+          where: {
+            userId: req.user.id,
+            OR: targetGtins.flatMap((g) => [
+              { gtin: g },
+              { gtin: g.padStart(14, '0') },
+              { gtin: g.replace(/^0+/, '') },
+            ]),
+          },
+          select: { gtin: true, name: true },
+        });
+
+        const foundSet = new Set(
+          foundCards.flatMap((c) => [
+            c.gtin,
+            c.gtin?.padStart(14, '0'),
+            c.gtin?.replace(/^0+/, ''),
+          ]).filter(Boolean)
+        );
+
+        const missing = targetGtins.filter(
+          (g) => !foundSet.has(g) && !foundSet.has(g.padStart(14, '0')) && !foundSet.has(g.replace(/^0+/, ''))
+        );
+
+        if (missing.length > 0) {
+          return res.status(400).json({
+            message: `Товар с GTIN ${missing.join(', ')} не найден в реестре вашей организации в ИС МПТ / НКТ. Заказ кодов невозможен, пока товар не появится в каталоге организации.`,
+          });
+        }
+      }
+    }
+
     // Atomic collision-resistant order creation with automatic retry
     let newOrder: any = null;
     let attempts = 0;
@@ -320,10 +377,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     }
 
     // Process turnkey automatic Markirovka emission if requested
-    const { markirovkaMode, markirovkaAccountId, markirovkaGtin } = req.body;
     let createdMarkirovkaOrder: any = null;
-
-    const gtinPositions = rawPositions.filter((p: any) => p.gtin && String(p.gtin).trim().length >= 8);
 
     if (markirovkaMode === 'EMISSION' && markirovkaAccountId && (gtinPositions.length > 0 || markirovkaGtin)) {
       try {
@@ -405,6 +459,35 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
               );
               newOrder.codesFileUrl = attachRes.relativeUrl;
               newOrder.codesFileName = `markirovka_emission_${newOrder.orderNumber}.csv`;
+            } else {
+              const reasonText = 'Эмиссия позиций отклонена сервером ИС МПТ (коды товаров не найдены у участника)';
+              await prisma.order.update({
+                where: { id: newOrder.id },
+                data: {
+                  status: OrderStatus.CANCELLED,
+                  notes: newOrder.notes
+                    ? `${newOrder.notes}\n\n[Авто-аннулирование] ${reasonText}`
+                    : `[Авто-аннулирование] ${reasonText}`,
+                },
+              });
+
+              if (newOrder.paymentStatus === 'PAID') {
+                await prisma.user.update({
+                  where: { id: req.user.id },
+                  data: { balance: { increment: newOrder.totalPrice } },
+                }).catch(() => {});
+                await prisma.order.update({
+                  where: { id: newOrder.id },
+                  data: { paymentStatus: 'REFUNDED' },
+                }).catch(() => {});
+              }
+
+              return res.status(422).json({
+                success: false,
+                message: `Заказ отклонен ИС МПТ: ${reasonText}. Заказ в Tanbox автоматически аннулирован.`,
+                orderId: newOrder.id,
+                orderNumber: newOrder.orderNumber,
+              });
             }
           } else if (markirovkaGtin) {
             // Single fallback emission
@@ -466,6 +549,45 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
               );
               newOrder.codesFileUrl = attachRes.relativeUrl;
               newOrder.codesFileName = `markirovka_emission_${newOrder.orderNumber}.csv`;
+            } else if (pollRes.status === 'REJECTED' || pollRes.status === 'FAILED') {
+              const reasonText = pollRes.rejectionReason || 'Отклонено ИС МПТ: код товара не найден у участника (ошибка 32)';
+              await prisma.markirovkaOrder.update({
+                where: { id: createdMarkirovkaOrder.id },
+                data: {
+                  status: 'FAILED',
+                  errorDetails: reasonText,
+                },
+              });
+
+              // Auto-cancel order in Tanbox
+              await prisma.order.update({
+                where: { id: newOrder.id },
+                data: {
+                  status: OrderStatus.CANCELLED,
+                  notes: newOrder.notes
+                    ? `${newOrder.notes}\n\n[Авто-аннулирование] ${reasonText}`
+                    : `[Авто-аннулирование] ${reasonText}`,
+                },
+              });
+
+              // Auto-refund balance if already deducted
+              if (newOrder.paymentStatus === 'PAID') {
+                await prisma.user.update({
+                  where: { id: req.user.id },
+                  data: { balance: { increment: newOrder.totalPrice } },
+                }).catch(() => {});
+                await prisma.order.update({
+                  where: { id: newOrder.id },
+                  data: { paymentStatus: 'REFUNDED' },
+                }).catch(() => {});
+              }
+
+              return res.status(422).json({
+                success: false,
+                message: `Заказ отклонен ИС МПТ: ${reasonText}. Заказ в Tanbox автоматически аннулирован.`,
+                orderId: newOrder.id,
+                orderNumber: newOrder.orderNumber,
+              });
             } else {
               await prisma.markirovkaOrder.update({
                 where: { id: createdMarkirovkaOrder.id },
@@ -476,12 +598,31 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
             }
           } catch (emissionErr: any) {
             console.error('[Markirovka Auto-Emission] Emission error:', emissionErr.message);
+            const errReason = emissionErr.message || 'Ошибка эмиссии кодов в ИС МПТ';
             await prisma.markirovkaOrder.update({
               where: { id: createdMarkirovkaOrder.id },
               data: {
                 status: 'FAILED',
-                errorDetails: emissionErr.message || 'Ошибка эмиссии кодов в ИС МПТ',
+                errorDetails: errReason,
               },
+            });
+
+            // Auto-cancel order in Tanbox
+            await prisma.order.update({
+              where: { id: newOrder.id },
+              data: {
+                status: OrderStatus.CANCELLED,
+                notes: newOrder.notes
+                  ? `${newOrder.notes}\n\n[Авто-аннулирование] ${errReason}`
+                  : `[Авто-аннулирование] ${errReason}`,
+              },
+            });
+
+            return res.status(422).json({
+              success: false,
+              message: `Заказ отклонен сервером ИС МПТ: ${errReason}. Заказ в Tanbox автоматически аннулирован.`,
+              orderId: newOrder.id,
+              orderNumber: newOrder.orderNumber,
             });
           }
         }
