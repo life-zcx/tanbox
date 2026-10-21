@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Phone, Mail, Clock, Send, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { ContactsSection } from '../components/landing/ContactsSection';
-import { COMPANY_CONTACTS, getLocalizedCompanyContacts } from '../data/companyContacts';
 import { setPageSeo } from '../utils/seo';
 import { trackGoogleConversion } from '../utils/analytics';
 import { useLanguage } from '../context/LanguageContext';
 
 export const ContactsPage: React.FC = () => {
   const { lang, getLocalizedPath } = useLanguage();
-  const localizedContacts = getLocalizedCompanyContacts(lang);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -303,134 +301,48 @@ export const ContactsPage: React.FC = () => {
         {/* Telegram & Email quick contact cards */}
         <ContactsSection showTitle={false} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Info Side */}
-          <div className="lg:col-span-5 bg-white rounded-3xl p-8 shadow-sm space-y-8">
-            <h3 className="text-xl font-bold text-[#111827]">{localizedContacts.officeTitle}</h3>
-
-            <div className="space-y-6 text-sm">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-[#EBF5FF] text-[#0082FB] rounded-full flex items-center justify-center shrink-0">
-                  <MapPin className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">
-                    {lang === 'kz' ? 'Жұмыс форматы және мекенжай' : lang === 'en' ? 'Location & Format' : 'Формат работы и локация'}
-                  </p>
-                  <p className="text-[#64748B] mt-1">{localizedContacts.addressFull}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-[#EBF5FF] text-[#0082FB] rounded-full flex items-center justify-center shrink-0">
-                  <Phone className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">
-                    {lang === 'kz' ? 'Телефон және мессенджерлер' : lang === 'en' ? 'Phone & Messengers' : 'Телефон и мессенджеры'}
-                  </p>
-                  <p className="mt-1">
-                    <a href={`tel:${COMPANY_CONTACTS.phones.hotlineRaw}`} className="text-[#111827] font-bold hover:text-[#0082FB] transition-colors block">
-                      {COMPANY_CONTACTS.phones.hotline}
-                    </a>
-                  </p>
-                  <div className="flex items-center gap-2 mt-1 text-xs">
-                    <span className="text-[#64748B]">{lang === 'kz' ? '24/7 қоңыраулар' : lang === 'en' ? '24/7 Calls' : 'Звонки 24/7'}</span>
-                    <span className="text-gray-300">•</span>
-                    <a
-                      href={COMPANY_CONTACTS.links.whatsapp}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-[#0082FB] hover:underline"
-                    >
-                      WhatsApp
-                    </a>
-                    <span className="text-gray-300">•</span>
-                    <a
-                      href={COMPANY_CONTACTS.links.telegramChannel}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-[#0082FB] hover:underline"
-                    >
-                      Telegram
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-[#EBF5FF] text-[#0082FB] rounded-full flex items-center justify-center shrink-0">
-                  <Mail className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">
-                    {lang === 'kz' ? 'Электрондық пошта' : lang === 'en' ? 'Email' : 'Электронная почта'}
-                  </p>
-                  <p className="text-[#64748B] mt-1">
-                    <a href={`mailto:${COMPANY_CONTACTS.emails.info}`} className="hover:text-[#0082FB] transition-colors">
-                      {COMPANY_CONTACTS.emails.displayCombined}
-                    </a>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-[#EBF5FF] text-[#0082FB] rounded-full flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="font-bold text-[#111827] text-xs uppercase tracking-wider">
-                    {lang === 'kz' ? 'Жұмыс кестесі' : lang === 'en' ? 'Working Hours' : 'График работы'}
-                  </p>
-                  <p className="text-[#111827] font-semibold mt-1">{localizedContacts.workingHoursMain}</p>
-                  <p className="text-[#64748B] text-xs mt-0.5">{localizedContacts.workingHoursAdditional}</p>
-                </div>
-              </div>
-            </div>
-
+        {/* Form Container */}
+        <div className="w-full bg-white rounded-3xl p-6 sm:p-10 lg:p-12 shadow-sm space-y-6 border border-gray-100">
+          <div>
+            <h3 className="text-xl sm:text-2xl font-bold text-[#111827]">
+              {lang === 'kz' ? 'Таңбалау бөліміне хабарласу' : lang === 'en' ? 'Contact Serialization Department' : 'Написать в отдел маркировки'}
+            </h3>
+            <p className="text-sm text-[#64748B] mt-1">
+              {lang === 'kz'
+                ? 'Тауар партиясын есептеу немесе коммерциялық ұсыныс алу үшін өтінім қалдырыңыз.'
+                : lang === 'en'
+                ? 'Request a commercial proposal or cost calculation for your product batch.'
+                : 'Оставьте запрос на КП или коммерческий расчет партии товара.'}
+            </p>
           </div>
 
-          {/* Form Side */}
-          <div className="lg:col-span-7 bg-white rounded-3xl p-8 shadow-sm space-y-6">
-            <div>
-              <h3 className="text-xl font-bold text-[#111827]">
-                {lang === 'kz' ? 'Таңбалау бөліміне хабарласу' : lang === 'en' ? 'Contact Serialization Department' : 'Написать в отдел маркировки'}
-              </h3>
-              <p className="text-sm text-[#64748B] mt-1">
-                {lang === 'kz'
-                  ? 'Тауар партиясын есептеу немесе коммерциялық ұсыныс алу үшін өтінім қалдырыңыз.'
-                  : lang === 'en'
-                  ? 'Request a commercial proposal or cost calculation for your product batch.'
-                  : 'Оставьте запрос на КП или коммерческий расчет партии товара.'}
-              </p>
+          {submitted && (
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-emerald-900">
+                  {lang === 'kz' ? 'Өтінім сәтті жіберілді' : lang === 'en' ? 'Request successfully submitted' : 'Заявка успешно отправлена'}
+                </p>
+                <p className="text-xs text-emerald-700 mt-0.5">
+                  {lang === 'kz'
+                    ? 'Рақмет! Біз сіздің өтінішіңізді алдық және жақын арада хабарласамыз.'
+                    : lang === 'en'
+                    ? 'Thank you! We have received your inquiry and will contact you shortly.'
+                    : 'Спасибо! Мы получили ваше обращение и свяжемся с вами в ближайшее время.'}
+                </p>
+              </div>
             </div>
+          )}
 
-            {submitted && (
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-emerald-900">
-                    {lang === 'kz' ? 'Өтінім сәтті жіберілді' : lang === 'en' ? 'Request successfully submitted' : 'Заявка успешно отправлена'}
-                  </p>
-                  <p className="text-xs text-emerald-700 mt-0.5">
-                    {lang === 'kz'
-                      ? 'Рақмет! Біз сіздің өтінішіңізді алдық және жақын арада хабарласамыз.'
-                      : lang === 'en'
-                      ? 'Thank you! We have received your inquiry and will contact you shortly.'
-                      : 'Спасибо! Мы получили ваше обращение и свяжемся с вами в ближайшее время.'}
-                  </p>
-                </div>
-              </div>
-            )}
+          {error && (
+            <div className="bg-red-50 text-red-700 p-3.5 rounded-xl text-xs font-semibold border border-red-200">
+              {error}
+            </div>
+          )}
 
-            {error && (
-              <div className="bg-red-50 text-red-700 p-3.5 rounded-xl text-xs font-semibold border border-red-200">
-                {error}
-              </div>
-            )}
-
-            <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {/* Grid: Company & Phone */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Company / Name */}
               <div>
                 <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1">
@@ -477,9 +389,10 @@ export const ContactsPage: React.FC = () => {
                   }`}
                 />
               </div>
+            </div>
 
-              {/* Grid: Email & BIN */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Grid: Email & BIN */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-extrabold text-[#111827] uppercase tracking-wider block mb-1 flex items-center justify-between">
                     <span>E-mail</span>
@@ -636,6 +549,5 @@ export const ContactsPage: React.FC = () => {
 
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };

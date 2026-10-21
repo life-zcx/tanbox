@@ -25,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
     { path: '/calculator', label: t('nav.calc') },
     { path: '/categories', label: t('nav.categories') },
     { path: '/services', label: t('nav.services') },
+    { path: '/articles', label: t('nav.articles') },
     { path: '/contacts', label: t('nav.contacts') },
   ];
 

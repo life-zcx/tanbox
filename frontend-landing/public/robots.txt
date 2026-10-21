@@ -10,6 +10,10 @@ Allow: /calculator
 Allow: /services
 Allow: /categories
 Allow: /categories/*
+Allow: /articles
+Allow: /articles/*
+Allow: /blog
+Allow: /blog/*
 Allow: /contacts
 Allow: /terms
 Allow: /privacy

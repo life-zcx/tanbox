@@ -414,4 +414,113 @@
     <priority>0.50</priority>
   </url>
 
+  <!-- ==================== 17. БАЗА ЗНАНИЙ И СТАТЬИ ==================== -->
+  <url>
+    <loc>https://tanbox.kz/articles</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles" />
+    <xhtml:link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz/articles" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://tanbox.kz/en/articles" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.92</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/shtrafy-za-otsutstvie-markirovki-kazakhstan-2026</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/shtrafy-za-otsutstvie-markirovki-kazakhstan-2026" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/shtrafy-za-otsutstvie-markirovki-kazakhstan-2026" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/markirovka-motornyh-masel-kazakhstan-2026</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/markirovka-motornyh-masel-kazakhstan-2026" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/markirovka-motornyh-masel-kazakhstan-2026" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/markirovka-obuvi-kazakhstan-pod-klyuch</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/markirovka-obuvi-kazakhstan-pod-klyuch" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/markirovka-obuvi-kazakhstan-pod-klyuch" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/markirovka-lekarstv-i-bad-kazakhstan</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/markirovka-lekarstv-i-bad-kazakhstan" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/markirovka-lekarstv-i-bad-kazakhstan" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/chto-takoe-is-tanba-polnoe-rukovodstvo</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/chto-takoe-is-tanba-polnoe-rukovodstvo" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/chto-takoe-is-tanba-polnoe-rukovodstvo" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/markirovka-dlya-kaspi-i-wildberries-kazakhstan</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/markirovka-dlya-kaspi-i-wildberries-kazakhstan" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/markirovka-dlya-kaspi-i-wildberries-kazakhstan" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/markirovka-odezhdy-tekstilya-kazakhstan</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/markirovka-odezhdy-tekstilya-kazakhstan" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/markirovka-odezhdy-tekstilya-kazakhstan" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/markirovka-vody-i-napitkov-kazakhstan</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/markirovka-vody-i-napitkov-kazakhstan" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/markirovka-vody-i-napitkov-kazakhstan" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/markirovka-piva-kazakhstan-2026-2027</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/markirovka-piva-kazakhstan-2026-2027" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/markirovka-piva-kazakhstan-2026-2027" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/kak-rabotat-s-sscc-agregatsiey-kazakhstan</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/kak-rabotat-s-sscc-agregatsiey-kazakhstan" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/kak-rabotat-s-sscc-agregatsiey-kazakhstan" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/instruktsiya-po-registratsii-v-is-tanba-i-nkt</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/instruktsiya-po-registratsii-v-is-tanba-i-nkt" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/instruktsiya-po-registratsii-v-is-tanba-i-nkt" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+  <url>
+    <loc>https://tanbox.kz/articles/peremarkirovka-i-vozvrat-tovara-v-kazakhstane</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tanbox.kz/articles/peremarkirovka-i-vozvrat-tovara-v-kazakhstane" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tanbox.kz/articles/peremarkirovka-i-vozvrat-tovara-v-kazakhstane" />
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.90</priority>
+  </url>
+
 </urlset>
+

@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  CheckCircle2, 
-  Clock, 
-  ArrowRight, 
-  Filter, 
   Cigarette, 
   Footprints, 
   Pill, 
@@ -15,10 +11,9 @@ import {
   HeartPulse, 
   Shirt, 
   Gem, 
-  Cpu, 
-  PackageCheck,
-  Calendar,
-  Layers
+  Trees,
+  Flame,
+  Cpu
 } from 'lucide-react';
 import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
 import { setPageSeo } from '../utils/seo';
@@ -386,46 +381,46 @@ export const CategoriesPage: React.FC = () => {
       tnved: '4203, 4304, 6101-6115, 6201-6217, 6302',
       icon: Shirt,
       description: lang === 'kz'
-        ? 'Бүкіл жеңіл өнеркәсіпті кезең-кезеңімен қамту: былғары және үлбір киімдер, іш киім, сыртқы киім, костюмдер, шалбарлар, блузкалар. Негізгі ережелер 2026 жылғы 14 қарашадан бастап күшіне енеді.'
+        ? 'ҚР Сауда министрінің № 199-НҚ бұйрығымен енгізіледі. КИЗ тарифі Минпромстрой № 381 бұйрығымен реттеледі. Ресейге экспорт үшін АО «Қазахтелеком» арқылы «Честный знак» КИЗ алу жүйесі жұмыс істейді. Кедендік қоймаларда (ИМ-70) таңбалау жүргізіледі (УСҚ-да жүргізілмейді).'
         : lang === 'en'
-        ? 'Phased coverage across all apparel: leather and fur goods, underwear, outerwear, suits, pants, blouses. Base rules take effect November 14, 2026.'
-        : 'Поэтапный охват всей легкой промышленности: одежда из кожи и меха, белье, верхняя одежда, костюмы, брюки, блузки. Базовые правила вступают в силу с 14 ноября 2026 г.',
+        ? 'Enacted under Order MTI № 199-NҚ. Maximum code cost is regulated by Order Minpromstroy № 381. Export to Russia via Chestny Znak marks through JSC Kazakhtelecom. Foreign goods marked in Customs Warehouse (IM-70) or SEZ (not permitted on basic temporary storage TSW).'
+        : 'Вводится приказом МТИ РК № 199-НҚ. Тариф КИЗ регулируется Приказом Минпромстроя № 381. Для экспорта в РФ действует сервис КИЗ Честного знака через АО «Казахтелеком». Иностранные товары маркируются в режимах «Таможенный склад» или СЭЗ (на обычном СВХ маркировка не проводится).',
       stages: lang === 'kz'
         ? [
-            { date: '2026 ж. 1 желтоқсаннан', title: 'Табиғи/композициялық былғарыдан тігілген киім, жасанды үлбір, шаңғы костюмдері, төсек, үстел және асүй жаймалары (ережелер 14.11.2026 бастап)' },
-            { date: '2027 ж. 1 наурыздан', title: 'Сыртқы киім (пальто, күртеше, плащ, желбегей), блузкалар, пуловерлер, кардигандар, шарфтар мен галстуктер' },
-            { date: '2027 ж. 1 қазаннан', title: 'Ерлер мен әйелдер костюмдері, пиджактар, көйлектер, белдемшелер, шалбарлар, комбинезондар, трикотаж көйлектер және спорттық костюмдер' },
-            { date: '2028 ж. 1 қаңтарға дейін', title: 'Міндетті таңбалау басталғанға дейін әкелінген сатылмаған тауар қалдықтарын таңбалаудың соңғы мерзімі' },
+            { date: '2026 ж. 1 желтоқсаннан', title: 'Өндірілген және импортталған жеңіл өнеркәсіп тауарларын міндетті таңбалау' },
+            { date: '2027 ж. 1 қазанға дейін', title: 'Қабылдап алу-тапсыру актілері бойынша тауарлардың толық қадағалануын қамтамасыз ету' },
+            { date: '2028 ж. 1 қаңтарға дейін', title: 'Міндетті таңбалауға дейін әкелінген таңбаланбаған қалдықтарды сатуға рұқсат етіледі' },
           ]
         : lang === 'en'
         ? [
-            { date: 'From Dec 1, 2026', title: 'Leather garments, faux fur, ski suits, bed/table/kitchen linen' },
-            { date: 'From Mar 1, 2027', title: 'Outerwear (coats, jackets, raincoats), blouses, pullovers, cardigans, scarves' },
-            { date: 'From Oct 1, 2027', title: 'Suits, blazers, dresses, skirts, trousers, jumpsuits, tracksuits' },
-            { date: 'Until Jan 1, 2028', title: 'Deadline for labeling unsold stock imported prior to enforcement' },
+            { date: 'From Dec 1, 2026', title: 'Mandatory serialization of manufactured and imported light industry goods' },
+            { date: 'Until Oct 1, 2027', title: 'Full batch and item traceability via transfer and acceptance acts' },
+            { date: 'Until Jan 1, 2028', title: 'Allowed sale of non-serialized inventory imported or made before Dec 1, 2026' },
           ]
         : [
-            { date: 'С 1 декабря 2026 г.', title: 'Одежда из натуральной/композиционной кожи, искусственный мех, лыжные костюмы, постельное, столовое и кухонное белье (правила с 14.11.2026)' },
-            { date: 'С 1 марта 2027 г.', title: 'Верхняя одежда (пальто, куртки, плащи, ветровки), блузки, пуловеры, кардиганы, шарфы и галстуки' },
-            { date: 'С 1 октября 2027 г.', title: 'Мужские и женские костюмы, пиджаки, платья, юбки, брюки, комбинезоны, трикотажные рубашки и спортивные костюмы' },
-            { date: 'До 1 января 2028 г.', title: 'Крайний срок маркировки нераспроданных остатков товаров, ввезенных до старта обязательной маркировки' },
+            { date: 'С 1 декабря 2026 г.', title: 'Введение поэтапной обязательной маркировки произведенных и импортированных ТЛП' },
+            { date: 'До 1 октября 2027 г.', title: 'Прослеживаемость маркированных ТЛП (передача по актам приема-передачи)' },
+            { date: 'До 1 января 2028 г.', title: 'Разрешена продажа немаркированных остатков, ввезенных до 1 декабря 2026 г.' },
           ],
       details: lang === 'kz'
         ? [
-            'Ярлықтарды, тігілген затбелгілерді және қаптаманы басу және стикерлеу',
-            '2028 жылғы 1 қаңтарға дейін сатылмаған қоймалық қалдықтарды таңбалау',
-            'Импорттаушылардың қоймаларында жапсыру үшін TANBOX мобильді көшпелі бригадалары',
+            'Тауар бірлігінің Data Matrix кодын басу және ярлықтарға/қаптамаға жағу',
+            'Ресейлік маркетплейстерге экспорттау үшін «Честный знак» КИЗ алу',
+            'Кедендік қоймаларда (ИМ-70 режимі) және СЭЗ аумағында импортты рәсімдеу',
+            '2028 жылғы 1 қаңтарға дейін ескі қоймалық қалдықтарды реттеу',
           ]
         : lang === 'en'
         ? [
-            'Printing and stickering of hang tags, sewn-in textile labels, and polybags',
-            'Turnkey labeling of unsold warehouse inventory until January 1, 2028',
-            'Dispatched mobile TANBOX crews for on-site labeling at importer warehouses',
+            'Printing and application of Data Matrix codes to hang tags, ribbons, and packaging',
+            'Chestny Znak export marks for selling on Russian marketplaces (Wildberries, Ozon)',
+            'Bonded customs warehouse (IM-70) and SEZ marking prior to domestic release',
+            'Grace period for selling unmarked inventory until January 1, 2028',
           ]
         : [
-            'Печать и стикерование ярлыков, вшивных этикеток и упаковки',
-            'Маркировка нераспроданных складских остатков до 1 января 2028 г.',
-            'Мобильные выездные бригады TANBOX для оклейки на складах импортеров',
+            'Печать и нанесение Data Matrix на ярлыки, вшивные ленты и упаковку',
+            'Получение КИЗ РФ (Честный знак) через АО «Казахтелеком» для экспорта на Wildberries, OZON',
+            'Маркировка импорта в процедурах «Таможенный склад» (ИМ-70) и СЭЗ (на СВХ не проводится)',
+            'Продажа немаркированных остатков разрешена до 1 января 2028 года',
           ],
       link: '/calculator?category=TEXTILE',
     },
@@ -435,28 +430,150 @@ export const CategoriesPage: React.FC = () => {
       id: 'jewelry',
       title: lang === 'kz' ? 'Зергерлік бұйымдар және бағалы металдар' : lang === 'en' ? 'Jewelry and Precious Metals' : 'Ювелирные изделия и драгметаллы',
       status: 'UPCOMING',
-      statusText: lang === 'kz' ? '2026 жылы енгізіледі' : lang === 'en' ? 'Upcoming in 2026' : 'Внедряется в 2026 году',
+      statusText: lang === 'kz' ? '2026 жылғы 1 желтоқсаннан енгізіледі' : lang === 'en' ? 'Upcoming from Dec 1, 2026' : 'Внедряется с 1 декабря 2026 г.',
       date: lang === 'kz' ? '2026 жылғы 1 желтоқсаннан бастап' : lang === 'en' ? 'From December 1, 2026' : 'С 1 декабря 2026 года',
-      tnved: '7113, 7114',
+      tnved: '7113 11 000 0, 7113 19 000 0, 7114 11 000 0, 7114 19 000 0, 9111 10 000 0, 9113 10 100 0',
       icon: Gem,
       description: lang === 'kz'
-        ? 'Бағалы металдардан (алтын, күміс, платина) және асыл тастардан жасалған зергерлік бұйымдар мен олардың бөліктері.'
+        ? 'ҚР Сауда және интеграция министрінің № 199-НҚ бұйрығына сәйкес бағалы металдардан жасалған зергерлік бұйымдарды, сағат корпустары мен білезіктерін міндетті таңбалау. 2022-2023 жылдардағы сынақ жобасы аяқталды.'
         : lang === 'en'
-        ? 'Jewelry pieces and components made from precious metals (gold, silver, platinum) and gemstones.'
-        : 'Ювелирные изделия и их части из драгоценных металлов (золото, серебро, платина) и драгоценных камней.',
-      details: lang === 'kz'
+        ? 'Mandatory serialization of precious metal jewelry, watch cases, and watch straps under MTI Order № 199-NҚ. The pilot testing (2022-2023) has officially concluded.'
+        : 'Обязательная маркировка ювелирных изделий, изделий мастеров, корпусов и браслетов для часов из драгметаллов (Приказ МТИ РК № 199-НҚ). Пилотный проект 2022-2023 гг. успешно завершен.',
+      stages: lang === 'kz'
         ? [
-            'Зергерлік биркалар мен пломбаларды DataMatrix кодтарымен микро-таңбалау',
-            'Өндірістен витринаға дейін әрбір бұйымды даналап есепке алу',
+            { date: '2022 ж. 1 наурыз', title: 'Зергерлік бұйымдарды таңбалау бойынша сынақ жобасының басталуы' },
+            { date: '2023 ж. 15 маусым', title: 'Сынақ жобасының сәтті аяқталуы' },
+            { date: '2026 ж. 1 желтоқсан', title: 'ҚР-да міндетті таңбалауды енгізу (№ 199-НҚ бұйрығы)' },
           ]
         : lang === 'en'
         ? [
-            'Micro-marking of jewelry hang tags and security seals with DataMatrix codes',
-            'Item-level serialization from factory production to retail boutique display',
+            { date: 'Mar 1, 2022', title: 'Launch of jewelry serialization pilot in Kazakhstan' },
+            { date: 'Jun 15, 2023', title: 'Official completion of pilot testing' },
+            { date: 'Dec 1, 2026', title: 'Enactment of mandatory serialization (Order № 199-NҚ)' },
           ]
         : [
-            'Микро-маркировка ювелирных бирков и пломб кодами DataMatrix',
-            'Поштучный учет каждого изделия от производства до витрины',
+            { date: '1 марта 2022 г.', title: 'Старт пилотного проекта по маркировке ювелирных изделий' },
+            { date: '15 июня 2023 г.', title: 'Завершение пилотного проекта' },
+            { date: '1 декабря 2026 г.', title: 'Введение обязательной маркировки (Приказ МТИ РК № 199-НҚ)' },
+          ],
+      details: lang === 'kz'
+        ? [
+            'Күміс, алтын, платина бұйымдарына және сағат бөлшектеріне DataMatrix микро-кодтарын жағу',
+            'Зергерлік биркалар мен қорғаныс пломбалары арқылы өнімді бұзбай даналап есепке алу',
+            'Ұлттық прослеживаемость жүйесіне бұйымдардың сынамалары мен салмағын тіркеу',
+          ]
+        : lang === 'en'
+        ? [
+            'Micro DataMatrix codes applied to silver, gold, platinum jewelry, and watch cases',
+            'Tamper-evident seals and hang tags protecting the visual aesthetics of the items',
+            'Itemized registration of fineness, gemstones, and net weight in the national registry',
+          ]
+        : [
+            'Микро-маркировка Data Matrix на бирках и защитных ювелирных пломбах',
+            'Охват изделий из серебра, золота, платины, а также корпусов (9111 10) и ремешков (9113 10)',
+            'Поштучный учет от завода/импорта до кассового чека в ювелирном бутике',
+          ],
+      link: '/calculator?category=OTHER',
+    },
+
+    // --- 11. TIMBER ---
+    {
+      id: 'timber',
+      title: lang === 'kz' ? 'Сүрек және домалақ ағаш' : lang === 'en' ? 'Timber & Roundwood' : 'Древесина и круглый лес',
+      status: 'UPCOMING',
+      statusText: lang === 'kz' ? '2026 жылғы 1 желтоқсаннан енгізіледі' : lang === 'en' ? 'Upcoming from Dec 1, 2026' : 'Внедряется с 1 декабря 2026 г.',
+      date: lang === 'kz' ? '2026 жылғы 1 желтоқсаннан бастап' : lang === 'en' ? 'From December 1, 2026' : 'С 1 декабря 2026 года',
+      tnved: '4401, 4403',
+      icon: Trees,
+      description: lang === 'kz'
+        ? '«Семей Орманы» резерватындағы пилоттық жоба аяқталды. Орман кесу билеті бар барлық тұлғаларға арналған домалақ ағашты (іскерлік және отындық) міндетті таңбалау. Тақтайлар мен араланған ағаш таңбаланбайды.'
+        : lang === 'en'
+        ? 'Pilot in "Semey Ormany" reserve concluded. Mandatory roundwood (industrial & fuelwood) serialization for all logging permit holders. Processed boards and sawn timber are exempt.'
+        : 'Обязательная маркировка круглого леса (делового и дровяного) для всех обладателей лесорубочного билета. Пилот в резервате «Семей Орманы» завершен. Доски и пиломатериалы НЕ маркируются.',
+      stages: lang === 'kz'
+        ? [
+            { date: '2025 ж. 1 тамыз', title: '«Семей Орманы» резерватында сынақ жобасының басталуы' },
+            { date: '2025 ж. 20 қазан', title: 'Сынақ жобасының сәтті аяқталуы' },
+            { date: '2026 ж. 1 желтоқсан', title: 'Домалақ ағашты міндетті таңбалауды енгізу' },
+          ]
+        : lang === 'en'
+        ? [
+            { date: 'Aug 1, 2025', title: 'Pilot launch in "Semey Ormany" state forest reserve' },
+            { date: 'Oct 20, 2025', title: 'Successful completion of pilot testing' },
+            { date: 'Dec 1, 2026', title: 'Enactment of mandatory roundwood serialization' },
+          ]
+        : [
+            { date: '1 августа 2025 г.', title: 'Начало пилотного проекта в ГЛПР «Семей Орманы»' },
+            { date: '20 октября 2025 г.', title: 'Завершение пилотного проекта' },
+            { date: '1 декабря 2026 г.', title: 'Введение обязательной маркировки круглого леса' },
+          ],
+      details: lang === 'kz'
+        ? [
+            'Орман кесу билетінің нөмірі, орманшылық, тоқсан, бөлініс және көлем деректерімен таңбалау',
+            'Бөренеге (іскерлік) немесе отын бумасына бірегей QR/штрих-кодты пластикалық пломба-бирка бекіту',
+            'Тақтайлар, брустар және араланған өнімдер таңбаланбайды (тек домалақ ағаш)',
+          ]
+        : lang === 'en'
+        ? [
+            'Encoding logging permit #, forest district, compartment, lot, species, and volume',
+            'Affixing plastic seal tags with QR/barcode to logs or firewood bundles',
+            'Strict exemption for processed lumber and boards (only roundwood is tracked)',
+          ]
+        : [
+            'Учет номера лесорубочного билета, лесничества, квартала, выдела, породы и объема',
+            'Крепление пластиковой пломбы-бирки со штрихкодом или QR на бревно или пачку дров',
+            'Маркируется только круглый лес; доски и пиломатериалы маркировке НЕ подлежат',
+          ],
+      link: '/calculator?category=OTHER',
+    },
+
+    // --- 12. LPG ---
+    {
+      id: 'lpg',
+      title: lang === 'kz' ? 'Тұрмыстық баллондардағы сұйытылған газ (СМГ)' : lang === 'en' ? 'LPG in Domestic Cylinders' : 'Сжиженный нефтяной газ в бытовых баллонах',
+      status: 'UPCOMING',
+      statusText: lang === 'kz' ? '2027 жылы енгізіледі' : lang === 'en' ? 'Upcoming in 2027' : 'Внедряется в 2027 году',
+      date: lang === 'kz' ? '2027 жыл' : lang === 'en' ? '2027' : '2027 год',
+      tnved: '2711 12 9400, 2711 12 9700, 2711 13 9700',
+      icon: Flame,
+      description: lang === 'kz'
+        ? 'ҚР Энергетика министрлігінің сынақ жобасы (2025 ж.) аяқталды. Тұрмыстық баллондар мен газ көлемін цифрлық есепке алу, жарамсыз ыдысты айналымнан шығару және ГНС-те таңбалау.'
+        : lang === 'en'
+        ? 'Ministry of Energy pilot completed in 2025. Mandatory digital tracking of domestic cylinders, gas volume control, and safe filling at gas filling stations (GNS).'
+        : 'Пилот Минэнерго РК завершен 31 декабря 2025 г. Цифровой учет бытовых баллонов и объемов газа на ГНС и ГНП, пресечение нелегальных заправок и изъятие аварийной тары.',
+      stages: lang === 'kz'
+        ? [
+            { date: '2025 ж. 1 шілде', title: 'ҚР Энергетика министрлігінің сынақ жобасын іске қосу' },
+            { date: '2025 ж. 31 желтоқсан', title: 'Газ толтыру станцияларында сынақ жұмыстарын аяқтау' },
+            { date: '2027 жыл', title: 'Қазақстан бойынша міндетті таңбалауды енгізу' },
+          ]
+        : lang === 'en'
+        ? [
+            { date: 'Jul 1, 2025', title: 'Launch of Ministry of Energy LPG pilot' },
+            { date: 'Dec 31, 2025', title: 'Completion of pilot at gas filling stations' },
+            { date: '2027', title: 'Mandatory nationwide track & trace enforcement' },
+          ]
+        : [
+            { date: '1 июля 2025 г.', title: 'Запуск пилотного проекта Минэнерго РК' },
+            { date: '31 декабря 2025 г.', title: 'Завершение пилотного проекта' },
+            { date: '2027 год', title: 'Введение обязательной маркировки газа в бытовых баллонах' },
+          ],
+      details: lang === 'kz'
+        ? [
+            'Пропан, бутан және олардың қоспаларын қамтитын баллондарды цифрлық сәйкестендіру',
+            'ГНС және ГНП-де толтыру алдында баллонның қауіпсіздік мерзімін тексеру',
+            'Мобильді қосымша арқылы баллонды және газдың заңдылығын растау',
+          ]
+        : lang === 'en'
+        ? [
+            'Digital tracking of propane, butane, and propane-butane mixture cylinders',
+            'Pre-filling inspection of cylinder safety certificates at gas filling stations (GNS)',
+            'Mobile app verification of cylinder safety and genuine authorized refill',
+          ]
+        : [
+            'Цифровой учет баллонов с пропаном, бутаном и смесью (ТН ВЭД 2711)',
+            'Нанесение идентификационных меток на газонаполнительных станциях (ГНС)',
+            'Отбраковка аварийных баллонов и проверка потребителем через мобильное приложение',
           ],
       link: '/calculator?category=OTHER',
     },
@@ -536,83 +653,34 @@ export const CategoriesPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Categories List */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filteredCategories.map((item) => {
             const isActive = item.status === 'ACTIVE';
+            const Icon = item.icon;
 
             return (
               <div
                 key={item.id}
                 id={item.id}
                 onClick={() => navigate(getLocalizedPath(`/categories/${item.id}`))}
-                className="bg-white rounded-2xl p-6 sm:p-7 border border-gray-200/90 hover:border-[#0082FB] hover:shadow-lg transition-all duration-200 flex flex-col justify-between group space-y-5 cursor-pointer"
+                className="bg-white rounded-2xl px-5 py-4 border border-gray-200/80 hover:border-[#0082FB]/40 hover:shadow-sm transition-all duration-150 flex items-center justify-between gap-4 cursor-pointer group"
               >
-                <div className="space-y-4">
-                  {/* Top Badge & TNVED */}
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <span
-                      className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${
-                        isActive
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
-                          : 'bg-blue-50 text-[#0082FB] border-blue-200/80'
-                      }`}
-                    >
-                      {isActive 
-                        ? (lang === 'kz' ? '✓ Міндетті таңбалау' : lang === 'en' ? '✓ Mandatory' : '✓ Обязательная маркировка')
-                        : item.statusText}
-                    </span>
-
-                    <span className="text-[11px] font-mono font-bold text-[#475569] bg-gray-50 border border-gray-200/80 px-2.5 py-1 rounded-lg">
-                      {lang === 'kz' ? 'ТН ВЭД' : lang === 'en' ? 'HS Code' : 'ТН ВЭД'}: {item.tnved}
-                    </span>
-                  </div>
-
-                  {/* Title & Date */}
-                  <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-[#111827] group-hover:text-[#0082FB] transition-colors tracking-tight leading-snug">
-                      {item.title}
-                    </h3>
-                    <p className="text-xs text-[#64748B] mt-1.5 flex items-center gap-1.5 font-medium">
-                      <Clock className="w-3.5 h-3.5 text-gray-400" />
-                      {lang === 'kz' ? 'Енгізу мерзімі:' : lang === 'en' ? 'Effective Date:' : 'Срок введения:'}{' '}
-                      <strong className="text-[#111827]">{item.date}</strong>
-                    </p>
-                  </div>
-
-                  {/* Description */}
-                  <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
-                    {item.description}
-                  </p>
-
-                  {/* Key Features List - Strict & Clean without nested gray boxes */}
-                  <ul className="space-y-2 pt-3 border-t border-gray-100">
-                    {item.details.map((detail, idx) => (
-                      <li key={idx} className="text-xs text-[#334155] flex items-start gap-2 font-medium">
-                        <CheckCircle2 className="w-4 h-4 text-[#0082FB] shrink-0 mt-0.5" />
-                        <span>{detail}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Bottom Action Bar */}
-                <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(getLocalizedPath(item.link));
-                    }}
-                    className="inline-flex items-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm cursor-pointer"
+                <div className="flex flex-col gap-2 min-w-0">
+                  <span className="text-[15px] font-semibold text-[#111827] group-hover:text-[#0082FB] transition-colors leading-snug truncate">
+                    {item.title}
+                  </span>
+                  <span
+                    className={`inline-flex w-fit text-[11px] font-semibold px-2.5 py-0.5 rounded-md ${
+                      isActive
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-blue-50 text-[#0082FB]'
+                    }`}
                   >
-                    {lang === 'kz' ? 'Партияны есептеу' : lang === 'en' ? 'Calculate Batch' : 'Рассчитать партию'} <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-
-                  <span className="text-xs font-bold text-[#64748B] group-hover:text-[#0082FB] flex items-center gap-1 transition-colors">
-                    {lang === 'kz' ? 'Ережелер туралы толығырақ' : lang === 'en' ? 'Read Regulations' : 'Регламент ТР ТС'} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    {lang === 'kz' ? 'Толығырақ' : lang === 'en' ? 'Details' : 'Подробнее'}
                   </span>
                 </div>
+                <Icon className="w-8 h-8 text-[#0082FB] shrink-0 opacity-80 group-hover:opacity-100 transition-opacity" />
               </div>
             );
           })}

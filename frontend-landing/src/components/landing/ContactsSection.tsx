@@ -48,23 +48,15 @@ export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = tr
 
             {/* Content */}
             <div className="relative z-10 max-w-[62%] space-y-2">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg sm:text-xl font-bold text-[#111827]">
-                  WhatsApp
-                </h3>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Онлайн
-                </span>
-              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-[#111827]">
+                WhatsApp
+              </h3>
               <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed font-normal">
                 {lang === 'kz' 
                   ? 'Таңбалау бойынша жедел кеңес алу және өтінімді 5 минутта жіберу.' 
                   : lang === 'en' 
                   ? 'Instant consultation on serialization and fast inquiry in 5 minutes.' 
                   : 'Оперативные консультации по маркировке и оформление заявки за 5 минут.'}
-                <br />
-                <span className="font-semibold text-[#111827]">{COMPANY_CONTACTS.phones.hotline}</span>
               </p>
             </div>
 

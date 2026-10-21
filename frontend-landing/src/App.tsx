@@ -12,6 +12,8 @@ import { ServicesPage } from './pages/ServicesPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { CategoryDetailPage } from './pages/CategoryDetailPage';
 import { ContactsPage } from './pages/ContactsPage';
+import { ArticlesPage } from './pages/ArticlesPage';
+import { ArticleDetailPage } from './pages/ArticleDetailPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { TermsPage } from './pages/TermsPage';
 import { CookiePolicyPage } from './pages/CookiePolicyPage';
@@ -113,6 +115,10 @@ const AppContent: React.FC = () => {
       />
       <Route path={`${prefix}/services`} element={<ServicesPage />} />
       <Route path={`${prefix}/tariffs`} element={<ServicesPage />} />
+      <Route path={`${prefix}/articles`} element={<ArticlesPage />} />
+      <Route path={`${prefix}/articles/:articleId`} element={<ArticleDetailPage />} />
+      <Route path={`${prefix}/blog`} element={<ArticlesPage />} />
+      <Route path={`${prefix}/blog/:articleId`} element={<ArticleDetailPage />} />
       <Route path={`${prefix}/contacts`} element={<ContactsPage />} />
       <Route path={`${prefix}/privacy`} element={<PrivacyPolicyPage />} />
       <Route path={`${prefix}/terms`} element={<TermsPage />} />

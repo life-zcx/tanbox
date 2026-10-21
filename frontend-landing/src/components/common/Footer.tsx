@@ -55,6 +55,11 @@ export const Footer: React.FC = () => {
               </Link>
             </li>
             <li>
+              <Link to={getLocalizedPath('/articles')} className="hover:text-white transition-colors">
+                {lang === 'kz' ? 'Білім базасы және мақалалар' : lang === 'en' ? 'Knowledge Base & Guides' : 'База знаний и статьи'}
+              </Link>
+            </li>
+            <li>
               <Link to={getLocalizedPath('/contacts')} className="hover:text-white transition-colors">
                 {lang === 'kz' ? 'Байланыс және деректемелер' : lang === 'en' ? 'Contacts & Details' : 'Контакты и Реквизиты'}
               </Link>
