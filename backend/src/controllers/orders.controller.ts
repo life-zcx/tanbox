@@ -2041,6 +2041,15 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
 
     const forceRegenerate = req.query.force === 'true' || req.query.refresh === 'true';
 
+    // Guard: Prevent server memory exhaustion on massive orders when attempting to generate entire batch in one request
+    if (!isSample && !isRoll && existing.itemsCount > 10000 && (!fs.existsSync(pdfPath) || forceRegenerate)) {
+      return res.status(400).json({
+        message: `Заказ содержит ${existing.itemsCount.toLocaleString('ru-RU')} кодов маркировки. Генерация единым PDF-файлом для такого объема ограничена в целях стабильности печати. Пожалуйста, скачивайте файл рулонами (по 1 000–5 000 шт.) через кнопки рулонов в личном кабинете или параметр ?roll=...`,
+        totalItems: existing.itemsCount,
+        suggestedBatchSize: 1000,
+      });
+    }
+
     // Return full batch PDF if already generated on disk
     if (!isSample && !isRoll && !forceRegenerate && fs.existsSync(pdfPath)) {
       res.setHeader('Content-Type', 'application/pdf');

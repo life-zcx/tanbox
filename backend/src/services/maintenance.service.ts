@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { prisma } from '../config/db';
 import { logger } from '../utils/logger';
 
@@ -61,3 +63,33 @@ export const setMaintenanceMode = async (active?: boolean, message?: string, upd
 
   return result;
 };
+
+/**
+ * Periodically purge unlinked/abandoned temporary upload files older than 24 hours.
+ */
+export const cleanupTempUploads = () => {
+  try {
+    const tempDir = path.resolve(process.cwd(), 'uploads/temp');
+    if (!fs.existsSync(tempDir)) return;
+    const now = Date.now();
+    const maxAgeMs = 24 * 60 * 60 * 1000; // 24 hours
+    const files = fs.readdirSync(tempDir);
+    let deleted = 0;
+    for (const f of files) {
+      const fullPath = path.join(tempDir, f);
+      try {
+        const stat = fs.statSync(fullPath);
+        if (now - stat.mtimeMs > maxAgeMs) {
+          fs.unlinkSync(fullPath);
+          deleted++;
+        }
+      } catch {}
+    }
+    if (deleted > 0) {
+      logger.info(`[Cleanup] Cleaned up ${deleted} stale temporary files in uploads/temp`);
+    }
+  } catch (err: any) {
+    logger.warn(`[Cleanup] Error during temp files cleanup: ${err.message}`);
+  }
+};
+

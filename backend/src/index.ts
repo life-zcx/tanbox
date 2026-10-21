@@ -29,7 +29,7 @@ import { logger } from './utils/logger';
 import { generalApiLimiter } from './middleware/rateLimiter';
 import { telegram } from './services/telegram.service';
 import { isMaintenanceActive, getMaintenanceMessage } from './controllers/system.controller';
-import { initMaintenanceSettings } from './services/maintenance.service';
+import { initMaintenanceSettings, cleanupTempUploads } from './services/maintenance.service';
 import { initNktSettings } from './services/nktSettings.service';
 import { clientTelegramBot } from './services/clientTelegram.service';
 
@@ -85,7 +85,7 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Public static serving for uploaded product images
+// Public static serving for uploaded product images only (public product catalog)
 app.use('/api/uploads/product-cards', express.static(path.resolve(process.cwd(), 'uploads/product-cards')));
 
 // Apply general API rate limiting
@@ -206,10 +206,12 @@ process.on('unhandledRejection', (reason: any) => {
   }).catch(() => {});
 });
 
-// Preload persistent system settings from DB into memory cache
+// Preload persistent system settings from DB into memory cache and purge stale temp uploads
 Promise.all([initMaintenanceSettings(), initNktSettings()]).catch((err) => {
   logger.error('Failed to preload system settings:', err);
 });
+cleanupTempUploads();
+setInterval(cleanupTempUploads, 6 * 60 * 60 * 1000);
 
 const server = app.listen(PORT, () => {
   logger.info(`🚀 TANBOX Backend REST API running on port ${PORT}`);

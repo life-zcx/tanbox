@@ -709,7 +709,18 @@ class TelegramService {
       .filter(Boolean)
       .join('\n');
 
-    await this.sendRaw(targetChatId, msg);
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: '🐞 Открыть баг-репорты в админке',
+            url: `https://admin.tanbox.kz/bug-reports`,
+          },
+        ],
+      ],
+    };
+
+    await this.sendRaw(targetChatId, msg, { replyMarkup: keyboard });
   }
 
   /**

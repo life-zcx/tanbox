@@ -64,7 +64,17 @@ export const createLead = async (req: Request, res: Response) => {
 
 export const getLeads = async (req: Request, res: Response) => {
   try {
+    const { type } = req.query;
+    let where: any = undefined;
+
+    if (type === 'BUGS') {
+      where = { serviceTitle: { startsWith: '[БАГ-РЕПОРТ]' } };
+    } else if (type === 'LEADS') {
+      where = { NOT: { serviceTitle: { startsWith: '[БАГ-РЕПОРТ]' } } };
+    }
+
     const leads = await prisma.serviceLead.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
     });
 

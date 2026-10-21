@@ -7,6 +7,7 @@ import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { AdminOrdersPage } from './pages/AdminOrdersPage';
 import { AdminLeadsPage } from './pages/AdminLeadsPage';
+import { AdminBugReportsPage } from './pages/AdminBugReportsPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { AdminTariffsPage } from './pages/AdminTariffsPage';
 import { AdminPriceBuilderPage } from './pages/AdminPriceBuilderPage';
@@ -103,6 +104,15 @@ export const App: React.FC = () => {
               element={
                 <ProtectedAdminLayout>
                   <AdminLeadsPage />
+                </ProtectedAdminLayout>
+              }
+            />
+
+            <Route
+              path="/bug-reports"
+              element={
+                <ProtectedAdminLayout>
+                  <AdminBugReportsPage />
                 </ProtectedAdminLayout>
               }
             />

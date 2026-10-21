@@ -15,6 +15,7 @@ import {
   Radio,
   FileSpreadsheet,
   Receipt,
+  Bug,
 } from 'lucide-react';
 import { getLandingUrl } from '@shared';
 import { AdminUser } from '../../types';
@@ -65,6 +66,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ user, onLogout }) =>
       items: [
         { to: '/tariffs', label: 'Тарифы и цены', icon: Settings },
         { to: '/users', label: 'Пользователи', icon: Users },
+        { to: '/bug-reports', label: 'Баг-репорты', icon: Bug },
         { to: '/system', label: 'Сервер & DevOps', icon: Server },
       ],
     },

@@ -1,4 +1,6 @@
 import { Response } from 'express';
+import path from 'path';
+import fs from 'fs';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../config/db';
 import { logger } from '../utils/logger';
@@ -68,7 +70,7 @@ export const submitBugReport = async (req: AuthRequest, res: Response) => {
 
     if (req.file) {
       screenshotFileName = req.file.originalname;
-      screenshotPath = `/uploads/bug-reports/${req.file.filename}`;
+      screenshotPath = `/api/support/bug-reports/attachment/${req.file.filename}`;
     }
 
     // Save as ServiceLead record for admin review
@@ -170,3 +172,45 @@ export const submitBugReport = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+/**
+ * GET /api/support/bug-reports/attachment/:filename
+ * Secure attachment downloader: requires JWT and checks role or ownership
+ */
+export const getBugReportAttachment = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: 'Требуется авторизация' });
+    }
+
+    const { filename } = req.params;
+    const safeFilename = path.basename(filename);
+    if (safeFilename !== filename || filename.includes('..')) {
+      return res.status(400).json({ message: 'Некорректное имя файла' });
+    }
+
+    const filePath = path.resolve(process.cwd(), 'uploads/bug-reports', safeFilename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'Файл не найден' });
+    }
+
+    if (user.role !== 'ADMIN') {
+      const isOwner = await prisma.serviceLead.findFirst({
+        where: {
+          email: user.email,
+          notes: { contains: safeFilename },
+        },
+      });
+      if (!isOwner) {
+        return res.status(403).json({ message: 'Нет доступа к данному файлу' });
+      }
+    }
+
+    return res.sendFile(filePath);
+  } catch (err: any) {
+    logger.error('Error serving bug report attachment:', err);
+    return res.status(500).json({ message: 'Ошибка загрузки вложения' });
+  }
+};
+

@@ -9,6 +9,7 @@ import {
   CATEGORY_TO_OMS_EXTENSION,
   getDefaultBaseUrl,
   validateAndSanitizeBaseUrl,
+  validateAndSanitizeNktBaseUrl,
 } from '../services/markirovkaClient.service';
 import { logger } from '../utils/logger';
 import { getNktSettings, saveNktSettings, testNktApiConnection } from '../services/nktSettings.service';
@@ -146,6 +147,15 @@ export async function createAccount(req: Request, res: Response) {
       }
     }
 
+    let sanitizedNktBaseUrl: string = 'https://nationalcatalog.kz/gwp';
+    if (nktBaseUrl && typeof nktBaseUrl === 'string' && nktBaseUrl.trim().length > 0) {
+      try {
+        sanitizedNktBaseUrl = validateAndSanitizeNktBaseUrl(nktBaseUrl);
+      } catch (validationErr: any) {
+        return res.status(400).json({ message: validationErr.message || 'Недопустимый URL Национального Каталога (НКТ)' });
+      }
+    }
+
     const account = await prisma.markirovkaAccount.create({
       data: {
         userId: effectiveUserId,
@@ -157,7 +167,7 @@ export async function createAccount(req: Request, res: Response) {
         omsId: omsId?.trim() || null,
         categories: finalCategories,
         nktApiKey: nktApiKey ? nktApiKey.trim() : null,
-        nktBaseUrl: nktBaseUrl ? nktBaseUrl.trim() : 'https://nationalcatalog.kz/gwp',
+        nktBaseUrl: sanitizedNktBaseUrl,
         nktStatus: nktApiKey?.trim() ? 'ACTIVE' : 'NOT_CONFIGURED',
       },
     });
@@ -242,7 +252,15 @@ export async function updateAccount(req: Request, res: Response) {
       }
     }
     if (nktBaseUrl !== undefined) {
-      updateData.nktBaseUrl = nktBaseUrl ? nktBaseUrl.trim() : 'https://nationalcatalog.kz/gwp';
+      if (nktBaseUrl && typeof nktBaseUrl === 'string' && nktBaseUrl.trim().length > 0) {
+        try {
+          updateData.nktBaseUrl = validateAndSanitizeNktBaseUrl(nktBaseUrl);
+        } catch (validationErr: any) {
+          return res.status(400).json({ message: validationErr.message || 'Недопустимый URL Национального Каталога (НКТ)' });
+        }
+      } else {
+        updateData.nktBaseUrl = 'https://nationalcatalog.kz/gwp';
+      }
     }
     if (status) updateData.status = status;
 
@@ -731,11 +749,20 @@ export async function updateNktSettingsHandler(req: Request, res: Response) {
   try {
     const user = (req as any).user;
     const { enabled, apiKey, baseUrl } = req.body;
+    let sanitizedNktUrl: string | undefined = undefined;
+    if (baseUrl && typeof baseUrl === 'string' && baseUrl.trim().length > 0) {
+      try {
+        sanitizedNktUrl = validateAndSanitizeNktBaseUrl(baseUrl);
+      } catch (validationErr: any) {
+        return res.status(400).json({ message: validationErr.message || 'Недопустимый URL Национального Каталога' });
+      }
+    }
+
     const updated = await saveNktSettings(
       {
         enabled: typeof enabled === 'boolean' ? enabled : undefined,
         apiKey: typeof apiKey === 'string' ? apiKey : undefined,
-        baseUrl: typeof baseUrl === 'string' ? baseUrl : undefined,
+        baseUrl: sanitizedNktUrl,
       },
       user?.email || 'admin'
     );

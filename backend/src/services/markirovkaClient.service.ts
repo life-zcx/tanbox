@@ -183,6 +183,46 @@ export function validateAndSanitizeBaseUrl(rawUrl?: string | null, env: Markirov
 }
 
 /**
+ * Validates and sanitizes baseUrl for National Catalog of Goods (NKT / nationalcatalog.kz).
+ * Preserves url path (e.g. /gwp) while blocking SSRF to private/internal IPs and service containers.
+ */
+export function validateAndSanitizeNktBaseUrl(rawUrl?: string | null): string {
+  if (!rawUrl || !rawUrl.trim()) {
+    return 'https://nationalcatalog.kz/gwp';
+  }
+  const trimmed = rawUrl.trim();
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error('Некорректный формат URL Национального Каталога (NKT)');
+  }
+
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error('Разрешены только протоколы https:// или http:// для сервера Национального Каталога');
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  const blockedHosts = [
+    'localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.169.254',
+    'postgres', 'backend', 'caddy', 'label-generator',
+    'tanbox_postgres', 'tanbox_backend', 'tanbox_caddy', 'tanbox_label_generator'
+  ];
+  if (blockedHosts.includes(hostname)) {
+    throw new Error('Доступ к локальным и внутренним служебным адресам запрещен политикой безопасности');
+  }
+
+  if (/^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)/.test(hostname)) {
+    throw new Error('Доступ к приватным сетевым диапазонам запрещен политикой безопасности');
+  }
+
+  const cleanPath = parsed.pathname.replace(/\/+$/, '');
+  return `${parsed.protocol}//${parsed.host}${cleanPath}`;
+}
+
+
+/**
  * Recursively sort JSON object keys alphabetically (A-Z)
  * as required by Kazakhstan xTrace ICOM REST API specification.
  */
