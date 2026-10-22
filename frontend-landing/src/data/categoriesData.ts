@@ -142,7 +142,8 @@ export const CATEGORIES_DATA: CategoryData[] = [
     faq: [
       { q: 'Каковы требования к стикерам для влажных бутылок?', a: 'Мы используем специальный влагостойкий клей и полипропиленовые этикетки.' }
     ],
-    calcCategoryCode: 'WATER'
+    calcCategoryCode: 'WATER',
+    bannerUrl: '/banners/water.svg'
   },
   {
     id: 'saiga',
