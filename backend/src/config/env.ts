@@ -15,6 +15,11 @@ export const env = {
       console.warn('⚠️ WARNING: JWT_SECRET is not set in process.env! Please specify JWT_SECRET in .env file.');
       return 'dev_only_local_secret_please_change_in_env_file';
     }
+    if (process.env.NODE_ENV === 'production') {
+      if (secret === 'replace_with_strong_random_jwt_secret_openssl_rand_hex_64' || secret === 'dev_only_local_secret_please_change_in_env_file' || secret.length < 32) {
+        throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET is too short or set to template placeholder in production!');
+      }
+    }
     return secret;
   },
   get ENCRYPTION_SECRET(): string {
@@ -25,6 +30,11 @@ export const env = {
       }
       console.warn('⚠️ WARNING: ENCRYPTION_SECRET is not set in process.env! Using local dev fallback.');
       return 'tanbox_markirovka_encryption_secret_key_2026_32bytes!!';
+    }
+    if (process.env.NODE_ENV === 'production') {
+      if (secret === 'replace_with_strong_random_encryption_secret_minimum_32_chars' || secret === 'tanbox_markirovka_encryption_secret_key_2026_32bytes!!' || secret.length < 16) {
+        throw new Error('CRITICAL SECURITY ERROR: ENCRYPTION_SECRET is too short or set to template placeholder in production!');
+      }
     }
     return secret;
   },

@@ -68,12 +68,12 @@ export const CATEGORIES_LIST: CategoryInfo[] = [
   },
   {
     type: 'TOBACCO',
-    name: 'Табачные изделия и вейпы',
+    name: 'Табачные изделия',
     shortName: 'Табачные изделия',
     tnved: 'ТН ВЭД 2402, 2403, 2404',
     statusText: 'Обязательная с 2020 г.',
     statusBadge: 'ACTIVE',
-    description: 'Сигареты, нагреваемый табак (стики), вейпы, жидкости для эл. сигарет',
+    description: 'Сигареты, сигариллы, нагреваемый табак (стики), кальянный табак',
     icon: Cigarette,
   },
   {

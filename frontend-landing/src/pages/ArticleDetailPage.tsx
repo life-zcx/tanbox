@@ -122,8 +122,26 @@ export const ArticleDetailPage: React.FC = () => {
     article.relatedSlugs?.includes(a.slug)
   ).slice(0, 3);
 
-  // Render markdown-like text to formatted HTML
+  // Render markdown-like text to formatted HTML with HTML-escaping to prevent XSS
   const formatSectionContent = (text: string) => {
+    const sanitizeAndFormat = (raw: string, isParagraph = false) => {
+      const safe = raw
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+      let formatted = safe
+        .replace(/•\s/g, '•&nbsp;')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-[#111827]">$1</strong>');
+
+      if (isParagraph) {
+        formatted = formatted.replace(/\n\n/g, '<br/><br/>');
+      }
+      return formatted;
+    };
+
     // If it contains a markdown table
     if (text.includes('| :---')) {
       const parts = text.split(/(?=\|[^\n]+\|\n\| :---)/);
@@ -152,7 +170,7 @@ export const ArticleDetailPage: React.FC = () => {
                     <tr key={rIdx} className="hover:bg-blue-50/30 transition-colors">
                       {row.map((cell, cIdx) => (
                         <td key={cIdx} className="px-4 py-3 text-[#334155] leading-relaxed">
-                          <span dangerouslySetInnerHTML={{ __html: cell.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>') }} />
+                          <span dangerouslySetInnerHTML={{ __html: sanitizeAndFormat(cell) }} />
                         </td>
                       ))}
                     </tr>
@@ -169,10 +187,7 @@ export const ArticleDetailPage: React.FC = () => {
             key={idx}
             className="space-y-3 leading-relaxed text-[#334155]"
             dangerouslySetInnerHTML={{
-              __html: part
-                .replace(/\n\n/g, '<br/><br/>')
-                .replace(/•\s/g, '•&nbsp;')
-                .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-[#111827]">$1</strong>')
+              __html: sanitizeAndFormat(part, true),
             }}
           />
         );
@@ -183,10 +198,7 @@ export const ArticleDetailPage: React.FC = () => {
       <div
         className="space-y-4 leading-relaxed text-[#334155]"
         dangerouslySetInnerHTML={{
-          __html: text
-            .replace(/\n\n/g, '<br/><br/>')
-            .replace(/•\s/g, '•&nbsp;')
-            .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-[#111827]">$1</strong>')
+          __html: sanitizeAndFormat(text, true),
         }}
       />
     );

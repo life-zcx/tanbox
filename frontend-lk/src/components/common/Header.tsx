@@ -172,44 +172,65 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Right Side: Balance, Bug Report & Profile Dropdown */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Balance (borderless) */}
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          {/* Balance */}
           {user && (
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-[#0082FB] shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 leading-none">
-                    Баланс
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-[#111827] leading-tight font-mono whitespace-nowrap">
-                    {Number(currentBalance).toLocaleString('ru-RU')} ₸
-                  </span>
-                </div>
-              </div>
-
+            <>
+              {/* Mobile Compact Balance Chip */}
               <button
                 type="button"
                 onClick={() => setIsTopUpOpen(true)}
                 title="Пополнить баланс"
-                className="px-3 py-1.5 text-xs font-black bg-[#0082FB] hover:bg-[#0070DA] text-white rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs whitespace-nowrap"
+                className="sm:hidden flex items-center gap-1.5 bg-[#F0F7FF] hover:bg-[#E0EFFF] active:scale-95 text-[#0082FB] border border-[#BAE0FF] px-2.5 py-1.5 rounded-xl transition-all shadow-xs cursor-pointer"
               >
-                + Пополнить
+                <Wallet className="w-3.5 h-3.5 text-[#0082FB] shrink-0" />
+                <span className="text-xs font-black font-mono leading-none whitespace-nowrap">
+                  {Number(currentBalance).toLocaleString('ru-RU')} ₸
+                </span>
+                <span className="w-4 h-4 rounded-full bg-[#0082FB] text-white flex items-center justify-center font-bold text-xs leading-none ml-0.5 shrink-0">
+                  +
+                </span>
               </button>
-            </div>
+
+              {/* Desktop Spacious Balance */}
+              <div className="hidden sm:flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-[#0082FB] shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 leading-none">
+                      Баланс
+                    </span>
+                    <span className="text-sm font-black text-[#111827] leading-tight font-mono whitespace-nowrap">
+                      {Number(currentBalance).toLocaleString('ru-RU')} ₸
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsTopUpOpen(true)}
+                  title="Пополнить баланс"
+                  className="px-3.5 py-1.5 text-xs font-black bg-[#0082FB] hover:bg-[#0070DA] text-white rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs whitespace-nowrap"
+                >
+                  + Пополнить
+                </button>
+              </div>
+            </>
           )}
 
-          {/* Company Profile Button (borderless, icon + text) */}
+          {/* Company Profile Button (compact icon on mobile, full on desktop) */}
           <div className="relative" ref={profileDropdownRef}>
             <button
               type="button"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center gap-2 py-1.5 px-2 rounded-xl text-[#475569] hover:text-[#111827] hover:bg-gray-100 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 py-1.5 px-2 rounded-xl text-[#475569] hover:text-[#111827] hover:bg-gray-100 transition-all cursor-pointer"
               title="Профиль компании"
             >
-              <User className="w-4 h-4 text-[#475569]" />
-              <span className="text-xs font-bold text-[#111827]">Профиль</span>
-              <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gray-100 sm:bg-transparent flex items-center justify-center text-[#475569] shrink-0">
+                <User className="w-4 h-4 text-[#475569]" />
+              </div>
+              <span className="text-xs font-bold text-[#111827] hidden sm:inline">Профиль</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform hidden sm:inline ${isProfileOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Profile Dropdown Menu */}

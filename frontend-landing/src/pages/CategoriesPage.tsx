@@ -90,10 +90,10 @@ export const CategoriesPage: React.FC = () => {
       tnved: '2402, 2403, 2404',
       icon: Cigarette,
       description: lang === 'kz'
-        ? 'Сүзгілі сигареттер, папиростар, сигариллалар, кальян темекісі, қыздырылатын темекі стиктері (IQOS, glo) және электронды сигареттер (вейптер, сұйықтықтар).'
+        ? 'Сүзгілі сигареттер, папиростар, сигариллалар, кальян темекісі және қыздырылатын темекі стиктері (IQOS, glo).'
         : lang === 'en'
-        ? 'Filtered cigarettes, cigarillos, hookah tobacco, heated tobacco sticks (IQOS, glo), and e-cigarettes (vapes, e-liquids).'
-        : 'Сигареты с фильтром, папиросы, сигариллы, кальянный табак, стики для систем нагревания табака (IQOS, glo) и электронные сигареты (вейпы, жидкости).',
+        ? 'Filtered cigarettes, cigarillos, hookah tobacco, and heated tobacco sticks (IQOS, glo).'
+        : 'Сигареты с фильтром, папиросы, сигариллы, кальянный табак и стики для систем нагревания табака (IQOS, glo).',
       details: lang === 'kz'
         ? [
             'Әрбір қорап пен құтыға GS1 DataMatrix кодын жекелей жағу',
@@ -589,27 +589,38 @@ export const CategoriesPage: React.FC = () => {
     <div className="bg-[#F4F6F9] min-h-screen pb-16 space-y-8">
       
       {/* Header Banner */}
-      <section className="relative py-12 sm:py-16 bg-white border-b border-gray-200/80 overflow-hidden">
+      <section className="relative py-6 sm:py-8 lg:py-9 bg-white border-b border-gray-200/80 overflow-hidden">
         {/* Subtle grid pattern & ambient tint */}
         <div className="absolute inset-0 bg-[radial-gradient(#0082FB_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.07] pointer-events-none" />
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#0082FB]/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-100/30 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight max-w-4xl">
-            {lang === 'kz' 
-              ? 'Қазақстанда таңбалауға жататын тауар санаттарының тізілімі' 
-              : lang === 'en' 
-              ? 'Registry of Goods Subject to Serialization in Kazakhstan' 
-              : 'Реестр подлежащих маркировке товаров в Казахстане'}
-          </h1>
-          <p className="text-base sm:text-lg text-[#64748B] max-w-3xl font-normal leading-relaxed">
-            {lang === 'kz'
-              ? 'ҚР заңнамасына (GS1 DataMatrix) сәйкес қолданыстағы міндетті таңбалаудың толық тізімі және жаңа тауар топтарын енгізудің күнтізбелік кестесі.'
-              : lang === 'en'
-              ? 'Complete list of active mandatory labeling and timeline for introducing new product categories under Kazakhstan regulations (GS1 DataMatrix).'
-              : 'Полный перечень действующей обязательной маркировки и календарный график введения новых групп товаров согласно законодательству РК (DataMatrix GS1).'}
-          </p>
+        <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 lg:gap-8">
+          <div className="space-y-4 max-w-3xl">
+            <h1 className="text-3xl sm:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight">
+              {lang === 'kz' 
+                ? 'Қазақстанда таңбалауға жататын тауар санаттарының тізілімі' 
+                : lang === 'en' 
+                ? 'Registry of Goods Subject to Serialization in Kazakhstan' 
+                : 'Реестр подлежащих маркировке товаров в Казахстане'}
+            </h1>
+            <p className="text-base sm:text-lg text-[#64748B] font-normal leading-relaxed">
+              {lang === 'kz'
+                ? 'ҚР заңнамасына (GS1 DataMatrix) сәйкес қолданыстағы міндетті таңбалаудың толық тізімі және жаңа тауар топтарын енгізудің күнтізбелік кестесі.'
+                : lang === 'en'
+                ? 'Complete list of active mandatory labeling and timeline for introducing new product categories under Kazakhstan regulations (GS1 DataMatrix).'
+                : 'Полный перечень действующей обязательной маркировки и календарный график введения новых групп товаров согласно законодательству РК (DataMatrix GS1).'}
+            </p>
+          </div>
+
+          <div className="shrink-0 flex items-center justify-center md:justify-end self-center md:self-auto">
+            <img
+              src="/banners/categories.svg"
+              alt="Категории товаров Танбокс"
+              className="w-40 sm:w-52 md:w-60 lg:w-72 h-auto max-h-36 sm:max-h-44 md:max-h-52 lg:max-h-56 object-contain select-none pointer-events-none drop-shadow-sm transition-transform duration-300 hover:scale-105"
+              loading="eager"
+            />
+          </div>
         </div>
       </section>
 
@@ -654,7 +665,7 @@ export const CategoriesPage: React.FC = () => {
         </div>
 
         {/* Categories List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
           {filteredCategories.map((item) => {
             const isActive = item.status === 'ACTIVE';
             const Icon = item.icon;
@@ -664,23 +675,25 @@ export const CategoriesPage: React.FC = () => {
                 key={item.id}
                 id={item.id}
                 onClick={() => navigate(getLocalizedPath(`/categories/${item.id}`))}
-                className="bg-white rounded-2xl px-5 py-4 border border-gray-200/80 hover:border-[#0082FB]/40 hover:shadow-sm transition-all duration-150 flex items-center justify-between gap-4 cursor-pointer group"
+                className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-gray-200/80 hover:border-[#0082FB]/50 hover:shadow-md transition-all duration-200 flex items-center justify-between gap-4 sm:gap-6 cursor-pointer group"
               >
-                <div className="flex flex-col gap-2 min-w-0">
-                  <span className="text-[15px] font-semibold text-[#111827] group-hover:text-[#0082FB] transition-colors leading-snug truncate">
+                <div className="flex flex-col gap-2.5 min-w-0">
+                  <span className="text-base sm:text-lg font-bold text-[#111827] group-hover:text-[#0082FB] transition-colors leading-snug">
                     {item.title}
                   </span>
                   <span
-                    className={`inline-flex w-fit text-[11px] font-semibold px-2.5 py-0.5 rounded-md ${
+                    className={`inline-flex w-fit text-xs font-semibold px-3 py-1 rounded-lg transition-colors ${
                       isActive
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-blue-50 text-[#0082FB]'
+                        ? 'bg-emerald-50 text-emerald-700 group-hover:bg-emerald-100'
+                        : 'bg-blue-50 text-[#0082FB] group-hover:bg-blue-100'
                     }`}
                   >
                     {lang === 'kz' ? 'Толығырақ' : lang === 'en' ? 'Details' : 'Подробнее'}
                   </span>
                 </div>
-                <Icon className="w-8 h-8 text-[#0082FB] shrink-0 opacity-80 group-hover:opacity-100 transition-opacity" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50/80 group-hover:bg-[#0082FB]/10 flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-105">
+                  <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-[#0082FB]" />
+                </div>
               </div>
             );
           })}

@@ -221,66 +221,26 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
           </div>
 
           {/* Navigation links - centered with generous breathing room */}
-          <nav className="flex-1 my-auto flex flex-col items-center justify-center space-y-6 text-center py-6">
-            <Link
-              to={getLocalizedPath('/')}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`text-lg sm:text-xl tracking-wide transition-colors ${
-                isHomePage
-                  ? 'text-[#0082FB] font-bold'
-                  : 'text-slate-100 hover:text-[#0082FB] font-medium'
-              }`}
-            >
-              {t('nav.home')}
-            </Link>
-
-            <Link
-              to={getLocalizedPath('/calculator')}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`text-lg sm:text-xl tracking-wide transition-colors ${
-                cleanPath === '/calculator'
-                  ? 'text-[#0082FB] font-bold'
-                  : 'text-slate-100 hover:text-[#0082FB] font-medium'
-              }`}
-            >
-              {t('nav.calc')}
-            </Link>
-
-            <Link
-              to={getLocalizedPath('/categories')}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`text-lg sm:text-xl tracking-wide transition-colors ${
-                cleanPath.startsWith('/categories')
-                  ? 'text-[#0082FB] font-bold'
-                  : 'text-slate-100 hover:text-[#0082FB] font-medium'
-              }`}
-            >
-              {t('nav.categories')}
-            </Link>
-
-            <Link
-              to={getLocalizedPath('/services')}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`text-lg sm:text-xl tracking-wide transition-colors ${
-                cleanPath.startsWith('/services') || cleanPath.startsWith('/tariffs')
-                  ? 'text-[#0082FB] font-bold'
-                  : 'text-slate-100 hover:text-[#0082FB] font-medium'
-              }`}
-            >
-              {t('nav.services')}
-            </Link>
-
-            <Link
-              to={getLocalizedPath('/contacts')}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`text-lg sm:text-xl tracking-wide transition-colors ${
-                cleanPath === '/contacts'
-                  ? 'text-[#0082FB] font-bold'
-                  : 'text-slate-100 hover:text-[#0082FB] font-medium'
-              }`}
-            >
-              {t('nav.contacts')}
-            </Link>
+          <nav className="flex-1 my-auto flex flex-col items-center justify-center space-y-5 text-center py-4">
+            {NAV_LINKS.map((link) => {
+              const active =
+                cleanPath === link.path ||
+                (link.path !== '/' && cleanPath.startsWith(link.path));
+              return (
+                <Link
+                  key={link.path}
+                  to={getLocalizedPath(link.path)}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`text-lg sm:text-xl tracking-wide transition-colors ${
+                    active
+                      ? 'text-[#0082FB] font-bold'
+                      : 'text-slate-100 hover:text-[#0082FB] font-medium'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Bottom section: KZ RU EN + LK button */}

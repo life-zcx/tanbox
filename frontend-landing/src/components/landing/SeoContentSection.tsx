@@ -187,7 +187,7 @@ export const SeoContentSection: React.FC = () => {
 
               <li className="pt-2 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-[#111827] block">Табачные изделия и вейпы</span>
+                  <span className="font-bold text-[#111827] block">Табачная продукция</span>
                   <span className="text-[#64748B]">ТН ВЭД 2402, 2404</span>
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">

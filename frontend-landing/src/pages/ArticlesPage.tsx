@@ -76,27 +76,38 @@ export const ArticlesPage: React.FC = () => {
   return (
     <div className="bg-[#F8FAFC] min-h-screen pb-24">
       {/* Hero Header */}
-      <section className="relative py-12 sm:py-16 bg-white border-b border-gray-200/80 overflow-hidden">
+      <section className="relative py-6 sm:py-8 lg:py-9 bg-white border-b border-gray-200/80 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(#0082FB_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.07] pointer-events-none" />
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#0082FB]/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-100/30 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight max-w-4xl">
-            {lang === 'kz'
-              ? 'Таңбалау бойынша білім базасы мен мақалалар'
-              : lang === 'en'
-              ? 'Guides & Insights on Serialization in Kazakhstan'
-              : 'Статьи, законы и практические руководства по маркировке в РК'}
-          </h1>
+        <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 lg:gap-8">
+          <div className="space-y-4 max-w-3xl">
+            <h1 className="text-3xl sm:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight">
+              {lang === 'kz'
+                ? 'Таңбалау бойынша білім базасы мен мақалалар'
+                : lang === 'en'
+                ? 'Guides & Insights on Serialization in Kazakhstan'
+                : 'Статьи, законы и практические руководства по маркировке в РК'}
+            </h1>
 
-          <p className="text-base sm:text-lg text-[#64748B] max-w-3xl font-normal leading-relaxed">
-            {lang === 'kz'
-              ? 'ТМБ АЖ ережелері, заңдық жауапкершіліктер, айыппұлдардан қорғану және 2026 жылғы жаңа тауар санаттарын қосу бойынша ресми түсіндірмелер.'
-              : lang === 'en'
-              ? 'Official regulatory breakdowns, penalty risks, 2026 roadmap, and step-by-step procedures for Kazakhstan product marking.'
-              : 'Разбор статей КоАП РК, правила работы с ИС Танба, требования к оклейке новых товарных групп 2026 года и способы защиты бизнеса от штрафов.'}
-          </p>
+            <p className="text-base sm:text-lg text-[#64748B] font-normal leading-relaxed">
+              {lang === 'kz'
+                ? 'ТМБ АЖ ережелері, заңдық жауапкершіліктер, айыппұлдардан қорғану және 2026 жылғы жаңа тауар санаттарын қосу бойынша ресми түсіндірмелер.'
+                : lang === 'en'
+                ? 'Official regulatory breakdowns, penalty risks, 2026 roadmap, and step-by-step procedures for Kazakhstan product marking.'
+                : 'Разбор статей КоАП РК, правила работы с ИС Танба, требования к оклейке новых товарных групп 2026 года и способы защиты бизнеса от штрафов.'}
+            </p>
+          </div>
+
+          <div className="shrink-0 flex items-center justify-center md:justify-end self-center md:self-auto">
+            <img
+              src="/banners/articles.svg"
+              alt="База знаний Танбокс"
+              className="w-40 sm:w-52 md:w-60 lg:w-72 h-auto max-h-36 sm:max-h-44 md:max-h-52 lg:max-h-56 object-contain select-none pointer-events-none drop-shadow-sm transition-transform duration-300 hover:scale-105"
+              loading="eager"
+            />
+          </div>
         </div>
       </section>
 

@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import { markirovkaCardsService } from '../services/markirovkaCards.service';
 import { CATEGORY_SCHEMAS } from '../config/categorySchemas';
 import { OrderCategory } from '@prisma/client';
+import { prisma } from '../config/db';
 import { logger } from '../utils/logger';
 
 export const getCardsHandler = async (req: AuthRequest, res: Response) => {
@@ -23,13 +24,21 @@ export const getCardByIdHandler = async (req: AuthRequest, res: Response) => {
     if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
     const { id } = req.params;
 
-    const card = await markirovkaCardsService.checkNktStatus(id);
-    if (!card) {
+    const existing = await prisma.markirovkaProductCard.findUnique({
+      where: { id },
+      select: { id: true, userId: true },
+    });
+    if (!existing) {
       return res.status(404).json({ message: 'Карточка товара не найдена' });
     }
 
-    if (req.user.role !== 'ADMIN' && card.userId !== req.user.id) {
+    if (req.user.role !== 'ADMIN' && existing.userId !== req.user.id) {
       return res.status(403).json({ message: 'Нет доступа к данной карточке товара' });
+    }
+
+    const card = await markirovkaCardsService.checkNktStatus(id);
+    if (!card) {
+      return res.status(404).json({ message: 'Карточка товара не найдена' });
     }
 
     const schema = CATEGORY_SCHEMAS[card.category];
@@ -114,6 +123,18 @@ export const checkCardStatusHandler = async (req: AuthRequest, res: Response) =>
   try {
     if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
     const { id } = req.params;
+
+    const existing = await prisma.markirovkaProductCard.findUnique({
+      where: { id },
+      select: { id: true, userId: true },
+    });
+    if (!existing) {
+      return res.status(404).json({ message: 'Карточка товара не найдена' });
+    }
+
+    if (req.user.role !== 'ADMIN' && existing.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Нет доступа к данной карточке товара' });
+    }
 
     const card = await markirovkaCardsService.checkNktStatus(id);
     return res.json({

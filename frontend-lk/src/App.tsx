@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Plus, Tag, User, Menu } from 'lucide-react';
+import { LayoutDashboard, FileText, Plus, Tag, Receipt, Menu } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from '@shared';
 import { Sidebar } from './components/common/Sidebar';
@@ -92,60 +92,83 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
         />
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-28 md:pb-8 overflow-y-auto max-w-full">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-36 md:pb-8 overflow-y-auto max-w-full">
           {children}
         </main>
 
         {/* Mobile Bottom Navigation Bar */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200/80 px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-gray-200/90 px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom,0.5rem))] grid grid-cols-5 items-end shadow-[0_-4px_25px_rgba(0,0,0,0.06)] select-none">
+          {/* 1. Главная */}
           <Link
             to="/dashboard"
-            className={`flex flex-col items-center justify-center py-1 px-2 min-w-[56px] rounded-xl transition-colors ${
-              location.pathname === '/dashboard' ? 'text-[#0082FB] font-extrabold' : 'text-[#64748B] hover:text-[#111827]'
+            className={`flex flex-col items-center justify-center py-1 rounded-xl transition-all active:scale-90 ${
+              location.pathname === '/dashboard' ? 'text-[#0082FB] font-black' : 'text-[#64748B] hover:text-[#111827]'
             }`}
           >
-            <LayoutDashboard className={`w-5 h-5 ${location.pathname === '/dashboard' ? 'text-[#0082FB] stroke-[2.5]' : 'text-[#64748B]'}`} />
-            <span className="text-[10px] mt-1 font-bold">Главная</span>
+            <div className="h-8 flex items-center justify-center">
+              <LayoutDashboard className={`w-5 h-5 transition-transform ${location.pathname === '/dashboard' ? 'text-[#0082FB] stroke-[2.5] scale-110' : 'text-[#64748B]'}`} />
+            </div>
+            <span className="text-[10px] font-bold tracking-tight">Главная</span>
           </Link>
 
+          {/* 2. Заказы */}
           <Link
             to="/orders"
-            className={`flex flex-col items-center justify-center py-1 px-2 min-w-[56px] rounded-xl transition-colors ${
-              location.pathname.startsWith('/orders') && location.pathname !== '/orders/new' ? 'text-[#0082FB] font-extrabold' : 'text-[#64748B] hover:text-[#111827]'
+            className={`flex flex-col items-center justify-center py-1 rounded-xl transition-all active:scale-90 ${
+              location.pathname.startsWith('/orders') && location.pathname !== '/orders/new' ? 'text-[#0082FB] font-black' : 'text-[#64748B] hover:text-[#111827]'
             }`}
           >
-            <FileText className={`w-5 h-5 ${location.pathname.startsWith('/orders') && location.pathname !== '/orders/new' ? 'text-[#0082FB] stroke-[2.5]' : 'text-[#64748B]'}`} />
-            <span className="text-[10px] mt-1 font-bold">Заказы</span>
+            <div className="h-8 flex items-center justify-center">
+              <FileText className={`w-5 h-5 transition-transform ${location.pathname.startsWith('/orders') && location.pathname !== '/orders/new' ? 'text-[#0082FB] stroke-[2.5] scale-110' : 'text-[#64748B]'}`} />
+            </div>
+            <span className="text-[10px] font-bold tracking-tight">Заказы</span>
           </Link>
 
+          {/* 3. Создать заказ */}
           <Link
             to="/orders/new"
-            className="flex flex-col items-center justify-center -mt-5"
+            className="flex flex-col items-center justify-center py-1 rounded-xl transition-all active:scale-90 group"
           >
-            <div className="w-12 h-12 rounded-full bg-[#0082FB] text-white flex items-center justify-center shadow-lg shadow-[#0082FB]/35 active:scale-95 transition-transform">
-              <Plus className="w-6 h-6 stroke-[2.5]" />
+            <div className="h-8 flex items-center justify-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                location.pathname === '/orders/new'
+                  ? 'bg-[#0070DA] text-white shadow-md ring-2 ring-[#0082FB]/30'
+                  : 'bg-[#0082FB] hover:bg-[#0070DA] text-white shadow-sm'
+              }`}>
+                <Plus className="w-4.5 h-4.5 stroke-[2.8]" />
+              </div>
             </div>
-            <span className="text-[10px] font-extrabold text-[#0082FB] mt-0.5">Создать</span>
+            <span className={`text-[10px] font-black tracking-tight ${
+              location.pathname === '/orders/new' ? 'text-[#0070DA]' : 'text-[#0082FB]'
+            }`}>
+              Создать
+            </span>
           </Link>
 
+          {/* 4. Этикетки */}
           <Link
             to="/labels"
-            className={`flex flex-col items-center justify-center py-1 px-2 min-w-[56px] rounded-xl transition-colors ${
-              location.pathname.startsWith('/labels') ? 'text-[#0082FB] font-extrabold' : 'text-[#64748B] hover:text-[#111827]'
+            className={`flex flex-col items-center justify-center py-1 rounded-xl transition-all active:scale-90 ${
+              location.pathname.startsWith('/labels') ? 'text-[#0082FB] font-black' : 'text-[#64748B] hover:text-[#111827]'
             }`}
           >
-            <Tag className={`w-5 h-5 ${location.pathname.startsWith('/labels') ? 'text-[#0082FB] stroke-[2.5]' : 'text-[#64748B]'}`} />
-            <span className="text-[10px] mt-1 font-bold">Этикетки</span>
+            <div className="h-8 flex items-center justify-center">
+              <Tag className={`w-5 h-5 transition-transform ${location.pathname.startsWith('/labels') ? 'text-[#0082FB] stroke-[2.5] scale-110' : 'text-[#64748B]'}`} />
+            </div>
+            <span className="text-[10px] font-bold tracking-tight">Этикетки</span>
           </Link>
 
+          {/* 5. Счета */}
           <Link
-            to="/profile"
-            className={`flex flex-col items-center justify-center py-1 px-2 min-w-[56px] rounded-xl transition-colors ${
-              location.pathname.startsWith('/profile') ? 'text-[#0082FB] font-extrabold' : 'text-[#64748B] hover:text-[#111827]'
+            to="/invoices"
+            className={`flex flex-col items-center justify-center py-1 rounded-xl transition-all active:scale-90 ${
+              location.pathname.startsWith('/invoices') ? 'text-[#0082FB] font-black' : 'text-[#64748B] hover:text-[#111827]'
             }`}
           >
-            <User className={`w-5 h-5 ${location.pathname.startsWith('/profile') ? 'text-[#0082FB] stroke-[2.5]' : 'text-[#64748B]'}`} />
-            <span className="text-[10px] mt-1 font-bold">Профиль</span>
+            <div className="h-8 flex items-center justify-center">
+              <Receipt className={`w-5 h-5 transition-transform ${location.pathname.startsWith('/invoices') ? 'text-[#0082FB] stroke-[2.5] scale-110' : 'text-[#64748B]'}`} />
+            </div>
+            <span className="text-[10px] font-bold tracking-tight">Счета</span>
           </Link>
         </nav>
       </div>

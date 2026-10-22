@@ -76,10 +76,10 @@ export const CATEGORY_PRESETS: CategoryPreset[] = [
   },
   {
     id: 'TOBACCO',
-    name: 'Табачные изделия и вейпы',
+    name: 'Табачные изделия',
     shortName: 'Табак / Стики',
     icon: Cigarette,
-    description: 'Блоки сигарет, стиков и вейпов. Плотная промышленная укладка, высокая скорость потока',
+    description: 'Блоки сигарет и стиков. Плотная промышленная укладка, высокая скорость потока',
     defaultSpeed: 500,
     defaultUnitsPerBox: 50,
     defaultBoxesPerPallet: 60,

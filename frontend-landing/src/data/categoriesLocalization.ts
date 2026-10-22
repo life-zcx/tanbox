@@ -1,6 +1,6 @@
 import { CategoryData } from './categoriesData';
 
-type LocalizedFields = Omit<CategoryData, 'id' | 'status' | 'tnved' | 'iconName' | 'calcCategoryCode'>;
+type LocalizedFields = Omit<CategoryData, 'id' | 'status' | 'tnved' | 'iconName' | 'calcCategoryCode' | 'bannerUrl'>;
 
 export const CATEGORIES_LOCALIZATION: Record<'kz' | 'en', Record<string, LocalizedFields>> = {
   kz: {
@@ -10,8 +10,8 @@ export const CATEGORIES_LOCALIZATION: Record<'kz' | 'en', Record<string, Localiz
       statusText: 'ҚР-дағы міндетті таңбалау',
       dateBadge: '2020 ж. бастап',
       dateFull: '2020 жылғы 1 қазаннан бастап',
-      shortDesc: 'Сигареттер, стиктер, вейптер, электронды темекіге арналған сұйықтықтар',
-      fullDesc: 'Сүзгілі сигареттер, папиростар, сигариллалар, кальян темекісі, қыздырылатын темекі (IQOS, glo стиктері) және электронды сигареттер (вейптер, бір реттік буландырғыштар мен сұйықтықтар) таңбалануға жатады. Қазақстан Республикасы аумағында таңбаланбаған бұйымдарды сатуға қатаң тыйым салынған.',
+      shortDesc: 'Сигареттер, стиктер, сигариллалар, кальян темекісі',
+      fullDesc: 'Сүзгілі сигареттер, папиростар, сигариллалар, кальян темекісі және қыздырылатын темекі (IQOS, glo стиктері) таңбалануға жатады. Қазақстан Республикасы аумағында таңбаланбаған бұйымдарды сатуға қатаң тыйым салынған.',
       keyFeatures: [
         'Әрбір қорап пен стикке GS1 DataMatrix кодын жекелей жағу',
         'Блоктарды көліктік қораптар мен паллеттерге агрегациялау (SSCC)',
@@ -25,7 +25,7 @@ export const CATEGORIES_LOCALIZATION: Record<'kz' | 'en', Record<string, Localiz
         { step: '04', title: '«Таңба» АЖ-ге тапсыру', desc: 'Қабылдап алу-тапсыру актісін қалыптастырып, кодтарды ҚР айналымына енгізу' },
       ],
       faq: [
-        { q: 'Бір реттік вейптер таңбалауға жата ма?', a: 'Иә, никотинді жеткізудің барлық электронды жүйелері мен сұйықтықтары міндетті түрде DataMatrix арқылы даналап таңбаланады.' },
+        { q: 'Темекіні қыздыру жүйелерінің стиктері таңбалауға жата ма?', a: 'Иә, темекіні қыздыру жүйелеріне арналған барлық стиктер (IQOS, glo және т.б.) міндетті түрде DataMatrix арқылы даналап таңбаланады.' },
         { q: 'Блоктарды агрегациялау қалай жүргізіледі?', a: 'Әрбір блок сканерленіп, содан кейін қорап үшін SSCC көліктік стикері басып шығарылады.' },
       ],
     },
@@ -313,8 +313,8 @@ export const CATEGORIES_LOCALIZATION: Record<'kz' | 'en', Record<string, Localiz
       statusText: 'Mandatory Serialization in KZ',
       dateBadge: 'Since 2020',
       dateFull: 'From October 1, 2020',
-      shortDesc: 'Cigarettes, heated tobacco sticks, vapes, e-liquids',
-      fullDesc: 'Mandatory serialization applies to filtered cigarettes, cigarillos, hookah tobacco, heated tobacco sticks (IQOS, glo), and electronic cigarettes (vapes, disposable pods, e-liquids). Sale of unmarked tobacco in Kazakhstan is strictly prohibited.',
+      shortDesc: 'Cigarettes, heated tobacco sticks, cigarillos, hookah tobacco',
+      fullDesc: 'Mandatory serialization applies to filtered cigarettes, cigarillos, hookah tobacco, and heated tobacco sticks (IQOS, glo). Sale of unmarked tobacco products in Kazakhstan is strictly prohibited.',
       keyFeatures: [
         'Item-level GS1 DataMatrix code printing on every pack and container',
         'Aggregation of cartons into transport shippers and pallets (SSCC)',
@@ -328,7 +328,7 @@ export const CATEGORIES_LOCALIZATION: Record<'kz' | 'en', Record<string, Localiz
         { step: '04', title: 'IS Tanba Turnover', desc: 'Submission of application reports and legal turnover release in KZ' },
       ],
       faq: [
-        { q: 'Are disposable vapes subject to serialization?', a: 'Yes, all electronic nicotine delivery systems and e-liquids require mandatory piece-by-piece DataMatrix labeling.' },
+        { q: 'Are heated tobacco sticks subject to serialization?', a: 'Yes, all sticks for tobacco heating systems (IQOS, glo, etc.) require mandatory piece-by-piece DataMatrix labeling.' },
         { q: 'How does carton aggregation work?', a: 'Each pack is verified with a scanner, and a parent SSCC barcode label is generated for the shipper carton.' },
       ],
     },

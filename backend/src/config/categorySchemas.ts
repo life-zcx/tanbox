@@ -634,7 +634,7 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
     defaultOktru: '1200-0001-0001-100117542',
     oktruPresets: [
       { code: '1200-0001-0001-100117542', nameRu: 'Сигареты и папиросы' },
-      { code: '1200-0001-0002-100117543', nameRu: 'Стики табачные нагреваемые и вейпы' },
+      { code: '1200-0001-0002-100117543', nameRu: 'Стики табачные нагреваемые' },
     ],
     tnvedExamples: ['2402', '2404'],
     fields: [
@@ -652,8 +652,6 @@ export const CATEGORY_SCHEMAS: Record<OrderCategory, CategorySchema> = {
           'Сигары',
           'Кальянный табак',
           'Табак трубочный / курительный',
-          'Жидкости для ЭСДН с никотином',
-          'Одноразовые ЭСДН (вейпы)',
           'Бестабачные смеси для кальяна',
         ],
       },

@@ -98,61 +98,88 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
     <div className="bg-[#F4F6F9] min-h-screen pb-20">
       
       {/* Top Banner / Hero */}
-      <section className="py-8 sm:py-12 relative overflow-hidden">
-        <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-xs text-[#64748B] flex-wrap font-medium">
-            <Link to={getLocalizedPath('/')} className="hover:text-[#0082FB] transition-colors">
-              {lang === 'kz' ? 'Басты бет' : lang === 'en' ? 'Home' : 'Главная'}
-            </Link>
-            <span>/</span>
-            <Link to={getLocalizedPath('/categories')} className="hover:text-[#0082FB] transition-colors">
-              {lang === 'kz' ? 'Тауар санаттары' : lang === 'en' ? 'Categories' : 'Категории товаров'}
-            </Link>
-            <span>/</span>
-            <span className="text-[#0082FB] font-bold">{category.shortTitle}</span>
-          </div>
+      <section className="pt-2 sm:pt-3 pb-6 relative overflow-hidden">
+        <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
 
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pt-1">
-            
-            <div className="space-y-4 max-w-4xl">
-              
-              <div className="flex items-center gap-3 text-xs font-semibold text-[#64748B] flex-wrap">
-                <span className="inline-flex items-center gap-2 text-[#111827] font-bold">
-                  <span className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
-                  {isActive
-                    ? lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory Serialization' : 'Обязательная маркировка'
-                    : lang === 'kz' ? '2026–2027 жылдары енгізу' : lang === 'en' ? 'Implementation 2026–2027' : 'Внедрение 2026–2027'}
-                </span>
-                <span className="text-gray-300">•</span>
-                <span>{lang === 'kz' ? 'ТН ВЭД' : lang === 'en' ? 'HS Code' : 'ТН ВЭД'}: <strong className="text-[#111827] font-mono font-bold">{category.tnved}</strong></span>
-                <span className="text-gray-300">•</span>
-                <span>{category.dateFull}</span>
+          {category.bannerUrl ? (
+            <div className="space-y-4">
+              <div className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-gray-200/80 bg-white">
+                <img
+                  src={category.bannerUrl}
+                  alt={category.title}
+                  className="w-full h-auto object-cover block"
+                  loading="eager"
+                />
+                <h1 className="sr-only">{category.title}</h1>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#111827] tracking-tight leading-tight">
-                {category.title}
-              </h1>
+              {/* Action & Metadata bar under the banner */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 text-xs font-semibold text-[#64748B] flex-wrap">
+                  <span className="inline-flex items-center gap-2 text-[#111827] font-bold">
+                    <span className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
+                    {isActive
+                      ? lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory Serialization' : 'Обязательная маркировка'
+                      : lang === 'kz' ? '2026–2027 жылдары енгізу' : lang === 'en' ? 'Implementation 2026–2027' : 'Внедрение 2026–2027'}
+                  </span>
+                  <span className="text-gray-300">•</span>
+                  <span>{lang === 'kz' ? 'ТН ВЭД' : lang === 'en' ? 'HS Code' : 'ТН ВЭД'}: <strong className="text-[#111827] font-mono font-bold">{category.tnved}</strong></span>
+                  <span className="text-gray-300">•</span>
+                  <span>{category.dateFull}</span>
+                </div>
 
-              <p className="text-sm sm:text-base text-[#64748B] leading-relaxed font-normal pt-1">
-                {category.fullDesc}
-              </p>
+                <Link
+                  to={getLocalizedPath(`/calculator?category=${category.calcCategoryCode || 'OTHER'}`)}
+                  className="inline-flex items-center justify-center gap-2 bg-[#0082FB] text-white font-extrabold text-sm px-6 py-3 rounded-xl hover:bg-[#0070DA] transition-all active:scale-95 shadow-sm shrink-0"
+                >
+                  <Calculator className="w-4 h-4" />
+                  {lang === 'kz' ? 'Құнын есептеу' : lang === 'en' ? 'Calculate Cost' : 'Рассчитать стоимость'}
+                </Link>
+              </div>
 
+              {category.fullDesc && (
+                <div className="bg-white rounded-2xl p-5 text-sm sm:text-base text-[#64748B] leading-relaxed border border-gray-100 shadow-sm">
+                  {category.fullDesc}
+                </div>
+              )}
             </div>
+          ) : (
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pt-1">
+              <div className="space-y-4 max-w-4xl">
+                <div className="flex items-center gap-3 text-xs font-semibold text-[#64748B] flex-wrap">
+                  <span className="inline-flex items-center gap-2 text-[#111827] font-bold">
+                    <span className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
+                    {isActive
+                      ? lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory Serialization' : 'Обязательная маркировка'
+                      : lang === 'kz' ? '2026–2027 жылдары енгізу' : lang === 'en' ? 'Implementation 2026–2027' : 'Внедрение 2026–2027'}
+                  </span>
+                  <span className="text-gray-300">•</span>
+                  <span>{lang === 'kz' ? 'ТН ВЭД' : lang === 'en' ? 'HS Code' : 'ТН ВЭД'}: <strong className="text-[#111827] font-mono font-bold">{category.tnved}</strong></span>
+                  <span className="text-gray-300">•</span>
+                  <span>{category.dateFull}</span>
+                </div>
 
-            {/* Quick action button */}
-            <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-3">
-              <Link
-                to={getLocalizedPath(`/calculator?category=${category.calcCategoryCode || 'OTHER'}`)}
-                className="inline-flex items-center justify-center gap-2 bg-[#0082FB] text-white font-extrabold text-sm px-7 py-4 rounded-2xl hover:bg-[#0070DA] transition-all active:scale-95 shadow-md"
-              >
-                <Calculator className="w-4 h-4" />
-                {lang === 'kz' ? 'Құнын есептеу' : lang === 'en' ? 'Calculate Cost' : 'Рассчитать стоимость'}
-              </Link>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#111827] tracking-tight leading-tight">
+                  {category.title}
+                </h1>
+
+                <p className="text-sm sm:text-base text-[#64748B] leading-relaxed font-normal pt-1">
+                  {category.fullDesc}
+                </p>
+              </div>
+
+              {/* Quick action button */}
+              <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-3">
+                <Link
+                  to={getLocalizedPath(`/calculator?category=${category.calcCategoryCode || 'OTHER'}`)}
+                  className="inline-flex items-center justify-center gap-2 bg-[#0082FB] text-white font-extrabold text-sm px-7 py-4 rounded-2xl hover:bg-[#0070DA] transition-all active:scale-95 shadow-md"
+                >
+                  <Calculator className="w-4 h-4" />
+                  {lang === 'kz' ? 'Құнын есептеу' : lang === 'en' ? 'Calculate Cost' : 'Рассчитать стоимость'}
+                </Link>
+              </div>
             </div>
-
-          </div>
+          )}
 
         </div>
       </section>

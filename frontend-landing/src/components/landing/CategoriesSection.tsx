@@ -94,6 +94,24 @@ const JewelryIcon: React.FC<{ className?: string }> = ({ className = "w-10 h-10"
   </svg>
 );
 
+const TimberWoodIcon: React.FC<{ className?: string }> = ({ className = "w-10 h-10" }) => (
+  <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M26 54V40" />
+    <path d="M12 40l14-26 14 26H12z" />
+    <path d="M44 54V44" />
+    <path d="M34 44l10-18 10 18H34z" />
+  </svg>
+);
+
+const GasCylinderIcon: React.FC<{ className?: string }> = ({ className = "w-10 h-10" }) => (
+  <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="20" y="20" width="24" height="34" rx="4" />
+    <path d="M24 20v-6h16v6" />
+    <path d="M28 14V8h8v6" />
+    <path d="M32 30c-2 2-4 4-4 7a4 4 0 0 0 8 0c0-3-2-5-4-7z" fill="currentColor" />
+  </svg>
+);
+
 interface CategoriesSectionProps {
   onScrollNext?: () => void;
 }
@@ -152,6 +170,16 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({ onScrollNe
       title: lang === 'kz' ? 'Зергерлік бұйымдар' : lang === 'en' ? 'Jewelry' : 'Ювелирные изделия',
       icon: JewelryIcon,
     },
+    {
+      id: 'timber',
+      title: lang === 'kz' ? 'Сүрек және ағаш' : lang === 'en' ? 'Timber & Logs' : 'Древесина и круглый лес',
+      icon: TimberWoodIcon,
+    },
+    {
+      id: 'lpg',
+      title: lang === 'kz' ? 'Баллондағы газ' : lang === 'en' ? 'LPG Cylinders' : 'Сжиженный газ в баллонах',
+      icon: GasCylinderIcon,
+    },
   ];
 
   return (
@@ -171,8 +199,8 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({ onScrollNe
           </p>
         </div>
 
-        {/* 5-column x 2-row cards grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+        {/* 12 cards responsive grid: 2 cols on mobile, 3 on tablet, 4 on desktop, 6 on large screens */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4">
           {categories.map((cat) => {
             const IconComponent = cat.icon;
             return (

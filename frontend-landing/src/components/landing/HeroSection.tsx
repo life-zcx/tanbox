@@ -44,7 +44,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
   return (
     <section
       id="hero"
-      className="relative min-h-[90vh] sm:min-h-screen w-full flex flex-col justify-center items-center overflow-hidden pt-16 sm:pt-24 pb-8 sm:pb-16 bg-[#0B0F19] text-white select-none"
+      className="relative min-h-screen min-h-[100dvh] w-full flex flex-col justify-between items-center overflow-hidden pt-16 sm:pt-24 pb-4 sm:pb-8 bg-[#0B0F19] text-white select-none"
     >
       {/* Background Video with Darkening */}
       <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">

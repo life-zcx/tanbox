@@ -133,8 +133,8 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
 
   return (
     <div
-      className={`fixed right-[78px] sm:right-[100px] z-[1000] transition-all duration-300 ease-out select-none ${
-        cookieBannerVisible ? 'bottom-[150px] sm:bottom-8' : 'bottom-5 sm:bottom-8'
+      className={`fixed right-[18px] sm:right-[26px] z-[1000] transition-all duration-300 ease-out select-none ${
+        cookieBannerVisible ? 'bottom-[195px] sm:bottom-[92px]' : 'bottom-[74px] sm:bottom-[92px]'
       } ${
         isVisible
           ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
@@ -146,11 +146,11 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
         onClick={scrollToTop}
         aria-label={lang === 'kz' ? 'Беттің басына шығу' : lang === 'en' ? 'Scroll to top' : 'Наверх страницы'}
         title={lang === 'kz' ? 'Беттің басына шығу' : lang === 'en' ? 'Scroll to top' : 'Наверх страницы'}
-        className="group relative w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#0082FB] hover:bg-[#0070DA] text-white flex items-center justify-center shadow-[0_4px_22px_rgba(0,130,251,0.55)] hover:shadow-[0_6px_30px_rgba(0,130,251,0.8)] hover:scale-108 active:scale-95 transition-all duration-300 cursor-pointer focus:outline-none ring-4 ring-blue-400/25"
+        className="group relative w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-[#0082FB] hover:bg-[#0070DA] text-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer focus:outline-none ring-2 ring-blue-400/25"
       >
         {/* SVG Circular Progress Ring */}
         <svg
-          className="absolute inset-0 w-13 h-13 sm:w-14 sm:h-14 -rotate-90 pointer-events-none"
+          className="absolute inset-0 w-11 h-11 sm:w-13 sm:h-13 -rotate-90 pointer-events-none"
           viewBox="0 0 52 52"
         >
           {/* Background track */}
@@ -178,7 +178,7 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
         </svg>
 
         {/* Up Arrow Icon with hover animation */}
-        <ArrowUp className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5] transition-transform duration-300 group-hover:-translate-y-0.5" />
+        <ArrowUp className="w-5 h-5 sm:w-5.5 sm:h-5.5 stroke-[2.5] transition-transform duration-300 group-hover:-translate-y-0.5" />
       </button>
     </div>
   );

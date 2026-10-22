@@ -142,6 +142,31 @@ export function getDefaultBaseUrl(env: MarkirovkaEnvironment): string {
   return 'https://prod.markirovka.kz';
 }
 
+export function isBlockedSsrfHostname(hostname: string): boolean {
+  const norm = hostname.toLowerCase().trim();
+  const blockedHosts = [
+    'localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.169.254',
+    'postgres', 'backend', 'caddy', 'label-generator',
+    'tanbox_postgres', 'tanbox_backend', 'tanbox_caddy', 'tanbox_label_generator'
+  ];
+  if (blockedHosts.includes(norm) || norm.endsWith('.local') || norm.endsWith('.internal')) {
+    return true;
+  }
+  // Block common DNS rebinding aliases (e.g. nip.io, sslip.io, lvh.me)
+  if (/(^|\.)(nip\.io|sslip\.io|lvh\.me)$/i.test(norm)) {
+    return true;
+  }
+  // Block RFC1918, loopback, link-local, and zero network IPv4 ranges
+  if (/^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|169\.254\.|0\.)/.test(norm)) {
+    return true;
+  }
+  // Block IPv6 localhost and private ranges
+  if (norm.startsWith('[') && (norm.includes('::1') || norm.includes('fc00:') || norm.includes('fe80:'))) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Validates and sanitizes baseUrl for Kazakhstan IS MPT / True API integration.
  * Protects against SSRF targeting private IPs, loopback, cloud metadata, and internal containers.
@@ -164,19 +189,8 @@ export function validateAndSanitizeBaseUrl(rawUrl?: string | null, env: Markirov
 
   const hostname = parsed.hostname.toLowerCase();
 
-  // Block SSRF to internal Docker / loopback / cloud metadata services
-  const blockedHosts = [
-    'localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.169.254',
-    'postgres', 'backend', 'caddy', 'label-generator',
-    'tanbox_postgres', 'tanbox_backend', 'tanbox_caddy', 'tanbox_label_generator'
-  ];
-  if (blockedHosts.includes(hostname)) {
-    throw new Error('Доступ к локальным и внутренним служебным адресам запрещен политикой безопасности');
-  }
-
-  // Block RFC1918 private IPv4 ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8)
-  if (/^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)/.test(hostname)) {
-    throw new Error('Доступ к приватным сетевым диапазонам запрещен политикой безопасности');
+  if (isBlockedSsrfHostname(hostname)) {
+    throw new Error('Доступ к локальным, приватным и внутренним служебным адресам запрещен политикой безопасности');
   }
 
   return `${parsed.protocol}//${parsed.host}`;
@@ -204,17 +218,8 @@ export function validateAndSanitizeNktBaseUrl(rawUrl?: string | null): string {
 
   const hostname = parsed.hostname.toLowerCase();
 
-  const blockedHosts = [
-    'localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.169.254',
-    'postgres', 'backend', 'caddy', 'label-generator',
-    'tanbox_postgres', 'tanbox_backend', 'tanbox_caddy', 'tanbox_label_generator'
-  ];
-  if (blockedHosts.includes(hostname)) {
-    throw new Error('Доступ к локальным и внутренним служебным адресам запрещен политикой безопасности');
-  }
-
-  if (/^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)/.test(hostname)) {
-    throw new Error('Доступ к приватным сетевым диапазонам запрещен политикой безопасности');
+  if (isBlockedSsrfHostname(hostname)) {
+    throw new Error('Доступ к локальным, приватным и внутренним служебным адресам запрещен политикой безопасности');
   }
 
   const cleanPath = parsed.pathname.replace(/\/+$/, '');

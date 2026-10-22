@@ -77,15 +77,15 @@ export const WhatsAppWidget: React.FC = () => {
 
   return (
     <div
-      className={`fixed right-5 sm:right-8 z-[1001] transition-all duration-300 select-none ${
-        cookieBannerVisible ? 'bottom-[150px] sm:bottom-8' : 'bottom-5 sm:bottom-8'
+      className={`fixed right-4 sm:right-6 z-[1001] transition-all duration-300 select-none ${
+        cookieBannerVisible ? 'bottom-[136px] sm:bottom-6' : 'bottom-4 sm:bottom-6'
       }`}
     >
-      {/* Speech Bubble Tooltip */}
+      {/* Speech Bubble Tooltip - desktop only to avoid covering mobile screens */}
       {showTooltip && !isDismissed && (
         <div
           onClick={handleClick}
-          className="absolute bottom-16 sm:bottom-18 right-0 mb-1 w-64 sm:w-72 bg-white rounded-2xl p-3.5 shadow-2xl border border-gray-100 cursor-pointer animate-fade-in group hover:shadow-xl transition-all"
+          className="hidden sm:block absolute bottom-16 sm:bottom-18 right-0 mb-1 w-64 sm:w-72 bg-white rounded-2xl p-3.5 shadow-2xl border border-gray-100 cursor-pointer animate-fade-in group hover:shadow-xl transition-all"
         >
           {/* Header */}
           <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-gray-100">
@@ -130,14 +130,14 @@ export const WhatsAppWidget: React.FC = () => {
         onClick={handleClick}
         aria-label={buttonAria}
         title={buttonAria}
-        className="group relative w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#25D366] hover:bg-[#20BD5A] text-white flex items-center justify-center shadow-[0_4px_22px_rgba(37,211,102,0.55)] hover:shadow-[0_6px_30px_rgba(37,211,102,0.8)] hover:scale-108 active:scale-95 transition-all duration-300 cursor-pointer focus:outline-none ring-4 ring-emerald-400/25"
+        className="group relative w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#25D366] hover:bg-[#20BD5A] text-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer focus:outline-none ring-2 sm:ring-4 ring-emerald-400/25"
       >
         {/* Soft ripple pulse wave */}
-        <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-25 pointer-events-none" />
+        <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-20 pointer-events-none" />
 
         {/* Official WhatsApp SVG Icon */}
         <svg
-          className="w-7 h-7 sm:w-8 sm:h-8 fill-white transition-transform duration-300 group-hover:scale-110"
+          className="w-6 h-6 sm:w-7 sm:h-7 fill-white transition-transform duration-300 group-hover:scale-110"
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
