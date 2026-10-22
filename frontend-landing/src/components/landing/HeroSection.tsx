@@ -15,6 +15,14 @@ interface HeroSectionProps {
 export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onScrollNext, onOpenOrderModal }) => {
   const { lang, t, getLocalizedPath } = useLanguage();
   const [titleNumber, setTitleNumber] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
 
   const titles = useMemo(() => {
     if (lang === 'kz') {
@@ -48,36 +56,38 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
     >
       {/* Background Video with Darkening */}
       <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
-        {/* Mobile Background: Lightweight WebP image (37KB) to avoid downloading 2.5MB video on mobile 4G */}
+        {/* Mobile Background: Real authentic warehouse (matches desktop video) */}
         <picture className="block md:hidden w-full h-full">
           <source srcSet="/hero-bg-poster-mobile.webp" type="image/webp" />
           <img
-            src="/hero-bg-poster.jpg"
+            src="/hero-bg-mobile.jpg"
             alt="TANBOX Background"
             width={640}
-            height={360}
+            height={1138}
             className="w-full h-full object-cover object-center"
             loading="eager"
             {...({ fetchpriority: 'high' } as any)}
           />
         </picture>
 
-        {/* Desktop Video: Loaded only on md+ screens */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          poster="/hero-bg-poster.webp"
-          preload="none"
-          className="hidden md:block w-full h-full object-cover object-center"
-        >
-          <source src="/hero-bg.webm" type="video/webm" />
-          <source src="/hero-bg.mp4" type="video/mp4" />
-        </video>
+        {/* Desktop Video: Loaded only on md+ screens when isDesktop is true, saving 2.5MB on mobile */}
+        {isDesktop && (
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            poster="/hero-bg-poster.webp"
+            preload="auto"
+            className="hidden md:block w-full h-full object-cover object-center"
+          >
+            <source src="/hero-bg.webm" type="video/webm" />
+            <source src="/hero-bg.mp4" type="video/mp4" />
+          </video>
+        )}
 
-        {/* Затемнение видео */}
-        <div className="absolute inset-0 bg-[#0B0F19]/75" />
+        {/* Затемнение фона: умеренное (60%), чтобы склад и стеллажи были отлично видны до самого верха */}
+        <div className="absolute inset-0 bg-[#0B0F19]/60 md:bg-[#0B0F19]/75" />
       </div>
 
       <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 sm:space-y-8 relative z-10 my-auto">
@@ -102,7 +112,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={`${lang}-${titleNumber}`}
-                    className="inline-block font-black text-[#0082FB] whitespace-nowrap"
+                    className="inline-block font-black text-[#0082FB] whitespace-nowrap will-change-transform"
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -16 }}
