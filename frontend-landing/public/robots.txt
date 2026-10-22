@@ -18,6 +18,7 @@ Allow: /contacts
 Allow: /terms
 Allow: /privacy
 Allow: /cookie-policy
+Allow: /payment-procedure
 
 # Закрыто от индексации: Панель администратора
 Disallow: /admin
