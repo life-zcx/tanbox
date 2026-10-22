@@ -50,12 +50,14 @@ export const ArticleDetailPage: React.FC = () => {
         }
       );
 
-      // Inject Schema.org Article and FAQ structured data
-      const articleSchema = {
+      // Inject Schema.org Article and FAQ structured data (Rich Snippets for Google & Yandex)
+      const pageUrl = `https://tanbox.kz${lang === 'ru' ? '' : `/${lang}`}/articles/${article.slug}`;
+      const articleSchema: any = {
         '@context': 'https://schema.org',
         '@type': 'Article',
         headline: article.title,
         description: article.metaDescription,
+        inLanguage: lang === 'kz' ? 'kk' : lang,
         author: {
           '@type': 'Organization',
           name: article.author,
@@ -71,9 +73,25 @@ export const ArticleDetailPage: React.FC = () => {
         },
         mainEntityOfPage: {
           '@type': 'WebPage',
-          '@id': `https://tanbox.kz/articles/${article.slug}`,
+          '@id': pageUrl,
         },
       };
+
+      const graph: any[] = [articleSchema];
+
+      if (article.faq && article.faq.length > 0) {
+        graph.push({
+          '@type': 'FAQPage',
+          mainEntity: article.faq.map((item) => ({
+            '@type': 'Question',
+            name: item.q,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: item.a,
+            },
+          })),
+        });
+      }
 
       let schemaScript = document.querySelector('#article-schema-org') as HTMLScriptElement | null;
       if (!schemaScript) {
@@ -82,7 +100,9 @@ export const ArticleDetailPage: React.FC = () => {
         schemaScript.type = 'application/ld+json';
         document.head.appendChild(schemaScript);
       }
-      schemaScript.textContent = JSON.stringify(articleSchema);
+      schemaScript.textContent = JSON.stringify(
+        graph.length === 1 ? graph[0] : { '@context': 'https://schema.org', '@graph': graph }
+      );
     }
   }, [articleId, article]);
 
