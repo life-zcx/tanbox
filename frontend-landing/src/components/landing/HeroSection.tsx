@@ -48,14 +48,29 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
     >
       {/* Background Video with Darkening */}
       <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
+        {/* Mobile Background: Lightweight WebP image (37KB) to avoid downloading 2.5MB video on mobile 4G */}
+        <picture className="block md:hidden w-full h-full">
+          <source srcSet="/hero-bg-poster-mobile.webp" type="image/webp" />
+          <img
+            src="/hero-bg-poster.jpg"
+            alt="TANBOX Background"
+            width={640}
+            height={360}
+            className="w-full h-full object-cover object-center"
+            loading="eager"
+            {...({ fetchpriority: 'high' } as any)}
+          />
+        </picture>
+
+        {/* Desktop Video: Loaded only on md+ screens */}
         <video
           autoPlay
           loop
           muted
           playsInline
-          poster="/hero-bg-poster.jpg"
-          preload="metadata"
-          className="w-full h-full object-cover object-center"
+          poster="/hero-bg-poster.webp"
+          preload="none"
+          className="hidden md:block w-full h-full object-cover object-center"
         >
           <source src="/hero-bg.webm" type="video/webm" />
           <source src="/hero-bg.mp4" type="video/mp4" />

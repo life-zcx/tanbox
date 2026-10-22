@@ -16,7 +16,7 @@ export const Footer: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <Link to={getLocalizedPath('/')}>
-              <img src="/tanbox-white.svg" alt="tanbox.kz" className="h-6 w-auto" />
+              <img src="/tanbox-white.svg" alt="tanbox.kz" width={140} height={24} className="h-6 w-auto" />
             </Link>
           </div>
           <p className="text-sm text-gray-400 leading-relaxed">
@@ -184,17 +184,23 @@ export const Footer: React.FC = () => {
           <img
             src="/Visa.webp"
             alt="Visa"
+            width={60}
+            height={24}
             className="h-6 w-auto object-contain"
           />
           <img
             src="/Mastercard.webp"
             alt="Mastercard"
+            width={40}
+            height={24}
             className="h-6 w-auto object-contain"
           />
           <span className="h-4 w-px bg-white/20 mx-0.5" />
           <img
             src="/Logo_white.svg"
             alt="Freedom Pay"
+            width={100}
+            height={20}
             className="h-5 w-auto object-contain"
           />
         </Link>

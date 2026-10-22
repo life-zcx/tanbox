@@ -7,18 +7,20 @@ import { CookieBanner } from './components/common/CookieBanner';
 import { ScrollToTopButton } from './components/common/ScrollToTopButton';
 import { WhatsAppWidget } from './components/common/WhatsAppWidget';
 import { HomePage } from './pages/HomePage';
-import { CalculatorPage } from './pages/CalculatorPage';
-import { ServicesPage } from './pages/ServicesPage';
-import { CategoriesPage } from './pages/CategoriesPage';
-import { CategoryDetailPage } from './pages/CategoryDetailPage';
-import { ContactsPage } from './pages/ContactsPage';
-import { ArticlesPage } from './pages/ArticlesPage';
-import { ArticleDetailPage } from './pages/ArticleDetailPage';
-import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
-import { TermsPage } from './pages/TermsPage';
-import { CookiePolicyPage } from './pages/CookiePolicyPage';
-import { PaymentProcedurePage } from './pages/PaymentProcedurePage';
 import { TariffCode } from './types';
+
+// Code-split secondary pages so initial bundle only loads HomePage
+const CalculatorPage = React.lazy(() => import('./pages/CalculatorPage').then(m => ({ default: m.CalculatorPage })));
+const ServicesPage = React.lazy(() => import('./pages/ServicesPage').then(m => ({ default: m.ServicesPage })));
+const CategoriesPage = React.lazy(() => import('./pages/CategoriesPage').then(m => ({ default: m.CategoriesPage })));
+const CategoryDetailPage = React.lazy(() => import('./pages/CategoryDetailPage').then(m => ({ default: m.CategoryDetailPage })));
+const ContactsPage = React.lazy(() => import('./pages/ContactsPage').then(m => ({ default: m.ContactsPage })));
+const ArticlesPage = React.lazy(() => import('./pages/ArticlesPage').then(m => ({ default: m.ArticlesPage })));
+const ArticleDetailPage = React.lazy(() => import('./pages/ArticleDetailPage').then(m => ({ default: m.ArticleDetailPage })));
+const PrivacyPolicyPage = React.lazy(() => import('./pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsPage = React.lazy(() => import('./pages/TermsPage').then(m => ({ default: m.TermsPage })));
+const CookiePolicyPage = React.lazy(() => import('./pages/CookiePolicyPage').then(m => ({ default: m.CookiePolicyPage })));
+const PaymentProcedurePage = React.lazy(() => import('./pages/PaymentProcedurePage').then(m => ({ default: m.PaymentProcedurePage })));
 import { getLkUrl } from './utils/navigation';
 import { trackGoogleConversion } from './utils/analytics';
 import { LanguageProvider } from './context/LanguageContext';
@@ -135,16 +137,18 @@ const AppContent: React.FC = () => {
       <Header onOpenAuth={handleOpenAuth} maintenance={maintenance?.active} />
 
       <main className="flex-1">
-        <Routes>
-          {/* Default (Russian) */}
-          {renderRoutes('')}
+        <React.Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center"><div className="w-8 h-8 border-2 border-[#165DFB] border-t-transparent rounded-full animate-spin" /></div>}>
+          <Routes>
+            {/* Default (Russian) */}
+            {renderRoutes('')}
 
-          {/* Kazakh (/kz) */}
-          {renderRoutes('/kz')}
+            {/* Kazakh (/kz) */}
+            {renderRoutes('/kz')}
 
-          {/* English (/en) */}
-          {renderRoutes('/en')}
-        </Routes>
+            {/* English (/en) */}
+            {renderRoutes('/en')}
+          </Routes>
+        </React.Suspense>
       </main>
 
       <Footer />

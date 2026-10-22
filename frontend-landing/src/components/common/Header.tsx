@@ -89,6 +89,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
             <img
               src={isTransparent ? '/tanbox-white.svg' : '/tanbox-dark.svg'}
               alt="tanbox.kz"
+              width={140}
+              height={24}
               className="h-5 sm:h-6 w-auto transition-all duration-300"
             />
           </Link>
@@ -207,6 +209,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
               <img
                 src="/tanbox-white.svg"
                 alt="tanbox.kz"
+                width={140}
+                height={28}
                 className="h-6 sm:h-7 w-auto"
               />
             </Link>

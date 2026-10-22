@@ -6,7 +6,7 @@ import { CalculatorSection } from '../components/landing/CalculatorSection';
 import { HowItWorksSection } from '../components/landing/HowItWorksSection';
 import { FaqSection } from '../components/landing/FaqSection';
 import { ContactsSection } from '../components/landing/ContactsSection';
-import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
+const ServiceOrderModal = React.lazy(() => import('../components/modals/ServiceOrderModal').then(m => ({ default: m.ServiceOrderModal })));
 import { TariffCode } from '../types';
 import { setPageSeo } from '../utils/seo';
 
@@ -90,17 +90,21 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) 
       <ContactsSection />
 
       {/* Quick Service Order Modal */}
-      <ServiceOrderModal
-        isOpen={isOrderModalOpen}
-        onClose={() => setIsOrderModalOpen(false)}
-        initialServiceTitle={
-          lang === 'kz'
-            ? 'Тауарларды цифрлық таңбалау (кілтке дейін)'
-            : lang === 'en'
-            ? 'Turnkey Product Serialization & Marking'
-            : 'Цифровая маркировка товаров под ключ'
-        }
-      />
+      {isOrderModalOpen && (
+        <React.Suspense fallback={null}>
+          <ServiceOrderModal
+            isOpen={isOrderModalOpen}
+            onClose={() => setIsOrderModalOpen(false)}
+            initialServiceTitle={
+              lang === 'kz'
+                ? 'Тауарларды цифрлық таңбалау (кілтке дейін)'
+                : lang === 'en'
+                ? 'Turnkey Product Serialization & Marking'
+                : 'Цифровая маркировка товаров под ключ'
+            }
+          />
+        </React.Suspense>
+      )}
     </div>
   );
 };
