@@ -1076,8 +1076,88 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
         { id: 'excise-penalties', title: '3. Excisable goods: Article 283 and confiscation' },
         { id: 'kkm-receipts', title: '4. Retail operations and POS receipts: Article 284' },
         { id: 'compliance-steps', title: '5. Compliance recommendations for businesses' }
+      ],
+      contentSections: [
+        {
+          id: 'legal-basis',
+          title: '1. Regulatory framework for digital marking in RK',
+          content: `
+Mandatory digital marking via Data Matrix 2D barcodes in Kazakhstan is governed by:
+• The Law of the Republic of Kazakhstan "On Regulation of Trading Activities";
+• The Eurasian Economic Union (EAEU) Agreement on Marking of Goods by Identification Means;
+• Government decrees and sectoral ministerial orders (Trade, Energy, Health, Finance).
+
+State control is enforced by:
+• **State Revenue Committee (SRC)** — customs clearance verification, border controls, and cross-checking declarations against decommissioned items;
+• **Committee of Sanitary and Epidemiological Control (MoH)** — pharmaceutical and dietary supplement turnover;
+• **Committee for Technical Regulation and Metrology (CTRM)** — compliance of goods in retail circulation.
+          `
+        },
+        {
+          id: 'pharma-penalties',
+          title: '2. Pharmaceuticals: Article 426 of the Code',
+          content: `
+For pharmaceuticals, administrative liability is established under **Article 426 of the Code of Administrative Offences of RK**:
+
+Violations of pharmaceutical regulations, storage, import, or sale of unlabeled medicines incur fines (Part 1):
+• Individuals — **70 MCI**;
+• Officials — **100 MCI**;
+• Small business entities — **130 MCI**;
+• Medium business entities — **200 MCI**;
+• Large business entities — **1,000 MCI**.
+
+*Critical:* Repeated violation within one year (Part 2) leads to **suspension of the pharmaceutical license for up to 6 months**.
+          `
+        },
+        {
+          id: 'excise-penalties',
+          title: '3. Excisable goods: Article 283 and confiscation',
+          content: `
+For excisable products (tobacco, beer and alcoholic beverages), **Article 283 of the Code of Administrative Offences** applies:
+
+Turnover of excisable goods subject to mandatory marking without identification codes or with counterfeit codes leads to:
+• Fines ranging from **50 to 500 MCI** depending on enterprise category;
+• **Mandatory confiscation** of all unmarked goods;
+• For recurring violations — revocation of licenses and permits.
+          `
+        },
+        {
+          id: 'kkm-receipts',
+          title: '4. Retail operations and POS receipts: Article 284',
+          content: `
+For retail points of sale, compliance is monitored through **online cash register (KKM) fiscal receipts**.
+
+Cashiers must scan the 2D Data Matrix code upon checkout. The fiscal data operator (OFD) automatically transmits the code tag to the national IS Tanba database.
+
+Selling serialized products without scanning the code or transmitting the tag violates **Article 284 of the Code**:
+• First violation — **official warning**;
+• Repeated violation within 12 months — fines from **15 to 50 MCI**.
+          `
+        },
+        {
+          id: 'compliance-steps',
+          title: '5. Compliance recommendations for businesses',
+          content: `
+To mitigate audit risks:
+1. Register your company in the national system at **prod.markirovka.kz**;
+2. Apply identification codes prior to customs declaration (at overseas manufacturing facilities or at bonded customs warehouses under procedure IM-70);
+3. Upgrade retail checkout counters with 2D scanners and compatible cash register software;
+4. Transmit codes to downstream partners through electronic transfer acts in IS Tanba.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Who is liable if an unreadable code is found on a retail shelf?',
+          a: 'The retailer exhibiting the item for sale bears primary liability before auditing authorities.'
+        },
+        {
+          q: 'Can imported goods be labeled after customs release?',
+          a: 'No. Goods subject to mandatory serialization must be labeled before customs declaration release for domestic consumption.'
+        }
       ]
     },
+
     'markirovka-motornyh-masel-kazakhstan-2026': {
       title: 'Motor Oil Serialization in Kazakhstan: Deadlines, HS Codes, and Step-by-Step Guide',
       shortTitle: 'Motor Oil Serialization Guide',
@@ -1087,8 +1167,71 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Technical Dept',
       summary: 'Mandatory Data Matrix serialization for engine oils and lubricants in Kazakhstan. Covered HS codes, timeline, customs warehouse labeling, and retail scanning rules.',
       metaDescription: 'Mandatory motor oil marking in Kazakhstan. HS code group 2710, customs warehouse labeling, POS cash register readiness.',
-      metaKeywords: 'motor oil marking Kazakhstan, engine lubricants serialization, HS code 2710 markirovka kz'
+      metaKeywords: 'motor oil marking Kazakhstan, engine lubricants serialization, HS code 2710 markirovka kz',
+      tableOfContents: [
+        { id: 'decree-basis', title: '1. Government Decree and Mandate' },
+        { id: 'timeline-stages', title: '2. Implementation Timeline' },
+        { id: 'tnved-scope', title: '3. Regulated HS Codes' },
+        { id: 'code-expiry', title: '4. Customs and Packaging Specifics' },
+        { id: 'sto-and-retail', title: '5. Auto Service Centers and Retail Requirements' }
+      ],
+      contentSections: [
+        {
+          id: 'decree-basis',
+          title: '1. Government Decree and Mandate',
+          content: `
+Under the regulatory decisions of the Ministry of Industry and Construction and the Ministry of Trade of RK, motor oils and petroleum lubricants are subject to mandatory digital marking with 2D Data Matrix barcodes.
+
+The measure aims to eliminate counterfeit engine oils from the market and ensure genuine motor oil traceability from factory or customs import to the end customer.
+          `
+        },
+        {
+          id: 'timeline-stages',
+          title: '2. Implementation Timeline',
+          content: `
+• **Phase 1:** Mandatory marking by domestic manufacturers and importers for all packaged engine oils;
+• **Phase 2:** Complete restriction on importing unlabeled oils through customs checkpoints;
+• **Phase 3:** Mandatory retail scanning through online POS terminals and decommissioning codes upon oil changes at auto service stations.
+          `
+        },
+        {
+          id: 'tnved-scope',
+          title: '3. Regulated HS Codes',
+          content: `
+Serialization applies to petroleum oils and oils obtained from bituminous minerals:
+• **2710 19 810 0** — Motor oils, compressor oils, turbine oils;
+• **2710 19 830 0** — Hydraulic fluids;
+• **2710 19 870 0** — Gear and transmission lubricants.
+
+Both small retail canisters (1L, 4L, 5L) and industrial drums (20L, 60L, 208L) require unique serial codes.
+          `
+        },
+        {
+          id: 'code-expiry',
+          title: '4. Customs and Packaging Specifics',
+          content: `
+Because oil containers often encounter oily and moist warehouse environments, labels must feature:
+• High-tack solvent acrylic adhesive;
+• Synthetic polypropylene or polyester film resistant to petroleum distillates;
+• High-contrast resin thermal transfer ribbon printing.
+          `
+        },
+        {
+          id: 'sto-and-retail',
+          title: '5. Auto Service Centers and Retail Requirements',
+          content: `
+Auto service centers (СТО) replacing oil for retail consumers must scan the canister code upon consumption or file a decommissioning document in IS Tanba citing "own production needs / service provision".
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Do bulk barrels (208L) need individual serialization?',
+          a: 'Yes. Each barrel must carry a unique Data Matrix code. When oil is dispensed in retail portions, the barrel code is decommissioned upon initial opening.'
+        }
+      ]
     },
+
     'markirovka-obuvi-kazakhstan-pod-klyuch': {
       title: 'Turnkey Footwear Serialization in Kazakhstan: Rules, Remaining Stock, and Customs Clearance',
       shortTitle: 'Turnkey Footwear Serialization',
@@ -1098,8 +1241,70 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Warehouse Team',
       summary: 'Comprehensive guide to footwear serialization in RK: labeling before customs declaration, working on customs warehouses, Data Matrix requirements, and POS integration.',
       metaDescription: 'Footwear marking in Kazakhstan. Turnkey customs labeling, IS Tanba catalog registration, and compliance.',
-      metaKeywords: 'shoes marking Kazakhstan, footwear serialization Almaty, customs warehouse shoes labeling'
+      metaKeywords: 'shoes marking Kazakhstan, footwear serialization Almaty, customs warehouse shoes labeling',
+      tableOfContents: [
+        { id: 'shoes-legal', title: '1. Footwear Serialization Requirements' },
+        { id: 'shoes-tnved', title: '2. Regulated Shoe HS Codes (Group 64)' },
+        { id: 'svh-customs', title: '3. Customs Warehouse Labeling (IM-70)' },
+        { id: 'retail-flow', title: '4. Retail Sales and Kaspi / Wildberries' },
+        { id: 'tanbox-help', title: '5. Turnkey Services by TANBOX.KZ' }
+      ],
+      contentSections: [
+        {
+          id: 'shoes-legal',
+          title: '1. Footwear Serialization Requirements',
+          content: `
+Digital marking of shoes has been fully mandatory in Kazakhstan across all distribution channels:
+• Importers cannot clear shipments through customs without valid Data Matrix codes registered in IS Tanba;
+• Retail stores cannot sell shoes without scanning the 2D code at checkout;
+• Unmarked shoe stock is deemed illicit circulation subject to seizure.
+          `
+        },
+        {
+          id: 'shoes-tnved',
+          title: '2. Regulated Shoe HS Codes (Group 64)',
+          content: `
+All commodity codes under HS chapter 64 are included:
+• **6401 - 6405:** Waterproof footwear, leather shoes, boots, sneakers, textile footwear, and sandals;
+• Exemptions apply only to orthopedic shoes custom-made by medical prescription and sports shoes with built-in ice skates.
+          `
+        },
+        {
+          id: 'svh-customs',
+          title: '3. Customs Warehouse Labeling (IM-70)',
+          content: `
+If overseas manufacturers cannot sticker shoes at the factory:
+1. The shipment is placed under the customs warehouse procedure (IM-70) in Almaty, Astana, or regional customs terminals;
+2. TANBOX certified operators enter the bonded customs warehouse, print tamper-proof Data Matrix labels, and affix them to each shoebox or tag;
+3. A verification report is submitted to customs, enabling seamless transition to final release (IM-40).
+          `
+        },
+        {
+          id: 'retail-flow',
+          title: '4. Retail Sales and Kaspi / Wildberries',
+          content: `
+When fulfilling orders via Kaspi Pay or Wildberries FBS:
+• Cashiers scan the Data Matrix code on the box;
+• The OFD cashier receipt transmits the decommissioned serial number to IS Tanba automatically;
+• In marketplace sales, codes are transmitted via electronic invoice / electronic dispatch act.
+          `
+        },
+        {
+          id: 'tanbox-help',
+          title: '5. Turnkey Services by TANBOX.KZ',
+          content: `
+TANBOX provides complete turnkey support: NKT catalog registration, code emission, printing on certified equipment, customs warehouse physical stickering, and aggregation into master cartons.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Where should the shoe label be affixed?',
+          a: 'The label can be placed on the retail shoebox, individual polybag, or attached directly to the shoe via a secure tag.'
+        }
+      ]
     },
+
     'markirovka-lekarstv-i-bad-kazakhstan': {
       title: 'Pharma & Dietary Supplements Serialization: 100% Traceability and Article 426 Compliance',
       shortTitle: 'Pharma and Supplements Marking',
@@ -1109,8 +1314,61 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Compliance Dept',
       summary: 'Full serialization requirements for drugs and dietary supplements (BAA) in Kazakhstan. 2D Data Matrix on secondary packaging, aggregation into SSCC, and pharmacy POS scanning.',
       metaDescription: 'Pharmaceuticals and dietary supplements serialization in Kazakhstan. MoH regulations, pharmacy checkouts, and license protection.',
-      metaKeywords: 'pharma serialization Kazakhstan, medicine Data Matrix kz, dietary supplements marking RK'
+      metaKeywords: 'pharma serialization Kazakhstan, medicine Data Matrix kz, dietary supplements marking RK',
+      tableOfContents: [
+        { id: 'pharma-vs-bad', title: '1. Pharmaceuticals vs. Dietary Supplements' },
+        { id: 'pharma-regulations', title: '2. Ministry of Healthcare Mandates' },
+        { id: 'bad-regulations', title: '3. Dietary Supplements (BAA) Timeline' },
+        { id: 'pharmacy-requirements', title: '4. Pharmacy and Hospital Integration' },
+        { id: 'penalties-reminder', title: '5. License Revocation Risks' }
+      ],
+      contentSections: [
+        {
+          id: 'pharma-vs-bad',
+          title: '1. Pharmaceuticals vs. Dietary Supplements',
+          content: `
+Both pharmaceuticals (medicines) and biologically active dietary supplements (BAA) require digital traceability, but adhere to different regulatory timelines and registration portals:
+• Medicines: Regulated by the National Center for Expertise of Medicines (NCEM) and MoH;
+• Dietary supplements: Under Sanitary-Epidemiological Control Committee supervision.
+          `
+        },
+        {
+          id: 'pharma-regulations',
+          title: '2. Ministry of Healthcare Mandates',
+          content: `
+From 2024 to 2026, Kazakhstan transitioned to 100% mandatory digital marking for all registered medicines. Every individual package must bear a unique GS1 Data Matrix code featuring GTIN, serial number, batch number, and expiration date.
+          `
+        },
+        {
+          id: 'bad-regulations',
+          title: '3. Dietary Supplements (BAA) Timeline',
+          content: `
+Dietary supplements are subjected to pilot and mandatory stages. Importers must upload Certificate of State Registration (SGR) numbers into NKT cards before ordering code emission.
+          `
+        },
+        {
+          id: 'pharmacy-requirements',
+          title: '4. Pharmacy and Hospital Integration',
+          content: `
+Pharmacies must utilize 2D barcode scanners compatible with GS1 Data Matrix syntax. Upon dispensing prescription or OTC drugs, the serial code is automatically submitted to the national repository via OFD.
+          `
+        },
+        {
+          id: 'penalties-reminder',
+          title: '5. License Revocation Risks',
+          content: `
+Under Article 426 of the Code of Administrative Offences, repeated distribution of unlabeled medicines results in suspension of pharmacy or wholesale licenses for up to six months.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Do hospital dispensaries have to scan medicine codes?',
+          a: 'Yes. Medical institutions must decommission codes citing "medical use / internal treatment" via medical information system (MIS) integration.'
+        }
+      ]
     },
+
     'chto-takoe-is-tanba-polnoe-rukovodstvo': {
       title: 'What is IS Tanba (ТМБ АЖ): Complete Architecture, Registration, and Workflow Guide',
       shortTitle: 'Complete Guide to IS Tanba',
@@ -1120,8 +1378,62 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Systems Architect',
       summary: 'The unified information system for product marking and traceability in Kazakhstan. System architecture, digital signature login, NKT catalog, emission station, and 1C integration.',
       metaDescription: 'Complete overview of IS Tanba Kazakhstan. Personal account registration, Data Matrix code ordering, and ERP integration.',
-      metaKeywords: 'IS Tanba Kazakhstan, markirovka kz portal, NKT catalog registration'
+      metaKeywords: 'IS Tanba Kazakhstan, markirovka kz portal, NKT catalog registration',
+      tableOfContents: [
+        { id: 'tanba-overview', title: '1. Purpose of IS Tanba' },
+        { id: 'operator-role', title: '2. National Operator (Kazakhtelecom)' },
+        { id: 'system-components', title: '3. Core System Modules' },
+        { id: 'naqty-onim', title: '4. Naqty Onim and Naqty Sauda Apps' },
+        { id: 'tanbox-role', title: '5. Integrating IS Tanba with 1C and WMS' }
+      ],
+      contentSections: [
+        {
+          id: 'tanba-overview',
+          title: '1. Purpose of IS Tanba',
+          content: `
+IS Tanba (Тауарларды таңбалау мен қадағалаудың ақпараттық жүйесі - ТМБ АЖ) is Kazakhstan\'s central state cloud database tracking serialized consumer goods from production or customs import to retail point-of-sale checkout.
+          `
+        },
+        {
+          id: 'operator-role',
+          title: '2. National Operator (Kazakhtelecom)',
+          content: `
+JSC "Kazakhtelecom" serves as the designated National Operator for marking and traceability under the Ministry of Digital Development and Ministry of Trade. It maintains servers, emission cryptoservers, and data pipelines.
+          `
+        },
+        {
+          id: 'system-components',
+          title: '3. Core System Modules',
+          content: `
+• **NKT (National Product Catalog):** Master database of product descriptors, GTINs, and international barcodes;
+• **SUZ (Order Management Station):** Generates encrypted crypto-tail 2D codes;
+• **Traceability Engine:** Processes electronic acceptance acts (EAP) between supply chain counterparties.
+          `
+        },
+        {
+          id: 'naqty-onim',
+          title: '4. Naqty Onim and Naqty Sauda Apps',
+          content: `
+• **Naqty Onim:** Free consumer mobile app to check authenticity and verify legitimate origin;
+• **Naqty Sauda:** Business app enabling small retail shops to receive and decommission codes using a smartphone camera.
+          `
+        },
+        {
+          id: 'tanbox-role',
+          title: '5. Integrating IS Tanba with 1C and WMS',
+          content: `
+TANBOX provides automated REST API connectors between IS Tanba, 1C:Enterprise, MoySklad, and warehouse WMS, eliminating manual data entry.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Is registration in IS Tanba free of charge?',
+          a: 'Yes, registering a personal corporate account in IS Tanba is free. The cost is per code emission fee set by state tariff.'
+        }
+      ]
     },
+
     'markirovka-dlya-kaspi-i-wildberries-kazakhstan': {
       title: 'Product Marking for Kaspi.kz, Wildberries & Ozon in Kazakhstan: Marketplace Rules',
       shortTitle: 'Marking for Marketplaces',
@@ -1131,8 +1443,63 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ E-commerce Dept',
       summary: 'How to sell serialized goods on Kaspi.kz, Wildberries, and Ozon. FBO/FBS acceptance, scanning at pickup points, withdrawal from circulation, and common errors.',
       metaDescription: 'Marking rules for Kaspi and Wildberries sellers in Kazakhstan. Code transmission, acceptance, and return handling.',
-      metaKeywords: 'Kaspi marking Kazakhstan, Wildberries serialization KZ, marketplace Data Matrix'
+      metaKeywords: 'Kaspi marking Kazakhstan, Wildberries serialization KZ, marketplace Data Matrix',
+      tableOfContents: [
+        { id: 'marketplace-rules', title: '1. Marketplace Policies in RK' },
+        { id: 'kaspi-workflow', title: '2. Kaspi Shop Serialization Workflow' },
+        { id: 'wb-workflow', title: '3. Wildberries and Ozon FBO / FBS Rules' },
+        { id: 'returns-management', title: '4. Processing Customer Returns' },
+        { id: 'fulfillment-tanbox', title: '5. Marketplace Fulfillment by TANBOX' }
+      ],
+      contentSections: [
+        {
+          id: 'marketplace-rules',
+          title: '1. Marketplace Policies in RK',
+          content: `
+Online marketplaces operating in Kazakhstan (Kaspi.kz, Wildberries, Ozon) are legally classified as participants in the product turnover chain. They strictly refuse acceptance of unlabeled goods subject to mandatory marking.
+          `
+        },
+        {
+          id: 'kaspi-workflow',
+          title: '2. Kaspi Shop Serialization Workflow',
+          content: `
+For merchant orders via Kaspi Delivery:
+1. Seller generates and enters Data Matrix code upon packaging;
+2. Code is scanned during handover to courier or courier hub;
+3. Kaspi fiscal receipt decommissions the serial code at final delivery.
+          `
+        },
+        {
+          id: 'wb-workflow',
+          title: '3. Wildberries and Ozon FBO / FBS Rules',
+          content: `
+• **FBS (Fulfillment by Seller):** Seller must scan Data Matrix and attach code to the specific consignment label before handover;
+• **FBO (Fulfillment by Operator):** Entire batch must be transferred to the marketplace via electronic acceptance act in IS Tanba before sorting center delivery.
+          `
+        },
+        {
+          id: 'returns-management',
+          title: '4. Processing Customer Returns',
+          content: `
+If an item is returned by a buyer with an intact code, it can be re-listed immediately. If the barcode is damaged, the seller must order a re-marking code in IS Tanba.
+          `
+        },
+        {
+          id: 'fulfillment-tanbox',
+          title: '5. Marketplace Fulfillment by TANBOX',
+          content: `
+TANBOX handles end-to-end marketplace prep: barcode stickering, marketplace box labeling, electronic acts transmission, and cross-docking.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Can Wildberries reject my shipment if one box has an unreadable code?',
+          a: 'Yes, marketplaces can reject the entire delivery box or issue penalties for unreadable 2D codes.'
+        }
+      ]
     },
+
     'markirovka-odezhdy-tekstilya-kazakhstan': {
       title: 'Apparel and Home Textiles Serialization: Roadmap, HS Codes, and Importer Guide',
       shortTitle: 'Apparel & Textile Marking',
@@ -1142,8 +1509,61 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Technical Dept',
       summary: 'Stage-by-stage introduction of digital marking for clothes, linens, and light industry goods in Kazakhstan. Label design, sew-in tags, and customs warehouse processing.',
       metaDescription: 'Textile and clothing serialization in Kazakhstan. Label requirements, customs warehouse stickering, and retail checkout rules.',
-      metaKeywords: 'clothing serialization Kazakhstan, textile Data Matrix, light industry marking'
+      metaKeywords: 'clothing serialization Kazakhstan, textile Data Matrix, light industry marking',
+      tableOfContents: [
+        { id: 'light-industry-decree', title: '1. Light Industry Regulations' },
+        { id: 'three-stages', title: '2. Three Implementation Stages' },
+        { id: 'customs-warehouse-rules', title: '3. Customs Warehouse Processing' },
+        { id: 'export-russia-kiz', title: '4. Cross-border EAEU Recognition (Chestny ZNAK)' },
+        { id: 'implementation-plan', title: '5. Implementation Checklist for Brands' }
+      ],
+      contentSections: [
+        {
+          id: 'light-industry-decree',
+          title: '1. Light Industry Regulations',
+          content: `
+The Ministry of Trade and Integration of RK implemented progressive digital marking for clothing and textile products. The goal is combating gray market imports and protecting intellectual property.
+          `
+        },
+        {
+          id: 'three-stages',
+          title: '2. Three Implementation Stages',
+          content: `
+• **Stage 1:** Overcoats, windbreakers, jackets, and leather garments;
+• **Stage 2:** Bed linens, table linens, and bath towels;
+• **Stage 3:** Knitted shirts, blouses, trousers, and daily apparel.
+          `
+        },
+        {
+          id: 'customs-warehouse-rules',
+          title: '3. Customs Warehouse Processing',
+          content: `
+Imported apparel must be tagged prior to customs declaration. Labels can be placed on fabric care tags, hangtags, or outer packaging with protective polymer film.
+          `
+        },
+        {
+          id: 'export-russia-kiz',
+          title: '4. Cross-border EAEU Recognition (Chestny ZNAK)',
+          content: `
+Kazakhstan and Russia mutual marking recognition permits cross-border verification. Goods legally marked with IS Tanba codes can be exported to EAEU partners without re-marking.
+          `
+        },
+        {
+          id: 'implementation-plan',
+          title: '5. Implementation Checklist for Brands',
+          content: `
+Brands should register in NKT, obtain GTINs for each size/color variant (SKU), and prepare compliant hangtag stickers with barcode dimensions of at least 15x15mm.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Does each apparel size need a separate GTIN?',
+          a: 'Yes. Every combination of model, color, and size is a distinct SKU requiring its own GTIN in the National Product Catalog.'
+        }
+      ]
     },
+
     'markirovka-vody-i-napitkov-kazakhstan': {
       title: 'Bottled Water & Soft Drinks Serialization: Production Line Equipment and Deadlines',
       shortTitle: 'Water & Soft Drinks Marking',
@@ -1153,8 +1573,54 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Engineering Dept',
       summary: 'Requirements for high-speed digital serialization of packaged drinking water and sweetened drinks. Bottle cap laser printing, thermal transfer labels, and group aggregation.',
       metaDescription: 'Packaged water marking in Kazakhstan. High-speed bottle printing, camera verification, and aggregation.',
-      metaKeywords: 'water marking Kazakhstan, soft drinks Data Matrix kz, beverage production line marking'
+      metaKeywords: 'water marking Kazakhstan, soft drinks Data Matrix kz, beverage production line marking',
+      tableOfContents: [
+        { id: 'water-official-status', title: '1. Current Regulatory Status' },
+        { id: 'why-canceled', title: '2. Technological Solutions for Bottlers' },
+        { id: 'cross-border-eeu', title: '3. EAEU Import and Export Rules' },
+        { id: 'recommendations-manufacturers', title: '4. Production Line Engineering Guide' }
+      ],
+      contentSections: [
+        {
+          id: 'water-official-status',
+          title: '1. Current Regulatory Status',
+          content: `
+Packaged natural mineral water, purified drinking water, and soft drinks are subject to digital traceability in Kazakhstan. High-speed production demands dedicated industrial marking equipment.
+          `
+        },
+        {
+          id: 'why-canceled',
+          title: '2. Technological Solutions for Bottlers',
+          content: `
+Beverage factories typically apply codes via:
+• **Laser engraving** onto HDPE/PP plastic bottle caps;
+• **Continuous inkjet (CIJ)** using specialized fast-drying food-grade ink;
+• **Direct thermal labels** on outer shrink-wrap packaging.
+          `
+        },
+        {
+          id: 'cross-border-eeu',
+          title: '3. EAEU Import and Export Rules',
+          content: `
+Bottled beverages imported from Georgia, Russia, Turkey, and Europe must have valid Data Matrix codes prior to entering domestic retail channels.
+          `
+        },
+        {
+          id: 'recommendations-manufacturers',
+          title: '4. Production Line Engineering Guide',
+          content: `
+High-speed lines running at 10,000 to 36,000 bottles per hour require high-resolution vision inspection cameras to eject defective or unreadable codes with zero line downtime.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Can the Data Matrix code be printed on the bottle label instead of the cap?',
+          a: 'Yes, as long as the code maintains Grade B or higher scanning readability under ISO/IEC 15415 standards.'
+        }
+      ]
     },
+
     'markirovka-piva-kazakhstan-2026-2027': {
       title: 'Beer & Low-Alcohol Beverage Serialization: Kegs, Glass, Aluminum Cans and Excise Rules',
       shortTitle: 'Beer & Low-Alcohol Marking',
@@ -1164,8 +1630,61 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Legal & Technical Dept',
       summary: 'Mandatory marking regulations for breweries and beverage importers. Keg serialization, cans, glass bottles, and State Revenue Committee accounting.',
       metaDescription: 'Beer serialization in Kazakhstan. Keg and can Data Matrix codes, retail tap accounting, and customs import requirements.',
-      metaKeywords: 'beer serialization Kazakhstan, brewery Data Matrix, alcohol marking RK'
+      metaKeywords: 'beer serialization Kazakhstan, brewery Data Matrix, alcohol marking RK',
+      tableOfContents: [
+        { id: 'beer-decree-110', title: '1. Legislative Directives' },
+        { id: 'beer-timeline', title: '2. Deadlines for Kegs, Glass, and Cans' },
+        { id: 'beer-inventory', title: '3. Inventory Declaration and Transition' },
+        { id: 'horeca-flow', title: '4. HoReCa (Restaurants and Bars) Flow' },
+        { id: 'importers-support', title: '5. Solutions for Beer Importers' }
+      ],
+      contentSections: [
+        {
+          id: 'beer-decree-110',
+          title: '1. Legislative Directives',
+          content: `
+Under joint regulatory frameworks, beer and beer-based beverages are included in mandatory serialization to replace paper excise marks with digital cryptographic Data Matrix codes.
+          `
+        },
+        {
+          id: 'beer-timeline',
+          title: '2. Deadlines for Kegs, Glass, and Cans',
+          content: `
+• **Draft beer in kegs:** Mandatory marking commenced first;
+• **Glass and PET bottles:** Phased enforcement across all volumes;
+• **Aluminum cans:** High-speed packaging compliance mandatory.
+          `
+        },
+        {
+          id: 'beer-inventory',
+          title: '3. Inventory Declaration and Transition',
+          content: `
+Wholesale distributors and breweries must conduct physical inventory reconciliation to declare remaining stock before deadlines to avoid non-compliance citations.
+          `
+        },
+        {
+          id: 'horeca-flow',
+          title: '4. HoReCa (Restaurants and Bars) Flow',
+          content: `
+Restaurants and bars serving draft beer scan the keg Data Matrix code upon initial tap connection, decommissioning the entire volume in IS Tanba.
+          `
+        },
+        {
+          id: 'importers-support',
+          title: '5. Solutions for Beer Importers',
+          content: `
+TANBOX assists international craft beer and beverage importers with customs warehouse stickering in cold storage conditions using moisture-resistant synthetic labels.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Do non-alcoholic beer products require serialization?',
+          a: 'Non-alcoholic beer with 0.5% ABV or less is categorized under soft drinks and follows separate non-excisable timelines.'
+        }
+      ]
     },
+
     'kak-rabotat-s-sscc-agregatsiey-kazakhstan': {
       title: 'Box & Pallet Aggregation (SSCC-18): How to Save Time and Avoid Opening Every Package',
       shortTitle: 'SSCC Aggregation Guide',
@@ -1175,8 +1694,61 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Logistics Dept',
       summary: 'What is SSCC code and hierarchical aggregation. How to associate individual Data Matrix codes into master cases and pallets for rapid customs clearance and warehouse logistics.',
       metaDescription: 'SSCC pallet aggregation in Kazakhstan. Logistics barcodes, warehouse scanning, and IS Tanba electronic transfer.',
-      metaKeywords: 'SSCC aggregation Kazakhstan, pallet marking, logistics barcode Tanba'
+      metaKeywords: 'SSCC aggregation Kazakhstan, pallet marking, logistics barcode Tanba',
+      tableOfContents: [
+        { id: 'aggregation-concept', title: '1. What is Aggregation?' },
+        { id: 'sscc-standard', title: '2. The GS1 SSCC-18 Structure' },
+        { id: 'hierarchy-levels', title: '3. Consumer Unit -> Case -> Pallet' },
+        { id: 'disaggregation-flow', title: '4. De-aggregation and Re-packing' },
+        { id: 'tanbox-aggregation', title: '5. Automated Aggregation with TANBOX' }
+      ],
+      contentSections: [
+        {
+          id: 'aggregation-concept',
+          title: '1. What is Aggregation?',
+          content: `
+Aggregation is the process of linking individual serialized items into group containers (boxes, cartons, pallets) under a single parent barcode. Instead of scanning 5,000 individual shoes or bottles during customs clearance, operators scan 5 pallet labels.
+          `
+        },
+        {
+          id: 'sscc-standard',
+          title: '2. The GS1 SSCC-18 Structure',
+          content: `
+Serial Shipping Container Code (SSCC-18) is an 18-digit global unique identifier standardized by GS1. It encodes the extension digit, company prefix, serial container number, and check digit.
+          `
+        },
+        {
+          id: 'hierarchy-levels',
+          title: '3. Consumer Unit -> Case -> Pallet',
+          content: `
+• **Level 1 (Consumer):** Individual 2D Data Matrix on each SKU;
+• **Level 2 (Group Case):** Master carton label combining 12-24 consumer items;
+• **Level 3 (Logistics Pallet):** SSCC pallet tag linking all master cases.
+          `
+        },
+        {
+          id: 'disaggregation-flow',
+          title: '4. De-aggregation and Re-packing',
+          content: `
+When a warehouse disassembles a pallet for multi-destination distribution, a "de-aggregation" document is processed in IS Tanba to re-assign cases to distinct consignments.
+          `
+        },
+        {
+          id: 'tanbox-aggregation',
+          title: '5. Automated Aggregation with TANBOX',
+          content: `
+TANBOX industrial vision systems scan and associate up to 200 items per minute simultaneously on conveyor lines, generating validated SSCC labels instantly.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Can customs inspect goods without unbinding the SSCC pallet?',
+          a: 'Yes, customs officers query the master SSCC in IS Tanba to view all nested unit codes without opening sealed pallets.'
+        }
+      ]
     },
+
     'instruktsiya-po-registratsii-v-is-tanba-i-nkt': {
       title: 'Step-by-Step Registration in IS Tanba and National Product Catalog (NKT)',
       shortTitle: 'IS Tanba & NKT Registration Guide',
@@ -1186,8 +1758,62 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Support Team',
       summary: 'Practical guide to connecting your business: NCALayer setup, digital signature registration, signing participant agreements, entering product cards in NKT, and GTIN ordering.',
       metaDescription: 'How to register in IS Tanba and NKT Kazakhstan. Digital signature setup, GS1 GTIN barcodes, and profile configuration.',
-      metaKeywords: 'IS Tanba registration step by step, NKT catalog setup, NCALayer marking Kazakhstan'
+      metaKeywords: 'IS Tanba registration step by step, NKT catalog setup, NCALayer marking Kazakhstan',
+      tableOfContents: [
+        { id: 'prep-work', title: '1. Prerequisites and NCALayer' },
+        { id: 'ncalayer-config', title: '2. Digital Signature (EDS) Authentication' },
+        { id: 'login-portals', title: '3. Creating Company Profile in IS Tanba' },
+        { id: 'suz-gtin-flow', title: '4. Adding Product Cards to NKT' },
+        { id: 'balance-and-export', title: '5. Ordering Codes in SUZ' }
+      ],
+      contentSections: [
+        {
+          id: 'prep-work',
+          title: '1. Prerequisites and NCALayer',
+          content: `
+Before registering:
+1. Ensure you possess a valid corporate Digital Signature (ЭЦП / ЭҚТ) issued by the National Certification Authority of RK (НУЦ РК);
+2. Download and launch the latest version of NCALayer;
+3. Have your BIN (БИН), bank details, and founding director credentials ready.
+          `
+        },
+        {
+          id: 'ncalayer-config',
+          title: '2. Digital Signature (EDS) Authentication',
+          content: `
+Navigate to **markirovka.kz**, click "Enter via EDS", select your GOST/RSA authentication certificate, and authorize the system session.
+          `
+        },
+        {
+          id: 'login-portals',
+          title: '3. Creating Company Profile in IS Tanba',
+          content: `
+Complete your corporate questionnaire, select your industry groups (footwear, apparel, pharma, oil, etc.), review the standard National Operator agreement, and sign with your signing certificate.
+          `
+        },
+        {
+          id: 'suz-gtin-flow',
+          title: '4. Adding Product Cards to NKT',
+          content: `
+Access the National Product Catalog (НКТ), input brand names, country of origin, composition, and HS code. If you do not have GS1 GTINs, assign new codes through the catalog interface.
+          `
+        },
+        {
+          id: 'balance-and-export',
+          title: '5. Ordering Codes in SUZ',
+          content: `
+Deposit funds into your personal emission balance, navigate to the Order Management Station (СУЗ), create an emission order, and export generated Data Matrix files in CSV or PDF format.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'How long does card moderation take in NKT?',
+          a: 'Card moderation generally takes from 2 to 24 business hours depending on documentation completeness.'
+        }
+      ]
     },
+
     'peremarkirovka-i-vozvrat-tovara-v-kazakhstane': {
       title: 'Re-marking and Customer Returns in Kazakhstan: Handling Damaged Codes and Returned Goods',
       shortTitle: 'Re-marking and Returns',
@@ -1197,8 +1823,62 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Operations Team',
       summary: 'Clear procedure for customer returns, re-issuing damaged or unreadable Data Matrix codes, and returning products back into legal circulation in IS Tanba.',
       metaDescription: 'How to re-mark damaged goods in Kazakhstan. Customer return workflow and re-introducing codes into IS Tanba.',
-      metaKeywords: 're-marking Kazakhstan, customer return Data Matrix, damaged code replacement Tanba'
+      metaKeywords: 're-marking Kazakhstan, customer return Data Matrix, damaged code replacement Tanba',
+      tableOfContents: [
+        { id: 'consumer-rights', title: '1. Customer Returns under Consumer Protection Law' },
+        { id: 'intact-code-flow', title: '2. Returns with Intact Data Matrix Code' },
+        { id: 'damaged-code-relabel', title: '3. Re-marking Damaged or Lost Barcodes' },
+        { id: 'damaged-goods-writeoff', title: '4. Defective Goods Decommissioning' },
+        { id: 'tanbox-relabel-service', title: '5. Automated Re-labeling Solutions' }
+      ],
+      contentSections: [
+        {
+          id: 'consumer-rights',
+          title: '1. Customer Returns under Consumer Protection Law',
+          content: `
+Under Kazakhstan consumer protection law, consumers may return non-defective goods within 14 days. When serialized goods are returned, retailers must reflect the status change in IS Tanba to re-introduce the serial code into valid stock.
+          `
+        },
+        {
+          id: 'intact-code-flow',
+          title: '2. Returns with Intact Data Matrix Code',
+          content: `
+If the customer returns an item with an intact, readable Data Matrix code, the cashier generates a return receipt on the online KKM. The OFD notifies IS Tanba, restoring the code to active inventory automatically.
+          `
+        },
+        {
+          id: 'damaged-code-relabel',
+          title: '3. Re-marking Damaged or Lost Barcodes',
+          content: `
+If the code sticker is ripped, soiled, or unreadable:
+1. Log into IS Tanba;
+2. Create a "Re-marking" (Перемаркировка) document, referencing the SKU GTIN and reason "Label damage";
+3. Generate, print, and affix a new serial code to the item.
+          `
+        },
+        {
+          id: 'damaged-goods-writeoff',
+          title: '4. Defective Goods Decommissioning',
+          content: `
+If goods are damaged beyond repair or expired, submit a "Decommissioning / Write-off" act in IS Tanba citing "Damage / Disposal" to legally remove the serial numbers from your tax balance.
+          `
+        },
+        {
+          id: 'tanbox-relabel-service',
+          title: '5. Automated Re-labeling Solutions',
+          content: `
+TANBOX provides mobile terminal software that allows warehouse clerks to scan returned cartons and print replacement labels on portable Bluetooth printers in seconds.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Can a store refuse a return if the customer threw away the marking tag?',
+          a: 'No, but the retailer must perform internal re-marking before putting the merchandise back on the sales floor.'
+        }
+      ]
     },
+
     'markirovka-drevesiny-kazakhstan-2026': {
       title: 'Timber & Wood Products Tracking in Kazakhstan: Forestry Controls and Electronic Invoices',
       shortTitle: 'Timber Tracking & Marking',
@@ -1208,8 +1888,59 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Environmental & Legal Dept',
       summary: 'Digital traceability of timber, lumber, and wood imports. Preventing illegal logging, customs documentation, and electronic road consignment tracking.',
       metaDescription: 'Timber and wood tracking in Kazakhstan. Forest resource accounting, wood product serialization, and customs transit.',
-      metaKeywords: 'wood marking Kazakhstan, timber traceability, lumber export import RK'
+      metaKeywords: 'wood marking Kazakhstan, timber traceability, lumber export import RK',
+      tableOfContents: [
+        { id: 'timber-pilot-results', title: '1. Forestry Conservation Strategy' },
+        { id: 'timber-scope-who-and-what', title: '2. Covered Wood Products and Timber Logs' },
+        { id: 'timber-code-structure', title: '3. Weather-proof Barcoding Tags' },
+        { id: 'timber-penalties-verification', title: '4. Electronic Waybills and Road Inspection' },
+        { id: 'timber-action-plan', title: '5. Preparation for Lumber Importers' }
+      ],
+      contentSections: [
+        {
+          id: 'timber-pilot-results',
+          title: '1. Forestry Conservation Strategy',
+          content: `
+The Ministry of Ecology and Natural Resources, alongside the State Revenue Committee, launched digital timber traceability to combat illegal felling, ensure sustainable forestry, and transparently track lumber imports from Siberia and Europe.
+          `
+        },
+        {
+          id: 'timber-scope-who-and-what',
+          title: '2. Covered Wood Products and Timber Logs',
+          content: `
+Traceability applies to round timber, sawn timber, wooden beams, railway sleepers, and industrial plywood under HS chapter 44.
+          `
+        },
+        {
+          id: 'timber-code-structure',
+          title: '3. Weather-proof Barcoding Tags',
+          content: `
+Because timber is stored outdoors exposed to rain, snow, and UV radiation, markings must use high-durability staple-mounted plastic tags or direct indelible branding.
+          `
+        },
+        {
+          id: 'timber-penalties-verification',
+          title: '4. Electronic Waybills and Road Inspection',
+          content: `
+Timber transports on public roads must be accompanied by electronic road consignment notes (СНТ) tied to the batch serial numbers, verified by roadside ecological police.
+          `
+        },
+        {
+          id: 'timber-action-plan',
+          title: '5. Preparation for Lumber Importers',
+          content: `
+Importers should verify that foreign sawmills supply electronic batch certificates and affix scanning tags before rail or truck border crossing.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Does firewood require individual digital marking?',
+          a: 'No, unprocessed small firewood is tracked via aggregate volume certificates rather than unit Data Matrix codes.'
+        }
+      ]
     },
+
     'markirovka-yuvelirnyh-izdeliy-kazakhstan-2026': {
       title: 'Jewelry & Precious Metal Marking: Micro-marking, Hallmarking, and Assay Chamber',
       shortTitle: 'Jewelry Micro-Marking',
@@ -1219,8 +1950,61 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Assay & Gemological Dept',
       summary: 'Nano-laser Data Matrix marking on precious metals and jewelry tags. Integration with the National Assay Chamber and retail display rules.',
       metaDescription: 'Jewelry marking in Kazakhstan. Precious metals Data Matrix, assay chamber registration, and retail scanning.',
-      metaKeywords: 'jewelry marking Kazakhstan, gold silver Data Matrix, assay chamber RK'
+      metaKeywords: 'jewelry marking Kazakhstan, gold silver Data Matrix, assay chamber RK',
+      tableOfContents: [
+        { id: 'jewelry-decree-and-pilot', title: '1. Assay Regulations and Pilot Projects' },
+        { id: 'jewelry-tnved-table', title: '2. Gold, Silver, and Gemstone Scope' },
+        { id: 'jewelry-marking-rules', title: '3. Micro-laser Engraving and RFID Hangtags' },
+        { id: 'jewelry-retail-turnover', title: '4. Jewelry Salon Point-of-Sale Procedures' },
+        { id: 'jewelry-action-plan', title: '5. Compliance Roadmap for Jewelers' }
+      ],
+      contentSections: [
+        {
+          id: 'jewelry-decree-and-pilot',
+          title: '1. Assay Regulations and Pilot Projects',
+          content: `
+Under regulatory frameworks coordinating with the National Assay Chamber of RK, jewelry items made of precious metals (gold, silver, platinum) and precious stones are entering mandatory digital serialization.
+          `
+        },
+        {
+          id: 'jewelry-tnved-table',
+          title: '2. Gold, Silver, and Gemstone Scope',
+          content: `
+Regulated goods include rings, necklaces, bracelets, earrings, and watches under HS code group 7113, 7114, and 7118.
+          `
+        },
+        {
+          id: 'jewelry-marking-rules',
+          title: '3. Micro-laser Engraving and RFID Hangtags',
+          content: `
+Marking is implemented via two parallel methods:
+• Ultra-compact 2D Data Matrix nano-laser engraving (0.8x0.8 mm) directly onto the metal surface;
+• Tamper-evident secure thread hangtags with high-frequency RFID chips and 2D barcodes.
+          `
+        },
+        {
+          id: 'jewelry-retail-turnover',
+          title: '4. Jewelry Salon Point-of-Sale Procedures',
+          content: `
+Retail jewelers scan the hangtag code with high-resolution micro-scanners. Customers can verify carat, purity, and origin instantly via the Naqty Onim smartphone application.
+          `
+        },
+        {
+          id: 'jewelry-action-plan',
+          title: '5. Compliance Roadmap for Jewelers',
+          content: `
+Jewelry salons must register their inventory, audit remaining stock, and integrate salon POS systems with the central assay marking database.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'Will micro-laser engraving damage the aesthetic finish of rings?',
+          a: 'No, laser engraving is applied to the inner shank of rings or hidden clasp facets using low-energy picosecond lasers without altering metal integrity.'
+        }
+      ]
     },
+
     'markirovka-szhizhennogo-gaza-ballonov-kazakhstan-2027': {
       title: 'LPG Gas Cylinder Serialization in Kazakhstan: 2027 Safety Standards and Gas Station Rules',
       shortTitle: 'LPG Gas Cylinder Serialization',
@@ -1230,7 +2014,57 @@ SSCC штрихкоды көбінесе А5 немесе А6 форматынд
       author: 'TANBOX.KZ Analytics Dept',
       summary: 'Digital traceability and safety tracking of liquefied petroleum gas (LPG) cylinders. Explosion safety, gas filling stations (GFS), and cylinder lifecycle monitoring.',
       metaDescription: 'LPG cylinder marking in Kazakhstan. Ministry of Energy standards, gas filling station automation, RFID and Data Matrix solutions.',
-      metaKeywords: 'gas cylinder serialization Kazakhstan, LPG safety Tanba, gas station tracking RK'
+      metaKeywords: 'gas cylinder serialization Kazakhstan, LPG safety Tanba, gas station tracking RK',
+      tableOfContents: [
+        { id: 'lpg-decree-and-pilot-results', title: '1. Gas Safety and Ministry Directives' },
+        { id: 'lpg-tnved-scope', title: '2. Household and Industrial Cylinder Scope' },
+        { id: 'lpg-marking-process-gns', title: '3. Spark-proof RFID and Metal Matrix Tags' },
+        { id: 'lpg-safety-goals', title: '4. Gas Filling Station Automation' },
+        { id: 'lpg-action-plan', title: '5. Consumer Exchange and Safety Cycle' }
+      ],
+      contentSections: [
+        {
+          id: 'lpg-decree-and-pilot-results',
+          title: '1. Gas Safety and Ministry Directives',
+          content: `
+The Ministry of Energy and Ministry of Emergency Situations of RK initiated mandatory cylinder serialization to prevent domestic gas explosions caused by overfilled, outdated, or leaking gas cylinders.
+          `
+        },
+        {
+          id: 'lpg-tnved-scope',
+          title: '2. Household and Industrial Cylinder Scope',
+          content: `
+Applies to portable liquefied petroleum gas cylinders (5L, 27L, 50L) under HS code 7311 00 used in domestic households, catering, and industrial heating.
+          `
+        },
+        {
+          id: 'lpg-marking-process-gns',
+          title: '3. Spark-proof RFID and Metal Matrix Tags',
+          content: `
+Due to explosive gas vapor environments, cylinders are tagged using ATEX-certified spark-free stainless steel plates or intrinsically safe UHF RFID transponders welded or riveted to the collar.
+          `
+        },
+        {
+          id: 'lpg-safety-goals',
+          title: '4. Gas Filling Station Automation',
+          content: `
+Before filling, the station scanner reads the cylinder ID. The system checks hydro-test certification dates and tare weight automatically, preventing gas filling into compromised cylinders.
+          `
+        },
+        {
+          id: 'lpg-action-plan',
+          title: '5. Consumer Exchange and Safety Cycle',
+          content: `
+At retail gas exchange stations, returned empty cylinders are scanned and assigned for testing or refilling, ensuring 100% accountability throughout the cylinder lifecycle.
+          `
+        }
+      ],
+      faq: [
+        {
+          q: 'When does mandatory gas cylinder serialization take full effect?',
+          a: 'Following regional pilot trials, full mandatory enforcement takes effect across all Kazakhstan filling stations by 2027.'
+        }
+      ]
     }
   }
 };
