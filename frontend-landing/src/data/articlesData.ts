@@ -1486,6 +1486,13 @@ TANBOX помогает решить вопрос **перемаркировки
   }
 ];
 
-export function getArticleBySlug(slug: string): ArticleData | undefined {
-  return ARTICLES_DATA.find((a) => a.slug === slug || a.id === slug);
+import { getLocalizedArticle, getLocalizedArticles } from './articlesLocalization';
+export { getLocalizedArticle, getLocalizedArticles };
+
+export function getArticleBySlug(slug: string, lang?: string): ArticleData | undefined {
+  const article = ARTICLES_DATA.find((a) => a.slug === slug || a.id === slug);
+  if (!article) return undefined;
+  if (!lang || lang === 'ru') return article;
+  return getLocalizedArticle(article, lang);
 }
+

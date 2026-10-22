@@ -22,7 +22,7 @@ import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
 export const ArticleDetailPage: React.FC = () => {
   const { articleId } = useParams<{ articleId: string }>();
   const { lang, getLocalizedPath } = useLanguage();
-  const article = articleId ? getArticleBySlug(articleId) : undefined;
+  const article = articleId ? getArticleBySlug(articleId, lang) : undefined;
 
   const [copied, setCopied] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
@@ -45,7 +45,7 @@ export const ArticleDetailPage: React.FC = () => {
         `${article.title} | TANBOX.KZ`,
         article.metaDescription,
         {
-          lang: 'ru',
+          lang: (lang as 'ru' | 'kz' | 'en') || 'ru',
           keywords: article.metaKeywords,
         }
       );
@@ -118,9 +118,27 @@ export const ArticleDetailPage: React.FC = () => {
     } catch {}
   };
 
-  const relatedArticles = ARTICLES_DATA.filter((a) =>
-    article.relatedSlugs?.includes(a.slug)
-  ).slice(0, 3);
+  const relatedArticles = (article.relatedSlugs || [])
+    .map((slug) => getArticleBySlug(slug, lang))
+    .filter((a): a is ArticleData => !!a)
+    .slice(0, 3);
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'Законодательство':
+        return lang === 'kz' ? 'Заңнама' : lang === 'en' ? 'Regulations' : 'Законодательство';
+      case 'Тренды 2026':
+        return lang === 'kz' ? '2026 трендтері' : lang === 'en' ? '2026 Trends' : 'Тренды 2026';
+      case 'Отрасли':
+        return lang === 'kz' ? 'Салалық нұсқаулық' : lang === 'en' ? 'Industry Guides' : 'Отрасли';
+      case 'Практика':
+        return lang === 'kz' ? 'Тәжірибе және ТМБ АЖ' : lang === 'en' ? 'IS Tanba Practice' : 'Практика';
+      case 'Инструкции':
+        return lang === 'kz' ? 'Нұсқаулықтар' : lang === 'en' ? 'Instructions' : 'Инструкции';
+      default:
+        return category;
+    }
+  };
 
   // Render markdown-like text to formatted HTML with HTML-escaping to prevent XSS
   const formatSectionContent = (text: string) => {
@@ -216,7 +234,7 @@ export const ArticleDetailPage: React.FC = () => {
             </Link>
             <span>/</span>
             <Link to={getLocalizedPath('/articles')} className="hover:text-[#0082FB] transition-colors">
-              {lang === 'kz' ? 'База знаний' : lang === 'en' ? 'Knowledge Base' : 'База знаний'}
+              {lang === 'kz' ? 'Білім базасы' : lang === 'en' ? 'Knowledge Base' : 'База знаний'}
             </Link>
             <span>/</span>
             <span className="text-[#111827] truncate max-w-xs">{article.shortTitle}</span>
@@ -226,7 +244,7 @@ export const ArticleDetailPage: React.FC = () => {
           <div className="max-w-4xl space-y-4">
             <div className="flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-extrabold bg-[#EBF5FF] text-[#0082FB]">
-                {article.category}
+                {getCategoryLabel(article.category)}
               </span>
               <div className="flex items-center gap-1.5 text-xs text-[#64748B] font-medium">
                 <Calendar className="w-3.5 h-3.5" />
@@ -265,12 +283,16 @@ export const ArticleDetailPage: React.FC = () => {
                 {copied ? (
                   <>
                     <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-emerald-700">Ссылка скопирована!</span>
+                    <span className="text-emerald-700">
+                      {lang === 'kz' ? 'Сілтеме көшірілді!' : lang === 'en' ? 'Link copied!' : 'Ссылка скопирована!'}
+                    </span>
                   </>
                 ) : (
                   <>
                     <Share2 className="w-3.5 h-3.5" />
-                    <span>Поделиться статьей</span>
+                    <span>
+                      {lang === 'kz' ? 'Мақаламен бөлісу' : lang === 'en' ? 'Share article' : 'Поделиться статьей'}
+                    </span>
                   </>
                 )}
               </button>
@@ -305,10 +327,20 @@ export const ArticleDetailPage: React.FC = () => {
               <section className="bg-white rounded-3xl p-6 sm:p-9 shadow-sm border border-gray-100 space-y-6">
                 <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#0082FB]">
                   <HelpCircle className="w-4 h-4" />
-                  <span>Часто задаваемые вопросы</span>
+                  <span>
+                    {lang === 'kz'
+                      ? 'Жиі қойылатын сұрақтар'
+                      : lang === 'en'
+                      ? 'Frequently Asked Questions'
+                      : 'Часто задаваемые вопросы'}
+                  </span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-[#111827]">
-                  Вопросы и ответы по теме
+                  {lang === 'kz'
+                    ? 'Тақырып бойынша сұрақтар мен жауаптар'
+                    : lang === 'en'
+                    ? 'Questions and Answers'
+                    : 'Вопросы и ответы по теме'}
                 </h2>
 
                 <div className="space-y-3">
@@ -346,7 +378,11 @@ export const ArticleDetailPage: React.FC = () => {
             {relatedArticles.length > 0 && (
               <section className="space-y-4 pt-4">
                 <h3 className="text-xl font-extrabold text-[#111827]">
-                  Полезно прочитать также:
+                  {lang === 'kz'
+                    ? 'Осы тақырып бойынша оқуға кеңес береміз:'
+                    : lang === 'en'
+                    ? 'Recommended reading:'
+                    : 'Полезно прочитать также:'}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {relatedArticles.map((rel) => (
@@ -357,7 +393,7 @@ export const ArticleDetailPage: React.FC = () => {
                     >
                       <div className="space-y-2">
                         <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-blue-50 text-[#0082FB]">
-                          {rel.category}
+                          {getCategoryLabel(rel.category)}
                         </span>
                         <h4 className="text-sm font-bold text-[#111827] group-hover:text-[#0082FB] transition-colors leading-snug">
                           {rel.title}
@@ -382,7 +418,13 @@ export const ArticleDetailPage: React.FC = () => {
               <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4">
                 <h3 className="text-xs font-extrabold text-[#111827] uppercase tracking-wider flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-[#0082FB]" />
-                  <span>Содержание статьи</span>
+                  <span>
+                    {lang === 'kz'
+                      ? 'Мақала мазмұны'
+                      : lang === 'en'
+                      ? 'Table of Contents'
+                      : 'Содержание статьи'}
+                  </span>
                 </h3>
                 <nav className="space-y-1.5 text-xs font-semibold">
                   {article.tableOfContents.map((item) => (
@@ -434,7 +476,13 @@ export const ArticleDetailPage: React.FC = () => {
                   className="inline-flex items-center gap-2 text-xs font-bold text-[#64748B] hover:text-[#0082FB] transition-colors"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Все статьи базы знаний</span>
+                  <span>
+                    {lang === 'kz'
+                      ? 'Білім базасының барлық мақалалары'
+                      : lang === 'en'
+                      ? 'All Knowledge Base articles'
+                      : 'Все статьи базы знаний'}
+                  </span>
                 </Link>
               </div>
 

@@ -7,7 +7,7 @@ import {
   PhoneCall,
   FileText
 } from 'lucide-react';
-import { ARTICLES_DATA, ArticleData } from '../data/articlesData';
+import { ARTICLES_DATA, ArticleData, getLocalizedArticles } from '../data/articlesData';
 import { setPageSeo } from '../utils/seo';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -60,8 +60,29 @@ export const ArticlesPage: React.FC = () => {
     { id: 'Практика', label: lang === 'kz' ? 'Тәжірибе және ТМБ АЖ' : lang === 'en' ? 'Practice & IS Tanba' : 'Практика и ИС Танба' },
   ];
 
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'Законодательство':
+        return lang === 'kz' ? 'Заңнама' : lang === 'en' ? 'Regulations' : 'Законодательство';
+      case 'Тренды 2026':
+        return lang === 'kz' ? '2026 трендтері' : lang === 'en' ? '2026 Trends' : 'Тренды 2026';
+      case 'Отрасли':
+        return lang === 'kz' ? 'Салалық нұсқаулық' : lang === 'en' ? 'Industry Guides' : 'Отрасли';
+      case 'Практика':
+        return lang === 'kz' ? 'Тәжірибе және ТМБ АЖ' : lang === 'en' ? 'IS Tanba Practice' : 'Практика';
+      case 'Инструкции':
+        return lang === 'kz' ? 'Нұсқаулықтар' : lang === 'en' ? 'Instructions' : 'Инструкции';
+      default:
+        return category;
+    }
+  };
+
+  const localizedArticles = useMemo(() => {
+    return getLocalizedArticles(ARTICLES_DATA, lang);
+  }, [lang]);
+
   const filteredArticles = useMemo(() => {
-    return ARTICLES_DATA.filter((article) => {
+    return localizedArticles.filter((article) => {
       const matchesCategory = selectedCategory === 'ALL' || article.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -71,7 +92,7 @@ export const ArticlesPage: React.FC = () => {
         article.metaKeywords.toLowerCase().includes(q);
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [localizedArticles, selectedCategory, searchQuery]);
 
   return (
     <div className="bg-[#F8FAFC] min-h-screen pb-24">
@@ -201,7 +222,7 @@ export const ArticlesPage: React.FC = () => {
                     {/* Header info */}
                     <div className="flex items-center justify-between gap-2">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-[#EBF5FF] text-[#0082FB]">
-                        {article.category}
+                        {getCategoryLabel(article.category)}
                       </span>
                       <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] font-medium">
                         <Clock className="w-3.5 h-3.5" />

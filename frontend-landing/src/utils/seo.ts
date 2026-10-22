@@ -123,7 +123,7 @@ export function setPageSeo(title: string, description?: string, options?: SeoOpt
     },
     areaServed: {
       '@type': 'Country',
-      name: 'Kazakhstan',
+      name: currentLang === 'kz' ? 'Қазақстан' : 'Казахстан',
     },
     name: title,
     description: description || '',

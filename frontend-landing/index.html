@@ -172,30 +172,115 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
   </noscript>
 
+  <!-- GEO Meta Tags (Kazakhstan nationwide) -->
+  <meta name="geo.region" content="KZ" />
+  <meta name="geo.placename" content="Казахстан / Қазақстан / Kazakhstan" />
+  <meta name="geo.position" content="48.019573;66.923684" />
+  <meta name="ICBM" content="48.019573, 66.923684" />
+
   <!-- Schema.org -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": "Organization",
+        "@type": "WebSite",
+        "@id": "https://tanbox.kz/#website",
+        "url": "https://tanbox.kz",
+        "name": "TANBOX.KZ",
+        "alternateName": ["Танбокс", "TANBOX Маркировка Казахстан", "Таңбалау Қазақстан"],
+        "description": "Официальная цифровая маркировка товаров в Казахстане под ключ: эмиссия Data Matrix, интеграция с ИС Танба, печать этикеток и оклейка складов по всей Республике Казахстан",
+        "publisher": {
+          "@id": "https://tanbox.kz/#organization"
+        },
+        "inLanguage": ["ru", "kk", "en"]
+      },
+      {
+        "@type": "ItemList",
+        "@id": "https://tanbox.kz/#sitelinks",
+        "name": "Разделы сервиса TANBOX",
+        "itemListElement": [
+          {
+            "@type": "SiteNavigationElement",
+            "position": 1,
+            "name": "Калькулятор стоимости маркировки",
+            "description": "Онлайн-расчёт стоимости эмиссии кодов Data Matrix, печати стикеров и оклейки",
+            "url": "https://tanbox.kz/calculator"
+          },
+          {
+            "@type": "SiteNavigationElement",
+            "position": 2,
+            "name": "Категории товаров",
+            "description": "12 обязательных товарных групп: обувь, лекарства, вода, табак, текстиль и др.",
+            "url": "https://tanbox.kz/categories"
+          },
+          {
+            "@type": "SiteNavigationElement",
+            "position": 3,
+            "name": "Услуги и тарифы",
+            "description": "Комплексная маркировка товаров под ключ, эмиссия кодов и регистрация в НКТ",
+            "url": "https://tanbox.kz/services"
+          },
+          {
+            "@type": "SiteNavigationElement",
+            "position": 4,
+            "name": "База знаний и статьи",
+            "description": "Гайды по ИС Танба, законы РК, штрафы, маркировка для Kaspi и Wildberries",
+            "url": "https://tanbox.kz/articles"
+          },
+          {
+            "@type": "SiteNavigationElement",
+            "position": 5,
+            "name": "Контакты и поддержка",
+            "description": "Обслуживание клиентов по всему Казахстану, консультации экспертов 24/7",
+            "url": "https://tanbox.kz/contacts"
+          }
+        ]
+      },
+      {
+        "@type": ["Organization", "ProfessionalService"],
         "@id": "https://tanbox.kz/#organization",
         "name": "TANBOX.KZ",
+        "alternateName": "ТАНБОКС Маркировка",
         "legalName": "ИП INTERSENSE",
         "url": "https://tanbox.kz",
         "logo": "https://tanbox.kz/tanbox-white.svg",
         "telephone": "+77003048532",
         "email": "info@tanbox.kz",
+        "priceRange": "от 15 ₸",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Онлайн-обслуживание и выездные бригады",
+          "streetAddress": "Обслуживание клиентов по всей Республике Казахстан, выездные бригады оклейки и экспресс-доставка стикеров",
           "addressLocality": "Алматы",
+          "addressRegion": "Алматы",
+          "postalCode": "050000",
           "addressCountry": "KZ"
         },
-        "areaServed": {
-          "@type": "Country",
-          "name": "Казахстан"
-        }
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 43.238949,
+          "longitude": 76.889709
+        },
+        "areaServed": [
+          {
+            "@type": "Country",
+            "name": "Казахстан",
+            "sameAs": "https://ru.wikipedia.org/wiki/Казахстан"
+          },
+          {
+            "@type": "AdministrativeArea",
+            "name": "Все 17 областей и 3 города республиканского значения Республики Казахстан (Алматы, Астана, Шымкент, Караганда, Актобе, Тараз, Павлодар, Усть-Каменогорск, Семей, Атырау, Костанай, Кызылорда, Уральск, Петропавловск, Актау, Темиртау, Туркестан, Кокшетау, Талдыкорган, Жезказган)"
+          }
+        ],
+        "knowsAbout": [
+          "Цифровая маркировка товаров в Казахстане",
+          "Data Matrix коды",
+          "Информационная система маркировки и прослеживаемости товаров (ИС Танба)",
+          "Национальный каталог товаров (НКТ)",
+          "GS1 Kazakhstan",
+          "Агрегация транспортной упаковки SSCC",
+          "Маркировка товаров для Kaspi.kz и Wildberries"
+        ]
       },
       {
         "@type": "Service",
