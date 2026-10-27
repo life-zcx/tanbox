@@ -233,9 +233,10 @@ export const CATEGORIES_LOCALIZATION: Record<'kz' | 'en', Record<string, Localiz
       shortDesc: 'Бағалы металдар мен асыл тастардан жасалған бұйымдар',
       fullDesc: 'Бағалы металдардан (алтын, күміс, платина) және асыл тастардан жасалған зергерлік бұйымдарды таңбалау.',
       keyFeatures: [
-        'Биркалар мен зергерлік пломбаларға DataMatrix микро-таңбалауы',
-        'Өндірістен немесе импорттан бастап витринаға дейін әрбір бұйымды қатаң есепке алу',
-        'Зергерлік дүкендер нарығын жасандылықтан және заңсыз әкелуден қорғау',
+        'Алтын, күміс, платина және сағаттар: зергерлік бұйымдар мен білезіктерге міндетті',
+        'Металл бүлінбейді: бұйымның өзіне лазер қойылмайды, тек аспалы бирка немесе пломба таңбаланады',
+        'Қалдықтарды дүкенде таңбалау: сынама палатасына қайта апармай, витрина мен ломбардта тікелей түгендеу',
+        'Импортты кілтке дейін таңбалау: ҚР кеден қоймаларында (УСХ) немесе шетелдік зауытта дайындау',
       ],
       processSteps: [
         { step: '01', title: 'Микро-кодтарға тапсырыс', desc: 'Жоғары тығыздықтағы кодтарды генерациялау' },
@@ -536,9 +537,10 @@ export const CATEGORIES_LOCALIZATION: Record<'kz' | 'en', Record<string, Localiz
       shortDesc: 'Jewelry items and parts made of precious metals and gemstones',
       fullDesc: 'Mandatory track & trace for jewelry crafted from precious metals (gold, silver, platinum) and gemstones.',
       keyFeatures: [
-        'Micro DataMatrix marking on jewelry hang tags and tamper-evident seals',
-        'Strict item-level tracing from manufacture/import to retail showroom showcase',
-        'Safeguarding jewelry retail chains against counterfeits and contraband',
+        'Gold, Silver, Platinum & Watches: Mandatory for fine jewelry, wristwatches, and precious metal bands',
+        'No Damage to Metal: No laser engraving on products; Data Matrix is applied strictly to hang tags and seals',
+        'On-site Stock Inventory: Labeling showroom inventory and pawnshops without re-assaying or hallmarking',
+        'Turnkey Import Compliance: Serialization prior to customs release at bonded warehouses (SVH) in KZ',
       ],
       processSteps: [
         { step: '01', title: 'Micro-Code Ordering', desc: 'High-density DataMatrix code generation for small surfaces' },

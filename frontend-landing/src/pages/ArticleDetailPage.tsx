@@ -245,8 +245,8 @@ export const ArticleDetailPage: React.FC = () => {
   return (
     <div className="bg-[#F8FAFC] min-h-screen pb-24">
       {/* Top Breadcrumb & Hero */}
-      <section className="bg-white border-b border-gray-100 pt-8 pb-12 sm:pb-16">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <section className="bg-white border-b border-gray-100 pt-4 sm:pt-8 pb-6 sm:pb-16">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 space-y-3 sm:space-y-6">
           {/* Breadcrumbs */}
           <nav className="flex items-center gap-2 text-xs font-semibold text-[#64748B]">
             <Link to={getLocalizedPath('/')} className="hover:text-[#0082FB] transition-colors">
@@ -261,9 +261,9 @@ export const ArticleDetailPage: React.FC = () => {
           </nav>
 
           {/* Header Metadata */}
-          <div className="max-w-4xl space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-extrabold bg-[#EBF5FF] text-[#0082FB]">
+          <div className="max-w-4xl space-y-2.5 sm:space-y-4">
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+              <span className="inline-flex items-center px-3 py-0.5 sm:px-3.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-extrabold bg-[#EBF5FF] text-[#0082FB]">
                 {getCategoryLabel(article.category)}
               </span>
               <div className="flex items-center gap-1.5 text-xs text-[#64748B] font-medium">
@@ -278,12 +278,12 @@ export const ArticleDetailPage: React.FC = () => {
             </div>
 
             {/* Main H1 */}
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-4xl lg:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight">
               {article.title}
             </h1>
 
             {/* Lead Summary */}
-            <p className="text-base sm:text-lg text-[#64748B] leading-relaxed font-normal pt-2">
+            <p className="text-xs sm:text-base lg:text-lg text-[#64748B] leading-relaxed font-normal pt-1 sm:pt-2">
               {article.summary}
             </p>
 

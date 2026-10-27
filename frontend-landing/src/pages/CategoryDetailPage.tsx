@@ -14,6 +14,9 @@ import {
   HeartPulse, 
   Shirt, 
   Gem, 
+  Trees,
+  Flame,
+  Cpu,
   ArrowLeft, 
   CheckCircle2, 
   Calculator, 
@@ -41,7 +44,10 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Beer,
   HeartPulse,
   Shirt,
-  Gem
+  Gem,
+  Trees,
+  Flame,
+  Cpu
 };
 
 interface CategoryDetailPageProps {
@@ -99,7 +105,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
   }
 
   const isActive = category.status === 'ACTIVE';
-  const IconComponent = category.iconName ? ICON_MAP[category.iconName] : Tag;
+  const IconComponent = (category.iconName && ICON_MAP[category.iconName]) || Tag;
 
   // Build clean message for WhatsApp consultation
   const waMessage = lang === 'kz'
@@ -160,51 +166,37 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
             </div>
           )}
 
-          {/* Mobile View (sm and below): Crisp, legible native Hero card */}
-          <div className="md:hidden bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-200/80 space-y-3.5">
-            {/* Status & Date badges */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-[#0082FB] font-bold text-[11px]">
-                <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
+          {/* Mobile View (sm and below): Clean, Minimalist, Premium Typography */}
+          <div className="md:hidden bg-white p-5 rounded-2xl shadow-xs border border-slate-200/80 space-y-3">
+            {/* Minimal Status line */}
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#64748B]">
+              <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
+              <span className="text-[#0F172A] font-bold">
                 {isActive
-                  ? (lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory Serialization' : 'Обязательная маркировка')
+                  ? (lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory' : 'Обязательная маркировка')
                   : (lang === 'kz' ? 'Енгізілуде' : lang === 'en' ? 'Upcoming' : 'Внедрение')}
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-[11px]">
-                <Calendar className="w-3 h-3 text-slate-500" />
-                {category.dateFull}
-              </span>
+              <span className="text-slate-300">•</span>
+              <span>{category.dateFull}</span>
             </div>
 
-            {/* Title with Category Icon */}
-            <div className="flex items-start gap-3 pt-0.5">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0082FB] shrink-0 mt-0.5 shadow-2xs">
-                <IconComponent className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <h1 className="text-xl font-extrabold text-[#111827] leading-snug tracking-tight">
-                  {category.title}
-                </h1>
-                <p className="text-xs text-[#64748B] leading-relaxed font-normal">
-                  {category.shortDesc || category.fullDesc}
-                </p>
-              </div>
+            {/* Clear, bold H1 title */}
+            <h1 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] leading-tight tracking-tight pt-0.5">
+              {category.title}
+            </h1>
+
+            {/* Human description (fullDesc or clean summary) */}
+            <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
+              {category.fullDesc || category.shortDesc}
+            </p>
+
+            {/* Clean, quiet metadata line */}
+            <div className="pt-0.5 text-xs text-[#64748B]">
+              <span>ТН ВЭД: <strong className="text-[#0F172A] font-mono font-bold">{category.tnved}</strong></span>
             </div>
 
-            {/* TN VED list */}
-            {tnvedList.length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-xs text-[#64748B]">
-                <span className="font-semibold text-slate-500 text-[11px]">ТН ВЭД:</span>
-                {tnvedList.map((code) => (
-                  <span key={code} className="px-2 py-0.5 rounded-md bg-slate-100 text-[#1E293B] font-mono font-bold text-[11px]">
-                    {code}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Mobile Action Buttons (Side-by-side, compact, thumb-friendly) */}
-            <div className="grid grid-cols-2 gap-2 pt-1.5">
+            {/* Mobile Action Buttons */}
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
               <a
                 href={waUrl}
                 target="_blank"
@@ -315,37 +307,105 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
               </div>
             )}
 
-            {/* Process Steps (4 steps grid) */}
+            {/* Turnkey Services Block: Берём всю маркировку на себя */}
             <div className="space-y-4">
-              <h2 className="text-lg sm:text-2xl font-bold text-[#111827] tracking-tight">
-                {lang === 'kz' ? 'TANBOX таңбалау операциялары қалай жүргізіледі' : lang === 'en' ? 'How Serialization Operations Work' : 'Как происходят операции маркировки TANBOX'}
-              </h2>
+              <div>
+                <h2 className="text-lg sm:text-2xl font-bold text-[#111827] tracking-tight">
+                  {lang === 'kz' ? 'Барлық таңбалау жұмыстарын кілтке дейін өзіміз атқарамыз' : lang === 'en' ? 'Full Turnkey Serialization for Your Business' : 'Берём всю маркировку на себя под ключ'}
+                </h2>
+                <p className="text-xs sm:text-sm text-[#64748B] pt-0.5">
+                  {lang === 'kz'
+                    ? 'Кодтар мен қоймадан бастап 1С бағдарламасы мен кассаға дейін толық кешенді шешім'
+                    : lang === 'en'
+                    ? 'From code issuance and warehouse stickering to 1C ERP and cash desk scanners'
+                    : 'От получения кодов и оклейки на складе до настройки 1С и кассовых сканеров'}
+                </p>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {category.processSteps.map((stepItem, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/70 space-y-2.5 hover:shadow-sm transition-all shadow-2xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="w-8 h-8 bg-[#0082FB] text-white font-extrabold text-xs rounded-lg flex items-center justify-center">
-                        {stepItem.step}
-                      </span>
-                      <PackageCheck className="w-5 h-5 text-[#0082FB]" />
+                {[
+                  {
+                    num: '01',
+                    title: lang === 'kz' ? 'Тіркеу және кодтарды алу' : lang === 'en' ? 'Registration & Codes' : 'Регистрация и получение кодов',
+                    desc: lang === 'kz'
+                      ? 'ҰТК-ға (GS1) номенклатураны заңды енгізу, «ТМБ» АЖ арқылы Data Matrix ресми кодтарын шығару және айналымға енгізу.'
+                      : lang === 'en'
+                      ? 'Product registry in NKT (GS1), official Data Matrix code issuance in IS Tanba, and commissioning into circulation.'
+                      : 'Заводим номенклатуру в НКТ (GS1), официально выпускаем Data Matrix в ИС «Танба» и вводим коды в оборот.',
+                    icon: FileCheck2
+                  },
+                  {
+                    num: '02',
+                    title: lang === 'kz' ? 'Басып шығару және қоймада жапсыру' : lang === 'en' ? 'Printing & Stickering' : 'Печать и оклейка на складе',
+                    desc: lang === 'kz'
+                      ? 'Төзімді жапсырмалар мен биркаларды өндірістік басу. Қажет болса, бригадамыз қоймаңызға барып, тауарды толық оклейка жасайды.'
+                      : lang === 'en'
+                      ? 'Industrial printing of durable labels and tags. On-site stickering team available for full batch processing at your warehouse.'
+                      : 'Промышленная термопечать стикеров и бирок. При необходимости наша бригада выезжает на ваш склад и оклеивает всю партию.',
+                    icon: PackageCheck
+                  },
+                  {
+                    num: '03',
+                    title: lang === 'kz' ? '1С, касса және жабдық интеграциясы' : lang === 'en' ? '1C, POS & Hardware Setup' : 'Интеграция с 1С, кассами и оборудованием',
+                    desc: lang === 'kz'
+                      ? '1С, Webkassa немесе басқа кассалық жүйелерді баптау, 2D-сканерлер мен ТСД қосу, кассада қатесіз автоматты есептен шығару.'
+                      : lang === 'en'
+                      ? 'Setting up 1C ERP, Webkassa, POS systems, 2D scanners, and handheld terminals (MDT) for error-free retail checkout.'
+                      : 'Настраиваем 1С, Webkassa и кассовые программы, подключаем 2D-сканеры и терминалы (ТСД), чтобы товар без сбоев списывался на кассе.',
+                    icon: Layers
+                  },
+                  {
+                    num: '04',
+                    title: lang === 'kz' ? 'Оқыту және заңдық сүйемелдеу' : lang === 'en' ? 'Staff Training & Compliance' : 'Обучение и сопровождение',
+                    desc: lang === 'kz'
+                      ? 'Сатушыларыңыз бен есепшілеріңізді кодтармен жұмыс істеуге үйрету, тексерулер мен регламенттер өзгергенде толық сүйемелдеу.'
+                      : lang === 'en'
+                      ? 'Training your sales and accounting staff to work with serialization codes, full regulatory compliance support.'
+                      : 'Обучаем ваших продавцов и бухгалтеров работе с кодами, консультируем при проверках и обновлении регламентов.',
+                    icon: ShieldCheck
+                  }
+                ].map((item, idx) => {
+                  const PillarIcon = item.icon;
+                  return (
+                    <div
+                      key={idx}
+                      className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 space-y-2.5 hover:shadow-sm hover:border-[#0082FB]/30 transition-all shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="w-8 h-8 bg-[#0082FB] text-white font-extrabold text-xs rounded-xl flex items-center justify-center shadow-xs">
+                          {item.num}
+                        </span>
+                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#0082FB] flex items-center justify-center">
+                          <PillarIcon className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <h3 className="text-base font-bold text-[#111827]">{item.title}</h3>
+                      <p className="text-xs text-[#64748B] leading-relaxed">{item.desc}</p>
                     </div>
-                    <h3 className="text-base font-bold text-[#111827]">{stepItem.title}</h3>
-                    <p className="text-xs text-[#64748B] leading-relaxed">{stepItem.desc}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             {/* Key Features List */}
             <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200/70 shadow-xs space-y-4">
-              <h2 className="text-lg sm:text-xl font-bold text-[#111827]">
-                {lang === 'kz' ? 'TANBOX мүмкіндіктері мен артықшылықтары' : lang === 'en' ? 'Key Capabilities & Advantages' : 'Возможности и особенности маркировки категории'}
-              </h2>
-              <ul className="space-y-3">
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-[#111827]">
+                  {lang === 'kz'
+                    ? `«${category.shortTitle}» таңбалау ережелері мен талаптары`
+                    : lang === 'en'
+                    ? `Regulatory Requirements for ${category.shortTitle}`
+                    : `Особенности и требования к маркировке: ${category.shortTitle}`}
+                </h2>
+                <p className="text-xs text-[#64748B] pt-0.5">
+                  {lang === 'kz'
+                    ? 'Осы тауар тобына қатысты ҚР заңнамалық ерекшеліктері'
+                    : lang === 'en'
+                    ? 'Industry-specific rules and compliance requirements in Kazakhstan'
+                    : 'Отраслевая специфика и нормативные правила в Республике Казахстан'}
+                </p>
+              </div>
+              <ul className="space-y-3 pt-1">
                 {category.keyFeatures.map((feat, idx) => (
                   <li key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-[#1E293B] font-medium leading-relaxed">
                     <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#0082FB] shrink-0 mt-0.5" />
