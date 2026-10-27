@@ -677,11 +677,11 @@ for (const route of routes) {
     html = html.replace('</head>', `${schemaScript}\n</head>`);
   }
 
-  // Inject semantic SSR pre-rendered content inside root div for search engine crawlers
+  // Inject semantic SEO content inside <noscript> for crawlers so users never see a flash of unstyled text
   if (meta.bodyContent) {
     html = html.replace(
       '<div id="root"></div>',
-      `<div id="root"><div class="ssg-pre-rendered-seo" style="display:contents;">${meta.bodyContent}</div></div>`
+      `<noscript><div class="ssg-noscript-seo">${meta.bodyContent}</div></noscript>\n  <div id="root"></div>`
     );
   }
 
@@ -701,26 +701,11 @@ for (const route of routes) {
   generatedCount++;
 }
 
-// Generate Standalone 404.html (True HTTP 404 page: NO canonical tag, noindex)
+// Generate Standalone 404.html (True HTTP 404 page: NO canonical tag, noindex, clean #root for React router)
 const notFoundHtml = baseHtml
   .replace(/<title>.*?<\/title>/s, `<title>Страница не найдена (404) | TANBOX.KZ</title>`)
   .replace(/<meta\s+name="robots".*?>/i, `<meta name="robots" content="noindex, follow" />`)
-  .replace(/<link\s+rel="canonical"\s+href=".*?"\s*\/?>/i, '') // STRIP CANONICAL FROM 404
-  .replace(
-    '<div id="root"></div>',
-    `<div id="root" style="min-height:75vh;display:flex;align-items:center;justify-content:center;background:#F8FAFC;font-family:sans-serif;text-align:center;padding:48px 16px;">
-      <div style="max-width:480px;margin:auto;">
-        <div style="margin-bottom:16px;">
-          <img src="/banners/404.svg" alt="404 — Ошибка сканирования" style="max-width:320px;width:100%;height:auto;margin:auto;display:block;" />
-        </div>
-        <h1 style="font-size:24px;font-weight:800;color:#111827;margin:16px 0 8px;">Страница не найдена</h1>
-        <p style="font-size:14px;color:#64748B;margin-bottom:24px;line-height:1.5;">Возможно, адрес набран с ошибкой или страница была перемещена.</p>
-        <div>
-          <a href="/" style="display:inline-block;background:#0082FB;color:white;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:800;font-size:14px;">Вернуться на главную</a>
-        </div>
-      </div>
-    </div>`
-  );
+  .replace(/<link\s+rel="canonical"\s+href=".*?"\s*\/?>/i, '');
 
 fs.writeFileSync(path.join(DIST_DIR, '404.html'), notFoundHtml, 'utf-8');
 

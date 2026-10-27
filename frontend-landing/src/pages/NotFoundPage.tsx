@@ -25,7 +25,7 @@ export const NotFoundPage: React.FC = () => {
   }, [lang]);
 
   return (
-    <div className="min-h-[75vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12 sm:py-16 bg-[#F8FAFC]">
+    <div className="w-full flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
       <div className="max-w-xl w-full text-center space-y-6">
         
         {/* Visual 404 Scan Error Illustration (No frame, transparent) */}
