@@ -76,7 +76,7 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
       prevClientsCount,
       totalClientsAllTime,
     ] = await Promise.all([
-      // Current period orders with user details
+      // Current period orders with selected fields to optimize memory
       prisma.order.findMany({
         where: {
           createdAt: {
@@ -84,7 +84,16 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
             lte: endDate,
           },
         },
-        include: {
+        select: {
+          id: true,
+          totalPrice: true,
+          itemsCount: true,
+          paymentStatus: true,
+          status: true,
+          tariffType: true,
+          category: true,
+          createdAt: true,
+          userId: true,
           user: {
             select: {
               id: true,

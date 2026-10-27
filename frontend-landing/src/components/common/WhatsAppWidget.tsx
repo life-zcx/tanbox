@@ -78,7 +78,7 @@ export const WhatsAppWidget: React.FC = () => {
   return (
     <div
       className={`fixed right-4 sm:right-6 z-[1001] transition-all duration-300 select-none ${
-        cookieBannerVisible ? 'bottom-[136px] sm:bottom-6' : 'bottom-4 sm:bottom-6'
+        cookieBannerVisible ? 'bottom-[60px] sm:bottom-6' : 'bottom-4 sm:bottom-6'
       }`}
     >
       {/* Speech Bubble Tooltip - desktop only to avoid covering mobile screens */}

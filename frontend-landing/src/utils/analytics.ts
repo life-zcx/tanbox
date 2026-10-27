@@ -79,11 +79,32 @@ export const sendGoogleAdsConversion = (
   return false;
 };
 
+export const YANDEX_METRIKA_ID =
+  (typeof window !== 'undefined' && (window as any).YANDEX_METRIKA_ID) || 113816974;
+
+export const reachYandexGoal = (goalName: string, params?: Record<string, any>) => {
+  if (typeof window === 'undefined') return;
+  if (isDevEnvironment()) {
+    console.debug('[Analytics:dev-blocked] Yandex Metrika goal suppressed in dev:', goalName, params);
+    return;
+  }
+  const ym = (window as any).ym;
+  const counterId = (window as any).YANDEX_METRIKA_ID || 113816974;
+  if (typeof ym === 'function') {
+    try {
+      ym(counterId, 'reachGoal', goalName, params);
+    } catch (e) {
+      console.warn('[Analytics] Yandex Metrika reachGoal error:', e);
+    }
+  }
+};
+
 /**
  * Event snippet for: Открытие модалки conversion page
  * send_to: AW-18368406368/ApjmCJPU_qIdEODG3rZE
  */
 export const trackModalOpenConversion = (url?: string): boolean => {
+  reachYandexGoal('modal_open');
   return sendGoogleAdsConversion(CONVERSION_MODAL_OPEN, {
     value: 1.0,
     currency: 'USD',
@@ -99,6 +120,7 @@ export const trackFormSubmitConversion = (
   url?: string,
   options?: ConversionOptions
 ): boolean => {
+  reachYandexGoal('form_submit', options ? { value: options.value } : undefined);
   return sendGoogleAdsConversion(CONVERSION_FORM_SUBMIT, {
     value: 1.0,
     currency: 'USD',
@@ -111,6 +133,7 @@ export const trackFormSubmitConversion = (
  * General helper (backward compatible)
  */
 export const trackGoogleConversion = (options: ConversionOptions = {}): boolean => {
+  reachYandexGoal('form_submit', options);
   return sendGoogleAdsConversion(CONVERSION_FORM_SUBMIT, options);
 };
 
@@ -119,11 +142,36 @@ export const trackGoogleConversion = (options: ConversionOptions = {}): boolean 
  * send_to: AW-18368406368/IF-ZCJPMhaMdEODG3rZE
  */
 export const trackWhatsAppClick = (url?: string): boolean => {
+  reachYandexGoal('whatsapp_click');
   return sendGoogleAdsConversion(CONVERSION_WHATSAPP_CLICK, {
     value: 1.0,
     currency: 'USD',
     url,
   });
+};
+
+/**
+ * Event snippet for: Клик по номеру телефона
+ */
+export const trackPhoneClick = (phone?: string): void => {
+  reachYandexGoal('phone_click', { phone });
+  if (typeof window !== 'undefined') {
+    const gtag = (window as any).gtag;
+    if (typeof gtag === 'function' && !isDevEnvironment()) {
+      gtag('event', 'phone_call', {
+        event_category: 'engagement',
+        event_label: phone || '+77003048532',
+      });
+    }
+  }
+};
+
+/**
+ * Event snippet for: Клик по расчету в WhatsApp из калькулятора
+ */
+export const trackCalculatorWhatsAppClick = (params?: { tariff?: string; quantity?: number; price?: number }): void => {
+  reachYandexGoal('calc_whatsapp', params);
+  trackWhatsAppClick();
 };
 
 /**
@@ -146,4 +194,7 @@ if (typeof window !== 'undefined') {
   (window as any).gtag_report_conversion = trackFormSubmitConversion;
   (window as any).gtag_report_whatsapp = trackWhatsAppClick;
   (window as any).trackWhatsAppClick = trackWhatsAppClick;
+  (window as any).trackPhoneClick = trackPhoneClick;
+  (window as any).trackCalculatorWhatsAppClick = trackCalculatorWhatsAppClick;
+  (window as any).reachYandexGoal = reachYandexGoal;
 }

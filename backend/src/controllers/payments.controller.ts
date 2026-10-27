@@ -304,6 +304,14 @@ export async function freedomResultWebhook(req: Request, res: Response) {
       return res.type('application/xml').send(xml);
     }
 
+    // Strict amount verification in result webhook to protect against partial/tampered payments
+    const requestedAmount = params.pg_amount !== undefined ? Number(params.pg_amount) : undefined;
+    if (requestedAmount !== undefined && !isNaN(requestedAmount) && Math.abs(Number(payment.amount) - requestedAmount) > 0.01) {
+      logger.warn(`[FreedomPay] Amount mismatch in result webhook: expected ${payment.amount}, received ${requestedAmount}`);
+      const xml = freedomPayService.buildXmlResponse(scriptName, 'rejected', `Неверная сумма платежа (ожидается ${payment.amount} KZT)`);
+      return res.type('application/xml').send(xml);
+    }
+
     if (isSuccess) {
       // 1. Atomic status transition: ensure only ONE webhook process executes the credit/status change
       const wasUpdated = await prisma.$transaction(async (tx) => {

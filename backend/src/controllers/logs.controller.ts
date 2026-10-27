@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { logger } from '../utils/logger';
+import { logger, resetLogStreams } from '../utils/logger';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { telegram } from '../services/telegram.service';
 
@@ -169,6 +169,8 @@ export const clearSystemLogs = async (req: AuthRequest, res: Response) => {
     } else {
       await clearFile('error.log');
     }
+
+    resetLogStreams(type);
 
     logger.info(`Logs cleared by admin: type=${type}`);
     return res.json({ status: 'ok', message: `Файл логов (${type}) успешно очищен` });

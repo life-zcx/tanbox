@@ -25,6 +25,17 @@ interface CachedUserStatus {
 
 const userBlockCache = new Map<string, CachedUserStatus>();
 const CACHE_TTL_MS = 15000; // 15 seconds
+const MAX_CACHE_ENTRIES = 5000;
+
+// Periodic cleanup of stale cached entries to prevent memory leak
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of userBlockCache.entries()) {
+    if (now - value.cachedAt >= CACHE_TTL_MS) {
+      userBlockCache.delete(key);
+    }
+  }
+}, 60000).unref();
 
 export const invalidateUserBlockCache = (userId: string) => {
   userBlockCache.delete(userId);
@@ -51,6 +62,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
     // Verify account active status and token version in DB (blocked or invalidated sessions are rejected)
     if (decoded?.id) {
       const now = Date.now();
+      const tokenVersion = typeof decoded.tokenVersion === 'number' ? decoded.tokenVersion : 0;
       const cached = userBlockCache.get(decoded.id);
 
       if (cached && now - cached.cachedAt < CACHE_TTL_MS) {
@@ -62,7 +74,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
               : 'Ваш аккаунт заблокирован администратором платформы',
           });
         }
-        if (typeof decoded.tokenVersion === 'number' && decoded.tokenVersion !== cached.tokenVersion) {
+        if (tokenVersion !== cached.tokenVersion) {
           return res.status(401).json({
             code: 'SESSION_REVOKED',
             message: 'Сессия аннулирована в связи со сменой пароля. Пожалуйста, выполните вход повторно.',
@@ -76,6 +88,12 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
 
         if (!dbUser) {
           return res.status(401).json({ message: 'Пользователь не найден или был удален' });
+        }
+
+        // Bounded insertion to prevent uncontrolled growth
+        if (userBlockCache.size >= MAX_CACHE_ENTRIES) {
+          const oldestKey = userBlockCache.keys().next().value;
+          if (oldestKey) userBlockCache.delete(oldestKey);
         }
 
         userBlockCache.set(decoded.id, {
@@ -94,7 +112,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
           });
         }
 
-        if (typeof decoded.tokenVersion === 'number' && decoded.tokenVersion !== dbUser.tokenVersion) {
+        if (tokenVersion !== dbUser.tokenVersion) {
           return res.status(401).json({
             code: 'SESSION_REVOKED',
             message: 'Сессия аннулирована в связи со сменой пароля. Пожалуйста, выполните вход повторно.',

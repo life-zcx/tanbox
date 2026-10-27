@@ -19,13 +19,23 @@ const proxyToLabelGenerator = (targetPath: string) => {
     const headers = { ...req.headers };
     delete headers.host;
 
-    const isJson = req.is('application/json');
-    let jsonBodyBuffer: Buffer | null = null;
+    let payloadBuffer: Buffer | null = null;
+    const method = (req.method || 'GET').toUpperCase();
+    const hasBody = !['GET', 'HEAD', 'DELETE'].includes(method);
 
-    if (isJson && req.body && Object.keys(req.body).length > 0) {
-      jsonBodyBuffer = Buffer.from(JSON.stringify(req.body));
-      headers['content-length'] = String(jsonBodyBuffer.length);
-      headers['content-type'] = 'application/json';
+    if (hasBody && req.body) {
+      if (Buffer.isBuffer(req.body)) {
+        payloadBuffer = req.body;
+      } else if (typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+        payloadBuffer = Buffer.from(JSON.stringify(req.body));
+        headers['content-type'] = 'application/json';
+      }
+    }
+
+    if (payloadBuffer) {
+      headers['content-length'] = String(payloadBuffer.length);
+    } else if (!hasBody) {
+      delete headers['content-length'];
     }
 
     const proxyReq = http.request(
@@ -33,14 +43,19 @@ const proxyToLabelGenerator = (targetPath: string) => {
         hostname: LABEL_GENERATOR_HOST,
         port: LABEL_GENERATOR_PORT,
         path: fullPath,
-        method: req.method,
+        method,
         headers,
+        timeout: 60000,
       },
       (proxyRes) => {
         res.writeHead(proxyRes.statusCode || 500, proxyRes.headers);
         proxyRes.pipe(res);
       }
     );
+
+    proxyReq.on('timeout', () => {
+      proxyReq.destroy(new Error('Proxy request timed out'));
+    });
 
     proxyReq.on('error', (err) => {
       logger.error(`Label generator proxy error on ${fullPath}:`, err);
@@ -49,8 +64,16 @@ const proxyToLabelGenerator = (targetPath: string) => {
       }
     });
 
-    if (jsonBodyBuffer) {
-      proxyReq.write(jsonBodyBuffer);
+    req.on('close', () => {
+      if (!proxyReq.destroyed) {
+        proxyReq.destroy();
+      }
+    });
+
+    if (payloadBuffer) {
+      proxyReq.write(payloadBuffer);
+      proxyReq.end();
+    } else if (!hasBody) {
       proxyReq.end();
     } else {
       req.pipe(proxyReq);

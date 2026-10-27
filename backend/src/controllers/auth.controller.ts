@@ -12,14 +12,32 @@ import { logger } from '../utils/logger';
 // In-memory rate limiting / anti-abuse store
 const memoryCooldowns = new Map<string, number>();
 const memoryAttempts = new Map<string, number>();
+const clientLoginFailures = new Map<string, { count: number; lockedUntil: number }>();
 
-// Periodic cleanup: evict stale cooldowns/attempts and expired DB codes (every 10 minutes)
+export const hashOtpCode = (code: string): string => {
+  return crypto.createHash('sha256').update(String(code).trim()).digest('hex');
+};
+
+export const verifyOtpMatch = (storedValue: string, providedCode: string): boolean => {
+  const clean = String(providedCode).trim();
+  const hashed = hashOtpCode(clean);
+  // Matches either hashed code or legacy plaintext code (backward compatibility)
+  return storedValue === hashed || storedValue === clean;
+};
+
+// Periodic cleanup: evict stale cooldowns/attempts, expired lockouts, and expired DB codes (every 10 minutes)
 setInterval(async () => {
-  const cutoff = Date.now() - 15 * 60 * 1000;
+  const now = Date.now();
+  const cutoff = now - 15 * 60 * 1000;
   for (const [key, timestamp] of memoryCooldowns.entries()) {
     if (timestamp < cutoff) {
       memoryCooldowns.delete(key);
       memoryAttempts.delete(key);
+    }
+  }
+  for (const [key, val] of clientLoginFailures.entries()) {
+    if (val.lockedUntil > 0 && val.lockedUntil < now) {
+      clientLoginFailures.delete(key);
     }
   }
   try {
@@ -27,7 +45,7 @@ setInterval(async () => {
       where: { expiresAt: { lt: new Date() } },
     });
   } catch {}
-}, 10 * 60 * 1000);
+}, 10 * 60 * 1000).unref();
 
 /**
  * STEP 1: Validate registration data, generate 6-digit OTP code, and send verification email
@@ -115,12 +133,12 @@ export const sendRegisterCode = async (req: Request, res: Response) => {
     const code = crypto.randomInt(100000, 999999).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Store in database
+    // Store securely hashed code in database
     await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
     await prisma.verificationCode.create({
       data: {
         email: cleanEmail,
-        code,
+        code: hashOtpCode(code),
         expiresAt,
       },
     });
@@ -180,10 +198,11 @@ export const register = async (req: Request, res: Response) => {
 
     // 2. Validate OTP code in DB
     const tokenRecord = await prisma.verificationCode.findFirst({
-      where: { email: cleanEmail, code: cleanCode },
+      where: { email: cleanEmail },
+      orderBy: { createdAt: 'desc' },
     });
 
-    if (!tokenRecord) {
+    if (!tokenRecord || !verifyOtpMatch(tokenRecord.code, cleanCode)) {
       memoryAttempts.set(cleanEmail, attempts + 1);
       const remaining = 5 - (attempts + 1);
       return res.status(400).json({
@@ -277,6 +296,16 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
+
+    // Check account lockout from repeated failed attempts
+    const lockInfo = clientLoginFailures.get(cleanEmail);
+    if (lockInfo && lockInfo.lockedUntil > Date.now()) {
+      const waitMin = Math.ceil((lockInfo.lockedUntil - Date.now()) / 60000);
+      return res.status(429).json({
+        message: `Слишком много неверных попыток входа. Аккаунт временно заблокирован на ${waitMin} мин. для защиты от подбора.`,
+      });
+    }
+
     const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (!user) {
       return res.status(401).json({ message: 'Неверный email или пароль' });
@@ -284,8 +313,17 @@ export const login = async (req: Request, res: Response) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Неверный email или пароль' });
+      const fails = (lockInfo?.count || 0) + 1;
+      const lockedUntil = fails >= 5 ? Date.now() + 15 * 60 * 1000 : 0;
+      clientLoginFailures.set(cleanEmail, { count: fails, lockedUntil });
+
+      const remaining = 5 - fails;
+      const warning = remaining > 0 && remaining <= 3 ? ` (Осталось попыток: ${remaining})` : '';
+      return res.status(401).json({ message: `Неверный email или пароль${warning}` });
     }
+
+    // Reset failed login counter on successful password authentication
+    clientLoginFailures.delete(cleanEmail);
 
     // Check account block status
     if (user.isBlocked) {
@@ -322,7 +360,7 @@ export const login = async (req: Request, res: Response) => {
         await prisma.verificationCode.create({
           data: {
             email: cleanEmail,
-            code: otpCode,
+            code: hashOtpCode(otpCode),
             expiresAt,
           },
         });
@@ -360,7 +398,7 @@ export const login = async (req: Request, res: Response) => {
         orderBy: { createdAt: 'desc' },
       });
 
-      if (!storedCode || storedCode.code !== cleanCode) {
+      if (!storedCode || !verifyOtpMatch(storedCode.code, cleanCode)) {
         const remaining = 5 - currentAttempts;
         return res.status(400).json({
           message: `Неверный код подтверждения из письма. Осталось попыток: ${remaining > 0 ? remaining : 0}`,
@@ -557,7 +595,7 @@ export const sendForgotPasswordCode = async (req: Request, res: Response) => {
     await prisma.verificationCode.create({
       data: {
         email: cleanEmail,
-        code,
+        code: hashOtpCode(code),
         expiresAt,
       },
     });
@@ -607,10 +645,11 @@ export const resetPasswordWithCode = async (req: Request, res: Response) => {
     }
 
     const tokenRecord = await prisma.verificationCode.findFirst({
-      where: { email: cleanEmail, code: cleanCode },
+      where: { email: cleanEmail },
+      orderBy: { createdAt: 'desc' },
     });
 
-    if (!tokenRecord) {
+    if (!tokenRecord || !verifyOtpMatch(tokenRecord.code, cleanCode)) {
       memoryAttempts.set(cleanEmail, attempts + 1);
       const remaining = 5 - (attempts + 1);
       return res.status(400).json({

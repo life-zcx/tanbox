@@ -8,6 +8,7 @@ node_modules/
 dist/
 build/
 .output/
+frontend-landing/scripts/run-ssg.mjs
 
 # Prisma & Database
 *.db

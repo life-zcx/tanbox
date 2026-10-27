@@ -134,7 +134,7 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
   return (
     <div
       className={`fixed right-[18px] sm:right-[26px] z-[1000] transition-[opacity,transform] duration-300 ease-out select-none ${
-        cookieBannerVisible ? 'bottom-[195px] sm:bottom-[92px]' : 'bottom-[74px] sm:bottom-[92px]'
+        cookieBannerVisible ? 'bottom-[122px] sm:bottom-[92px]' : 'bottom-[76px] sm:bottom-[92px]'
       } ${
         isVisible
           ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'

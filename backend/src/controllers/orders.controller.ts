@@ -2105,10 +2105,17 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
 
     let rows: Record<string, string>[] = [];
     const dbCount = await prisma.orderCodeItem.count({ where: { orderId: existing.id } });
-    if (dbCount > 0) {
+    const isFromDb = dbCount > 0;
+    if (isFromDb) {
+      // Memory protection: only fetch the needed slice for sample / roll from DB
+      const skip = isSample ? 0 : isRoll ? Math.max(0, offsetQuery || 0) : 0;
+      const take = isSample ? 1 : isRoll ? Math.max(1, limitQuery || 1000) : 2000;
+
       const dbItems = await prisma.orderCodeItem.findMany({
         where: { orderId: existing.id },
         orderBy: { index: 'asc' },
+        skip,
+        take,
         select: { index: true, code: true, gtin: true, serial: true },
       });
       const orderPositions = await prisma.orderPosition.findMany({
@@ -2364,20 +2371,26 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
       let rollNum: number | undefined;
 
       if (isSample) {
-        rowsToGenerate = rows.slice(0, 1);
+        rowsToGenerate = isFromDb ? rows : rows.slice(0, 1);
         filename = `Sample_${existing.orderNumber}.pdf`;
       } else if (isRoll) {
         const start = Math.max(0, offsetQuery || 0);
         const take = Math.max(1, limitQuery || 1000);
-        if (start >= rows.length) {
-          return res.status(400).json({
-            message: `Начальный индекс (${start + 1}) превышает количество доступных кодов (${rows.length})`,
-          });
-        }
-        const end = Math.min(rows.length, start + take);
-        rowsToGenerate = rows.slice(start, end);
         rollNum = rollQuery || Math.floor(start / take) + 1;
-        filename = `Roll_${rollNum}_(${start + 1}-${end})_${existing.orderNumber}.pdf`;
+        if (isFromDb) {
+          rowsToGenerate = rows;
+          const end = start + rows.length;
+          filename = `Roll_${rollNum}_(${start + 1}-${end})_${existing.orderNumber}.pdf`;
+        } else {
+          if (start >= rows.length) {
+            return res.status(400).json({
+              message: `Начальный индекс (${start + 1}) превышает количество доступных кодов (${rows.length})`,
+            });
+          }
+          const end = Math.min(rows.length, start + take);
+          rowsToGenerate = rows.slice(start, end);
+          filename = `Roll_${rollNum}_(${start + 1}-${end})_${existing.orderNumber}.pdf`;
+        }
       }
 
       const queueKey = isRoll
@@ -2392,13 +2405,50 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
         ? `Заказ ${existing.orderNumber} - Образец`
         : `Заказ ${existing.orderNumber} - Вся партия (${rowsToGenerate.length} шт.)`;
 
-      if (isSample) {
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      // Cancel dangling generation if client disconnects before job completes
+      const targetPdfFile = isRoll
+        ? path.join(orderDir, `roll_${rollNum}_${offsetQuery || 0}_${limitQuery || 1000}.pdf`)
+        : pdfPath;
+
+      const onClientClose = () => {
+        try {
+          pdfQueue.cancelTask(queueKey);
+        } catch {}
+        if (activeMicroReq) {
+          try {
+            activeMicroReq.destroy();
+          } catch {}
+        }
+      };
+      req.once('close', onClientClose);
+
+      try {
+        if (isSample) {
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+          await pdfQueue.enqueue(
+            queueKey,
+            taskDesc,
+            () => requestLabelGeneratorPdfStream({ template, csvData: rowsToGenerate }, res),
+            () => {
+              if (activeMicroReq) {
+                try {
+                  activeMicroReq.destroy();
+                } catch {}
+              }
+            }
+          );
+          return;
+        }
+
+        if (!fs.existsSync(orderDir)) {
+          fs.mkdirSync(orderDir, { recursive: true });
+        }
+
         await pdfQueue.enqueue(
           queueKey,
           taskDesc,
-          () => requestLabelGeneratorPdfStream({ template, csvData: rowsToGenerate }, res),
+          () => requestLabelGeneratorPdfToFile({ template, csvData: rowsToGenerate }, targetPdfFile, queueKey),
           () => {
             if (activeMicroReq) {
               try {
@@ -2407,29 +2457,9 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
             }
           }
         );
-        return;
+      } finally {
+        req.off('close', onClientClose);
       }
-
-      if (!fs.existsSync(orderDir)) {
-        fs.mkdirSync(orderDir, { recursive: true });
-      }
-
-      const targetPdfFile = isRoll
-        ? path.join(orderDir, `roll_${rollNum}_${offsetQuery || 0}_${limitQuery || 1000}.pdf`)
-        : pdfPath;
-
-      await pdfQueue.enqueue(
-        queueKey,
-        taskDesc,
-        () => requestLabelGeneratorPdfToFile({ template, csvData: rowsToGenerate }, targetPdfFile, queueKey),
-        () => {
-          if (activeMicroReq) {
-            try {
-              activeMicroReq.destroy();
-            } catch {}
-          }
-        }
-      );
 
       if (!isRoll && !existing.pdfUrl) {
         await prisma.order.update({

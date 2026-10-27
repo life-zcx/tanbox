@@ -46,6 +46,17 @@ class RotatingLogStream {
     }
   }
 
+  public reset() {
+    try {
+      if (this.stream) {
+        this.stream.end();
+        this.stream = null;
+      }
+      this.currentSize = 0;
+    } catch {}
+    this.initStream();
+  }
+
   private rotate() {
     try {
       if (this.stream) {
@@ -80,6 +91,13 @@ class RotatingLogStream {
 const accessStream = new RotatingLogStream(path.join(logsDir, 'access.log'));
 const errorStream = new RotatingLogStream(path.join(logsDir, 'error.log'));
 const frontendStream = new RotatingLogStream(path.join(logsDir, 'frontend.log'));
+
+export function resetLogStreams(type: string = 'all') {
+  const t = type.toLowerCase();
+  if (t === 'all' || t === 'access') accessStream.reset();
+  if (t === 'all' || t === 'error') errorStream.reset();
+  if (t === 'all' || t === 'frontend') frontendStream.reset();
+}
 
 function sanitizeLog(text: string): string {
   return String(text).replace(/[\r\n]+/g, ' ').slice(0, 1000);

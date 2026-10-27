@@ -40,8 +40,24 @@ export async function reindexClientOrders(userId: string): Promise<void> {
 
   let runningIndex = 1;
   for (const ord of orders) {
-    const count = await prisma.orderCodeItem.count({ where: { orderId: ord.id } });
+    const stats = await prisma.orderCodeItem.aggregate({
+      where: { orderId: ord.id },
+      _count: { _all: true },
+      _min: { index: true },
+      _max: { index: true },
+    });
+
+    const count = stats._count._all;
     if (count === 0) continue;
+
+    const expectedMin = runningIndex;
+    const expectedMax = runningIndex + count - 1;
+
+    // Skip heavy raw SQL updates if this order's codes are already sequentially indexed
+    if (stats._min.index === expectedMin && stats._max.index === expectedMax) {
+      runningIndex += count;
+      continue;
+    }
 
     // First, make indices negative to avoid transient unique constraint collisions on @@unique([orderId, index])
     await prisma.$executeRawUnsafe(

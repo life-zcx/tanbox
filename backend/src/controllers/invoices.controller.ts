@@ -7,13 +7,23 @@ import { clientTelegramBot } from '../services/clientTelegram.service';
 import { logger } from '../utils/logger';
 import { advanceOrderStatus } from '../utils/orderLifecycle';
 
+let lastGlobalSync = 0;
+
 /**
  * Auto-synchronizes orders with Invoice records.
  * If an order doesn't have an Invoice yet, it creates one so that clients see invoices for all their orders.
  */
 export async function syncOrderInvoices(userId?: string) {
   try {
-    // Only query orders that do NOT have an invoice yet (O(1) index lookup instead of full DB table scan)
+    if (!userId) {
+      const now = Date.now();
+      if (now - lastGlobalSync < 60000) {
+        return; // Throttle all-order sync to at most once per minute
+      }
+      lastGlobalSync = now;
+    }
+
+    // Only query orders that do NOT have an invoice yet with a safe batch size
     const ordersWithoutInvoices = await prisma.order.findMany({
       where: {
         ...(userId ? { userId } : {}),
@@ -22,6 +32,7 @@ export async function syncOrderInvoices(userId?: string) {
       include: {
         user: true,
       },
+      take: 50,
     });
 
     for (const order of ordersWithoutInvoices) {
@@ -98,8 +109,10 @@ export async function getInvoices(req: AuthRequest, res: Response) {
       return res.status(401).json({ message: 'Не авторизован' });
     }
 
-    // Auto-sync missing invoices for user's orders before returning
-    await syncOrderInvoices(user.role === 'ADMIN' ? undefined : user.id);
+    // Trigger missing invoices sync asynchronously without blocking the GET response
+    syncOrderInvoices(user.role === 'ADMIN' ? undefined : user.id).catch((err) =>
+      logger.warn(`Background syncOrderInvoices error: ${err.message}`)
+    );
 
     const { status, search, limit = '100', offset = '0' } = req.query as {
       status?: string;

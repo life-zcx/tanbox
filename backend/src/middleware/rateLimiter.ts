@@ -1,13 +1,11 @@
 import rateLimit from 'express-rate-limit';
 
 /**
- * Extracts true client IP address. Prioritizes Cloudflare (cf-connecting-ip)
- * and Express's validated req.ip (configured with 'trust proxy', 1 behind Caddy)
+ * Extracts true client IP address. Uses Express's validated req.ip
+ * (configured with 'trust proxy', 1 behind Caddy reverse proxy)
  * to prevent IP spoofing and rate limit bypasses.
  */
 export const getClientIp = (req: any): string => {
-  const cfIp = req.headers['cf-connecting-ip'];
-  if (typeof cfIp === 'string' && cfIp.trim()) return cfIp.trim();
   return req.ip || req.socket?.remoteAddress || '127.0.0.1';
 };
 

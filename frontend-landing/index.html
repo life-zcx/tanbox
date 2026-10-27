@@ -115,6 +115,44 @@
     }
   </script>
 
+  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+    (function () {
+      var hostname = window.location.hostname;
+      var isDev = ['localhost', '127.0.0.1', '::1'].includes(hostname) ||
+        hostname.includes('dev') ||
+        hostname.includes('test') ||
+        hostname.endsWith('.local');
+
+      window.YANDEX_METRIKA_ID = 113816974;
+
+      if (isDev) {
+        window['ym'] = function () {
+          console.debug('[ym:dev-blocked]', Array.from(arguments));
+        };
+        console.info('[Analytics] Yandex Metrika disabled in dev/local environment');
+        return;
+      }
+
+      (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+      })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=113816974', 'ym');
+
+      ym(113816974, 'init', {
+        ssr: true,
+        webvisor: true,
+        clickmap: true,
+        ecommerce: "dataLayer",
+        accurateTrackBounce: true,
+        trackLinks: true
+      });
+    })();
+  </script>
+  <!-- /Yandex.Metrika counter -->
+
   <meta charset="UTF-8" />
   <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
@@ -351,6 +389,7 @@
 </head>
 
 <body class="bg-white text-black font-sans antialiased selection:bg-black selection:text-white">
+  <noscript><div><img src="https://mc.yandex.ru/watch/113816974" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
