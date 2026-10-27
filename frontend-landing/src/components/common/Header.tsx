@@ -73,22 +73,31 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
             : 'bg-white/95 backdrop-blur-md border-b border-gray-200/80 shadow-xs'
         }`}
       >
-        {/* Sleek On-Brand Regulatory Top Strip */}
-        <div className="bg-[#0B132B]/95 text-slate-300 text-xs py-2 border-b border-white/10 hidden md:block">
-          <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-            <span className="text-slate-300 text-xs">
+        {/* Sleek On-Brand Regulatory Top Strip (Desktop & Mobile) */}
+        <div className="bg-[#0B132B]/95 text-slate-300 text-xs py-2 border-b border-white/10 block">
+          <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2.5 sm:gap-4">
+            <span className="text-slate-300 text-[11px] sm:text-xs leading-snug">
               <strong className="text-white font-bold">
-                {lang === 'kz' ? '2026 жылғы 1 желтоқсаннан' : lang === 'en' ? 'From December 1, 2026' : 'С 1 декабря 2026 года'}
+                {lang === 'kz' ? '2026 ж. 1 желтоқсаннан' : lang === 'en' ? 'From Dec 1, 2026' : 'С 1 декабря 2026 года'}
               </strong>{' '}
-              {lang === 'kz'
-                ? 'Қазақстанда зергерлік бұйымдарды міндетті цифрлық таңбалау енгізіледі'
-                : lang === 'en'
-                ? 'mandatory jewelry digital marking is introduced in Kazakhstan'
-                : 'вводится обязательная маркировка ювелирных изделий в Казахстане'}
+              <span className="hidden sm:inline">
+                {lang === 'kz'
+                  ? 'Қазақстанда зергерлік бұйымдарды міндетті цифрлық таңбалау енгізіледі'
+                  : lang === 'en'
+                  ? 'mandatory jewelry digital marking is introduced in Kazakhstan'
+                  : 'вводится обязательная маркировка ювелирных изделий в Казахстане'}
+              </span>
+              <span className="sm:hidden">
+                {lang === 'kz'
+                  ? '— зергерлік бұйымдарды таңбалау'
+                  : lang === 'en'
+                  ? '— jewelry marking in KZ'
+                  : '— маркировка ювелирных изделий'}
+              </span>
             </span>
             <Link
               to={getLocalizedPath('/categories/jewelry')}
-              className="shrink-0 text-[11px] font-extrabold text-white bg-[#0082FB] hover:bg-[#0070DA] px-3.5 py-1.5 rounded-lg transition-all shadow-xs"
+              className="shrink-0 text-[10px] sm:text-[11px] font-extrabold text-white bg-[#0082FB] hover:bg-[#0070DA] px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg transition-all shadow-xs"
             >
               {lang === 'kz' ? 'Толығырақ' : lang === 'en' ? 'Learn more' : 'Подробнее'} →
             </Link>
