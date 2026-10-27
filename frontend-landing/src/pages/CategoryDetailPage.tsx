@@ -26,7 +26,8 @@ import {
   FileCheck2,
   Tag,
   ShieldCheck,
-  BookOpen
+  BookOpen,
+  MessageCircle
 } from 'lucide-react';
 import { ARTICLES_DATA } from '../data/articlesData';
 
@@ -142,102 +143,124 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
         </nav>
       </div>
 
-      {/* 2. Top Banner / Hero (Identical to other category pages) */}
+      {/* 2. Top Banner / Hero (Responsive: Native Card on Mobile, Full Infographic on Desktop) */}
       <section className="pt-2 sm:pt-3 pb-4 relative overflow-hidden">
         <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
 
-          {category.bannerUrl ? (
-            <div className="space-y-4">
-              <div className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-gray-200/80 bg-white">
-                <img
-                  src={category.bannerUrl}
-                  alt={category.title}
-                  className="w-full h-auto object-cover block"
-                  loading="eager"
-                />
-                <h1 className="sr-only">{category.title}</h1>
-              </div>
-
-              {/* Action & Metadata bar under the banner (100% mobile-friendly) */}
-              <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-semibold text-[#64748B] flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#0082FB] font-bold text-xs shrink-0">
-                    <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
-                    {isActive
-                      ? (lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory Serialization' : 'Обязательная маркировка')
-                      : (lang === 'kz' ? 'Енгізілуде' : lang === 'en' ? 'Upcoming' : 'Внедрение')}
-                  </span>
-                  <span className="text-gray-300">•</span>
-                  <span className="text-[#1E293B] font-bold shrink-0">{category.dateFull}</span>
-                  <span className="text-gray-300">•</span>
-                  <span className="shrink-0">{lang === 'kz' ? 'ТН ВЭД' : lang === 'en' ? 'HS Code' : 'ТН ВЭД'}: <strong className="text-[#111827] font-mono font-bold">{category.tnved}</strong></span>
-                </div>
-
-                {/* Buttons: full width on mobile, inline on desktop */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto shrink-0">
-                  <a
-                    href={waUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full sm:w-auto inline-flex items-center justify-center bg-[#25D366] hover:bg-[#20ba5a] text-white font-extrabold text-xs sm:text-sm px-6 py-3 rounded-xl transition-all active:scale-95 shadow-sm text-center"
-                  >
-                    <span>{lang === 'kz' ? 'WhatsApp-та есептеу алу' : lang === 'en' ? 'WhatsApp Quote' : 'Получить расчёт в WhatsApp'}</span>
-                  </a>
-
-                  <Link
-                    to={getLocalizedPath(`/calculator?category=${category.calcCategoryCode || 'OTHER'}`)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs sm:text-sm px-6 py-3 rounded-xl transition-all active:scale-95 shadow-sm text-center"
-                  >
-                    <Calculator className="w-4 h-4 shrink-0" />
-                    <span>{lang === 'kz' ? 'Құнын есептеу' : lang === 'en' ? 'Calculate Cost' : 'Рассчитать стоимость'}</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pt-1">
-              <div className="space-y-4 max-w-4xl">
-                <div className="flex items-center gap-3 text-xs font-semibold text-[#64748B] flex-wrap">
-                  <span className="inline-flex items-center gap-2 text-[#111827] font-bold">
-                    <span className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
-                    {isActive
-                      ? lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory Serialization' : 'Обязательная маркировка'
-                      : lang === 'kz' ? 'Енгізілуде' : lang === 'en' ? 'Upcoming' : 'Внедрение'}
-                  </span>
-                  <span className="text-gray-300">•</span>
-                  <span>{lang === 'kz' ? 'ТН ВЭД' : lang === 'en' ? 'HS Code' : 'ТН ВЭД'}: <strong className="text-[#111827] font-mono font-bold">{category.tnved}</strong></span>
-                  <span className="text-gray-300">•</span>
-                  <span>{category.dateFull}</span>
-                </div>
-
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#111827] tracking-tight leading-tight">
-                  {category.title}
-                </h1>
-
-                <p className="text-sm sm:text-base text-[#64748B] leading-relaxed font-normal pt-1">
-                  {category.fullDesc}
-                </p>
-              </div>
-
-              <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-3">
-                <a
-                  href={waUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center bg-[#25D366] hover:bg-[#20ba5a] text-white font-extrabold text-sm px-7 py-4 rounded-2xl transition-all active:scale-95 shadow-md"
-                >
-                  <span>{lang === 'kz' ? 'WhatsApp-та есептеу алу' : lang === 'en' ? 'WhatsApp Quote' : 'Получить расчёт в WhatsApp'}</span>
-                </a>
-                <Link
-                  to={getLocalizedPath(`/calculator?category=${category.calcCategoryCode || 'OTHER'}`)}
-                  className="inline-flex items-center justify-center gap-2 bg-[#0082FB] text-white font-extrabold text-sm px-7 py-4 rounded-2xl hover:bg-[#0070DA] transition-all active:scale-95 shadow-md"
-                >
-                  <Calculator className="w-4 h-4" />
-                  {lang === 'kz' ? 'Құнын есептеу' : lang === 'en' ? 'Calculate Cost' : 'Рассчитать стоимость'}
-                </Link>
-              </div>
+          {/* Desktop View (md+): Widescreen infographic banner */}
+          {category.bannerUrl && (
+            <div className="hidden md:block relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-gray-200/80 bg-white">
+              <img
+                src={category.bannerUrl}
+                alt={category.title}
+                className="w-full h-auto object-cover block"
+                loading="eager"
+              />
+              <h1 className="sr-only">{category.title}</h1>
             </div>
           )}
+
+          {/* Mobile View (sm and below): Crisp, legible native Hero card */}
+          <div className="md:hidden bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-200/80 space-y-3.5">
+            {/* Status & Date badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-[#0082FB] font-bold text-[11px]">
+                <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
+                {isActive
+                  ? (lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory Serialization' : 'Обязательная маркировка')
+                  : (lang === 'kz' ? 'Енгізілуде' : lang === 'en' ? 'Upcoming' : 'Внедрение')}
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-[11px]">
+                <Calendar className="w-3 h-3 text-slate-500" />
+                {category.dateFull}
+              </span>
+            </div>
+
+            {/* Title with Category Icon */}
+            <div className="flex items-start gap-3 pt-0.5">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0082FB] shrink-0 mt-0.5 shadow-2xs">
+                <IconComponent className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-xl font-extrabold text-[#111827] leading-snug tracking-tight">
+                  {category.title}
+                </h1>
+                <p className="text-xs text-[#64748B] leading-relaxed font-normal">
+                  {category.shortDesc || category.fullDesc}
+                </p>
+              </div>
+            </div>
+
+            {/* TN VED list */}
+            {tnvedList.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-xs text-[#64748B]">
+                <span className="font-semibold text-slate-500 text-[11px]">ТН ВЭД:</span>
+                {tnvedList.map((code) => (
+                  <span key={code} className="px-2 py-0.5 rounded-md bg-slate-100 text-[#1E293B] font-mono font-bold text-[11px]">
+                    {code}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Mobile Action Buttons (Side-by-side, compact, thumb-friendly) */}
+            <div className="grid grid-cols-2 gap-2 pt-1.5">
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 bg-[#25D366] hover:bg-[#20ba5a] text-white font-extrabold text-xs py-3 px-3 rounded-xl shadow-xs transition-all active:scale-95 text-center"
+              >
+                <MessageCircle className="w-4 h-4 shrink-0" />
+                <span>{lang === 'kz' ? 'WhatsApp' : lang === 'en' ? 'WhatsApp' : 'WhatsApp'}</span>
+              </a>
+
+              <Link
+                to={getLocalizedPath(`/calculator?category=${category.calcCategoryCode || 'OTHER'}`)}
+                className="flex items-center justify-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs py-3 px-3 rounded-xl shadow-xs transition-all active:scale-95 text-center"
+              >
+                <Calculator className="w-4 h-4 shrink-0" />
+                <span>{lang === 'kz' ? 'Калькулятор' : lang === 'en' ? 'Calculator' : 'Калькулятор'}</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Desktop Metadata & Action Bar (md+) */}
+          <div className="hidden md:flex bg-white p-5 rounded-2xl shadow-sm border border-gray-100 items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-sm font-semibold text-[#64748B] flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#0082FB] font-bold text-xs shrink-0">
+                <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
+                {isActive
+                  ? (lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory Serialization' : 'Обязательная маркировка')
+                  : (lang === 'kz' ? 'Енгізілуде' : lang === 'en' ? 'Upcoming' : 'Внедрение')}
+              </span>
+              <span className="text-gray-300">•</span>
+              <span className="text-[#1E293B] font-bold shrink-0">{category.dateFull}</span>
+              <span className="text-gray-300">•</span>
+              <span className="shrink-0">{lang === 'kz' ? 'ТН ВЭД' : lang === 'en' ? 'HS Code' : 'ТН ВЭД'}: <strong className="text-[#111827] font-mono font-bold">{category.tnved}</strong></span>
+            </div>
+
+            {/* Desktop Action Buttons */}
+            <div className="flex items-center gap-3 shrink-0">
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white font-extrabold text-sm px-6 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm text-center"
+              >
+                <MessageCircle className="w-4 h-4 shrink-0" />
+                <span>{lang === 'kz' ? 'WhatsApp-та есептеу алу' : lang === 'en' ? 'WhatsApp Quote' : 'Получить расчёт в WhatsApp'}</span>
+              </a>
+
+              <Link
+                to={getLocalizedPath(`/calculator?category=${category.calcCategoryCode || 'OTHER'}`)}
+                className="inline-flex items-center justify-center gap-2 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm px-6 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm text-center"
+              >
+                <Calculator className="w-4 h-4 shrink-0" />
+                <span>{lang === 'kz' ? 'Құнын есептеу' : lang === 'en' ? 'Calculate Cost' : 'Рассчитать стоимость'}</span>
+              </Link>
+            </div>
+          </div>
 
         </div>
       </section>
@@ -249,15 +272,15 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
           {/* Left Details Column (8 cols) */}
           <div className="lg:col-span-8 space-y-6">
 
-            {/* Implementation Schedule & Stages */}
+            {/* Implementation Schedule & Stages (Modern Vertical Timeline) */}
             {category.stages && category.stages.length > 0 && (
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/70 shadow-xs space-y-5">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200/70 shadow-xs space-y-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#EBF5FF] text-[#0082FB] rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-[#EBF5FF] text-[#0082FB] rounded-xl flex items-center justify-center shrink-0">
                     <Layers className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-[#111827]">
+                    <h2 className="text-lg sm:text-xl font-bold text-[#111827]">
                       {lang === 'kz' ? 'Күшіне ену кестесі мен кезеңдері' : lang === 'en' ? 'Implementation Schedule & Stages' : 'График и этапы вступления в силу'}
                     </h2>
                     <p className="text-xs text-[#64748B]">
@@ -266,18 +289,26 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
                   </div>
                 </div>
 
-                <div className="space-y-3 pt-1">
+                {/* Elegant Timeline UI instead of giant blue buttons */}
+                <div className="relative pl-6 sm:pl-8 space-y-4 pt-1 before:absolute before:left-2 sm:before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-blue-100">
                   {category.stages.map((stg, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 hover:border-[#0082FB]/40 transition-all"
-                    >
-                      <span className="w-full sm:w-44 text-center bg-[#0082FB] text-white font-bold text-xs py-2 px-3 rounded-xl shrink-0">
-                        {stg.date}
-                      </span>
-                      <span className="text-sm font-semibold text-[#111827] leading-snug">
-                        {stg.title}
-                      </span>
+                    <div key={idx} className="relative group">
+                      {/* Timeline Bullet Node */}
+                      <div className="absolute -left-6 sm:-left-8 top-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white border-2 border-[#0082FB] flex items-center justify-center shadow-xs">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#0082FB]" />
+                      </div>
+
+                      <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 hover:border-[#0082FB]/40 hover:bg-white transition-all space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 text-[#0082FB] font-bold text-xs border border-blue-200/60">
+                            <Calendar className="w-3 h-3 text-[#0082FB]" />
+                            {stg.date}
+                          </span>
+                        </div>
+                        <p className="text-xs sm:text-sm font-semibold text-[#111827] leading-snug">
+                          {stg.title}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -286,7 +317,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
 
             {/* Process Steps (4 steps grid) */}
             <div className="space-y-4">
-              <h2 className="text-xl sm:text-2xl font-bold text-[#111827] tracking-tight">
+              <h2 className="text-lg sm:text-2xl font-bold text-[#111827] tracking-tight">
                 {lang === 'kz' ? 'TANBOX таңбалау операциялары қалай жүргізіледі' : lang === 'en' ? 'How Serialization Operations Work' : 'Как происходят операции маркировки TANBOX'}
               </h2>
 
@@ -310,14 +341,14 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
             </div>
 
             {/* Key Features List */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/70 shadow-xs space-y-4">
-              <h2 className="text-xl font-bold text-[#111827]">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-slate-200/70 shadow-xs space-y-4">
+              <h2 className="text-lg sm:text-xl font-bold text-[#111827]">
                 {lang === 'kz' ? 'TANBOX мүмкіндіктері мен артықшылықтары' : lang === 'en' ? 'Key Capabilities & Advantages' : 'Возможности и особенности маркировки категории'}
               </h2>
               <ul className="space-y-3">
                 {category.keyFeatures.map((feat, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-sm text-[#1E293B] font-medium leading-relaxed">
-                    <CheckCircle2 className="w-5 h-5 text-[#0082FB] shrink-0 mt-0.5" />
+                  <li key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-[#1E293B] font-medium leading-relaxed">
+                    <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#0082FB] shrink-0 mt-0.5" />
                     <span>{feat}</span>
                   </li>
                 ))}
@@ -327,13 +358,13 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
             {/* FAQ Section */}
             {category.faq && category.faq.length > 0 && (
               <div className="space-y-4 pt-1">
-                <h2 className="text-xl sm:text-2xl font-bold text-[#111827] flex items-center gap-2">
-                  <HelpCircle className="w-6 h-6 text-[#0082FB]" />
+                <h2 className="text-lg sm:text-2xl font-bold text-[#111827] flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6 text-[#0082FB]" />
                   {lang === 'kz' ? 'Жиі қойылатын сұрақтар' : lang === 'en' ? 'Frequently Asked Questions' : 'Часто задаваемые вопросы'}
                 </h2>
                 <div className="space-y-3">
                   {category.faq.map((f, idx) => (
-                    <div key={idx} className="bg-white rounded-2xl p-5 border border-slate-200/70 space-y-2 shadow-2xs">
+                    <div key={idx} className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-slate-200/70 space-y-2 shadow-2xs">
                       <h3 className="text-sm font-bold text-[#111827]">{f.q}</h3>
                       <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed">{f.a}</p>
                     </div>
@@ -344,7 +375,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
 
             {/* Knowledge Base Section / Статьи базы знаний по категории */}
             {relatedArticle && (
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-blue-200/80 shadow-xs space-y-4">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-blue-200/80 shadow-xs space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2 text-xs font-bold text-[#0082FB] uppercase tracking-wider">
                     <BookOpen className="w-4 h-4 text-[#0082FB]" />
