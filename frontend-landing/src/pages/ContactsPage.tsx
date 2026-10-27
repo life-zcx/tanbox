@@ -289,10 +289,10 @@ export const ContactsPage: React.FC = () => {
             </h1>
             <p className="text-base sm:text-lg text-[#64748B] font-normal leading-relaxed">
               {lang === 'kz'
-                ? 'Қазақстан Республикасындағы ресми сату бөлімі және клиенттерге қызмет көрсету орталығы.'
+                ? 'TANBOX таңбалау орталығы — кодтарды басу, тауарларды оклейкалау және Қазақстанда «Танба» жүйесімен кілтке дейін интеграциялау.'
                 : lang === 'en'
-                ? 'Official sales office and customer service center for digital serialization in Kazakhstan.'
-                : 'Официальный отдел продаж и центр обслуживания клиентов ИС Танба в Республике Казахстан.'}
+                ? 'TANBOX marking center — code printing, product labeling, and turnkey integration with IS Tanba in Kazakhstan.'
+                : 'Центр маркировки TANBOX — печать кодов, оклейка товаров и интеграция с системой «Танба» под ключ в Казахстане.'}
             </p>
           </div>
 

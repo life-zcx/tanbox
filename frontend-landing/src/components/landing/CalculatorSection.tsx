@@ -598,6 +598,11 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   // Yandex Metrika reachGoal
                   if (typeof (window as any).ym === 'function') {
                     try {
+                      (window as any).ym(113816974, 'reachGoal', 'calculator_whatsapp', {
+                        tariff: tariffType,
+                        quantity: itemsCount,
+                        price: result.totalPrice,
+                      });
                       (window as any).ym(113816974, 'reachGoal', 'calc_whatsapp', {
                         tariff: tariffType,
                         quantity: itemsCount,
@@ -610,11 +615,8 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   const waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(message)}`;
                   window.open(waUrl, '_blank', 'noopener,noreferrer');
                 }}
-                className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-extrabold text-sm py-3.5 px-6 rounded-xl transition-all active:scale-95 shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2.5 cursor-pointer"
+                className="bg-[#25D366] hover:bg-[#20ba5a] text-white font-extrabold text-sm sm:text-base py-3.5 px-8 rounded-xl transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg hover:shadow-emerald-500/25 flex items-center justify-center cursor-pointer tracking-tight"
               >
-                <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
-                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.074-2.146-.527-1.428-.592-2.348-2.039-2.42-2.133-.07-.095-.572-.76-.572-1.45 0-.69.362-1.029.49-1.17.13-.14.283-.175.378-.175.094 0 .188.001.27.006.088.004.204-.033.319.244.12.288.405.99.442 1.062.036.073.06.158.01.256-.05.097-.075.158-.15.244-.075.086-.157.192-.224.258-.075.074-.153.155-.066.305.086.15.385.635.824 1.028.567.506 1.045.663 1.195.738.15.075.238.066.326-.036.088-.103.376-.438.476-.588.1-.15.2-.125.337-.075.137.05.869.41 1.02.485.15.075.25.112.287.175.038.063.038.365-.106.77z" />
-                </svg>
                 <span>
                   {lang === 'kz'
                     ? 'WhatsApp-қа есептеуді алу'
@@ -624,7 +626,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                 </span>
               </button>
 
-              {/* Portal Order Button */}
+              {/* Portal Order Button (Secondary Outline Style) */}
               <button
                 type="button"
                 onClick={() => {
@@ -635,16 +637,16 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   }
                   onOrderQuick(tariffType, itemsCount, result.totalPrice);
                 }}
-                className="bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 px-6 rounded-xl transition-all active:scale-95 shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                className="bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-300 font-bold text-sm py-3.5 px-5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
               >
                 <span>
                   {lang === 'kz'
-                    ? 'Жеке кабинетте тапсырыс беру'
+                    ? 'Жеке кабинетте'
                     : lang === 'en'
-                    ? 'Order in Portal'
-                    : 'Оформить в кабинете'}
+                    ? 'Client Portal'
+                    : 'В личном кабинете'}
                 </span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 text-slate-400" />
               </button>
             </div>
 

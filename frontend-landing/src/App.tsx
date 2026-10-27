@@ -21,6 +21,7 @@ const PrivacyPolicyPage = React.lazy(() => import('./pages/PrivacyPolicyPage').t
 const TermsPage = React.lazy(() => import('./pages/TermsPage').then(m => ({ default: m.TermsPage })));
 const CookiePolicyPage = React.lazy(() => import('./pages/CookiePolicyPage').then(m => ({ default: m.CookiePolicyPage })));
 const PaymentProcedurePage = React.lazy(() => import('./pages/PaymentProcedurePage').then(m => ({ default: m.PaymentProcedurePage })));
+const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 import { getLkUrl } from './utils/navigation';
 import { trackGoogleConversion } from './utils/analytics';
 import { LanguageProvider } from './context/LanguageContext';
@@ -147,6 +148,9 @@ const AppContent: React.FC = () => {
 
             {/* English (/en) */}
             {renderRoutes('/en')}
+
+            {/* 404 Catch-All */}
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </React.Suspense>
       </main>
