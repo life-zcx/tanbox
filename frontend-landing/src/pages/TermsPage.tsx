@@ -67,7 +67,7 @@ export const TermsPage: React.FC = () => {
 
               {/* Preamble KZ */}
               <p>
-                Қазақстан Республикасының заңнамасы негізінде әрекет ететін {COMPANY_CONTACTS.legal.companyName}, ЖСН {COMPANY_CONTACTS.legal.iin}, бұдан әрі <strong>«Орындаушы»</strong> деп аталатын, бір тараптан, Қазақстан Республикасы Азаматтық кодексінің 395 және 396-баптарына сәйкес жария оферта болып табылатын осы ұсынысты кез келген заңды тұлғаға немесе жеке кәсіпкерге (бұдан әрі — <strong>«Тапсырыс беруші»</strong>) осы Шарттың талаптарын толық және сөзсіз акцепттеу арқылы жариялайды.
+                Қазақстан Республикасының заңнамасы негізінде әрекет ететін {COMPANY_CONTACTS.legal.companyName}, ЖСН {COMPANY_CONTACTS.legal.iin}, тіркеу мекенжайы: {COMPANY_CONTACTS.legal.address}, бұдан әрі <strong>«Орындаушы»</strong> деп аталатын, бір тараптан, Қазақстан Республикасы Азаматтық кодексінің 395 және 396-баптарына сәйкес жария оферта болып табылатын осы ұсынысты кез келген заңды тұлғаға немесе жеке кәсіпкерге (бұдан әрі — <strong>«Тапсырыс беруші»</strong>) осы Шарттың талаптарын толық және сөзсіз акцепттеу арқылы жариялайды.
               </p>
 
               {/* Section 1 KZ */}
@@ -159,8 +159,8 @@ export const TermsPage: React.FC = () => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Мекенжай</td>
-                      <td className="border border-gray-300 p-2.5">{localizedContacts.addressFull}</td>
+                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Тіркеу мекенжайы</td>
+                      <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.address}</td>
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Байланыс</td>
@@ -188,7 +188,7 @@ export const TermsPage: React.FC = () => {
 
               {/* Preamble EN */}
               <p>
-                {COMPANY_CONTACTS.legal.companyName}, acting in accordance with the legislation of the Republic of Kazakhstan, IIN {COMPANY_CONTACTS.legal.iin}, hereinafter referred to as the <strong>"Contractor"</strong>, publishes this public offer pursuant to Articles 395 and 396 of the Civil Code of the Republic of Kazakhstan, addressed to any legal entity or individual entrepreneur (hereinafter <strong>"Customer"</strong>), accepting the terms hereof.
+                {COMPANY_CONTACTS.legal.companyName}, acting in accordance with the legislation of the Republic of Kazakhstan, IIN {COMPANY_CONTACTS.legal.iin}, registered address: {COMPANY_CONTACTS.legal.address}, hereinafter referred to as the <strong>"Contractor"</strong>, publishes this public offer pursuant to Articles 395 and 396 of the Civil Code of the Republic of Kazakhstan, addressed to any legal entity or individual entrepreneur (hereinafter <strong>"Customer"</strong>), accepting the terms hereof.
               </p>
 
               {/* Section 1 EN */}
@@ -278,8 +278,8 @@ export const TermsPage: React.FC = () => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Address</td>
-                      <td className="border border-gray-300 p-2.5">{localizedContacts.addressFull}</td>
+                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Registered Address</td>
+                      <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.address}</td>
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Contacts</td>
@@ -307,7 +307,7 @@ export const TermsPage: React.FC = () => {
 
               {/* Preamble RU */}
               <p>
-                {COMPANY_CONTACTS.legal.companyName}, действующий на основании Законодательства Республики Казахстан, ИИН {COMPANY_CONTACTS.legal.iin}, именуемый в дальнейшем <strong>«Исполнитель»</strong>, с одной стороны, публикует настоящее предложение, являющееся публичной офертой в соответствии со статьями 395 и 396 Гражданского кодекса Республики Казахстан (далее — ГК РК), адресованное любому юридическому лицу или индивидуальному предпринимателю, именуемому в дальнейшем <strong>«Заказчик»</strong>, принявшему условия настоящего Договора путем его полного и безоговорочного акцепта.
+                {COMPANY_CONTACTS.legal.companyName}, действующий на основании Законодательства Республики Казахстан, ИИН {COMPANY_CONTACTS.legal.iin}, адрес регистрации: {COMPANY_CONTACTS.legal.address}, именуемый в дальнейшем <strong>«Исполнитель»</strong>, с одной стороны, публикует настоящее предложение, являющееся публичной офертой в соответствии со статьями 395 и 396 Гражданского кодекса Республики Казахстан (далее — ГК РК), адресованное любому юридическому лицу или индивидуальному предпринимателю, именуемому в дальнейшем <strong>«Заказчик»</strong>, принявшему условия настоящего Договора путем его полного и безоговорочного акцепта.
               </p>
 
               {/* Section 1 RU */}
@@ -401,8 +401,8 @@ export const TermsPage: React.FC = () => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Адрес</td>
-                      <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.address.full}</td>
+                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Адрес регистрации</td>
+                      <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.address}</td>
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Контакты</td>

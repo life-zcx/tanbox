@@ -18,7 +18,7 @@ export const COMPANY_CONFIG = {
   // договоре-оферте (/terms) и на странице контактов.
   legal: {
     companyName: 'ИП INTERSENSE',
-    address: 'Алматы, МИКРОРАЙОН АТЫРАУ, дом 8, кв/офис 16',
+    address: 'Республика Казахстан, г. Алматы, микрорайон Атырау, дом 8, кв/офис 16',
     iinBin: '990601301525',
     // Основной расчетный счет (Kaspi Bank)
     bank: 'АО «Kaspi Bank»',

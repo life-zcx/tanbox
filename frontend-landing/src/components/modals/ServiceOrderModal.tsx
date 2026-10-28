@@ -23,7 +23,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     if (lang === 'kz') {
       return [
         'Тауарларды цифрлық таңбалау (кілтке дейін)',
-        'Тауарларды кедендік ресімдеу және растаможка',
+        'Тауарларды кедендік қоймаларда таңбалау (ИМ-70)',
         'Тауарларды ҰТК каталогына енгізу (Ұлттық каталог)',
         'Data Matrix кодтарын эмиссиялау және жапсыру',
         'Қораптар мен паллеттерге агрегациялау (SSCC)',
@@ -35,7 +35,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     if (lang === 'en') {
       return [
         'Turnkey Product Serialization & Marking',
-        'Customs Clearance and Freight Handling',
+        'Customs Warehouse Serialization (IM-70)',
         'National Product Catalog (NKT) Registration',
         'Data Matrix Code Issuance and Labeling',
         'Carton and Pallet Aggregation (SSCC)',
@@ -46,7 +46,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     }
     return [
       'Цифровая маркировка товаров под ключ',
-      'Таможенное оформление и растаможка грузов',
+      'Маркировка на таможенных складах (ИМ-70)',
       'Заведение товаров в НКТ (Каталог товаров)',
       'Эмиссия и нанесение кодов Data Matrix',
       'Агрегация в короба и паллеты (SSCC)',

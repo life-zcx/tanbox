@@ -33,21 +33,21 @@ export const ServicesPage: React.FC = () => {
     window.scrollTo(0, 0);
     if (lang === 'kz') {
       setPageSeo(
-        'Қазақстанда тауарларды «кілтке дейін» таңбалау қызметтері (СЭҚ, ҰТК, Оклейка) | TANBOX.KZ',
-        'ҚР-да цифрлық таңбалау бойынша кешенді қызметтер: кедендік ресімдеу, Ұлттық тауарлар каталогында (ҰТК) номенклатураны тіркеу, Data Matrix кодтарын генерациялау, стикерлерді басып шығару және 1С-пен интеграция.',
+        'Қазақстанда тауарларды «кілтке дейін» таңбалау қызметтері (ҰТК, Қойма, Оклейка) | TANBOX.KZ',
+        'ҚР-да цифрлық таңбалау бойынша кешенді қызметтер: кедендік қоймаларда таңбалау (ИМ-70), Ұлттық тауарлар каталогында (ҰТК) номенклатураны тіркеу, Data Matrix кодтарын генерациялау, стикерлерді басып шығару және 1С-пен интеграция.',
         { lang: 'kz', keywords: 'таңбалау қызметтері Қазақстан, ҰТК тіркеу, кеденнен таңбалау, Data Matrix басу' }
       );
     } else if (lang === 'en') {
       setPageSeo(
-        'Turnkey Product Serialization Services in Kazakhstan (Customs, NKT, Labeling) | TANBOX.KZ',
-        'Full-scope digital product serialization in Kazakhstan: customs clearance, National Product Catalog (NKT) registration, Data Matrix issuance, industrial sticker printing, and 1C ERP sync.',
-        { lang: 'en', keywords: 'serialization services Kazakhstan, customs labeling, NKT catalog' }
+        'Turnkey Product Serialization & NKT Registration in Kazakhstan | TANBOX.KZ',
+        'Full-scope digital product serialization in Kazakhstan: customs warehouse marking (IM-70), National Product Catalog (NKT) registration, Data Matrix issuance, industrial sticker printing, and 1C ERP sync.',
+        { lang: 'en', keywords: 'serialization services Kazakhstan, customs warehouse labeling, NKT catalog' }
       );
     } else {
       setPageSeo(
-        'Услуги маркировки товаров «под ключ» в Казахстане (ВЭД, НКТ, Оклейка) | TANBOX.KZ',
-        'Комплексные услуги цифровой маркировки в РК: таможенное оформление, регистрация номенклатуры в Национальном каталоге товаров (НКТ), генерация кодов Data Matrix, печать стикеров и интеграция с 1С.',
-        { lang: 'ru', keywords: 'услуги маркировки Казахстан, маркировка под ключ, НКТ ВЭД 1С' }
+        'Услуги цифровой маркировки товаров «под ключ» в Казахстане (НКТ, СВХ, Оклейка) | TANBOX.KZ',
+        'Комплексные услуги цифровой маркировки в РК: маркировка на таможенных складах (ИМ-70), регистрация номенклатуры в Национальном каталоге товаров (НКТ), генерация кодов Data Matrix, печать стикеров и интеграция с 1С.',
+        { lang: 'ru', keywords: 'услуги маркировки Казахстан, маркировка под ключ, НКТ СВХ 1С' }
       );
     }
   }, [lang]);
@@ -65,15 +65,15 @@ export const ServicesPage: React.FC = () => {
       return [
         {
           id: 'customs',
-          title: 'Тауарларды кедендік ресімдеу және растаможка',
-          badge: 'СЭҚ және Логистика',
-          desc: 'ҚР шекараларында жүкті кедендік декларациялау және рәсімдеудің толық кешені. Қытай, Түркия, Еуропа және ЕАЭО елдерінен тасымалдаумен жұмыс істейміз.',
+          title: 'Тауарларды кедендік қоймаларда таңбалау (ИМ-70)',
+          badge: 'Қойма және Логистика',
+          desc: 'Еркін айналымға шығарылғанға дейін кедендік қоймаларда (ИМ-70 режимінде) Data Matrix кодтарын басу және жапсыру бойынша толық қызметтер кешені.',
           icon: Truck,
           features: [
-            'Кедендік декларациялау (ЖТД / ТД)',
-            'ҚР ТН ВЭД кодтарын жіктеу және аудит',
-            'Сәйкестік сертификаттары мен декларацияларын алу',
-            'Кедендік баждар мен ҚҚС-ты оңтайландыру',
+            'Кедендік қойма (ИМ-70) және АЭА рәсімдерінде таңбалау',
+            '31-бағанға енгізу үшін таңбалау кодтары туралы деректерді дайындау',
+            'Кеден одағының техникалық регламенттеріне сай макеттер әзірлеу',
+            'Жылдам тексеру үшін қораптар мен паллеттерді агрегациялау (SSCC)',
           ],
         },
         {
@@ -148,15 +148,15 @@ export const ServicesPage: React.FC = () => {
       return [
         {
           id: 'customs',
-          title: 'Customs Clearance & Freight Brokerage',
-          badge: 'FEA & Logistics',
-          desc: 'Comprehensive customs brokerage and cargo clearance at Kazakhstan borders. Handling import flows from China, Turkey, Europe, and EAEU.',
+          title: 'Customs Warehouse Serialization (IM-70)',
+          badge: 'Warehouse & Logistics',
+          desc: 'Full-scope Data Matrix printing and stickering services at customs bonded warehouses (IM-70 regime) prior to release into free circulation.',
           icon: Truck,
           features: [
-            'Customs declaration filing (CCD)',
-            'HS Code classification and compliance audit',
-            'Certificates and declarations of conformity',
-            'Customs duties and VAT optimization',
+            'Labeling under customs warehouse (IM-70) and SEZ procedures',
+            'Preparing serialization code data for entry into declaration box 31',
+            'Label layout design compliant with technical regulations',
+            'Box and pallet aggregation (SSCC) for rapid inspection',
           ],
         },
         {
@@ -230,15 +230,15 @@ export const ServicesPage: React.FC = () => {
     return [
       {
         id: 'customs',
-        title: 'Таможенное оформление и растаможка грузов',
-        badge: 'ВЭД и Логистика',
-        desc: 'Полный комплекс услуг по очистке и таможенному декларированию грузов на границах РК. Работаем с поставками из Китая, Турции, Европы и стран ЕАЭС.',
+        title: 'Маркировка на таможенных складах (ИМ-70)',
+        badge: 'Склады и Логистика',
+        desc: 'Комплекс услуг по нанесению кодов Data Matrix и оклейке партий на таможенных складах (режим ИМ-70) до выпуска товаров в свободное обращение.',
         icon: Truck,
         features: [
-          'Таможенное декларирование (ГТД / ДТ)',
-          'Классификация и аудит кодов ТН ВЭД РК',
-          'Получение сертификатов и деклараций соответствия',
-          'Расчет и оптимизация таможенных пошлин и НДС',
+          'Маркировка товаров в таможенной процедуре ИМ-70 и СЭЗ',
+          'Подготовка сведений о кодах маркировки для внесения в графу 31 декларации',
+          'Разработка макетов этикеток по техническим регламентам ЕАЭС',
+          'Агрегация кодов в короба и паллеты (SSCC) для ускоренного досмотра',
         ],
       },
       {
@@ -323,17 +323,17 @@ export const ServicesPage: React.FC = () => {
           <div className="space-y-1.5 sm:space-y-4 max-w-3xl">
             <h1 className="text-xl sm:text-4xl lg:text-5xl font-extrabold text-[#111827] tracking-tight leading-tight">
               {lang === 'kz'
-                ? 'Таңбалау, кедендік ресімдеу және ҰТК бойынша кешенді қызметтер'
+                ? 'Таңбалау, ҰТК және қоймалық оклейка бойынша кешенді қызметтер'
                 : lang === 'en'
-                ? 'Turnkey Product Serialization, Customs & NKT Services'
-                : 'Комплексные услуги по маркировке, растаможке и НКТ'}
+                ? 'Turnkey Product Serialization, Warehouse Labeling & NKT Services'
+                : 'Комплексные услуги по маркировке, заведению в НКТ и оклейке на складах'}
             </h1>
             <p className="text-xs sm:text-base lg:text-lg text-[#64748B] font-normal leading-relaxed">
               {lang === 'kz'
-                ? 'Кез келген сұрақ бойынша кәсіби қолдау: кедендік ресімдеуден және ҰТК-ға тауарларды енгізуден бастап қоймада таңбалауға дейін.'
+                ? 'Кез келген сұрақ бойынша кәсіби қолдау: ҰТК-ға тауарларды енгізуден бастап кедендік қоймаларда таңбалауға дейін.'
                 : lang === 'en'
-                ? 'End-to-end expertise: from cross-border customs clearance and NKT catalog registration to onsite warehouse serialization.'
-                : 'Экспертное сопровождение: от растаможки грузов и заведения товаров в Национальный каталог (НКТ) до выездной маркировки на вашем складе.'}
+                ? 'End-to-end expertise: from NKT catalog registration to onsite and bonded warehouse serialization.'
+                : 'Экспертное сопровождение: от заведения товаров в Национальный каталог (НКТ) до выездной маркировки на вашем или таможенном складе.'}
             </p>
           </div>
 
@@ -404,10 +404,10 @@ export const ServicesPage: React.FC = () => {
           <div className="space-y-2 max-w-2xl text-center md:text-left">
             <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
               {lang === 'kz'
-                ? 'Кедендік рәсімдеу немесе ҰТК карточкаларын енгізу бойынша жеке есептеу қажет пе?'
+                ? 'Таңбалау немесе ҰТК карточкаларын енгізу бойынша жеке есептеу қажет пе?'
                 : lang === 'en'
-                ? 'Need a custom quote for customs clearance or NKT catalog registration?'
-                : 'Нужен индивидуальный расчет растаможки или заведения карточек в НКТ?'}
+                ? 'Need a custom quote for batch serialization or NKT catalog registration?'
+                : 'Нужен индивидуальный расчет маркировки партии или заведения карточек в НКТ?'}
             </h3>
             <p className="text-sm text-slate-300">
               {lang === 'kz'

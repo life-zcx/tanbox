@@ -69,7 +69,7 @@ export const PrivacyPolicyPage: React.FC = () => {
               <div className="space-y-2">
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">1. Жалпы ережелер</h2>
                 <p>1.1. Осы Құпиялылық саясаты (бұдан әрі — «Саясат») Қазақстан Республикасының 2013 жылғы 21 мамырдағы № 94-V «Дербес деректер және оларды қорғау туралы» Заңына сәйкес TANBOX сервисі пайдаланушыларының дербес деректерін жинау, өңдеу, сақтау, тарату және жою тәртібін белгілейді.</p>
-                <p>1.2. Дербес деректерді қамтитын дерекқордың Операторы — {COMPANY_CONTACTS.legal.companyName} (ЖСН {COMPANY_CONTACTS.legal.iin}, мекенжайы: {localizedContacts.addressFull}) (бұдан әрі — «Оператор»).</p>
+                <p>1.2. Дербес деректерді қамтитын дерекқордың Операторы — {COMPANY_CONTACTS.legal.companyName} (ЖСН {COMPANY_CONTACTS.legal.iin}, тіркеу мекенжайы: {COMPANY_CONTACTS.legal.address}) (бұдан әрі — «Оператор»).</p>
                 <p>1.3. <code>lk.tanbox.kz</code> Жеке кабинетіне тіркелу, таңбалауға өтінім беру немесе <code>tanbox.kz</code> сайтының кез келген функционалын пайдалану Пайдаланушының осы Саясатпен толық және сөзсіз келісімін білдіреді.</p>
               </div>
 
@@ -138,8 +138,8 @@ export const PrivacyPolicyPage: React.FC = () => {
                       <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.iin}</td>
                     </tr>
                     <tr>
-                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Мекенжай</td>
-                      <td className="border border-gray-300 p-2.5">{localizedContacts.addressFull}</td>
+                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Тіркеу мекенжайы</td>
+                      <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.address}</td>
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Байланыс</td>
@@ -169,7 +169,7 @@ export const PrivacyPolicyPage: React.FC = () => {
               <div className="space-y-2">
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">1. General Provisions</h2>
                 <p>1.1. This Privacy Policy (hereinafter "Policy") governs the collection, processing, storage, and protection of personal data in strict compliance with the Law of the Republic of Kazakhstan No. 94-V dated May 21, 2013 "On Personal Data and Their Protection".</p>
-                <p>1.2. The Personal Data Database Operator is {COMPANY_CONTACTS.legal.companyName} (IIN {COMPANY_CONTACTS.legal.iin}, Address: {localizedContacts.addressFull}) (hereinafter "Operator").</p>
+                <p>1.2. The Personal Data Database Operator is {COMPANY_CONTACTS.legal.companyName} (IIN {COMPANY_CONTACTS.legal.iin}, registered address: {COMPANY_CONTACTS.legal.address}) (hereinafter "Operator").</p>
                 <p>1.3. Registering in the Client Portal <code>lk.tanbox.kz</code>, placing a serialization order, or using the <code>tanbox.kz</code> website constitutes full acceptance of this Policy.</p>
               </div>
 
@@ -237,8 +237,8 @@ export const PrivacyPolicyPage: React.FC = () => {
                       <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.iin}</td>
                     </tr>
                     <tr>
-                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Address</td>
-                      <td className="border border-gray-300 p-2.5">{localizedContacts.addressFull}</td>
+                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Registered Address</td>
+                      <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.address}</td>
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Contacts</td>
@@ -268,7 +268,7 @@ export const PrivacyPolicyPage: React.FC = () => {
               <div className="space-y-2">
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">1. Общие положения</h2>
                 <p>1.1. Настоящая Политика конфиденциальности (далее — «Политика») определяет порядок сбора, систематизации, накопления, хранения, уточнения, использования, передачи и уничтожения персональных данных пользователей сервиса TANBOX в строгом соответствии с Законом Республики Казахстан от 21 мая 2013 года № 94-V «О персональных данных и их защите».</p>
-                <p>1.2. Оператором базы данных, содержащей персональные данные, является {COMPANY_CONTACTS.legal.companyName} (ИИН {COMPANY_CONTACTS.legal.iin}, адрес: {COMPANY_CONTACTS.address.full}) (далее — «Оператор»).</p>
+                <p>1.2. Оператором базы данных, содержащей персональные данные, является {COMPANY_CONTACTS.legal.companyName} (ИИН {COMPANY_CONTACTS.legal.iin}, адрес регистрации: {COMPANY_CONTACTS.legal.address}) (далее — «Оператор»).</p>
                 <p>1.3. Регистрация в Личном кабинете <code>lk.tanbox.kz</code>, оформление заявки на маркировку либо использование любых функциональных возможностей сайта <code>tanbox.kz</code> означает полное и безоговорочное согласие Пользователя с настоящей Политикой.</p>
               </div>
 
@@ -337,8 +337,8 @@ export const PrivacyPolicyPage: React.FC = () => {
                       <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.iin}</td>
                     </tr>
                     <tr>
-                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Адрес</td>
-                      <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.address.full}</td>
+                      <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Адрес регистрации</td>
+                      <td className="border border-gray-300 p-2.5">{COMPANY_CONTACTS.legal.address}</td>
                     </tr>
                     <tr>
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Контакты</td>

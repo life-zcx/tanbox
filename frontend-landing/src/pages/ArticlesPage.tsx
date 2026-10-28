@@ -268,10 +268,10 @@ export const ArticlesPage: React.FC = () => {
           <div className="space-y-2 max-w-2xl text-center md:text-left">
             <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
               {lang === 'kz'
-                ? 'Кедендік рәсімдеу немесе ҰТК карточкаларын енгізу бойынша жеке есептеу қажет пе?'
+                ? 'Таңбалау немесе ҰТК карточкаларын енгізу бойынша жеке есептеу қажет пе?'
                 : lang === 'en'
-                ? 'Need a custom quote for customs clearance or NKT catalog registration?'
-                : 'Нужен индивидуальный расчет растаможки или заведения карточек в НКТ?'}
+                ? 'Need a custom quote for batch serialization or NKT catalog registration?'
+                : 'Нужен индивидуальный расчет маркировки партии или заведения карточек в НКТ?'}
             </h3>
             <p className="text-sm text-slate-300">
               {lang === 'kz'

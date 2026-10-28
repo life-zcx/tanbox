@@ -21,10 +21,10 @@ export const Footer: React.FC = () => {
           </div>
           <p className="text-sm text-gray-400 leading-relaxed">
             {lang === 'kz'
-              ? 'Қазақстан Республикасындағы цифрлық таңбалаудың ұлттық сервисі. ТМБ АЖ-мен тікелей интеграция, кедендік ресімдеуден 1С-пен интеграцияға дейінгі толық цикл: кодтардың эмиссиясы, басып шығару және қоймада оклейка.'
+              ? 'Қазақстан Республикасындағы цифрлық таңбалаудың ұлттық сервисі. ТМБ АЖ-мен тікелей интеграция, кодтардың эмиссиясынан 1С-пен интеграцияға дейінгі толық цикл: кодтарды алу, басып шығару және қоймада оклейка.'
               : lang === 'en'
-              ? 'National digital product marking service in Kazakhstan with direct IS MPT connectivity. Full cycle from customs clearance to 1C integration: code issuance, printing, and onsite stickering.'
-              : 'Национальный сервис цифровой маркировки товаров в Республике Казахстан с прямой интеграцией в ИС МПТ. Полный цикл — от растаможки до интеграции в 1С: заказ кодов, печать и оклейка на складе.'}
+              ? 'National digital product marking service in Kazakhstan with direct IS MPT connectivity. Full cycle from code generation to 1C integration: code issuance, printing, and onsite stickering.'
+              : 'Национальный сервис цифровой маркировки товаров в Республике Казахстан с прямой интеграцией в ИС МПТ. Полный цикл — от заказа и генерации кодов Data Matrix до интеграции в 1С: печать и оклейка на складе.'}
           </p>
         </div>
 
@@ -51,7 +51,7 @@ export const Footer: React.FC = () => {
             </li>
             <li>
               <Link to={getLocalizedPath('/services')} className="hover:text-white transition-colors">
-                {lang === 'kz' ? 'Кілтке дейінгі қызметтер (СЭҚ, ҰТК)' : lang === 'en' ? 'Turnkey Services (FEA, NKT)' : 'Услуги под ключ (ВЭД, НКТ)'}
+                {lang === 'kz' ? 'Кілтке дейінгі қызметтер (ҰТК, Таңбалау)' : lang === 'en' ? 'Turnkey Services (NKT, Labeling)' : 'Услуги под ключ (НКТ, Маркировка)'}
               </Link>
             </li>
             <li>
