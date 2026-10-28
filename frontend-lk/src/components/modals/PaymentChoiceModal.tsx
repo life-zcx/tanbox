@@ -363,12 +363,6 @@ export const PaymentChoiceModal: React.FC<PaymentChoiceModalProps> = ({
                 Правилами оплаты и возврата
               </a>
             </p>
-
-            {/* Footer trust badge */}
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-400 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Безопасная оплата • Комиссия 0% • Фискальный чек</span>
-            </div>
           </div>
         </div>
       </div>
