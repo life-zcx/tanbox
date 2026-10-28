@@ -887,6 +887,32 @@ class TelegramService {
   // ============================================================================
 
   /**
+   * Оповещение с одноразовым кодом подтверждения для входа в панель администратора
+   */
+  public async sendAdminLoginOtp(email: string, code: string, ip?: string) {
+    const targetChatId = this.alertsChatId || this.leadsChatId || '-1004315165839';
+    if (!targetChatId) return;
+
+    const msg = [
+      `🔐 <b>КОД ДЛЯ ВХОДА В АДМИН-ПАНЕЛЬ</b>`,
+      `──────────────────────────────`,
+      `🔑 <b>Код подтверждения:</b> <code>${code}</code>`,
+      `✉️ <b>Почта:</b> ${this.escapeHtml(email)}`,
+      ip ? `🌐 <b>IP:</b> <code>${this.escapeHtml(ip)}</code>` : null,
+      `⏰ <b>Срок действия:</b> 10 минут`,
+      `──────────────────────────────`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    await this.sendRaw(targetChatId, msg);
+    // Дублируем в чат заявок, если он настроен отдельно, чтобы администратор не пропустил
+    if (this.leadsChatId && this.leadsChatId !== targetChatId) {
+      await this.sendRaw(this.leadsChatId, msg);
+    }
+  }
+
+  /**
    * Оповещение о критической ошибке сервера (500, unhandled exceptions)
    */
   public async sendServerErrorAlert(data: {

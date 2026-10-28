@@ -7,6 +7,7 @@ import { env } from '../config/env';
 import { AuthRequest, invalidateUserBlockCache } from '../middleware/auth.middleware';
 import { sendVerificationOtpEmail, sendPasswordResetOtpEmail, sendAdminLoginOtpEmail } from '../services/email.service';
 import { clientTelegramBot } from '../services/clientTelegram.service';
+import { telegram } from '../services/telegram.service';
 import { logger } from '../utils/logger';
 
 // In-memory rate limiting / anti-abuse store
@@ -366,14 +367,26 @@ export const login = async (req: Request, res: Response) => {
         });
 
         memoryCooldowns.set(`admin_otp_${cleanEmail}`, now);
-        memoryAttempts.delete(`admin_otp_${cleanEmail}`);
+        logger.info(`🔑 [ADMIN OTP] Сгенерирован код подтверждения для ${cleanEmail}: >>> ${otpCode} <<<`);
 
-        await sendAdminLoginOtpEmail(cleanEmail, otpCode, { ip });
+        // 1. Отправляем в Telegram (мгновенная и надежная доставка)
+        try {
+          await telegram.sendAdminLoginOtp(cleanEmail, otpCode, ip);
+        } catch (tgErr: any) {
+          logger.warn(`[ADMIN OTP] Ошибка отправки кода в Telegram: ${tgErr?.message || tgErr}`);
+        }
+
+        // 2. Отправляем на почту (если SMTP доступен)
+        try {
+          await sendAdminLoginOtpEmail(cleanEmail, otpCode, { ip });
+        } catch (mailErr: any) {
+          logger.warn(`[ADMIN OTP] Ошибка отправки кода на почту: ${mailErr?.message || mailErr}`);
+        }
 
         return res.status(200).json({
           requireOtp: true,
           email: cleanEmail,
-          message: `Код подтверждения отправлен на почту ${cleanEmail}`,
+          message: `Код подтверждения отправлен в Telegram и на почту ${cleanEmail}`,
           cooldownRemaining: 60,
         });
       }

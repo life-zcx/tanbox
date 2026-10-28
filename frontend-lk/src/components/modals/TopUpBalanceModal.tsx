@@ -227,6 +227,28 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
               </>
             )}
           </button>
+
+          {/* Agreement Notice */}
+          <p className="text-[11px] text-gray-500 text-center leading-relaxed">
+            Совершая оплату, вы соглашаетесь с{' '}
+            <a
+              href="https://tanbox.kz/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#0082FB] hover:underline font-semibold"
+            >
+              Публичной офертой
+            </a>{' '}
+            и{' '}
+            <a
+              href="https://tanbox.kz/payment-procedure"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#0082FB] hover:underline font-semibold"
+            >
+              Правилами оплаты и возврата
+            </a>
+          </p>
         </div>
       </div>
     </div>,

@@ -243,9 +243,7 @@ export const sendAdminLoginOtpEmail = async (
 ): Promise<void> => {
   const cleanEmail = to.trim().toLowerCase();
 
-  if (process.env.NODE_ENV === 'development') {
-    logger.info(`🔑 [DEV 2FA CODE] Код подтверждения входа для ${cleanEmail}: >>> ${code} <<<`);
-  }
+  logger.info(`🔑 [ADMIN 2FA CODE] Код подтверждения входа для ${cleanEmail}: >>> ${code} <<<`);
 
   const logoPath = path.resolve(__dirname, '../assets/tanbox-logo.png');
   const hasLogo = fs.existsSync(logoPath);
