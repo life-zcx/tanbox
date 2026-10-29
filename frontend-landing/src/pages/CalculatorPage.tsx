@@ -64,7 +64,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onOrderQuick }) 
 
           <div className="hidden md:flex shrink-0 items-center justify-end">
             <img
-              src="/banners/calculator.svg"
+              src="/banners/calculator.svg?v=20261029"
               alt="Калькулятор стоимости маркировки"
               className="w-40 sm:w-52 md:w-60 lg:w-72 h-auto max-h-36 sm:max-h-44 md:max-h-52 lg:max-h-56 object-contain select-none pointer-events-none drop-shadow-sm transition-transform duration-300 hover:scale-105"
               loading="eager"
