@@ -713,13 +713,12 @@ for (const route of routes) {
     html = html.replace('</head>', `${schemaScript}\n</head>`);
   }
 
-  // Inject semantic SEO content directly inside <div id="root">
-  // Googlebot (Chromium) indexes this immediately without <noscript> penalty.
-  // When React mounts, ReactDOM.createRoot cleanly replaces this markup.
+  // Inject semantic SEO content inside <noscript> so users never experience FOUC / text flashes
+  // Crawlers and non-JS engines still index the semantic markup, and Googlebot executes full JS.
   if (meta.bodyContent) {
     html = html.replace(
       '<div id="root"></div>',
-      `<div id="root">\n    <div class="ssg-seo-content" style="max-width:1200px;margin:0 auto;padding:24px;font-family:sans-serif;color:#111;">\n${meta.bodyContent}\n    </div>\n  </div>`
+      `<div id="root"></div>\n  <noscript>\n    <div class="ssg-seo-content" style="max-width:1200px;margin:0 auto;padding:24px;font-family:sans-serif;color:#111;">\n${meta.bodyContent}\n    </div>\n  </noscript>`
     );
   }
 
