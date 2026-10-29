@@ -73,6 +73,13 @@ routes.add('/en/payment-procedure');
 routes.add('/payments');
 routes.add('/payment');
 
+// Ensure all articles are in the pre-render routes
+for (const art of ARTICLES_DATA) {
+  routes.add(`/articles/${art.slug}`);
+  routes.add(`/kz/articles/${art.slug}`);
+  routes.add(`/en/articles/${art.slug}`);
+}
+
 console.log(`🚀 Starting SSG Pre-rendering for ${routes.size} routes...`);
 
 interface PageMeta {
