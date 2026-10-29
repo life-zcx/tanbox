@@ -513,7 +513,12 @@ function resolvePageMeta(route: string): PageMeta {
       { name: 'Главная', url: 'https://tanbox.kz/' },
       { name: 'База знаний', url: canonical },
     ];
-    const articlesHtml = ARTICLES_DATA.map(
+    const sortedArticles = [...ARTICLES_DATA].sort((a, b) => {
+      const dateA = a.publishedAt || a.date;
+      const dateB = b.publishedAt || b.date;
+      return dateB.localeCompare(dateA);
+    });
+    const articlesHtml = sortedArticles.map(
       (a) => `<li><a href="${localizedPrefix}/articles/${a.slug}"><strong>${a.title}</strong></a> (${a.date}, ${a.readTime})<p>${a.summary}</p></li>`
     ).join('');
 

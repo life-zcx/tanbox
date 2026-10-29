@@ -82,7 +82,7 @@ export const ArticlesPage: React.FC = () => {
   }, [lang]);
 
   const filteredArticles = useMemo(() => {
-    return localizedArticles.filter((article) => {
+    const list = localizedArticles.filter((article) => {
       const matchesCategory = selectedCategory === 'ALL' || article.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -91,6 +91,12 @@ export const ArticlesPage: React.FC = () => {
         article.summary.toLowerCase().includes(q) ||
         article.metaKeywords.toLowerCase().includes(q);
       return matchesCategory && matchesSearch;
+    });
+
+    return [...list].sort((a, b) => {
+      const dateA = a.publishedAt || a.date;
+      const dateB = b.publishedAt || b.date;
+      return dateB.localeCompare(dateA);
     });
   }, [localizedArticles, selectedCategory, searchQuery]);
 
@@ -137,8 +143,8 @@ export const ArticlesPage: React.FC = () => {
         
         {/* Search bar + Category Filter Pills */}
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-          {/* Category Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
+          {/* Category Filter Pills without scrollbar */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-1">
             {categories.map((cat) => {
               const isSelected = selectedCategory === cat.id;
               return (
@@ -157,7 +163,7 @@ export const ArticlesPage: React.FC = () => {
             })}
           </div>
 
-          {/* Search bar moved here */}
+          {/* Search bar */}
           <div className="relative w-full lg:w-80 shrink-0">
             <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
