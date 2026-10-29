@@ -344,6 +344,9 @@
           "Информационная система маркировки и прослеживаемости товаров (ИС Танба)",
           "Национальный каталог товаров (НКТ)",
           "GS1 Kazakhstan",
+          "Заведение и модерация карточек товаров в НКТ и МПТ",
+          "Комплексный аутсорсинг процессов маркировки под ключ в Казахстане",
+          "Обучение персонала и складских операторов работе с ИС Танба",
           "Агрегация транспортной упаковки SSCC",
           "Маркировка товаров для Kaspi.kz и Wildberries"
         ]
@@ -351,26 +354,112 @@
       {
         "@type": "Service",
         "@id": "https://tanbox.kz/#service",
-        "name": "Обязательная цифровая маркировка товаров Data Matrix в ИС Танба",
+        "name": "Официальные услуги цифровой маркировки Data Matrix, заведения в НКТ и сопровождения в Казахстане",
         "provider": {
           "@id": "https://tanbox.kz/#organization"
         },
-        "serviceType": "Цифровая маркировка товаров и складская оклейка",
+        "serviceType": "Цифровая маркировка товаров, складская оклейка и заведение номенклатуры",
         "areaServed": {
           "@type": "Country",
           "name": "Республика Казахстан"
         },
-        "description": "Эмиссия кодов Data Matrix в ИС Танба, заведение номенклатуры в НКТ, промышленная термопечать стикеров, выездная оклейка на складе и формирование SSCC-агрегации.",
-        "offers": {
-          "@type": "Offer",
-          "priceCurrency": "KZT",
-          "price": "15",
-          "priceSpecification": {
-            "@type": "UnitPriceSpecification",
-            "price": "15",
-            "priceCurrency": "KZT",
-            "unitText": "код / стикер"
-          }
+        "description": "Эмиссия кодов Data Matrix в ИС Танба, заведение и модерация карточек товаров в НКТ/МПТ, промышленная печать стикеров, выездная оклейка на складе заказчика, агрегация SSCC, аутсорсинг и обучение персонала.",
+        "hasOfferCatalog": {
+          "@type": "OfferCatalog",
+          "name": "Услуги и тарифы TANBOX.KZ",
+          "itemListElement": [
+            {
+              "@type": "Offer",
+              "name": "Печать стикеров с кодами Data Matrix",
+              "description": "Рулонная термотрансферная печать износостойких стикеров Data Matrix для обязательной маркировки в РК.",
+              "priceCurrency": "KZT",
+              "price": "18",
+              "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": "18",
+                "priceCurrency": "KZT",
+                "unitText": "код / этикетка"
+              }
+            },
+            {
+              "@type": "Offer",
+              "name": "Маркировка товаров под ключ «Стандарт»",
+              "description": "Эмиссия в ИС Танба, рулонная печать этикеток и выездная оклейка партий на складе Заказчика.",
+              "priceCurrency": "KZT",
+              "price": "48",
+              "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": "48",
+                "priceCurrency": "KZT",
+                "unitText": "товар / единица"
+              }
+            },
+            {
+              "@type": "Offer",
+              "name": "Маркировка на СВХ и таможенных складах «PRO»",
+              "description": "Сложная оклейка со вскрытием коробок, сверкой артикулов и формированием агрегационных кодов SSCC.",
+              "priceCurrency": "KZT",
+              "price": "75",
+              "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": "75",
+                "priceCurrency": "KZT",
+                "unitText": "товар / единица"
+              }
+            },
+            {
+              "@type": "Offer",
+              "name": "Заведение и модерация карточек товаров в НКТ / GS1 / МПТ",
+              "description": "Регистрация номенклатуры в Национальном каталоге товаров РК, присвоение кодов GTIN/NTIN и успешное прохождение государственной модерации.",
+              "priceCurrency": "KZT",
+              "price": "150",
+              "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": "150",
+                "priceCurrency": "KZT",
+                "unitText": "карточка (SKU)"
+              }
+            },
+            {
+              "@type": "Offer",
+              "name": "Обучение персонала работе с ИС «Танба» и маркировкой",
+              "description": "Практический обучающий курс для кладовщиков, операторов и бухгалтеров: работа в ИС Танба, сканеры, 1С, агрегация и передача документов.",
+              "priceCurrency": "KZT",
+              "price": "85000",
+              "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": "85000",
+                "priceCurrency": "KZT",
+                "unitText": "полный практический курс"
+              }
+            },
+            {
+              "@type": "Offer",
+              "name": "Аутсорсинг процессов маркировки товаров под ключ",
+              "description": "Полная передача рутины по маркировке на внешнее управление: эмиссия, НКТ, отчеты, контроль оборота и техническая поддержка 24/7.",
+              "priceCurrency": "KZT",
+              "price": "85990",
+              "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": "85990",
+                "priceCurrency": "KZT",
+                "unitText": "пакет сопровождения"
+              }
+            },
+            {
+              "@type": "Offer",
+              "name": "Агрегация групповой тары в короба и паллеты (SSCC)",
+              "description": "Формирование транспортных кодов агрегации SSCC по стандартам GS1 для мгновенного сканирования без вскрытия коробок.",
+              "priceCurrency": "KZT",
+              "price": "5",
+              "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": "5",
+                "priceCurrency": "KZT",
+                "unitText": "транспортный короб / паллета"
+              }
+            }
+          ]
         }
       }
     ]

@@ -10,7 +10,8 @@ import {
   CheckCircle2, 
   ArrowRight, 
   ShieldCheck, 
-  PhoneCall 
+  PhoneCall,
+  Calculator 
 } from 'lucide-react';
 import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
 import { setPageSeo } from '../utils/seo';
@@ -20,6 +21,7 @@ export interface ServiceItem {
   title: string;
   badge: string;
   desc: string;
+  price?: string;
   icon: React.ComponentType<{ className?: string }>;
   features: string[];
 }
@@ -33,21 +35,21 @@ export const ServicesPage: React.FC = () => {
     window.scrollTo(0, 0);
     if (lang === 'kz') {
       setPageSeo(
-        'Қазақстанда тауарларды «кілтке дейін» таңбалау қызметтері (ҰТК, Қойма, Оклейка) | TANBOX.KZ',
-        'ҚР-да цифрлық таңбалау бойынша кешенді қызметтер: кедендік қоймаларда таңбалау (ИМ-70), Ұлттық тауарлар каталогында (ҰТК) номенклатураны тіркеу, Data Matrix кодтарын генерациялау, стикерлерді басып шығару және 1С-пен интеграция.',
-        { lang: 'kz', keywords: 'таңбалау қызметтері Қазақстан, ҰТК тіркеу, кеденнен таңбалау, Data Matrix басу' }
+        'Қазақстанда тауарларды таңбалау қызметтері: ҰТК карточкалары, Оқыту, Аутсорсинг | TANBOX.KZ',
+        'ҚР бойынша кешенді қызметтер: Data Matrix басу 18 ₸ бастап, қоймада оклейка 48 ₸ бастап, СВХ (ИМ-70) 75 ₸ бастап, ҰТК карточкаларын енгізу 150 ₸ бастап, қызметкерлерді оқыту 85 000 ₸, аутсорсинг 85 990 ₸ бастап.',
+        { lang: 'kz', keywords: 'таңбалау қызметтері Қазақстан, ҰТК карточкалары, ИС Танба оқыту, таңбалау аутсорсингі, кедендік қойма таңбалау, Data Matrix басу' }
       );
     } else if (lang === 'en') {
       setPageSeo(
-        'Turnkey Product Serialization & NKT Registration in Kazakhstan | TANBOX.KZ',
-        'Full-scope digital product serialization in Kazakhstan: customs warehouse marking (IM-70), National Product Catalog (NKT) registration, Data Matrix issuance, industrial sticker printing, and 1C ERP sync.',
-        { lang: 'en', keywords: 'serialization services Kazakhstan, customs warehouse labeling, NKT catalog' }
+        'Turnkey Product Serialization & Marking Services in Kazakhstan — NKT Cards, Training, Outsourcing | TANBOX.KZ',
+        'Full B2B serialization services: Data Matrix printing from 18 ₸, warehouse stickering from 48 ₸, bonded warehouse (IM-70) from 75 ₸, NKT catalog registration from 150 ₸, IS Tanba staff training from 85,000 ₸, turnkey outsourcing from 85,990 ₸.',
+        { lang: 'en', keywords: 'serialization services Kazakhstan, NKT catalog registration, IS Tanba training, turnkey marking outsourcing' }
       );
     } else {
       setPageSeo(
-        'Услуги цифровой маркировки товаров «под ключ» в Казахстане (НКТ, СВХ, Оклейка) | TANBOX.KZ',
-        'Комплексные услуги цифровой маркировки в РК: маркировка на таможенных складах (ИМ-70), регистрация номенклатуры в Национальном каталоге товаров (НКТ), генерация кодов Data Matrix, печать стикеров и интеграция с 1С.',
-        { lang: 'ru', keywords: 'услуги маркировки Казахстан, маркировка под ключ, НКТ СВХ 1С' }
+        'Услуги маркировки товаров под ключ в Казахстане: НКТ, Data Matrix, Обучение, Аутсорсинг | TANBOX.KZ',
+        'Комплексные услуги: эмиссия Data Matrix от 4 ₸, печать от 18 ₸, оклейка от 48 ₸, СВХ (ИМ-70) от 75 ₸, заведение карточек в НКТ от 150 ₸/SKU, обучение работе в ИС Танба от 85 000 ₸, аутсорсинг под ключ от 85 990 ₸.',
+        { lang: 'ru', keywords: 'услуги маркировки Казахстан, карточки НКТ, заведение номенклатуры, обучение ИС Танба, аутсорсинг маркировки под ключ, маркировка СВХ' }
       );
     }
   }, [lang]);
@@ -67,6 +69,7 @@ export const ServicesPage: React.FC = () => {
           id: 'customs',
           title: 'Тауарларды кедендік қоймаларда таңбалау (ИМ-70)',
           badge: 'Қойма және Логистика',
+          price: '75 ₸ бастап / дана',
           desc: 'Еркін айналымға шығарылғанға дейін кедендік қоймаларда (ИМ-70 режимінде) Data Matrix кодтарын басу және жапсыру бойынша толық қызметтер кешені.',
           icon: Truck,
           features: [
@@ -80,6 +83,7 @@ export const ServicesPage: React.FC = () => {
           id: 'nkt',
           title: 'Тауарларды ҰТК каталогына енгізу (Ұлттық каталог)',
           badge: 'Тіркеу және Каталогтау',
+          price: '150 ₸ бастап / SKU',
           desc: 'ҚР Бірыңғай ұлттық тауарлар каталогына (ҰТК) номенклатураны енгізу және GTIN / NTIN кодтарын алу. Атрибуттарды толтыру және модерациядан өткізу.',
           icon: FileSpreadsheet,
           features: [
@@ -93,6 +97,7 @@ export const ServicesPage: React.FC = () => {
           id: 'datamatrix',
           title: 'Data Matrix кодтарын эмиссиялау және жапсыру',
           badge: 'ҚР Таңбалауы',
+          price: '18 ₸ бастап / дана',
           desc: '«Таңба» АЖ-де кодтарға тапсырыс беру, төзімді стикерлерді жоғары жылдамдықта басу және қаптаманың кез келген түріне жапсыру.',
           icon: QrCode,
           features: [
@@ -103,9 +108,24 @@ export const ServicesPage: React.FC = () => {
           ],
         },
         {
+          id: 'outsourcing',
+          title: 'Таңбалау процестерін кілтке дейін аутсорсингке алу',
+          badge: 'B2B Аутсорсинг',
+          price: '85 990 ₸ бастап',
+          desc: 'Таңбалау процестерін толық сенімді сыртқы басқаруға беру: номенклатура, кодтарға тапсырыс, есептер және 24/7 техникалық сүйемелдеу.',
+          icon: ShieldCheck,
+          features: [
+            'Таңбалау бойынша барлық міндеттемелерді ресми толық өзімізге алу',
+            'ҰТК-де карточкаларды тіркеу және кодтарды уақтылы эмиссиялау',
+            'Айналымға енгізу, СНТ және ЭСФ-ке мәліметтерді беру',
+            'Жеке сарапшы және тәулік бойы 24/7 техникалық көмек',
+          ],
+        },
+        {
           id: 'aggregation',
           title: 'Қораптар мен паллеттерге агрегациялау (SSCC)',
           badge: 'Логистикалық агрегация',
+          price: '5 ₸ / SSCC',
           desc: 'Қораптар мен паллеттер үшін көліктік SSCC кодтарын қалыптастыру және басып шығару. Қоймада қабылдауды және кедендік тексеруден өтуді жеңілдету.',
           icon: Layers,
           features: [
@@ -119,6 +139,7 @@ export const ServicesPage: React.FC = () => {
           id: 'mobile-teams',
           title: 'Көшпелі мобильді стикерлеушілер тобы (24/7)',
           badge: 'Қоймаға шығу',
+          price: '48 ₸ бастап / дана',
           desc: 'Қазақстанның кез келген аймағындағы қоймаңызға өз жабдықтарымен және шығын материалдарымен кәсіби таңбалаушылар тобының шығуы.',
           icon: Users,
           features: [
@@ -130,9 +151,10 @@ export const ServicesPage: React.FC = () => {
         },
         {
           id: 'integration',
-          title: '«Таңба» АЖ жүйесін 1С / ERP-мен интеграциялау',
-          badge: 'АТ және Аудит',
-          desc: 'Есеп жүйеңізде толық прослеживаемостьты баптау, қызметкерлерді оқыту, мемлекеттік органдардың тексерулеріне дайындық.',
+          title: 'Қызметкерлерді оқыту және «Таңба» АЖ / 1С интеграциясы',
+          badge: 'АТ, Оқыту және Аудит',
+          price: '85 000 ₸ бастап',
+          desc: 'Қоймашылар мен операторларды оқыту, есеп жүйеңізде толық прослеживаемостьты баптау және мемлекеттік тексерулерге дайындық.',
           icon: Cpu,
           features: [
             '«Таңба» АЖ мен 1С:Кәсіпорын / ERP / WMS дерек алмасуын баптау',
@@ -150,6 +172,7 @@ export const ServicesPage: React.FC = () => {
           id: 'customs',
           title: 'Customs Warehouse Serialization (IM-70)',
           badge: 'Warehouse & Logistics',
+          price: 'from 75 ₸ / unit',
           desc: 'Full-scope Data Matrix printing and stickering services at customs bonded warehouses (IM-70 regime) prior to release into free circulation.',
           icon: Truck,
           features: [
@@ -163,6 +186,7 @@ export const ServicesPage: React.FC = () => {
           id: 'nkt',
           title: 'Product Cataloging in NKT (GS1 KZ)',
           badge: 'Registration & Cataloging',
+          price: 'from 150 ₸ / SKU',
           desc: 'Submitting SKU master data to the National Product Catalog of Kazakhstan to obtain official GTIN/NTIN codes with full attribute approval.',
           icon: FileSpreadsheet,
           features: [
@@ -176,6 +200,7 @@ export const ServicesPage: React.FC = () => {
           id: 'datamatrix',
           title: 'Data Matrix Code Emission & Stickering',
           badge: 'Kazakhstan Serialization',
+          price: 'from 18 ₸ / unit',
           desc: 'Ordering official Data Matrix pools from IS Tanba, high-speed thermal label printing, and applying stickers onto any product packaging.',
           icon: QrCode,
           features: [
@@ -186,9 +211,24 @@ export const ServicesPage: React.FC = () => {
           ],
         },
         {
+          id: 'outsourcing',
+          title: 'Turnkey Marking & Serialization Outsourcing',
+          badge: 'B2B Outsourcing',
+          price: 'from 85,990 ₸',
+          desc: 'Complete delegation of track & trace compliance: catalog registrations, code issuance, reports, and 24/7 technical oversight.',
+          icon: ShieldCheck,
+          features: [
+            'Full end-to-end legal and technical compliance management',
+            'NKT product cataloging and guaranteed code generation',
+            'Commissioning, withdrawal reports, and electronic invoice sync',
+            'Dedicated account manager and round-the-clock support',
+          ],
+        },
+        {
           id: 'aggregation',
           title: 'Carton & Pallet Aggregation (SSCC)',
           badge: 'Logistics Aggregation',
+          price: '5 ₸ / SSCC',
           desc: 'Generating and printing SSCC transport barcodes for cartons and pallets. Accelerating terminal intake and customs verification.',
           icon: Layers,
           features: [
@@ -202,6 +242,7 @@ export const ServicesPage: React.FC = () => {
           id: 'mobile-teams',
           title: 'Onsite Mobile Stickering Crews (24/7)',
           badge: 'Warehouse Dispatch',
+          price: 'from 48 ₸ / unit',
           desc: 'Deploying professional stickering crews equipped with mobile thermal printers directly to your warehouse across Kazakhstan.',
           icon: Users,
           features: [
@@ -213,9 +254,10 @@ export const ServicesPage: React.FC = () => {
         },
         {
           id: 'integration',
-          title: '1C / ERP & IS Tanba System Integration',
-          badge: 'IT & Audit',
-          desc: 'Configuring automated track & trace exchange in your ERP, training personnel, and conducting regulatory compliance audits.',
+          title: 'Staff Training & 1C / ERP IS Tanba Integration',
+          badge: 'IT, Training & Audit',
+          price: 'from 85,000 ₸',
+          desc: 'Hands-on staff training for warehouse operators, configuring ERP data exchange, and regulatory audit compliance.',
           icon: Cpu,
           features: [
             'Configuring IS Tanba data exchange with 1C / WMS',
@@ -232,6 +274,7 @@ export const ServicesPage: React.FC = () => {
         id: 'customs',
         title: 'Маркировка на таможенных складах (ИМ-70)',
         badge: 'Склады и Логистика',
+        price: 'от 75 ₸ / шт',
         desc: 'Комплекс услуг по нанесению кодов Data Matrix и оклейке партий на таможенных складах (режим ИМ-70) до выпуска товаров в свободное обращение.',
         icon: Truck,
         features: [
@@ -245,6 +288,7 @@ export const ServicesPage: React.FC = () => {
         id: 'nkt',
         title: 'Заведение товаров в НКТ (Каталог товаров)',
         badge: 'Регистрация и Каталогизация',
+        price: 'от 150 ₸ / SKU',
         desc: 'Внесение номенклатуры продукции и получение кодов GTIN / NTIN в Едином национальном каталоге товаров РК. Заполнение аттрибутов и прохождение модерации.',
         icon: FileSpreadsheet,
         features: [
@@ -258,6 +302,7 @@ export const ServicesPage: React.FC = () => {
         id: 'datamatrix',
         title: 'Эмиссия и нанесение кодов Data Matrix',
         badge: 'Маркировка РК',
+        price: 'от 18 ₸ / шт',
         desc: 'Заказ кодов в ИС Танба, высокоскоростная печать устойчивых стикеров и их нанесение на любые виды потребительской упаковки товаров.',
         icon: QrCode,
         features: [
@@ -268,9 +313,24 @@ export const ServicesPage: React.FC = () => {
         ],
       },
       {
+        id: 'outsourcing',
+        title: 'Комплексный аутсорсинг процессов маркировки под ключ',
+        badge: 'B2B Аутсорсинг',
+        price: 'от 85 990 ₸',
+        desc: 'Полная передача рутины по маркировке на внешнее управление: карточки, заказ кодов, ввод в оборот, отчетность и техподдержка 24/7.',
+        icon: ShieldCheck,
+        features: [
+          'Полная передача технических и операционных рисков по маркировке',
+          'Регистрация номенклатуры в НКТ и своевременный заказ кодов',
+          'Ввод в оборот и передача сведений в ЭСФ и СНТ',
+          'Персональный эксперт и круглосуточная поддержка 24/7',
+        ],
+      },
+      {
         id: 'aggregation',
         title: 'Агрегация в короба и паллеты (SSCC)',
         badge: 'Логистическая агрегация',
+        price: '5 ₸ / SSCC',
         desc: 'Формирование и печать транспортных кодов SSCC для коробов и паллет. Упрощение приемки грузов на складах и прохождения таможенного контроля.',
         icon: Layers,
         features: [
@@ -284,6 +344,7 @@ export const ServicesPage: React.FC = () => {
         id: 'mobile-teams',
         title: 'Выездные мобильные бригады оклейщиков (24/7)',
         badge: 'Выезд на склад',
+        price: 'от 48 ₸ / шт',
         desc: 'Выезд квалифицированных бригад маркировщиков со своим оборудованием и риббонами непосредственно на ваш склад в любом регионе Казахстана.',
         icon: Users,
         features: [
@@ -295,13 +356,14 @@ export const ServicesPage: React.FC = () => {
       },
       {
         id: 'integration',
-        title: 'Интеграция ИС Танба с 1С / ERP и Консалтинг',
-        badge: 'ИТ и Аудит',
-        desc: 'Полный настрой прослеживаемости в вашей учетной системе, обучение персонала, подготовка к проверочным мероприятиям государственных органов.',
+        title: 'Обучение сотрудников и интеграция ИС Танба с 1С',
+        badge: 'Обучение, ИТ и Аудит',
+        price: 'от 85 000 ₸',
+        desc: 'Практическое обучение персонала, настройка обмена данными в 1С / ERP и подготовка к проверкам государственных органов.',
         icon: Cpu,
         features: [
           'Настройка обмена ИС Танба с 1С:Предприятие / ERP / WMS',
-          'Обучение кладовщиков и операторов работе с 2D-сканерами',
+          'Обучение кладовщиков и операторов работе с 2D-сканерами и ТСД',
           'Аудит процессов маркировки перед проверками',
           'Круглосуточная техническая поддержка 24/7',
         ],

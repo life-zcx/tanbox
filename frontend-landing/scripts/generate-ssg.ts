@@ -83,6 +83,7 @@ interface PageMeta {
   bodyContent?: string;
   faqItems?: Array<{ q: string; a: string }>;
   breadcrumbs?: Array<{ name: string; url: string }>;
+  customSchemas?: object[];
 }
 
 const COMMON_FAQ = [
@@ -142,7 +143,7 @@ function resolvePageMeta(route: string): PageMeta {
         bodyContent: `
 <header>
   <h1>Қазақстанда тауарларды кілтке дейін цифрлық таңбалау</h1>
-  <p>«Таңба» АЖ-де Data Matrix кодтарын шығару, НКТ тіркеу, өндірістік басып шығару және қоймаларда оклейка жасау.</p>
+  <p>«Таңба» АЖ-де Data Matrix кодтарын шығару, ҰТК карточкаларын тіркеу, өндірістік басып шығару, қоймаларда оклейка және қызметкерлерді оқыту.</p>
 </header>
 <main>
   <section>
@@ -150,8 +151,15 @@ function resolvePageMeta(route: string): PageMeta {
     <ul>${categoriesHtml}</ul>
   </section>
   <section>
-    <h2>Тарифтер</h2>
-    <p>Басып шығару — 25 ₸ бастап, Кешенді таңбалау — 50 ₸ бастап, Қоймалар мен СВХ — 90 ₸ бастап.</p>
+    <h2>Тарифтер мен қызметтер</h2>
+    <ul>
+      <li><strong>Стикерлерді басып шығару:</strong> 18 ₸ бастап / дана</li>
+      <li><strong>Кешенді «Стандарт» таңбалау:</strong> 48 ₸ бастап / дана</li>
+      <li><strong>Қоймалар мен СВХ (ИМ-70, PRO):</strong> 75 ₸ бастап / дана</li>
+      <li><strong>ҰТК / GS1 тауар карточкаларын енгізу:</strong> 150 ₸ бастап / SKU</li>
+      <li><strong>Қызметкерлерді «Таңба» АЖ-ге оқыту:</strong> 85 000 ₸ бастап</li>
+      <li><strong>Таңбалауды кілтке дейін аутсорсингке алу:</strong> 85 990 ₸ бастап</li>
+    </ul>
   </section>
   <section>
     <h2>Жиі қойылатын сұрақтар</h2>
@@ -163,14 +171,14 @@ function resolvePageMeta(route: string): PageMeta {
     }
     if (lang === 'en') {
       return {
-        title: 'TANBOX — Turnkey Product Serialization in Kazakhstan | IS Tanba',
-        description: 'Professional mandatory Data Matrix product marking in Kazakhstan. Code issuance in IS Tanba, GS1 Kazakhstan nomenclature, roll thermal printing, warehouse stickering, and SSCC aggregation.',
+        title: 'TANBOX — Turnkey Product Serialization & Marking Services in Kazakhstan | IS Tanba',
+        description: 'Professional Data Matrix marking, NKT GS1 catalog registration from 150 ₸, staff training from 85,000 ₸, thermal roll printing from 18 ₸, warehouse stickering from 48 ₸, and full B2B outsourcing.',
         canonical,
         h1: 'Turnkey Product Serialization in Kazakhstan',
         bodyContent: `
 <header>
   <h1>Turnkey Product Serialization & Marking in Kazakhstan</h1>
-  <p>Data Matrix code generation in IS Tanba, GS1 cataloging, industrial thermal printing, warehouse stickering, and SSCC aggregation.</p>
+  <p>Data Matrix code generation in IS Tanba, NKT cataloging from 150 ₸/SKU, industrial thermal printing from 18 ₸, warehouse stickering from 48 ₸, staff training from 85,000 ₸, and B2B outsourcing.</p>
 </header>
 <main>
   <section>
@@ -178,8 +186,15 @@ function resolvePageMeta(route: string): PageMeta {
     <ul>${categoriesHtml}</ul>
   </section>
   <section>
-    <h2>Pricing</h2>
-    <p>Roll Printing from 25 ₸, Full Service from 50 ₸, Warehouse/Customs PRO from 90 ₸.</p>
+    <h2>Pricing & Services</h2>
+    <ul>
+      <li><strong>Sticker Printing:</strong> from 18 ₸ / unit</li>
+      <li><strong>Full Standard Marking:</strong> from 48 ₸ / unit</li>
+      <li><strong>Bonded Customs Warehouse (IM-70, PRO):</strong> from 75 ₸ / unit</li>
+      <li><strong>NKT / GS1 SKU Cataloging:</strong> from 150 ₸ / SKU</li>
+      <li><strong>Staff & Operator Training:</strong> from 85,000 ₸</li>
+      <li><strong>Turnkey B2B Outsourcing:</strong> from 85,990 ₸</li>
+    </ul>
   </section>
   <section>
     <h2>FAQ</h2>
@@ -191,14 +206,14 @@ function resolvePageMeta(route: string): PageMeta {
     }
 
     return {
-      title: 'TANBOX — Маркировка товаров в Казахстане под ключ | ИС Танба',
-      description: 'Профессиональная маркировка товаров Data Matrix под ключ в Республике Казахстан. Эмиссия кодов в ИС Танба, заведение номенклатуры в НКТ (ГС1 Казахстан), термопечать стикеров, выездная оклейка на складе и агрегация SSCC по РК.',
+      title: 'TANBOX — Маркировка товаров в Казахстане под ключ, карточки НКТ и Обучение | ИС Танба',
+      description: 'Профессиональная маркировка Data Matrix под ключ в РК: эмиссия в ИС Танба от 4 ₸, печать от 18 ₸, оклейка от 48 ₸, заведение карточек в НКТ от 150 ₸/SKU, обучение работе с маркировкой 85 000 ₸, аутсорсинг под ключ от 85 990 ₸.',
       canonical,
       h1: 'Маркировка товаров в Казахстане под ключ',
       bodyContent: `
 <header>
   <h1>Маркировка товаров в Казахстане под ключ</h1>
-  <p>Центр маркировки TANBOX: заказ и эмиссия кодов Data Matrix в ИС «Танба», регистрация карточек в Национальном каталоге товаров (НКТ / GS1), промышленная рулонная печать этикеток и выездная оклейка на складах заказчика по всему Казахстану.</p>
+  <p>Центр маркировки TANBOX: заказ и эмиссия кодов Data Matrix в ИС «Танба», регистрация карточек в Национальном каталоге товаров (НКТ / GS1), промышленная рулонная печать этикеток, выездная оклейка на складах заказчика, обучение сотрудников и полный аутсорсинг.</p>
 </header>
 <main>
   <section>
@@ -206,11 +221,14 @@ function resolvePageMeta(route: string): PageMeta {
     <ul>${categoriesHtml}</ul>
   </section>
   <section>
-    <h2>Тарифы на услуги маркировки</h2>
+    <h2>Тарифы на услуги маркировки и сопутствующие сервисы</h2>
     <ul>
-      <li><strong>Печать стикеров Data Matrix</strong> — от 25 ₸ / шт (термотрансферная печать на рулонах, устойчивая к стиранию).</li>
-      <li><strong>Маркировка под ключ (Стандарт)</strong> — от 50 ₸ / шт (эмиссия в ИС Танба, заведение в НКТ, печать и выездная оклейка).</li>
-      <li><strong>PRO / Склады и СВХ</strong> — от 90 ₸ / шт (агрегация в короба и паллеты SSCC, работа на таможенных складах).</li>
+      <li><strong>Печать стикеров Data Matrix</strong> — от 18 ₸ / шт (термотрансферная печать на рулонах, устойчивая к стиранию).</li>
+      <li><strong>Маркировка под ключ (Стандарт)</strong> — от 48 ₸ / шт (эмиссия в ИС Танба, заведение в НКТ, печать и выездная оклейка).</li>
+      <li><strong>PRO / Склады и СВХ (ИМ-70)</strong> — от 75 ₸ / шт (агрегация в короба и паллеты SSCC, работа на таможенных складах).</li>
+      <li><strong>Заведение карточек товаров в НКТ / GS1 / МПТ</strong> — от 150 ₸ / карточка (SKU) (регистрация номенклатуры, присвоение GTIN, модерация).</li>
+      <li><strong>Обучение сотрудников работе с ИС «Танба»</strong> — от 85 000 ₸ (курс для кладовщиков, операторов 2D-сканеров и бухгалтеров).</li>
+      <li><strong>Комплексный аутсорсинг маркировки под ключ</strong> — от 85 990 ₸ (полная передача рутины по маркировке на внешнее управление).</li>
     </ul>
   </section>
   <section>
@@ -240,77 +258,89 @@ function resolvePageMeta(route: string): PageMeta {
 
     if (lang === 'kz') {
       return {
-        title: 'Қазақстанда тауар таңбалау онлайн калькуляторы | Data Matrix құнын есептеу — TANBOX.KZ',
-        description: 'Қазақстанда міндетті Data Matrix таңбалау құнын есептеңіз. Кодтарды шығару, жапсырмаларды басып шығару және қоймада желімдеу тарифтері.',
+        title: 'Қазақстанда тауар таңбалау, ҰТК карточкалары және оқыту калькуляторы — TANBOX.KZ',
+        description: 'Data Matrix таңбалау, ҰТК карточкаларын енгізу (150 ₸ бастап), оқыту (85 000 ₸) және аутсорсинг құнын есептеңіз.',
         canonical,
         h1: 'Тауарларды таңбалау онлайн калькуляторы',
         breadcrumbs: calcBreadcrumbs,
         bodyContent: `
 <header>
   <h1>Тауарларды цифрлық таңбалау құнын есептеу калькуляторы</h1>
-  <p>Қазақстанда «Таңба» АЖ арқылы тауарларды таңбалау және қоймада оклейка жасаудың нақты құнын онлайн есептеңіз.</p>
+  <p>Қазақстанда «Таңба» АЖ арқылы тауарларды таңбалау, ҰТК карточкаларын тіркеу және оқытудың нақты құнын онлайн есептеңіз.</p>
 </header>
 <main>
   <section>
-    <h2>Тарифтер мен көлемдер</h2>
-    <p>500-ден 5 000 данаға дейін: 25 ₸ бастап. 20 000 данадан жоғары: арнайы тарифтер қарастырылған.</p>
+    <h2>Тарифтер мен негізгі қызметтер</h2>
+    <ul>
+      <li>Стикерлерді басып шығару: 18 ₸ бастап</li>
+      <li>Қоймада оклейка жасау: 48 ₸ бастап</li>
+      <li>Кедендік СВХ қоймалары (ИМ-70): 75 ₸ бастап</li>
+      <li>ҰТК карточкаларын енгізу: 150 ₸ бастап / SKU</li>
+      <li>Қызметкерлерді оқыту: 85 000 ₸ бастап</li>
+      <li>Кілтке дейін аутсорсинг: 85 990 ₸ бастап</li>
+    </ul>
   </section>
 </main>`,
       };
     }
     if (lang === 'en') {
       return {
-        title: 'Marking Pricing Calculator Kazakhstan | Data Matrix Cost Estimate — TANBOX.KZ',
-        description: 'Calculate product serialization and mandatory Data Matrix marking costs in Kazakhstan. Tariffs for code issuance, sticker printing, and warehouse stickering.',
+        title: 'Marking, NKT SKU Cards & Training Cost Calculator Kazakhstan — TANBOX.KZ',
+        description: 'Calculate product serialization in Kazakhstan: Data Matrix printing from 18 ₸, stickering from 48 ₸, NKT cataloging from 150 ₸, staff training from 85,000 ₸, outsourcing from 85,990 ₸.',
         canonical,
         h1: 'Serialization Pricing Calculator',
         breadcrumbs: calcBreadcrumbs,
         bodyContent: `
 <header>
-  <h1>Online Product Marking & Serialization Calculator Kazakhstan</h1>
-  <p>Instant pricing calculation for Data Matrix code generation, roll sticker printing, warehouse application, and SSCC aggregation in Kazakhstan.</p>
+  <h1>Online Product Marking & Services Calculator Kazakhstan</h1>
+  <p>Instant pricing calculation for Data Matrix serialization, NKT cataloging (from 150 ₸), warehouse stickering, staff training (from 85,000 ₸), and turnkey outsourcing.</p>
 </header>
 <main>
   <section>
-    <h2>Volume Pricing Tiers</h2>
-    <p>From 500 to 5,000 units: from 25 ₸/code. Over 20,000 units: custom high-volume pricing.</p>
+    <h2>Service Rates</h2>
+    <ul>
+      <li>Label Printing: from 18 ₸ / unit</li>
+      <li>Onsite Stickering: from 48 ₸ / unit</li>
+      <li>Bonded Warehouse (IM-70): from 75 ₸ / unit</li>
+      <li>NKT / GS1 SKU Cataloging: from 150 ₸ / SKU</li>
+      <li>Staff & Operator Training: from 85,000 ₸</li>
+      <li>Turnkey B2B Outsourcing: from 85,990 ₸</li>
+    </ul>
   </section>
 </main>`,
       };
     }
     return {
-      title: 'Калькулятор стоимости маркировки товаров в Казахстане | Расчет Data Matrix — TANBOX.KZ',
-      description: 'Онлайн-калькулятор стоимости обязательной маркировки товаров Data Matrix в Казахстане. Тарифы на эмиссию кодов, термопечать этикеток и выездную оклейку на складе.',
+      title: 'Калькулятор стоимости маркировки товаров, карточек НКТ и обучения — TANBOX.KZ',
+      description: 'Онлайн-калькулятор стоимости в Казахстане: эмиссия Data Matrix от 4 ₸, печать от 18 ₸, оклейка от 48 ₸, карточки в НКТ от 150 ₸, обучение от 85 000 ₸, аутсорсинг от 85 990 ₸.',
       canonical,
-      h1: 'Онлайн-калькулятор стоимости маркировки товаров',
+      h1: 'Онлайн-калькулятор стоимости маркировки товаров и сопутствующих услуг',
       breadcrumbs: calcBreadcrumbs,
       bodyContent: `
 <header>
   <h1>Онлайн-калькулятор стоимости маркировки товаров в Казахстане</h1>
-  <p>Точный расчет бюджета обязательной маркировки Data Matrix под ключ: генерация кодов в ИС Танба, регистрация в НКТ, термопечать рулонов и выездная оклейка на вашем складе.</p>
+  <p>Точный расчет бюджета обязательной маркировки Data Matrix под ключ: генерация кодов в ИС Танба, регистрация карточек в НКТ, термопечать рулонов, выездная оклейка, обучение персонала и аутсорсинг.</p>
 </header>
 <main>
   <section>
     <h2>Базовые параметры расчета</h2>
     <ul>
-      <li><strong>Объем партии:</strong> от 500 шт до крупных оптовых партий свыше 100 000 единиц.</li>
-      <li><strong>Форматы этикеток:</strong> 30×20 мм, 40×20 мм, 58×40 мм, микро-коды для ювелирных изделий.</li>
-      <li><strong>Дополнительные опции:</strong> выезд бригады оклейщиков, формирование транспортных агрегаций SSCC, регистрация в Национальном каталоге товаров.</li>
+      <li><strong>Печать и оклейка:</strong> печать от 18 ₸, оклейка Стандарт от 48 ₸, таможенные склады (ИМ-70, PRO) от 75 ₸.</li>
+      <li><strong>Заведение карточек товаров (SKU):</strong> от 150 ₸ за карточку в НКТ, 200 ₸ в МПТ, 300 ₸ полный пакет.</li>
+      <li><strong>Обучение персонала:</strong> 85 000 ₸ за полный практический курс работы с ИС «Танба», 2D-сканерами и 1С.</li>
+      <li><strong>Аутсорсинг под ключ:</strong> разовый запуск от 85 990 ₸, ежемесячные пакеты сопровождения от 159 990 ₸ / мес.</li>
     </ul>
   </section>
   <section>
-    <h2>Тарифная сетка по тиражам</h2>
+    <h2>Тарифная сетка по тиражам маркировки</h2>
     <table>
       <thead><tr><th>Объем партии</th><th>Стоимость печати</th><th>С оклейкой под ключ</th></tr></thead>
       <tbody>
-        <tr><td>500 – 5 000 шт</td><td>от 25 ₸ / шт</td><td>от 50 ₸ / шт</td></tr>
-        <tr><td>5 000 – 20 000 шт</td><td>от 22 ₸ / шт</td><td>от 45 ₸ / шт</td></tr>
-        <tr><td>от 20 000 шт</td><td>от 18 ₸ / шт</td><td>индивидуальный спецтариф</td></tr>
+        <tr><td>500 – 20 000 шт</td><td>от 20 ₸ / шт</td><td>от 55 ₸ / шт</td></tr>
+        <tr><td>20 000 – 100 000 шт</td><td>от 19 ₸ / шт</td><td>от 50 ₸ / шт</td></tr>
+        <tr><td>свыше 100 000 шт</td><td>от 18 ₸ / шт</td><td>от 48 ₸ / шт</td></tr>
       </tbody>
     </table>
-  </section>
-  <section>
-    <p>Для моментального согласования графика и выезда бригады свяжитесь с центром маркировки TANBOX по телефону <strong>+7 (700) 304-85-32</strong> или в WhatsApp.</p>
   </section>
 </main>`,
     };
@@ -504,34 +534,172 @@ function resolvePageMeta(route: string): PageMeta {
       { name: 'Услуги и тарифы', url: canonical },
     ];
 
-    return {
-      title: 'Услуги обязательной цифровой маркировки Data Matrix в Казахстане — TANBOX.KZ',
-      description: 'Комплексные услуги: эмиссия кодов в ИС Танба, термопечать рулонов стикеров, выездная оклейка на складе, агрегация в короба и паллеты (SSCC).',
-      canonical,
-      h1: 'Услуги и тарифы маркировки товаров под ключ',
-      breadcrumbs: srvBreadcrumbs,
-      bodyContent: `
+    const servicesOfferSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'OfferCatalog',
+      name: 'Услуги и тарифы цифровой маркировки TANBOX.KZ',
+      itemListElement: [
+        {
+          '@type': 'Offer',
+          name: 'Печать стикеров с кодами Data Matrix',
+          priceCurrency: 'KZT',
+          price: '18',
+        },
+        {
+          '@type': 'Offer',
+          name: 'Маркировка товаров под ключ «Стандарт»',
+          priceCurrency: 'KZT',
+          price: '48',
+        },
+        {
+          '@type': 'Offer',
+          name: 'Маркировка на СВХ и таможенных складах «PRO» (ИМ-70)',
+          priceCurrency: 'KZT',
+          price: '75',
+        },
+        {
+          '@type': 'Offer',
+          name: 'Заведение и модерация карточек товаров в НКТ / GS1 / МПТ',
+          priceCurrency: 'KZT',
+          price: '150',
+        },
+        {
+          '@type': 'Offer',
+          name: 'Обучение сотрудников работе с ИС «Танба» и маркировкой',
+          priceCurrency: 'KZT',
+          price: '85000',
+        },
+        {
+          '@type': 'Offer',
+          name: 'Комплексный аутсорсинг процессов маркировки под ключ',
+          priceCurrency: 'KZT',
+          price: '85990',
+        },
+        {
+          '@type': 'Offer',
+          name: 'Агрегация групповой тары в короба и паллеты (SSCC)',
+          priceCurrency: 'KZT',
+          price: '5',
+        },
+      ],
+    };
+
+    if (lang === 'kz') {
+      return {
+        title: 'Қазақстанда тауар таңбалау, ҰТК карточкалары, Оқыту және Аутсорсинг қызметтері — TANBOX.KZ',
+        description: 'ҚР бойынша кешенді қызметтер: Data Matrix басу 18 ₸ бастап, қоймада оклейка 48 ₸ бастап, СВХ (ИМ-70) 75 ₸ бастап, ҰТК карточкаларын енгізу 150 ₸ бастап, қызметкерлерді оқыту 85 000 ₸, аутсорсинг 85 990 ₸ бастап.',
+        canonical,
+        h1: 'Тауарларды цифрлық таңбалау қызметтері мен тарифтері',
+        breadcrumbs: srvBreadcrumbs,
+        customSchemas: [servicesOfferSchema],
+        bodyContent: `
 <header>
-  <h1>Услуги и тарифы цифровой маркировки Data Matrix в Казахстане</h1>
-  <p>Центр маркировки TANBOX предоставляет полный цикл услуг по цифровой идентификации и прослеживаемости товаров для импортеров, производителей и оптовых дистрибьюторов в Республике Казахстан.</p>
+  <h1>Қазақстанда тауарларды цифрлық таңбалау қызметтері мен тарифтері</h1>
+  <p>TANBOX орталығы: «Таңба» АЖ кодтарын эмиссиялау, ҰТК карточкаларын модерациялау, рулонды стикерлерді басу, қоймаларда оклейка, қызметкерлерді оқыту және кілтке дейін аутсорсинг.</p>
 </header>
 <main>
   <section>
-    <h2>5 ключевых услуг TANBOX</h2>
+    <h2>7 негізгі B2B қызметтері</h2>
     <ol>
-      <li><strong>Эмиссия кодов Data Matrix в ИС «Танба»:</strong> регистрация номенклатуры в Национальном каталоге товаров (НКТ / GS1), генерация кодов и ввод в оборот.</li>
-      <li><strong>Промышленная рулонная печать стикеров:</strong> высокоточная термотрансферная печать смоляными красками Resin на износостойких полипропиленовых и полуглянцевых этикетках.</li>
-      <li><strong>Складская оклейка товаров выездными бригадами:</strong> оперативная оклейка товарных партий на складах Заказчика, фулфилментах или зонах таможенного контроля (СВХ).</li>
-      <li><strong>Агрегация транспортной тары (SSCC):</strong> формирование кодов агрегации для групповых коробов и паллет для быстрого сканирования без вскрытия упаковок.</li>
-      <li><strong>Интеграция с учетными системами и сопровождение:</strong> настройка обмена с 1С:Предприятие, МойСклад, передача кодов при отгрузках в ЭСФ и СНТ.</li>
+      <li><strong>Кедендік қоймаларда таңбалау (ИМ-70):</strong> 75 ₸ бастап / дана. СВХ және АЭА аймақтарында дайындық және оклейка.</li>
+      <li><strong>ҰТК каталогына тауар карточкаларын енгізу:</strong> 150 ₸ бастап / SKU. GTIN / NTIN тағайындау, спецификациялар және сәтті модерация.</li>
+      <li><strong>Data Matrix кодтарын эмиссиялау және басу:</strong> 18 ₸ бастап / дана. Өнеркәсіптік төзімді термо-стикерлер.</li>
+      <li><strong>Таңбалауды кілтке дейін аутсорсингке алу:</strong> 85 990 ₸ бастап. Барлық процестерді сыртқы сенімді басқаруға беру.</li>
+      <li><strong>Қораптар мен паллеттерге агрегациялау (SSCC):</strong> 5 ₸ / SSCC. GS1 стандарттары бойынша халықаралық кодтар.</li>
+      <li><strong>Көшпелі мобильді стикерлеушілер тобы (24/7):</strong> 48 ₸ бастап / дана. ҚР кез келген қоймасына жеке жабдықпен шығу.</li>
+      <li><strong>Қызметкерлерді оқыту және «Таңба» АЖ / 1С интеграциясы:</strong> 85 000 ₸ бастап. Операторлар мен қоймашыларды оқыту.</li>
     </ol>
   </section>
   <section>
-    <h2>Тарифные планы</h2>
+    <h2>Тарифтік жоспарлар</h2>
     <ul>
-      <li><strong>Тариф «Печать»:</strong> от 25 ₸ за код. Быстрое изготовление тиражей рулонных этикеток со 100% считываемостью.</li>
-      <li><strong>Тариф «Стандарт под ключ»:</strong> от 50 ₸ за код. Эмиссия, регистрация в НКТ, печать и выездная оклейка.</li>
-      <li><strong>Тариф «PRO / Склады и СВХ»:</strong> от 90 ₸ за код. Комплексная агрегация SSCC, паллетирование и ускоренная таможенная очистка.</li>
+      <li><strong>Басып шығару:</strong> 18 ₸ бастап.</li>
+      <li><strong>Стандарт кешенді оклейка:</strong> 48 ₸ бастап.</li>
+      <li><strong>PRO / Складтар мен СВХ:</strong> 75 ₸ бастап.</li>
+      <li><strong>ҰТК карточкалары:</strong> 150 ₸ бастап / SKU.</li>
+      <li><strong>Оқыту курсы:</strong> 85 000 ₸.</li>
+      <li><strong>Аутсорсинг:</strong> 85 990 ₸ бастап.</li>
+    </ul>
+  </section>
+</main>`,
+      };
+    }
+
+    if (lang === 'en') {
+      return {
+        title: 'Turnkey Product Serialization & Marking Services in Kazakhstan — NKT Cards, Training, Outsourcing | TANBOX.KZ',
+        description: 'End-to-end B2B serialization in Kazakhstan: Data Matrix printing from 18 ₸, warehouse stickering from 48 ₸, bonded warehouse (IM-70) from 75 ₸, NKT catalog registration from 150 ₸, IS Tanba staff training from 85,000 ₸, full turnkey outsourcing from 85,990 ₸.',
+        canonical,
+        h1: 'Turnkey Product Serialization Services & Pricing in Kazakhstan',
+        breadcrumbs: srvBreadcrumbs,
+        customSchemas: [servicesOfferSchema],
+        bodyContent: `
+<header>
+  <h1>Product Serialization Services & Pricing in Kazakhstan</h1>
+  <p>TANBOX center: official IS Tanba code generation, NKT catalog registration from 150 ₸, industrial thermal printing from 18 ₸, warehouse stickering from 48 ₸, staff training from 85,000 ₸, and B2B outsourcing.</p>
+</header>
+<main>
+  <section>
+    <h2>7 Core B2B Services</h2>
+    <ol>
+      <li><strong>Customs Bonded Warehouse Marking (IM-70):</strong> from 75 ₸ / unit. Full compliance before customs release.</li>
+      <li><strong>NKT Product Cataloging (GS1 KZ):</strong> from 150 ₸ / SKU. Official GTIN/NTIN issuance and moderation guarantee.</li>
+      <li><strong>Data Matrix Code Emission & Roll Printing:</strong> from 18 ₸ / unit. High-speed resin thermal transfer labels.</li>
+      <li><strong>Turnkey Serialization B2B Outsourcing:</strong> from 85,990 ₸. Full external management of marking operations.</li>
+      <li><strong>Carton & Pallet Aggregation (SSCC):</strong> 5 ₸ / SSCC. Transport labels for instant barcode scanning.</li>
+      <li><strong>Onsite Mobile Stickering Crews (24/7):</strong> from 48 ₸ / unit. Nationwide warehouse deployment across Kazakhstan.</li>
+      <li><strong>Staff Training & IS Tanba 1C ERP Integration:</strong> from 85,000 ₸. Practical training for warehouse teams and operators.</li>
+    </ol>
+  </section>
+  <section>
+    <h2>Pricing Plans</h2>
+    <ul>
+      <li><strong>Print Plan:</strong> from 18 ₸ / unit.</li>
+      <li><strong>Standard Turnkey Plan:</strong> from 48 ₸ / unit.</li>
+      <li><strong>PRO Customs & Warehouses:</strong> from 75 ₸ / unit.</li>
+      <li><strong>NKT SKU Cataloging:</strong> from 150 ₸ / SKU.</li>
+      <li><strong>Staff Training Course:</strong> from 85,000 ₸.</li>
+      <li><strong>Outsourcing Package:</strong> from 85,990 ₸.</li>
+    </ul>
+  </section>
+</main>`,
+      };
+    }
+
+    return {
+      title: 'Услуги маркировки товаров под ключ в Казахстане: НКТ, Data Matrix, Обучение, Аутсорсинг | TANBOX.KZ',
+      description: 'Комплексные услуги: эмиссия Data Matrix от 4 ₸, печать от 18 ₸, оклейка от 48 ₸, СВХ (ИМ-70) от 75 ₸, заведение карточек в НКТ от 150 ₸/SKU, обучение работе в ИС Танба от 85 000 ₸, аутсорсинг под ключ от 85 990 ₸.',
+      canonical,
+      h1: 'Услуги и тарифы цифровой маркировки товаров под ключ',
+      breadcrumbs: srvBreadcrumbs,
+      customSchemas: [servicesOfferSchema],
+      bodyContent: `
+<header>
+  <h1>Услуги и тарифы цифровой маркировки Data Matrix в Казахстане</h1>
+  <p>Центр маркировки TANBOX предоставляет полный цикл услуг: эмиссия кодов в ИС «Танба», регистрация карточек в НКТ/GS1, промышленная рулонная печать, выездная оклейка на складе заказчика, агрегация SSCC, практическое обучение сотрудников и аутсорсинг маркировки под ключ.</p>
+</header>
+<main>
+  <section>
+    <h2>7 ключевых услуг TANBOX</h2>
+    <ol>
+      <li><strong>Маркировка на таможенных складах (ИМ-70, PRO):</strong> от 75 ₸ / шт. Нанесение кодов Data Matrix до выпуска товаров в свободное обращение, подготовка данных для графы 31 декларации.</li>
+      <li><strong>Заведение карточек товаров в НКТ / GS1 / МПТ:</strong> от 150 ₸ / SKU. Регистрация номенклатуры, присвоение GTIN/NTIN, массовая загрузка спецификаций и гарантированное прохождение модерации.</li>
+      <li><strong>Эмиссия и печать кодов Data Matrix:</strong> от 18 ₸ / шт. Высокоточная термотрансферная печать на рулонных стикерах со 100% считываемостью.</li>
+      <li><strong>Комплексный аутсорсинг процессов маркировки под ключ:</strong> от 85 990 ₸. Полная передача рутины по маркировке на внешнее управление: эмиссия, НКТ, отчеты и поддержка 24/7.</li>
+      <li><strong>Агрегация в короба и паллеты (SSCC):</strong> 5 ₸ / SSCC. Формирование транспортных кодов для мгновенного сканирования без вскрытия тары.</li>
+      <li><strong>Выездные мобильные бригады оклейщиков (24/7):</strong> от 48 ₸ / шт. Выезд квалифицированных бригад со своими принтерами на склад заказчика по всему Казахстану.</li>
+      <li><strong>Обучение сотрудников и интеграция ИС Танба с 1С:</strong> от 85 000 ₸. Практический курс для кладовщиков, операторов 2D-сканеров и бухгалтеров, настройка обмена с ERP.</li>
+    </ol>
+  </section>
+  <section>
+    <h2>Тарифная сетка на услуги</h2>
+    <ul>
+      <li><strong>Тариф «Печать»:</strong> от 18 ₸ за стикер.</li>
+      <li><strong>Тариф «Стандарт под ключ»:</strong> от 48 ₸ за единицу.</li>
+      <li><strong>Тариф «PRO / Склады и СВХ»:</strong> от 75 ₸ за единицу.</li>
+      <li><strong>Заведение карточек в НКТ:</strong> от 150 ₸ за SKU (МПТ 200 ₸, полный пакет 300 ₸).</li>
+      <li><strong>Обучение сотрудников:</strong> 85 000 ₸ за курс.</li>
+      <li><strong>Аутсорсинг маркировки:</strong> от 85 990 ₸ (разовый запуск) или от 159 990 ₸ / мес.</li>
     </ul>
   </section>
 </main>`,
@@ -702,6 +870,10 @@ for (const route of routes) {
         },
       })),
     });
+  }
+
+  if (meta.customSchemas && meta.customSchemas.length > 0) {
+    additionalSchemas.push(...meta.customSchemas);
   }
 
   if (additionalSchemas.length > 0) {
