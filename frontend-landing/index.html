@@ -2,6 +2,9 @@
 <html lang="ru">
 
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <!-- Google tag (gtag.js) - loaded only in production -->
   <script>
     (function () {
@@ -134,44 +137,69 @@
         return;
       }
 
-      (function(m,e,t,r,i,k,a){
-        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-        m[i].l=1*new Date();
-        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-      })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=113816974', 'ym');
+      window['ym'] = window['ym'] || function () {
+        (window['ym'].a = window['ym'].a || []).push(arguments);
+      };
 
-      ym(113816974, 'init', {
-        ssr: true,
-        webvisor: true,
-        clickmap: true,
-        ecommerce: "dataLayer",
-        accurateTrackBounce: true,
-        trackLinks: true
+      var ymLoaded = false;
+      function loadYm() {
+        if (ymLoaded) return;
+        ymLoaded = true;
+
+        (function(m,e,t,r,i,k,a){
+          m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+          m[i].l=1*new Date();
+          for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+          k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=113816974', 'ym');
+
+        ym(113816974, 'init', {
+          ssr: true,
+          webvisor: true,
+          clickmap: true,
+          ecommerce: "dataLayer",
+          accurateTrackBounce: true,
+          trackLinks: true
+        });
+      }
+
+      var interactionEvents = ['scroll', 'keydown', 'touchstart', 'click', 'mousemove'];
+      interactionEvents.forEach(function (ev) {
+        window.addEventListener(ev, loadYm, { once: true, passive: true });
       });
+
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(function () { setTimeout(loadYm, 4500); }, { timeout: 6000 });
+      } else {
+        setTimeout(loadYm, 4500);
+      }
     })();
   </script>
   <!-- /Yandex.Metrika counter -->
 
-  <meta charset="UTF-8" />
   <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
   <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png?v=2" />
   <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png?v=2" />
   <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png?v=2" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Маркировка товаров в Казахстане под ключ | Эмиссия кодов Data Matrix в ИС Танба — TANBOX.KZ</title>
+  <title>TANBOX — Маркировка товаров в Казахстане под ключ | ИС Танба</title>
   <meta name="title"
-    content="Маркировка товаров в Казахстане под ключ | Эмиссия кодов Data Matrix в ИС Танба — TANBOX.KZ" />
+    content="TANBOX — Маркировка товаров в Казахстане под ключ | ИС Танба" />
   <meta name="description"
-    content="Профессиональная маркировка товаров Data Matrix под ключ в Республике Казахстан. Эмиссия кодов в ИС Танба, заведение номенклатуры в НКТ (ГС1 Казахстан), термопечать стикеров, выездная оклейка на складе и агрегация SSCC по РК." />
+    content="Профессиональная цифровая маркировка товаров Data Matrix под ключ в Республике Казахстан. Эмиссия кодов в ИС Танба, заведение номенклатуры в НКТ (GS1 Казахстан), термопечать стикеров, выездная оклейка на складе и агрегация SSCC по РК." />
   <meta name="keywords"
-    content="маркировка товаров казахстан, маркировка товара tanba, ис танба, дата матрикс казахстан, data matrix казахстан, печать кодов data matrix, эмиссия кодов танба, маркировка обуви казахстан, маркировка одежды рк, маркировка лекарств казахстан, агрегация sscc, маркировка воды, нкт казахстан, оклейка товаров алматы, генерация кодов data matrix, танбокс, tanbox, tanbox.kz" />
+    content="TANBOX, танбокс, tanbox.kz, маркировка товаров в казахстане под ключ, маркировка товаров казахстан, маркировка товара tanba, ис танба, дата матрикс казахстан, data matrix казахстан, печать кодов data matrix, эмиссия кодов танба, маркировка обуви казахстан, маркировка одежды рк, маркировка лекарств казахстан, агрегация sscc, маркировка воды, нкт казахстан, оклейка товаров алматы, генерация кодов data matrix" />
   <meta name="author" content="TANBOX.KZ / ИП INTERSENSE" />
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
   <link rel="canonical" href="https://tanbox.kz/" />
+
+  <!-- Multilingual Hreflang Alternates (CRITICAL FOR GOOGLE INDEXING) -->
+  <link rel="alternate" hreflang="ru" href="https://tanbox.kz/" />
+  <link rel="alternate" hreflang="kk" href="https://tanbox.kz/kz" />
+  <link rel="alternate" hreflang="en" href="https://tanbox.kz/en" />
+  <link rel="alternate" hreflang="x-default" href="https://tanbox.kz/" />
 
   <meta name="geo.region" content="KZ-ALA" />
   <meta name="geo.placename" content="Алматы" />
@@ -204,10 +232,10 @@
   <!-- Fonts (asynchronous non-render-blocking) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
   <noscript>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
   </noscript>
 
   <!-- GEO Meta Tags (Kazakhstan nationwide) -->

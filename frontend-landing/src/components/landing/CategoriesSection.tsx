@@ -194,7 +194,7 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({ onScrollNe
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#111827] tracking-tight">
             {t('cat.title')}
           </h2>
-          <p className="text-sm sm:text-base text-[#64748B] max-w-3xl">
+          <p className="text-sm sm:text-base text-[#475569] max-w-3xl">
             {t('cat.subtitle')}
           </p>
         </div>
@@ -207,6 +207,7 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({ onScrollNe
               <Link
                 key={cat.id}
                 to={getLocalizedPath(`/categories/${cat.id}`)}
+                aria-label={`${cat.title} — ${t('cat.btn_more')}`}
                 className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group border border-gray-200/70 hover:border-blue-300 min-h-[130px] sm:min-h-[145px]"
               >
                 <div className="flex items-start justify-between">
@@ -219,7 +220,7 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({ onScrollNe
                 </div>
 
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500 group-hover:text-[#0082FB] transition-colors">
+                  <span className="text-xs font-semibold text-slate-600 group-hover:text-[#0082FB] transition-colors">
                     {t('cat.btn_more')} →
                   </span>
                 </div>

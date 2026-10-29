@@ -165,7 +165,7 @@ export const Footer: React.FC = () => {
       </div>
 
       {/* Compact Payment Logos & Footer Bottom Bar */}
-      <div className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16 mt-12 pt-8 border-t border-white/10 flex flex-col lg:flex-row items-center justify-between gap-6 text-xs text-gray-500">
+      <div className="max-w-[1700px] w-full mx-auto px-6 sm:px-10 lg:px-16 mt-12 pt-8 border-t border-white/10 flex flex-col lg:flex-row items-center justify-between gap-6 text-xs text-gray-400">
         <p className="order-2 lg:order-1 text-center lg:text-left">
           © 2026 TANBOX.KZ —{' '}
           {lang === 'kz'

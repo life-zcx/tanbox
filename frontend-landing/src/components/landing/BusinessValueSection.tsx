@@ -164,7 +164,7 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
                 ? 'Track & Trace Flow: 6 Steps to Complete Compliance' 
                 : 'Как устроен процесс цифровой маркировки в Казахстане'}
             </h2>
-            <p className="text-sm sm:text-base text-[#64748B] max-w-3xl">
+            <p className="text-sm sm:text-base text-[#475569] max-w-3xl">
               {lang === 'kz'
                 ? '«Таңба» АЖ жүйесіндегі Data Matrix коды — тауардың мемлекеттік сандық паспорты. Процесс 6 нақты кезеңнен тұрады:'
                 : lang === 'en'
@@ -180,7 +180,7 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
                 key={st.num}
                 className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-7 border border-gray-200/80 shadow-xs relative overflow-hidden group flex flex-col justify-between"
               >
-                <span className="text-3xl sm:text-4xl font-black text-slate-100 absolute top-5 right-6 select-none pointer-events-none group-hover:text-blue-50 transition-colors">
+                <span aria-hidden="true" className="text-3xl sm:text-4xl font-black text-slate-100 absolute top-5 right-6 select-none pointer-events-none group-hover:text-blue-50 transition-colors">
                   {st.num}
                 </span>
 
@@ -188,7 +188,7 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
                   <h3 className="text-base sm:text-lg font-bold text-[#111827] leading-snug">
                     {st.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#64748B] mt-2 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#475569] mt-2 leading-relaxed">
                     {st.desc}
                   </p>
                 </div>
@@ -209,7 +209,7 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
                 ? 'Challenges of In-House Track & Trace' 
                 : 'С какими сложностями сталкивается бизнес при самостоятельной маркировке'}
             </h2>
-            <p className="text-sm sm:text-base text-[#64748B] max-w-3xl">
+            <p className="text-sm sm:text-base text-[#475569] max-w-3xl">
               {lang === 'kz'
                 ? 'Процесті компания ішінде ұйымдастыру қызметкерлердің көп уақытын, мемлекеттік жүйені терең түсінуді және деректерді тұрақты бақылауды талап етеді:'
                 : lang === 'en'
@@ -235,7 +235,7 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
                   </span>
                 </div>
 
-                <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed pt-1">
+                <p className="text-xs sm:text-sm text-[#475569] leading-relaxed pt-1">
                   {risk.desc}
                 </p>
               </div>
@@ -255,7 +255,7 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
                 ? 'Turnkey Execution: Why Leading Importers Choose TANBOX' 
                 : 'Почему бизнесу выгодно передать маркировку TANBOX'}
             </h2>
-            <p className="text-sm sm:text-base text-[#64748B] max-w-3xl">
+            <p className="text-sm sm:text-base text-[#475569] max-w-3xl">
               {lang === 'kz'
                 ? 'Қойманы күрделі күнделікті рутинадан босатып, таңбалауды мамандарға тапсырыңыз. Толық циклді кепілдікпен орындаймыз:'
                 : lang === 'en'
@@ -274,7 +274,7 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
                 <h3 className="text-base sm:text-lg font-bold text-[#111827] leading-snug">
                   {feat.title}
                 </h3>
-                <p className="text-xs sm:text-sm text-[#64748B] mt-2 leading-relaxed">
+                <p className="text-xs sm:text-sm text-[#475569] mt-2 leading-relaxed">
                   {feat.desc}
                 </p>
               </div>

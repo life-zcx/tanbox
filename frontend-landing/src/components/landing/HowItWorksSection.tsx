@@ -50,7 +50,7 @@ export const HowItWorksSection: React.FC = () => {
                 key={idx} 
                 className="bg-white rounded-2xl sm:rounded-3xl p-6 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden group flex flex-col justify-between border border-gray-200/70 min-h-[170px]"
               >
-                <span className="text-3xl sm:text-4xl font-black text-slate-100 absolute top-4 right-5 group-hover:text-blue-50 transition-colors">
+                <span aria-hidden="true" className="text-3xl sm:text-4xl font-black text-slate-100 absolute top-4 right-5 group-hover:text-blue-50 transition-colors select-none pointer-events-none">
                   {s.num}
                 </span>
 
@@ -59,7 +59,7 @@ export const HowItWorksSection: React.FC = () => {
                     <Icon className="w-5 h-5 stroke-[2]" />
                   </div>
                   <h3 className="text-sm sm:text-base font-bold text-[#111827] mb-1.5 leading-snug">{s.title}</h3>
-                  <p className="text-xs text-[#64748B] leading-relaxed">{s.desc}</p>
+                  <p className="text-xs text-[#475569] leading-relaxed">{s.desc}</p>
                 </div>
               </div>
             );

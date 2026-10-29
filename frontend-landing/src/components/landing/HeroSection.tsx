@@ -16,12 +16,22 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
   const { lang, t, getLocalizedPath } = useLanguage();
   const [titleNumber, setTitleNumber] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [loadVideo, setLoadVideo] = useState(false);
 
   useEffect(() => {
     const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
     checkDesktop();
     window.addEventListener('resize', checkDesktop);
-    return () => window.removeEventListener('resize', checkDesktop);
+
+    // Delay video load until main thread is idle and critical resources are loaded
+    const timer = setTimeout(() => {
+      setLoadVideo(true);
+    }, 1800);
+
+    return () => {
+      window.removeEventListener('resize', checkDesktop);
+      clearTimeout(timer);
+    };
   }, []);
 
   const titles = useMemo(() => {
@@ -54,7 +64,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
       id="hero"
       className="relative min-h-screen min-h-[100dvh] w-full flex flex-col justify-between items-center overflow-hidden pt-16 sm:pt-24 pb-4 sm:pb-8 bg-[#0B0F19] text-white select-none"
     >
-      {/* Background Video with Darkening */}
+      {/* Background Video / Image with Darkening */}
       <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
         {/* Mobile Background: Real authentic warehouse (matches desktop video) */}
         <picture className="block md:hidden w-full h-full">
@@ -70,16 +80,29 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
           />
         </picture>
 
-        {/* Desktop Video: Loaded only on md+ screens when isDesktop is true, saving 2.5MB on mobile */}
-        {isDesktop && (
+        {/* Desktop Poster: Immediate crisp LCP paint without waiting for heavy video download */}
+        <picture className="hidden md:block w-full h-full">
+          <source srcSet="/hero-bg-poster.webp" type="image/webp" />
+          <img
+            src="/hero-bg-poster.webp"
+            alt="TANBOX Warehouse"
+            width={1920}
+            height={1080}
+            className="w-full h-full object-cover object-center"
+            loading="eager"
+            {...({ fetchpriority: 'high' } as any)}
+          />
+        </picture>
+
+        {/* Desktop Video: Loaded asynchronously on md+ screens after critical render, avoiding 2.5MB network lock */}
+        {isDesktop && loadVideo && (
           <video
             autoPlay
             loop
             muted
             playsInline
-            poster="/hero-bg-poster.webp"
-            preload="auto"
-            className="hidden md:block w-full h-full object-cover object-center"
+            preload="none"
+            className="hidden md:block absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-1000"
           >
             <source src="/hero-bg.webm" type="video/webm" />
             <source src="/hero-bg.mp4" type="video/mp4" />
@@ -97,10 +120,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
           <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[76px] font-black text-white tracking-tight leading-[1.12] max-w-7xl mx-auto">
             <span className="block whitespace-normal lg:whitespace-nowrap">
               {lang === 'kz' 
-                ? 'Тауарларды цифрлық таңбалау' 
+                ? 'Қазақстанда тауарларды таңбалау' 
                 : lang === 'en' 
-                ? 'Digital Product Serialization' 
-                : 'Цифровая маркировка товаров'}
+                ? 'Product Marking in Kazakhstan' 
+                : 'Маркировка товаров в Казахстане'}
             </span>
 
             {/* Second line: 'под ключ' is anchored to the center line and never moves. Dynamic word rotates seamlessly */}
@@ -108,15 +131,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
               <span className="w-1/2 text-right pr-2 sm:pr-3.5 text-white whitespace-nowrap">
                 {lang === 'kz' ? 'кілтке дейін' : lang === 'en' ? 'turnkey' : 'под ключ'}
               </span>
-              <span className="w-1/2 text-left pl-2 sm:pr-0 pl-2 sm:pl-3.5 text-[#0082FB] drop-shadow-md">
+              <span className="w-1/2 text-left pl-2 sm:pr-0 pl-2 sm:pl-3.5 text-[#0082FB] overflow-hidden flex items-center">
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={`${lang}-${titleNumber}`}
-                    className="inline-block font-black text-[#0082FB] whitespace-nowrap will-change-transform"
-                    initial={{ opacity: 0, y: 16 }}
+                    className="block font-black text-[#0082FB] whitespace-nowrap"
+                    initial={{ opacity: 0, y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -16 }}
-                    transition={{ duration: 0.24, ease: 'easeOut' }}
+                    exit={{ opacity: 0, y: -14 }}
+                    transition={{ duration: 0.22, ease: 'easeOut' }}
+                    style={{ willChange: 'transform, opacity' }}
                   >
                     {titles[titleNumber]}
                   </motion.span>

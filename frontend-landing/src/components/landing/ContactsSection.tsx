@@ -123,7 +123,14 @@ export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = tr
                 href={COMPANY_CONTACTS.links.telegramChannel} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-sm font-semibold text-[#0082FB] hover:text-[#0060C7] transition-colors inline-flex items-center gap-1 group/btn"
+                aria-label={
+                  lang === 'kz'
+                    ? 'TANBOX Telegram арнасы туралы толығырақ'
+                    : lang === 'en'
+                    ? 'More about TANBOX Telegram channel'
+                    : 'Подробнее о Telegram-канале TANBOX'
+                }
+                className="text-sm font-semibold text-[#006ED3] hover:text-[#0055A5] transition-colors inline-flex items-center gap-1 group/btn"
               >
                 <span>{lang === 'kz' ? 'Толығырақ' : lang === 'en' ? 'Learn more' : 'Подробнее'}</span>
                 <span className="transition-transform group-hover/btn:translate-x-1">→</span>

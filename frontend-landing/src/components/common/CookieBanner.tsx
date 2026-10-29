@@ -55,25 +55,25 @@ export const CookieBanner: React.FC = () => {
             </button>
           </div>
 
-          <p className="text-xs text-[#64748B] leading-relaxed font-normal">
+          <p className="text-xs text-[#475569] leading-relaxed font-normal">
             {lang === 'kz' ? (
               <>
                 Біз сервистің жұмысын қамтамасыз ету және талдау үшін «Ақпараттандыру туралы» ҚР Заңы мен № 94-V ҚР Заңына сәйкес cookie файлдарын қолданамыз.{' '}
-                <Link to={getLocalizedPath('/cookies')} className="text-[#0082FB] font-semibold underline underline-offset-2">
+                <Link to={getLocalizedPath('/cookies')} className="text-[#006ED3] font-semibold underline underline-offset-2">
                   Толығырақ
                 </Link>
               </>
             ) : lang === 'en' ? (
               <>
                 We use cookies in accordance with the RK Law "On Informatization" and Law No. 94-V to ensure service operation and analytics.{' '}
-                <Link to={getLocalizedPath('/cookies')} className="text-[#0082FB] font-semibold underline underline-offset-2">
+                <Link to={getLocalizedPath('/cookies')} className="text-[#006ED3] font-semibold underline underline-offset-2">
                   Learn more
                 </Link>
               </>
             ) : (
               <>
                 Мы используем файлы cookie в соответствии с Законом РК «Об информатизации» и Законом РК № 94-V для обеспечения работы сервиса и аналитики.{' '}
-                <Link to={getLocalizedPath('/cookies')} className="text-[#0082FB] font-semibold underline underline-offset-2">
+                <Link to={getLocalizedPath('/cookies')} className="text-[#006ED3] font-semibold underline underline-offset-2">
                   Подробнее
                 </Link>
               </>
@@ -83,13 +83,13 @@ export const CookieBanner: React.FC = () => {
           <div className="flex items-center gap-3 pt-1">
             <button
               onClick={handleAccept}
-              className="w-full bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs py-2.5 px-4 rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
+              className="w-full bg-[#0070DA] hover:bg-[#0060BA] text-white font-extrabold text-xs py-2.5 px-4 rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
             >
               {lang === 'kz' ? 'Қабылдау және жалғастыру' : lang === 'en' ? 'Accept and Continue' : 'Принять и продолжить'}
             </button>
             <Link
               to={getLocalizedPath('/privacy')}
-              className="text-xs font-semibold text-[#64748B] hover:text-[#111827] px-2 py-1 whitespace-nowrap transition-colors"
+              className="text-xs font-semibold text-[#475569] hover:text-[#111827] px-2 py-1 whitespace-nowrap transition-colors"
             >
               {lang === 'kz' ? 'Саясат' : lang === 'en' ? 'Privacy' : 'Политика'}
             </Link>
@@ -99,14 +99,14 @@ export const CookieBanner: React.FC = () => {
         {/* Mobile View: Slim unobtrusive strip */}
         <div className="sm:hidden flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <Cookie className="w-3.5 h-3.5 text-[#0082FB] shrink-0" />
+            <Cookie className="w-3.5 h-3.5 text-[#006ED3] shrink-0" />
             <p className="text-[11px] text-[#475569] leading-tight truncate">
               {lang === 'kz'
                 ? 'ҚР заңнамасына сай cookie қолданамыз.'
                 : lang === 'en'
                 ? 'We use cookies under RK law.'
                 : 'Используем cookie по законам РК.'}{' '}
-              <Link to={getLocalizedPath('/cookies')} className="text-[#0082FB] font-semibold underline">
+              <Link to={getLocalizedPath('/cookies')} className="text-[#006ED3] font-semibold underline">
                 {lang === 'kz' ? 'Мәлімет' : lang === 'en' ? 'More' : 'Инфо'}
               </Link>
             </p>
@@ -114,7 +114,7 @@ export const CookieBanner: React.FC = () => {
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={handleAccept}
-              className="bg-[#0082FB] text-white font-bold text-[11px] py-1.5 px-3 rounded-lg shadow-sm cursor-pointer active:scale-95"
+              className="bg-[#0070DA] text-white font-bold text-[11px] py-1.5 px-3 rounded-lg shadow-sm cursor-pointer active:scale-95"
             >
               OK
             </button>

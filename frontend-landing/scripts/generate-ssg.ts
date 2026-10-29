@@ -135,7 +135,7 @@ function resolvePageMeta(route: string): PageMeta {
 
     if (lang === 'kz') {
       return {
-        title: 'Қазақстанда тауарларды кілтке дейін таңбалау | «Таңба» АЖ Data Matrix — TANBOX.KZ',
+        title: 'TANBOX — Қазақстанда тауарларды кілтке дейін таңбалау | «Таңба» АЖ Data Matrix',
         description: 'Қазақстан бойынша Data Matrix тауарларын кәсіби цифрлық таңбалау. «Таңба» АЖ кодтарын шығару, НКТ номенклатурасы, стикерлерді басу, қоймада оклейка және SSCC агрегациясы.',
         canonical,
         h1: 'Қазақстанда тауарларды кілтке дейін таңбалау',
@@ -163,7 +163,7 @@ function resolvePageMeta(route: string): PageMeta {
     }
     if (lang === 'en') {
       return {
-        title: 'Turnkey Product Serialization in Kazakhstan | Data Matrix IS Tanba — TANBOX.KZ',
+        title: 'TANBOX — Turnkey Product Serialization in Kazakhstan | IS Tanba',
         description: 'Professional mandatory Data Matrix product marking in Kazakhstan. Code issuance in IS Tanba, GS1 Kazakhstan nomenclature, roll thermal printing, warehouse stickering, and SSCC aggregation.',
         canonical,
         h1: 'Turnkey Product Serialization in Kazakhstan',
@@ -191,7 +191,7 @@ function resolvePageMeta(route: string): PageMeta {
     }
 
     return {
-      title: 'Маркировка товаров в Казахстане под ключ | Эмиссия кодов Data Matrix в ИС Танба — TANBOX.KZ',
+      title: 'TANBOX — Маркировка товаров в Казахстане под ключ | ИС Танба',
       description: 'Профессиональная маркировка товаров Data Matrix под ключ в Республике Казахстан. Эмиссия кодов в ИС Танба, заведение номенклатуры в НКТ (ГС1 Казахстан), термопечать стикеров, выездная оклейка на складе и агрегация SSCC по РК.',
       canonical,
       h1: 'Маркировка товаров в Казахстане под ключ',
@@ -620,8 +620,25 @@ let generatedCount = 0;
 for (const route of routes) {
   const meta = resolvePageMeta(route);
 
+  // Determine language and clean route for hreflang alternates
+  let routeLang: 'ru' | 'kz' | 'en' = 'ru';
+  let cleanPath = route;
+  if (route.startsWith('/kz')) {
+    routeLang = 'kz';
+    cleanPath = route.replace(/^\/kz/, '') || '/';
+  } else if (route.startsWith('/en')) {
+    routeLang = 'en';
+    cleanPath = route.replace(/^\/en/, '') || '/';
+  }
+  if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
+  const pathPart = cleanPath === '/' ? '' : cleanPath;
+
+  // Replace <html lang="..."> attribute to match language
+  const htmlLangAttr = routeLang === 'kz' ? 'kk' : routeLang;
+  let html = baseHtml.replace(/<html(\s+[^>]*)?lang=".*?"/i, `<html$1lang="${htmlLangAttr}"`);
+
   // Replace Title
-  let html = baseHtml.replace(/<title>.*?<\/title>/s, `<title>${meta.title}</title>`);
+  html = html.replace(/<title>.*?<\/title>/s, `<title>${meta.title}</title>`);
 
   // Replace meta title
   html = html.replace(/<meta\s+name="title"\s+content=".*?"\s*\/?>/i, `<meta name="title" content="${meta.title}" />`);
@@ -636,6 +653,25 @@ for (const route of routes) {
   html = html.replace(/<meta\s+property="og:title"\s+content=".*?"\s*\/?>/i, `<meta property="og:title" content="${meta.title}" />`);
   html = html.replace(/<meta\s+property="og:description"\s+content=".*?"\s*\/?>/i, `<meta property="og:description" content="${meta.description}" />`);
   html = html.replace(/<meta\s+property="og:url"\s+content=".*?"\s*\/?>/i, `<meta property="og:url" content="${meta.canonical}" />`);
+
+  // Inject Precise Multilingual Hreflang Alternates (CRITICAL FOR GOOGLE INDEXING)
+  const baseDomain = 'https://tanbox.kz';
+  const ruUrl = `${baseDomain}${pathPart || '/'}`;
+  const kzUrl = `${baseDomain}/kz${pathPart}`;
+  const enUrl = `${baseDomain}/en${pathPart}`;
+
+  const hreflangBlock = `  <link rel="alternate" hreflang="ru" href="${ruUrl}" />\n  <link rel="alternate" hreflang="kk" href="${kzUrl}" />\n  <link rel="alternate" hreflang="en" href="${enUrl}" />\n  <link rel="alternate" hreflang="x-default" href="${ruUrl}" />`;
+
+  // Remove any base hreflang tags to prevent duplicates and inject the current route's tags
+  html = html.replace(/<link\s+rel="alternate"\s+hreflang=".*?"\s+href=".*?"\s*\/?>\n?/g, '');
+  if (html.includes('<!-- Multilingual Hreflang Alternates (CRITICAL FOR GOOGLE INDEXING) -->')) {
+    html = html.replace(
+      '<!-- Multilingual Hreflang Alternates (CRITICAL FOR GOOGLE INDEXING) -->',
+      `<!-- Multilingual Hreflang Alternates (CRITICAL FOR GOOGLE INDEXING) -->\n${hreflangBlock}`
+    );
+  } else {
+    html = html.replace('</head>', `${hreflangBlock}\n</head>`);
+  }
 
   // Inject Dynamic Schema.org for pages with FAQ and/or Breadcrumbs
   const additionalSchemas: object[] = [];
@@ -677,11 +713,13 @@ for (const route of routes) {
     html = html.replace('</head>', `${schemaScript}\n</head>`);
   }
 
-  // Inject semantic SEO content inside <noscript> for crawlers so users never see a flash of unstyled text
+  // Inject semantic SEO content directly inside <div id="root">
+  // Googlebot (Chromium) indexes this immediately without <noscript> penalty.
+  // When React mounts, ReactDOM.createRoot cleanly replaces this markup.
   if (meta.bodyContent) {
     html = html.replace(
       '<div id="root"></div>',
-      `<noscript><div class="ssg-noscript-seo">${meta.bodyContent}</div></noscript>\n  <div id="root"></div>`
+      `<div id="root">\n    <div class="ssg-seo-content" style="max-width:1200px;margin:0 auto;padding:24px;font-family:sans-serif;color:#111;">\n${meta.bodyContent}\n    </div>\n  </div>`
     );
   }
 

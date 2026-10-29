@@ -100,24 +100,31 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
                 </strong>{' '}
                 <span className="hidden sm:inline">
                   {lang === 'kz'
-                    ? 'Қазақстанда зергерлік бұйымдарды міндетті цифрлық таңбалау енгізіледі'
+                    ? 'Қазақстанда зергерлік бұйымдар мен сүректі (ағашты) міндетті цифрлық таңбалау енгізіледі'
                     : lang === 'en'
-                    ? 'mandatory jewelry digital marking is introduced in Kazakhstan'
-                    : 'вводится обязательная маркировка ювелирных изделий в Казахстане'}
+                    ? 'mandatory digital marking of jewelry and timber is introduced in Kazakhstan'
+                    : 'вводится обязательная маркировка ювелирных изделий и древесины в Казахстане'}
                 </span>
                 <span className="sm:hidden">
                   {lang === 'kz'
-                    ? '— зергерлік бұйымдарды таңбалау'
+                    ? '— зергерлік бұйымдар мен сүрек'
                     : lang === 'en'
-                    ? '— маркировка ювелирки'
-                    : '— маркировка ювелирки'}
+                    ? '— jewelry and timber'
+                    : '— ювелирные изделия и древесина'}
                 </span>
               </span>
 
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <Link
-                  to={getLocalizedPath('/categories/jewelry')}
-                  className="text-[10px] sm:text-[11px] font-extrabold text-white bg-[#0082FB] hover:bg-[#0070DA] px-2.5 sm:px-3 py-1 rounded-lg transition-all shadow-xs"
+                  to={getLocalizedPath('/categories')}
+                  aria-label={
+                    lang === 'kz'
+                      ? 'Тауарларды таңбалау санаттары туралы толығырақ'
+                      : lang === 'en'
+                      ? 'More details on product marking categories'
+                      : 'Подробнее о категориях обязательной маркировки'
+                  }
+                  className="text-[10px] sm:text-[11px] font-extrabold text-white bg-[#0070DA] hover:bg-[#0060BA] px-2.5 sm:px-3 py-1 rounded-lg transition-all shadow-xs"
                 >
                   {lang === 'kz' ? 'Толығырақ' : lang === 'en' ? 'Learn more' : 'Подробнее'} →
                 </Link>

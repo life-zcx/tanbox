@@ -136,7 +136,7 @@ export const FaqSection: React.FC = () => {
               ? 'Frequently Asked Questions'
               : 'Часто задаваемые вопросы'}
           </h2>
-          <p className="text-sm sm:text-base text-[#64748B]">
+          <p className="text-sm sm:text-base text-[#475569]">
             {lang === 'kz'
               ? 'ТМБ АЖ интеграциясы, кодтарды алу, басып шығару және таңбалау мерзімдері бойынша жауаптар.'
               : lang === 'en'
@@ -167,7 +167,7 @@ export const FaqSection: React.FC = () => {
                 </button>
 
                 {isOpen && (
-                  <div className="px-5 pb-6 sm:px-6 text-sm text-[#64748B] leading-relaxed border-t border-gray-100 pt-4">
+                  <div className="px-5 pb-6 sm:px-6 text-sm text-[#334155] leading-relaxed border-t border-gray-100 pt-4">
                     {faq.a}
                   </div>
                 )}

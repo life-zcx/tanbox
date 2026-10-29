@@ -278,24 +278,24 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                     <div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm sm:text-base font-extrabold text-[#111827]">{t.name}</span>
-                        {isSelected && <Check className="w-4 h-4 text-[#0082FB] shrink-0" />}
+                        {isSelected && <Check className="w-4 h-4 text-[#006ED3] shrink-0" />}
                       </div>
 
-                      <div className="text-xs sm:text-sm font-bold text-[#0082FB] mt-0.5">
+                      <div className="text-xs sm:text-sm font-bold text-[#006ED3] mt-0.5">
                         {t.priceFrom}
                       </div>
 
-                      <p className="text-xs text-[#64748B] mt-1.5 leading-snug">
+                      <p className="text-xs text-[#475569] mt-1.5 leading-snug">
                         {t.desc}
                       </p>
 
                       <div className="pt-3 mt-3 border-t border-gray-100 space-y-1.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] block">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] block">
                           {lang === 'kz' ? 'Не кіреді:' : lang === 'en' ? 'Includes:' : 'Что входит:'}
                         </span>
                         {t.includes.map((inc, idx) => (
-                          <div key={idx} className="flex items-start gap-1.5 text-xs text-[#334155] leading-tight font-medium">
-                            <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                          <div key={idx} className="flex items-start gap-1.5 text-xs text-[#1E293B] leading-tight font-medium">
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
                             <span>{inc}</span>
                           </div>
                         ))}
@@ -421,7 +421,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       : 'Агрегация в короба/паллеты (SSCC)'}
                   </span>
                 </div>
-                <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-2">
+                <span className="text-xs font-extrabold text-[#006ED3] shrink-0 ml-2">
                   +{dbPricingSettings?.ssccPrice ?? 5} ₸/{lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт'}
                 </span>
               </label>
@@ -449,7 +449,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       : 'Разработка макета стикера'}
                   </span>
                 </div>
-                <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-2">
+                <span className="text-xs font-extrabold text-[#006ED3] shrink-0 ml-2">
                   +{(dbPricingSettings?.stickerLayoutPrice ?? 5000).toLocaleString()} ₸
                 </span>
               </label>
@@ -477,7 +477,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       : 'Срочное исполнение (24 часа)'}
                   </span>
                 </div>
-                <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-2">
+                <span className="text-xs font-extrabold text-[#006ED3] shrink-0 ml-2">
                   +{dbPricingSettings?.urgentPercent ?? 20}%
                 </span>
               </label>
@@ -505,7 +505,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       : 'Доставка материалов по РК'}
                   </span>
                 </div>
-                <span className="text-xs font-extrabold text-[#0082FB] shrink-0 ml-2">
+                <span className="text-xs font-extrabold text-[#006ED3] shrink-0 ml-2">
                   +{(dbPricingSettings?.expressDeliveryPrice ?? 15000).toLocaleString()} ₸
                 </span>
               </label>

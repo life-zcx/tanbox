@@ -24,21 +24,21 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) 
   useEffect(() => {
     if (lang === 'kz') {
       setPageSeo(
-        'Қазақстанда тауарларды таңбалау | Data Matrix кодтарын эмиссиялау және ТМБ АЖ интеграциясы — TANBOX.KZ',
+        'TANBOX — Қазақстанда тауарларды кілтке дейін таңбалау | «Таңба» АЖ Data Matrix',
         'Қазақстанда тауарларды цифрлық таңбалау қызметі. ТМБ АЖ (Таңба) интеграциясы, ҰТК (GS1 Kazakhstan) каталогы, Data Matrix басып шығару және қоймада оклейка. Кодтар эмиссиясынан 1С-ке дейін.',
-        { lang: 'kz', keywords: 'тауарларды таңбалау Қазақстан, Data Matrix коды, ТМБ АЖ, таңбалау Алматы, ҰТК тауарлар каталогы, аяқ киім таңбалау, дәрі-дәрмек таңбалау' }
+        { lang: 'kz', keywords: 'TANBOX, танбокс, тауарларды таңбалау Қазақстан, кілтке дейін, Data Matrix коды, ТМБ АЖ, таңбалау Алматы, ҰТК тауарлар каталогы' }
       );
     } else if (lang === 'en') {
       setPageSeo(
-        'Digital Product Serialization & Marking in Kazakhstan | IS Tanba & IS MPT — TANBOX.KZ',
+        'TANBOX — Turnkey Product Serialization in Kazakhstan | IS Tanba',
         'End-to-end Data Matrix product serialization in Kazakhstan. Direct IS MPT / IS Tanba connectivity, NKT catalog setup, sticker printing, and warehouse stickering.',
-        { lang: 'en', keywords: 'product serialization Kazakhstan, Data Matrix codes, IS Tanba, IS MPT, digital labeling Kazakhstan' }
+        { lang: 'en', keywords: 'TANBOX, product serialization Kazakhstan, turnkey marking, Data Matrix codes, IS Tanba, IS MPT, digital labeling Kazakhstan' }
       );
     } else {
       setPageSeo(
-        'Маркировка товаров в Казахстане под ключ | Эмиссия кодов Data Matrix в ИС Танба — TANBOX.KZ',
+        'TANBOX — Маркировка товаров в Казахстане под ключ | ИС Танба',
         'Профессиональная цифровая маркировка товаров Data Matrix под ключ в Республике Казахстан. Эмиссия кодов в ИС Танба, заведение номенклатуры в НКТ (GS1 Казахстан), термопечать стикеров, выездная оклейка на складе и агрегация SSCC по РК.',
-        { lang: 'ru', keywords: 'маркировка товаров Казахстан, Data Matrix коды, ИС Танба, ИС МПТ, оклейка товара Алматы, НКТ GS1 Казахстан' }
+        { lang: 'ru', keywords: 'TANBOX, танбокс, tanbox.kz, маркировка товаров в казахстане под ключ, маркировка товаров Казахстан, Data Matrix коды, ИС Танба, ИС МПТ, оклейка товара Алматы, НКТ GS1 Казахстан' }
       );
     }
   }, [lang]);

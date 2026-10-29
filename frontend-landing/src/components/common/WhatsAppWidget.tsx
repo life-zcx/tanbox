@@ -10,17 +10,17 @@ export const WhatsAppWidget: React.FC = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
-  // Monitor cookie banner presence so widget offsets properly on mobile
+  // Check cookie banner once on mount and listen to cookie event without polling interval
   useEffect(() => {
     const checkBanner = () => {
       setCookieBannerVisible(!!document.getElementById('cookie-banner'));
     };
     checkBanner();
-    const interval = setInterval(checkBanner, 400);
-    return () => clearInterval(interval);
+    window.addEventListener('storage', checkBanner);
+    return () => window.removeEventListener('storage', checkBanner);
   }, []);
 
-  // Show tooltip after 2.5 seconds if user has not dismissed it in this session
+  // Show tooltip after 3 seconds if user has not dismissed it in this session
   useEffect(() => {
     try {
       const dismissed = sessionStorage.getItem('tanbox_wa_dismissed');
@@ -32,7 +32,7 @@ export const WhatsAppWidget: React.FC = () => {
 
     const timer = setTimeout(() => {
       setShowTooltip(true);
-    }, 2500);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -101,7 +101,7 @@ export const WhatsAppWidget: React.FC = () => {
             <button
               type="button"
               onClick={handleDismissTooltip}
-              aria-label="Close"
+              aria-label={lang === 'kz' ? 'Хабарламаны жабу' : lang === 'en' ? 'Dismiss message' : 'Закрыть сообщение'}
               className="w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
