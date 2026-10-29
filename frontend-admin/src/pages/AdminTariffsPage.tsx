@@ -53,6 +53,15 @@ export const AdminTariffsPage: React.FC = () => {
     expressDeliveryPrice: 15000,
     volumeTier1: 20000,
     volumeTier2: 100000,
+    outsourcingOneTimePrice: 100000,
+    outsourcingTier1Price: 200000,
+    outsourcingTier2Price: 300000,
+    outsourcingTier3Price: 400000,
+    outsourcingTier4Price: 500000,
+    cardNktPrice: 200,
+    cardMptPrice: 300,
+    cardFullPackagePrice: 400,
+    trainingCoursePrice: 100000,
   });
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -109,6 +118,15 @@ export const AdminTariffsPage: React.FC = () => {
           expressDeliveryPrice: Number(res.data.pricingSettings.expressDeliveryPrice) || 15000,
           volumeTier1: Number(res.data.pricingSettings.volumeTier1) || 20000,
           volumeTier2: Number(res.data.pricingSettings.volumeTier2) || 100000,
+          outsourcingOneTimePrice: Number(res.data.pricingSettings.outsourcingOneTimePrice) || 100000,
+          outsourcingTier1Price: Number(res.data.pricingSettings.outsourcingTier1Price) || 200000,
+          outsourcingTier2Price: Number(res.data.pricingSettings.outsourcingTier2Price) || 300000,
+          outsourcingTier3Price: Number(res.data.pricingSettings.outsourcingTier3Price) || 400000,
+          outsourcingTier4Price: Number(res.data.pricingSettings.outsourcingTier4Price) || 500000,
+          cardNktPrice: Number(res.data.pricingSettings.cardNktPrice) || 200,
+          cardMptPrice: Number(res.data.pricingSettings.cardMptPrice) || 300,
+          cardFullPackagePrice: Number(res.data.pricingSettings.cardFullPackagePrice) || 400,
+          trainingCoursePrice: Number(res.data.pricingSettings.trainingCoursePrice) || 100000,
         });
       }
       setHasUnsavedChanges(false);
@@ -202,6 +220,15 @@ export const AdminTariffsPage: React.FC = () => {
           Math.floor(Number(pricingSettings.volumeTier1) || 20000) + 100,
           Math.floor(Number(pricingSettings.volumeTier2) || 100000)
         ),
+        outsourcingOneTimePrice: Math.max(0, Number(pricingSettings.outsourcingOneTimePrice) || 0),
+        outsourcingTier1Price: Math.max(0, Number(pricingSettings.outsourcingTier1Price) || 0),
+        outsourcingTier2Price: Math.max(0, Number(pricingSettings.outsourcingTier2Price) || 0),
+        outsourcingTier3Price: Math.max(0, Number(pricingSettings.outsourcingTier3Price) || 0),
+        outsourcingTier4Price: Math.max(0, Number(pricingSettings.outsourcingTier4Price) || 0),
+        cardNktPrice: Math.max(0, Number(pricingSettings.cardNktPrice) || 0),
+        cardMptPrice: Math.max(0, Number(pricingSettings.cardMptPrice) || 0),
+        cardFullPackagePrice: Math.max(0, Number(pricingSettings.cardFullPackagePrice) || 0),
+        trainingCoursePrice: Math.max(0, Number(pricingSettings.trainingCoursePrice) || 0),
       };
 
       const res = await apiClient.put('/tariffs', {
@@ -229,6 +256,15 @@ export const AdminTariffsPage: React.FC = () => {
           expressDeliveryPrice: Number(res.data.pricingSettings.expressDeliveryPrice) || 0,
           volumeTier1: Number(res.data.pricingSettings.volumeTier1) || 20000,
           volumeTier2: Number(res.data.pricingSettings.volumeTier2) || 100000,
+          outsourcingOneTimePrice: Number(res.data.pricingSettings.outsourcingOneTimePrice) || 100000,
+          outsourcingTier1Price: Number(res.data.pricingSettings.outsourcingTier1Price) || 200000,
+          outsourcingTier2Price: Number(res.data.pricingSettings.outsourcingTier2Price) || 300000,
+          outsourcingTier3Price: Number(res.data.pricingSettings.outsourcingTier3Price) || 400000,
+          outsourcingTier4Price: Number(res.data.pricingSettings.outsourcingTier4Price) || 500000,
+          cardNktPrice: Number(res.data.pricingSettings.cardNktPrice) || 200,
+          cardMptPrice: Number(res.data.pricingSettings.cardMptPrice) || 300,
+          cardFullPackagePrice: Number(res.data.pricingSettings.cardFullPackagePrice) || 400,
+          trainingCoursePrice: Number(res.data.pricingSettings.trainingCoursePrice) || 100000,
         });
       }
 
@@ -574,6 +610,210 @@ export const AdminTariffsPage: React.FC = () => {
               <span className="text-xs font-bold text-gray-500 shrink-0">₸</span>
             </div>
             <p className="text-[10px] text-gray-500">Фиксированная стоимость доставки материалов</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 1.5: Additional B2B Services (Outsourcing, Cards, Training) */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-xs space-y-5">
+        <div className="border-b border-gray-100 pb-3">
+          <h2 className="text-sm font-extrabold text-black">
+            2. Дополнительные B2B-услуги (Аутсорсинг, Карточки, Обучение)
+          </h2>
+          <p className="text-xs text-gray-500">
+            Настройка тарифов для комплексного обслуживания, карточек в НКТ/МПТ/GS1 и обучения персонала
+          </p>
+        </div>
+
+        {/* 2.1 Outsourcing */}
+        <div className="space-y-3">
+          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#0082FB]"></span>
+            Полный аутсорсинг маркировки под ключ
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+            <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3.5 space-y-1.5">
+              <label className="text-[11px] font-extrabold text-gray-700 block">
+                Разовый аудит / запуск
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  step={5000}
+                  value={pricingSettings.outsourcingOneTimePrice ?? 100000}
+                  onChange={(e) => handleSettingsChange('outsourcingOneTimePrice', e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm font-black text-black focus:outline-none focus:border-[#0082FB]"
+                />
+                <span className="text-xs font-bold text-gray-500 shrink-0">₸</span>
+              </div>
+              <p className="text-[10px] text-gray-500">Настройка кабинетов, ЭЦП и обучение процессам</p>
+            </div>
+
+            <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3.5 space-y-1.5">
+              <label className="text-[11px] font-extrabold text-gray-700 block">
+                Тариф 1 (до 5 000 кодов)
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  step={10000}
+                  value={pricingSettings.outsourcingTier1Price ?? 200000}
+                  onChange={(e) => handleSettingsChange('outsourcingTier1Price', e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm font-black text-black focus:outline-none focus:border-[#0082FB]"
+                />
+                <span className="text-xs font-bold text-gray-500 shrink-0">₸/мес</span>
+              </div>
+              <p className="text-[10px] text-gray-500">Для малого бизнеса и первых поставок</p>
+            </div>
+
+            <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3.5 space-y-1.5">
+              <label className="text-[11px] font-extrabold text-gray-700 block">
+                Тариф 2 (до 10 000 кодов)
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  step={10000}
+                  value={pricingSettings.outsourcingTier2Price ?? 300000}
+                  onChange={(e) => handleSettingsChange('outsourcingTier2Price', e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm font-black text-black focus:outline-none focus:border-[#0082FB]"
+                />
+                <span className="text-xs font-bold text-gray-500 shrink-0">₸/мес</span>
+              </div>
+              <p className="text-[10px] text-gray-500">Регулярные партии обуви, одежды, текстиля</p>
+            </div>
+
+            <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3.5 space-y-1.5">
+              <label className="text-[11px] font-extrabold text-gray-700 block">
+                Тариф 3 (до 50 000 кодов)
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  step={10000}
+                  value={pricingSettings.outsourcingTier3Price ?? 400000}
+                  onChange={(e) => handleSettingsChange('outsourcingTier3Price', e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm font-black text-black focus:outline-none focus:border-[#0082FB]"
+                />
+                <span className="text-xs font-bold text-gray-500 shrink-0">₸/мес</span>
+              </div>
+              <p className="text-[10px] text-gray-500">Импортеры и дистрибьюторы со средним объемом</p>
+            </div>
+
+            <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3.5 space-y-1.5">
+              <label className="text-[11px] font-extrabold text-gray-700 block">
+                Тариф 4 (до 100 000 кодов)
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  step={10000}
+                  value={pricingSettings.outsourcingTier4Price ?? 500000}
+                  onChange={(e) => handleSettingsChange('outsourcingTier4Price', e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm font-black text-black focus:outline-none focus:border-[#0082FB]"
+                />
+                <span className="text-xs font-bold text-gray-500 shrink-0">₸/мес</span>
+              </div>
+              <p className="text-[10px] text-gray-500">Крупные сети и оптовики</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 2.2 Cards Operations & Training */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-2 border-t border-gray-100">
+          {/* Cards operations */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Операции с карточками товаров (₸ / 1 SKU)
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3.5 space-y-1.5">
+                <label className="text-[11px] font-extrabold text-gray-700 block">
+                  Регистрация в НКТ
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min={0}
+                    step={20}
+                    value={pricingSettings.cardNktPrice ?? 200}
+                    onChange={(e) => handleSettingsChange('cardNktPrice', e.target.value)}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-2 py-1.5 text-sm font-black text-black focus:outline-none focus:border-[#0082FB]"
+                  />
+                  <span className="text-xs font-bold text-gray-500 shrink-0">₸</span>
+                </div>
+                <p className="text-[10px] text-gray-500">Национальный каталог товаров</p>
+              </div>
+
+              <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3.5 space-y-1.5">
+                <label className="text-[11px] font-extrabold text-gray-700 block">
+                  Карточка в ИС МПТ
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min={0}
+                    step={20}
+                    value={pricingSettings.cardMptPrice ?? 300}
+                    onChange={(e) => handleSettingsChange('cardMptPrice', e.target.value)}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-2 py-1.5 text-sm font-black text-black focus:outline-none focus:border-[#0082FB]"
+                  />
+                  <span className="text-xs font-bold text-gray-500 shrink-0">₸</span>
+                </div>
+                <p className="text-[10px] text-gray-500">Каталог маркированных товаров</p>
+              </div>
+
+              <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3.5 space-y-1.5">
+                <label className="text-[11px] font-extrabold text-gray-700 block">
+                  Комплекс GS1+НКТ+МПТ
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min={0}
+                    step={20}
+                    value={pricingSettings.cardFullPackagePrice ?? 400}
+                    onChange={(e) => handleSettingsChange('cardFullPackagePrice', e.target.value)}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-2 py-1.5 text-sm font-black text-black focus:outline-none focus:border-[#0082FB]"
+                  />
+                  <span className="text-xs font-bold text-gray-500 shrink-0">₸</span>
+                </div>
+                <p className="text-[10px] text-gray-500">Включая получение GTIN в GS1</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Corporate Training */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+              Корпоративное обучение персонала
+            </h3>
+            <div className="bg-gray-50/90 border border-gray-200 rounded-xl p-3.5 space-y-1.5">
+              <label className="text-[11px] font-extrabold text-gray-700 block">
+                Полный практический курс (3 онлайн-сессии по 90 мин)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  step={5000}
+                  value={pricingSettings.trainingCoursePrice ?? 100000}
+                  onChange={(e) => handleSettingsChange('trainingCoursePrice', e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-black text-black focus:outline-none focus:border-[#0082FB]"
+                />
+                <span className="text-xs font-bold text-gray-500 shrink-0">₸ / курс</span>
+              </div>
+              <p className="text-[10px] text-gray-500">
+                Обучение работе в ИС МПТ, СУЗ/OMS, генерация кодов, агрегация, отгрузка и списание без штрафов КоАП
+              </p>
+            </div>
           </div>
         </div>
       </div>

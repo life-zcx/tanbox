@@ -23,6 +23,9 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     if (lang === 'kz') {
       return [
         'Тауарларды цифрлық таңбалау (кілтке дейін)',
+        'Таңбалаудың толық аутсорсингі',
+        'Тауар карточкалары (ҰТК / МПТ / GS1)',
+        'Міндетті таңбалауға оқыту',
         'Тауарларды кедендік қоймаларда таңбалау (ИМ-70)',
         'Тауарларды ҰТК каталогына енгізу (Ұлттық каталог)',
         'Data Matrix кодтарын эмиссиялау және жапсыру',
@@ -35,6 +38,9 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     if (lang === 'en') {
       return [
         'Turnkey Product Serialization & Marking',
+        'Full Turnkey Outsourcing',
+        'Product Cards Registration (NKT / MPT / GS1)',
+        'Mandatory Marking Staff Training',
         'Customs Warehouse Serialization (IM-70)',
         'National Product Catalog (NKT) Registration',
         'Data Matrix Code Issuance and Labeling',
@@ -46,6 +52,9 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     }
     return [
       'Цифровая маркировка товаров под ключ',
+      'Полный аутсорсинг маркировки',
+      'Операции с карточками товаров (НКТ / ИС МПТ / GS1)',
+      'Обучение обязательной маркировке',
       'Маркировка на таможенных складах (ИМ-70)',
       'Заведение товаров в НКТ (Каталог товаров)',
       'Эмиссия и нанесение кодов Data Matrix',
@@ -56,7 +65,27 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
     ];
   }, [lang]);
 
+  const allServiceOptions = useMemo(() => {
+    if (initialServiceTitle && !serviceOptions.includes(initialServiceTitle)) {
+      return [initialServiceTitle, ...serviceOptions];
+    }
+    return serviceOptions;
+  }, [initialServiceTitle, serviceOptions]);
+
   const [selectedService, setSelectedService] = useState(initialServiceTitle || serviceOptions[0]);
+
+  // Synchronize selectedService whenever modal opens or initialServiceTitle changes
+  useEffect(() => {
+    if (isOpen) {
+      if (initialServiceTitle) {
+        setSelectedService(initialServiceTitle);
+      } else {
+        setSelectedService(serviceOptions[0]);
+      }
+      setSubmitted(false);
+      setError(null);
+    }
+  }, [isOpen, initialServiceTitle, serviceOptions]);
   const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -320,7 +349,7 @@ export const ServiceOrderModal: React.FC<ServiceOrderModalProps> = ({
                   onChange={(e) => setSelectedService(e.target.value)}
                   className="w-full bg-[#F4F6F9] border border-gray-200/80 rounded-xl px-4 py-3 text-xs font-bold text-[#111827] focus:outline-none focus:border-[#0082FB] cursor-pointer"
                 >
-                  {serviceOptions.map((opt) => (
+                  {allServiceOptions.map((opt) => (
                     <option key={opt} value={opt}>
                       {opt}
                     </option>

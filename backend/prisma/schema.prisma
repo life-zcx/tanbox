@@ -200,6 +200,22 @@ model PricingSettings {
   expressDeliveryPrice Decimal  @default(15000.0) @db.Decimal(12, 2)
   volumeTier1          Int      @default(20000)
   volumeTier2          Int      @default(100000)
+
+  // Service Pricing: Full Outsourcing (monthly retainer & one-time setup)
+  outsourcingOneTimePrice Decimal @default(100000.0) @db.Decimal(12, 2)
+  outsourcingTier1Price   Decimal @default(200000.0) @db.Decimal(12, 2)
+  outsourcingTier2Price   Decimal @default(300000.0) @db.Decimal(12, 2)
+  outsourcingTier3Price   Decimal @default(400000.0) @db.Decimal(12, 2)
+  outsourcingTier4Price   Decimal @default(500000.0) @db.Decimal(12, 2)
+
+  // Service Pricing: Product Card operations (per SKU)
+  cardNktPrice            Decimal @default(200.0)    @db.Decimal(12, 2)
+  cardMptPrice            Decimal @default(300.0)    @db.Decimal(12, 2)
+  cardFullPackagePrice    Decimal @default(400.0)    @db.Decimal(12, 2)
+
+  // Service Pricing: Corporate Staff Training
+  trainingCoursePrice     Decimal @default(100000.0) @db.Decimal(12, 2)
+
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

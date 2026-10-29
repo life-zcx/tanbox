@@ -142,6 +142,15 @@ export const PaymentProcedurePage: React.FC = () => {
                 <p>
                   4.3. <strong>Көшпелі таңбалау қызметтері:</strong> Бригаданың Тапсырыс берушінің қоймасына шығу мерзімі мен кестесі өтінім ресімделген кезде жеке келісіледі.
                 </p>
+                <p>
+                  4.4. <strong>Таңбалау аутсорсингі және жүйелерді жүргізу:</strong> Абоненттік қызмет көрсету немесе біржолғы өтінімдер бойынша көрсетіледі. Орындаушы ИС МПТ, СУЗ/OMS және ҰТК жүйелеріндегі операцияларды жүргізеді. Есепті кезеңнің (күнтізбелік айдың) нәтижелері бойынша Тапсырыс берушіге келесі айдың 10-күніне дейін ЭСФ және Орындалған жұмыстар актісі (Р-1 нысаны) ұсынылады.
+                </p>
+                <p>
+                  4.5. <strong>Тауар карточкаларын каталогтау:</strong> Тапсырыс беруші номенклатура спецификациясын толық ұсынған сәттен бастап карточкаларды ҰТК және ТМБ АЖ жүйелеріне толтыру және модерацияға жіберу 1–3 жұмыс күні ішінде орындалады. Оператор тарапынан модерация мерзімі мемлекеттік регламенттерге сәйкес 24-тен 48 сағатқа дейін созылады.
+                </p>
+                <p>
+                  4.6. <strong>Корпоративтік оқыту қызметтері:</strong> Тараптар келіскен күндері Google Meet / Zoom арқылы онлайн-сессиялар форматында өтеді. Сабақтардың бейнежазбалары, регламенттер мен әдістемелік PDF-нұсқаулықтар Тапсырыс берушіге шектеусіз пайдалану құқығымен тұрақты беріледі.
+                </p>
               </div>
 
               {/* Contacts Note KZ */}
@@ -245,6 +254,15 @@ export const PaymentProcedurePage: React.FC = () => {
                 </p>
                 <p>
                   4.3. <strong>Onsite Marking:</strong> Mobile team schedules are arranged individually upon order placement.
+                </p>
+                <p>
+                  4.4. <strong>Serialization Outsourcing & Account Management:</strong> Rendered on a recurring monthly retainer or per-project basis. The Contractor operates statutory systems (IS MPT, OMS/SUZ, NKT). Monthly deliverables are formalized via Electronic Tax Invoices (ESF) and Form R-1 Completion Acts submitted by the 10th day of the following calendar month.
+                </p>
+                <p>
+                  4.5. <strong>Product SKU Card Registration:</strong> Data entry and submission to NKT and IS MPT registries are performed within 1–3 business days following receipt of complete specifications from the Customer. National registry moderation turnaround is subject to statutory operator timelines (24–48 hours).
+                </p>
+                <p>
+                  4.6. <strong>Corporate Training Services:</strong> Conducted remotely via scheduled interactive Google Meet / Zoom sessions. Course video recordings, standard operating procedures, and PDF guidebooks are provided to the Customer for permanent retention upon session completion.
                 </p>
               </div>
 
@@ -358,6 +376,15 @@ export const PaymentProcedurePage: React.FC = () => {
                 </ul>
                 <p>
                   4.3. <strong>Выездные услуги (оклейка на складе Заказчика):</strong> Дата, время и адрес выезда мобильной бригады согласуются индивидуально при оформлении заказа.
+                </p>
+                <p>
+                  4.4. <strong>Аутсорсинг процессов маркировки и регулярное обслуживание:</strong> Оказывается на абонентской ежемесячной основе либо в формате разового проекта. Исполнитель выполняет функции оператора в государственных системах ИС МПТ, СУЗ/OMS и НКТ. Результаты отчетного месяца оформляются Актом выполненных работ (форма Р-1) и ЭСФ, направляемыми Заказчику до 10 числа месяца, следующего за отчетным.
+                </p>
+                <p>
+                  4.5. <strong>Регистрация карточек товаров в каталогах:</strong> Заполнение атрибутивного состава и передача на модерацию в каталоги НКТ и ИС МПТ выполняются в течение 1–3 рабочих дней с момента предоставления Заказчиком спецификаций. Сроки государственной модерации регулируются регламентами операторов (от 24 до 48 часов). Результат — статус одобренной карточки с возможностью заказа Data Matrix.
+                </p>
+                <p>
+                  4.6. <strong>Корпоративное обучение персонала:</strong> Проводится по согласованному графику в онлайн-формате (интерактивные видеосессии в Google Meet / Zoom). Записи проведенных занятий, методические инструкции в формате PDF и шаблоны внутренних регламентов передаются Заказчику в бессрочный доступ по завершении курса.
                 </p>
               </div>
 

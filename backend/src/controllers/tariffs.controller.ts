@@ -36,6 +36,15 @@ const formatPricingSettings = (s: any) => ({
   expressDeliveryPrice: Number(s.expressDeliveryPrice) || 0,
   volumeTier1: Math.floor(Number(s.volumeTier1) || 20000),
   volumeTier2: Math.floor(Number(s.volumeTier2) || 100000),
+  outsourcingOneTimePrice: Number(s.outsourcingOneTimePrice) || 100000,
+  outsourcingTier1Price: Number(s.outsourcingTier1Price) || 200000,
+  outsourcingTier2Price: Number(s.outsourcingTier2Price) || 300000,
+  outsourcingTier3Price: Number(s.outsourcingTier3Price) || 400000,
+  outsourcingTier4Price: Number(s.outsourcingTier4Price) || 500000,
+  cardNktPrice: Number(s.cardNktPrice) || 200,
+  cardMptPrice: Number(s.cardMptPrice) || 300,
+  cardFullPackagePrice: Number(s.cardFullPackagePrice) || 400,
+  trainingCoursePrice: Number(s.trainingCoursePrice) || 100000,
   createdAt: s.createdAt,
   updatedAt: s.updatedAt,
 });
@@ -61,6 +70,15 @@ export const getTariffs = async (req: Request, res: Response) => {
           expressDeliveryPrice: 15000,
           volumeTier1: 20000,
           volumeTier2: 100000,
+          outsourcingOneTimePrice: 100000,
+          outsourcingTier1Price: 200000,
+          outsourcingTier2Price: 300000,
+          outsourcingTier3Price: 400000,
+          outsourcingTier4Price: 500000,
+          cardNktPrice: 200,
+          cardMptPrice: 300,
+          cardFullPackagePrice: 400,
+          trainingCoursePrice: 100000,
         },
       });
     }
@@ -137,6 +155,18 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
       const safeTier1 = Math.max(100, Math.floor(toSafeNum(pricingSettings.volumeTier1, 20000)));
       const safeTier2 = Math.max(safeTier1 + 100, Math.floor(toSafeNum(pricingSettings.volumeTier2, 100000)));
 
+      const safeOutsourcingOneTime = Math.max(0, toSafeNum(pricingSettings.outsourcingOneTimePrice, 100000));
+      const safeOutsourcingTier1 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier1Price, 200000));
+      const safeOutsourcingTier2 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier2Price, 300000));
+      const safeOutsourcingTier3 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier3Price, 400000));
+      const safeOutsourcingTier4 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier4Price, 500000));
+
+      const safeCardNkt = Math.max(0, toSafeNum(pricingSettings.cardNktPrice, 200));
+      const safeCardMpt = Math.max(0, toSafeNum(pricingSettings.cardMptPrice, 300));
+      const safeCardFull = Math.max(0, toSafeNum(pricingSettings.cardFullPackagePrice, 400));
+
+      const safeTrainingCourse = Math.max(0, toSafeNum(pricingSettings.trainingCoursePrice, 100000));
+
       await prisma.pricingSettings.upsert({
         where: { key: 'GLOBAL' },
         update: {
@@ -147,6 +177,15 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
           expressDeliveryPrice: safeExpress,
           volumeTier1: safeTier1,
           volumeTier2: safeTier2,
+          outsourcingOneTimePrice: safeOutsourcingOneTime,
+          outsourcingTier1Price: safeOutsourcingTier1,
+          outsourcingTier2Price: safeOutsourcingTier2,
+          outsourcingTier3Price: safeOutsourcingTier3,
+          outsourcingTier4Price: safeOutsourcingTier4,
+          cardNktPrice: safeCardNkt,
+          cardMptPrice: safeCardMpt,
+          cardFullPackagePrice: safeCardFull,
+          trainingCoursePrice: safeTrainingCourse,
         },
         create: {
           key: 'GLOBAL',
@@ -157,6 +196,15 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
           expressDeliveryPrice: safeExpress,
           volumeTier1: safeTier1,
           volumeTier2: safeTier2,
+          outsourcingOneTimePrice: safeOutsourcingOneTime,
+          outsourcingTier1Price: safeOutsourcingTier1,
+          outsourcingTier2Price: safeOutsourcingTier2,
+          outsourcingTier3Price: safeOutsourcingTier3,
+          outsourcingTier4Price: safeOutsourcingTier4,
+          cardNktPrice: safeCardNkt,
+          cardMptPrice: safeCardMpt,
+          cardFullPackagePrice: safeCardFull,
+          trainingCoursePrice: safeTrainingCourse,
         },
       });
     }

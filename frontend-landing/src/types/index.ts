@@ -21,6 +21,15 @@ export interface PricingSettings {
   expressDeliveryPrice: number;
   volumeTier1: number;
   volumeTier2: number;
+  outsourcingOneTimePrice?: number;
+  outsourcingTier1Price?: number;
+  outsourcingTier2Price?: number;
+  outsourcingTier3Price?: number;
+  outsourcingTier4Price?: number;
+  cardNktPrice?: number;
+  cardMptPrice?: number;
+  cardFullPackagePrice?: number;
+  trainingCoursePrice?: number;
 }
 
 export interface CalculationResult {

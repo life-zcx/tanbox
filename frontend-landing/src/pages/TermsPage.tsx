@@ -85,7 +85,7 @@ export const TermsPage: React.FC = () => {
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">2. Шарттың мәні</h2>
                 <p>2.1. Орындаушы Тапсырыс берушінің тапсырмасы бойынша тауарларды цифрлық таңбалауға байланысты қызметтер кешенін көрсетуге, ал Тапсырыс беруші осы Шартта белгіленген тәртіппен және шарттармен қызметтерді қабылдауға және ақысын төлеуге міндеттенеді.</p>
                 <p>2.2. Қызметтердің нақты тізімі, көлемі, тарифі, мерзімдері мен құны Тапсырыс беруші Жеке кабинетте Тапсырысты қалыптастырған кезде анықталады және Төлем шотында және Орындалған жұмыстар актісінде көрсетіледі.</p>
-                <p>2.3. Қызметтер кешеніне мыналар кіруі мүмкін: «Таңба» АЖ-де кодтарға тапсырыс беру және эмиссиялау, жапсырма макеттерін әзірлеу, өнеркәсіптік термотрансферлік басып шығару, Тапсырыс берушінің қоймасында тауарларды оклейка жасау, көліктік қаптама кодтарын (SSCC) қалыптастыру және ҚР бойынша курьерлік жеткізу.</p>
+                <p>2.3. Қызметтер кешеніне мыналар кіруі мүмкін: «Таңба» АЖ-де (ИС МПТ) кодтарға тапсырыс беру және эмиссиялау, жапсырма макеттерін әзірлеу, өнеркәсіптік термотрансферлік басып шығару, Тапсырыс берушінің қоймасында тауарларды оклейка жасау, көліктік қаптама кодтарын (SSCC) қалыптастыру, ҚР бойынша курьерлік жеткізу, таңбалау процестерін толық аутсорсингке алу (мемлекеттік ақпараттық жүйелердегі жеке кабинеттерді жүргізу, әкелу туралы хабарламалар мен қабылдау-тапсыру актілерін ресімдеу), тауар карточкаларымен операциялар (номенклатураны ҰТК, ТМБ АЖ (ИС МПТ) жүйелеріне тіркеу, GS1 жүйесінде GTIN алу), сондай-ақ персоналды міндетті цифрлық таңбалау бойынша корпоративтік оқыту және консультациялық қызметтер көрсету.</p>
               </div>
 
               {/* Section 3 KZ */}
@@ -206,7 +206,7 @@ export const TermsPage: React.FC = () => {
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">2. Subject Matter</h2>
                 <p>2.1. The Contractor agrees to provide digital product serialization and marking services, and the Customer agrees to accept and pay for such services pursuant to this Agreement.</p>
                 <p>2.2. Batch volume, tariff tier, turnaround schedule, and pricing are configured by the Customer via the Portal order form and finalized in the Proforma Invoice and Completion Act.</p>
-                <p>2.3. Services include: code issuance in IS Tanba, label layout formatting, industrial roll printing, onsite labeling crews at Customer warehouses, SSCC aggregation, and nationwide dispatch.</p>
+                <p>2.3. Services include: code issuance in IS Tanba / IS MPT, label layout formatting, industrial roll printing, onsite labeling crews at Customer warehouses, SSCC aggregation, nationwide dispatch, full-scope serialization outsourcing (administering statutory portals, filing import notices and acceptance-transfer acts), product cataloging and SKU card registration (National Catalog NKT, IS MPT, GS1 Kazakhstan GTIN allocation), as well as corporate compliance training and consulting for customer personnel.</p>
               </div>
 
               {/* Section 3 EN */}
@@ -325,7 +325,7 @@ export const TermsPage: React.FC = () => {
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">2. Предмет договора</h2>
                 <p>2.1. Исполнитель обязуется по поручению Заказчика оказать комплекс услуг, связанных с цифровой маркировкой товаров, а Заказчик обязуется принять и оплатить услуги в порядке и на условиях, установленных настоящим Договором.</p>
                 <p>2.2. Конкретный перечень, объем, тариф, сроки и стоимость услуг определяются Заказчиком при формировании Заказа в Личном кабинете и отражаются в выставленном Счете на оплату и Акте выполненных работ.</p>
-                <p>2.3. В комплекс услуг могут входить: заказ и эмиссия кодов в ИС Танба, разработка макетов этикеток, промышленная термотрансферная печать, оклейка товаров на складе Заказчика, формирование кодов транспортной упаковки (SSCC) и курьерская доставка по РК.</p>
+                <p>2.3. В комплекс услуг могут входить: заказ и эмиссия кодов в ИС Танба / ИС МПТ, разработка макетов этикеток, промышленная термотрансферная печать, оклейка товаров на складе Заказчика, формирование кодов транспортной упаковки (SSCC), курьерская доставка по РК, полный аутсорсинг процессов маркировки (администрирование личных кабинетов в государственных информационных системах, оформление актов приема-передачи АПП, уведомлений о ввозе из ЕАЭС и третьих стран), операции с карточками товаров и каталогами (заведение и модерация номенклатуры в ИС МПТ, Национальном каталоге товаров НКТ, присвоение кодов GTIN в GS1 Kazakhstan), а также корпоративное обучение персонала и консультационные услуги по работе с обязательной цифровой маркировкой.</p>
               </div>
 
               {/* Section 3 RU */}

@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, CheckCircle2, ShieldCheck, Cpu, Printer, Users, Layers, ArrowRight } from 'lucide-react';
+import { X, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { TariffItem } from '../../types';
 
@@ -9,6 +9,7 @@ interface TariffHelpModalProps {
   onClose: () => void;
   onSelectTariff?: (tariffCode: 'DIGITAL' | 'PRINT' | 'STANDARD' | 'PRO') => void;
   dbTariffs?: TariffItem[];
+  initialTab?: 'batch' | 'outsourcing' | 'cards' | 'training';
 }
 
 export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
@@ -16,8 +17,10 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
   onClose,
   onSelectTariff,
   dbTariffs,
+  initialTab = 'batch',
 }) => {
   const { lang } = useLanguage();
+  const [activeTab, setActiveTab] = useState<'batch' | 'outsourcing' | 'cards' | 'training'>(initialTab);
 
   const getTariffPrice = (code: string, fallback: number) => {
     const found = dbTariffs?.find((t) => t.code === code);
@@ -30,13 +33,16 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      if (initialTab) {
+        setActiveTab(initialTab);
+      }
     } else {
       document.body.style.overflow = '';
     }
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [isOpen, initialTab]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -51,366 +57,382 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
 
   if (!isOpen) return null;
 
-  const content = {
-    ru: {
-      title: 'Справка по тарифам маркировки TANBOX',
-      subtitle: 'Подробное описание: что входит в каждый тариф, для кого подходит и разграничение зон ответственности.',
-      close: 'Закрыть',
-      choose: 'Выбрать тариф',
-      tariffs: [
-        {
-          code: 'DIGITAL' as const,
-          badge: 'Только коды',
-          price: getTariffPrice('DIGITAL', 10),
-          name: 'Тариф «Цифровой»',
-          target: 'Для кого: У вас есть собственный промышленный термотрансферный принтер, качественные расходники и штатные сотрудники для нанесения.',
-          weDoTitle: 'Что делает TANBOX:',
-          weDo: [
-            'Заказ и получение пулов кодов Data Matrix в ИС Танба / ИС МПТ',
-            'Генерация готовых макетов этикеток (PDF, CSV, Excel)',
-            'Проверка структуры криптозащиты и валидности GTIN',
-          ],
-          clientDoTitle: 'Что делает клиент:',
-          clientDo: [
-            'Самостоятельная печать стикеров на своем принтере',
-            'Поштучное наклеивание этикеток на товар своими силами',
-          ],
-        },
-        {
-          code: 'PRINT' as const,
-          badge: 'Печать рулонов',
-          price: getTariffPrice('PRINT', 25),
-          name: 'Тариф «Печатный»',
-          target: 'Для кого: Есть сотрудники на складе для оклейки, но нет промышленного принтера высокого разрешения и верификатора считываемости.',
-          weDoTitle: 'Что делает TANBOX:',
-          weDo: [
-            'Эмиссия кодов Data Matrix в государственной системе ИС Танба',
-            'Промышленная термотрансферная печать рулонов стикеров (resin/wax-resin)',
-            '100% верификация каждого кода аппаратным 2D-сканером',
-            'Быстрая доставка готовых рулонов по Алматы и всем регионам РК',
-          ],
-          clientDoTitle: 'Что делает клиент:',
-          clientDo: [
-            'Получает готовые рулоны и наклеивает стикеры на складе своими силами',
-          ],
-        },
-        {
-          code: 'STANDARD' as const,
-          badge: 'Под ключ без вскрытия',
-          price: getTariffPrice('STANDARD', 50),
-          name: 'Тариф «Стандарт»',
-          target: 'Для кого: Импортеры и производители моно-партий в стандартных заводских коробках, которым нужно быстро замаркировать партию без отвлечения своих сотрудников.',
-          weDoTitle: 'Что делает TANBOX:',
-          weDo: [
-            'Эмиссия кодов в ИС Танба + промышленная печать рулонов стикеров',
-            'Выезд мобильной бригады со станциями маркировки на ваш склад или СВХ',
-            'Потоковое нанесение стикеров без вскрытия индивидуальной тары',
-            'Контрольное сканирование и акт выполненных работ',
-          ],
-          clientDoTitle: 'Что делает клиент:',
-          clientDo: [
-            'Предоставляет доступ к партии товара на складе и принимает результат',
-          ],
-        },
-        {
-          code: 'PRO' as const,
-          badge: 'Полный цикл + SSCC',
-          price: getTariffPrice('PRO', 90),
-          name: 'Тариф «PRO Склад»',
-          target: 'Для кого: Сборные грузы (разные размеры, цвета, артикулы), одежда, обувь, поставки для торговых сетей и дистрибьюторов с агрегацией.',
-          weDoTitle: 'Что делает TANBOX:',
-          weDo: [
-            'Всё, что входит в «Стандарт» (эмиссия + печать + выездная оклейка)',
-            'Вскрытие транспортных коробок и сверка номенклатуры по артикулам и размерам',
-            'Поштучная оклейка каждой единицы с обратной укладкой в коробку',
-            'Формирование транспортной агрегации SSCC (штука → коробка → паллета)',
-            'Отправка отчета о нанесении в ИС Танба, ввод в оборот и предоставление ЭСФ',
-          ],
-          clientDoTitle: 'Что делает клиент:',
-          clientDo: [
-            'Только передает партию и получает товар, 100% готовый к легальной продаже',
-          ],
-        },
-      ],
+  const tabsList = [
+    {
+      id: 'batch',
+      label: lang === 'kz' ? 'Партияны таңбалау' : lang === 'en' ? 'Batch Tariffs' : 'Партия под ключ',
     },
-    kz: {
-      title: 'TANBOX таңбалау тарифтері бойынша анықтамалық',
-      subtitle: 'Толық сипаттама: әр тарифке не кіреді, кімге арналған және жауапкершілік аймақтарының бөлінісі.',
-      close: 'Жабу',
-      choose: 'Тарифті таңдау',
-      tariffs: [
-        {
-          code: 'DIGITAL' as const,
-          badge: 'Тек кодтар',
-          price: getTariffPrice('DIGITAL', 10),
-          name: '«Сандық» тарифі',
-          target: 'Кімге арналған: Жеке термотрансферлік принтеріңіз, сапалы риббондарыңыз және жапсыратын штаттағы қызметкерлеріңіз бар кезде.',
-          weDoTitle: 'TANBOX не істейді:',
-          weDo: [
-            '«Таңба» АЖ / ТМБ АЖ жүйесінен Data Matrix кодтарын шығару',
-            'Дайын жапсырма макеттерін қалыптастыру (PDF, CSV, Excel)',
-            'Криптоқорғау құрылымы мен GTIN дұрыстығын тексеру',
-          ],
-          clientDoTitle: 'Тапсырыс беруші не істейді:',
-          clientDo: [
-            'Жеке принтерде стикерлерді өз бетінше басып шығару',
-            'Қоймада тауарға өз күшімен жекелей жапсыру',
-          ],
-        },
-        {
-          code: 'PRINT' as const,
-          badge: 'Рулондарды басу',
-          price: getTariffPrice('PRINT', 25),
-          name: '«Баспа» тарифі',
-          target: 'Кімге арналған: Қоймада жапсыратын қызметкерлер бар, бірақ өндірістік жоғары сапалы принтер мен сканер-верификатор жоқ болғанда.',
-          weDoTitle: 'TANBOX не істейді:',
-          weDo: [
-            '«Таңба» АЖ жүйесінде Data Matrix кодтарын эмиссиялау',
-            'Төзімді стикерлерді өндірістік термотрансферлік басып шығару (resin/wax-resin)',
-            'Әрбір кодтың 100% оқылуын аппараттық 2D сканермен верификациялау',
-            'Дайын рулондарды Алматы және ҚР барлық аймақтарына жылдам жеткізу',
-          ],
-          clientDoTitle: 'Тапсырыс беруші не істейді:',
-          clientDo: [
-            'Дайын орамдарды қабылдап алып, қоймасында өз күшімен жапсырады',
-          ],
-        },
-        {
-          code: 'STANDARD' as const,
-          badge: 'Ашпай кілтке дейін',
-          price: getTariffPrice('STANDARD', 50),
-          name: '«Стандарт» тарифі',
-          target: 'Кімге арналған: Стандартты зауыттық қораптардағы моно-партиялары бар импорттаушыларға өз қызметкерлерін бөлмей жылдам оклейка жасау қажет болғанда.',
-          weDoTitle: 'TANBOX не істейді:',
-          weDo: [
-            'Кодтарды эмиссиялау + стикерлерді өндірістік басып шығару',
-            'Мобильді станциялармен оклейка бригадасының қоймаңызға немесе УСҚ-ға шығуы',
-            'Жеке қаптамаларды ашпай ағынды жапсыру жасау',
-            'Бақылау сканерлеуі және орындалған жұмыстар актісі',
-          ],
-          clientDoTitle: 'Тапсырыс беруші не істейді:',
-          clientDo: [
-            'Қоймадағы тауарға қолжетімділік береді және дайын нәтижені қабылдайды',
-          ],
-        },
-        {
-          code: 'PRO' as const,
-          badge: 'Толық цикл + SSCC',
-          price: getTariffPrice('PRO', 90),
-          name: '«PRO Қойма» тарифі',
-          target: 'Кімге арналған: Құрама жүктер (әр түрлі өлшемдер, түстер, артикулдар), киім, аяқ киім, сауда желілері мен дистрибьюторларға арналған күрделі партиялар.',
-          weDoTitle: 'TANBOX не істейді:',
-          weDo: [
-            '«Стандарт» тарифіне кіретін барлық қызметтер (эмиссия + баспа + оклейка)',
-            'Көліктік қораптарды ашу және артикулдар мен өлшемдер бойынша сәйкестігін тексеру',
-            'Әр өнімді жекелей жапсырып, қорапқа қайта реттеп салу',
-            'Көліктік SSCC агрегациясын қалыптастыру (дана → қорап → паллета)',
-            '«Таңба» АЖ-ге есеп жіберу, заңды айналымға енгізу және ЭШФ беру',
-          ],
-          clientDoTitle: 'Тапсырыс беруші не істейді:',
-          clientDo: [
-            'Тек партияны тапсырады және сатуға 100% заңды дайын тауарды қабылдап алады',
-          ],
-        },
-      ],
+    {
+      id: 'outsourcing',
+      label: lang === 'kz' ? 'Толық аутсорсинг' : lang === 'en' ? 'Outsourcing' : 'Полный аутсорсинг',
     },
-    en: {
-      title: 'TANBOX Serialization Tariff Guide',
-      subtitle: 'Clear, transparent breakdown of what each tier covers, who it is designed for, and responsibilities.',
-      close: 'Close',
-      choose: 'Select Tariff',
-      tariffs: [
-        {
-          code: 'DIGITAL' as const,
-          badge: 'Codes Only',
-          price: getTariffPrice('DIGITAL', 10),
-          name: 'Digital Tariff',
-          target: 'Best for: Importers who own high-volume thermal transfer printers and have warehouse personnel to apply labels.',
-          weDoTitle: 'What TANBOX delivers:',
-          weDo: [
-            'Issuance and export of Data Matrix code pools from IS Tanba / IS MPT',
-            'Exporting print-ready sticker layouts in PDF, CSV, and Excel',
-            'Cryptographic structure and GTIN catalog validation',
-          ],
-          clientDoTitle: 'What the client handles:',
-          clientDo: [
-            'In-house label printing on internal industrial printers',
-            'Manual stickering of products on their warehouse floor',
-          ],
-        },
-        {
-          code: 'PRINT' as const,
-          badge: 'Roll Printing',
-          price: getTariffPrice('PRINT', 25),
-          name: 'Print Tariff',
-          target: 'Best for: Businesses with warehouse hands available for stickering, but lacking industrial 300/600 dpi printers and grading scanners.',
-          weDoTitle: 'What TANBOX delivers:',
-          weDo: [
-            'Data Matrix code issuance in the national IS Tanba system',
-            'Industrial roll printing with durable resin/wax-resin ribbons',
-            '100% code scan grading with automated barcode verifiers',
-            'Express delivery of finished label rolls across Almaty and Kazakhstan',
-          ],
-          clientDoTitle: 'What the client handles:',
-          clientDo: [
-            'Receiving ready-to-use rolls and applying labels with warehouse crew',
-          ],
-        },
-        {
-          code: 'STANDARD' as const,
-          badge: 'Turnkey Without Unboxing',
-          price: getTariffPrice('STANDARD', 50),
-          name: 'Standard Tariff',
-          target: 'Best for: Importers with uniform mono-batches in standard factory cartons needing fast turnaround without diverting staff.',
-          weDoTitle: 'What TANBOX delivers:',
-          weDo: [
-            'Code issuance + roll printing + dispatched traveling stickering crew',
-            'Mobile crews dispatched to your warehouse or customs terminal (TSW)',
-            'High-speed labeling of exterior packaging without unpacking inner items',
-            'Full quality verification and formal completion documentation',
-          ],
-          clientDoTitle: 'What the client handles:',
-          clientDo: [
-            'Providing warehouse batch access and signing completion handover',
-          ],
-        },
-        {
-          code: 'PRO' as const,
-          badge: 'Full Cycle + SSCC',
-          price: getTariffPrice('PRO', 90),
-          name: 'PRO Warehouse Tariff',
-          target: 'Best for: Mixed multi-SKU freight (varied sizes, colors, brands), apparel, footwear, and shipments for retail chains or distributors.',
-          weDoTitle: 'What TANBOX delivers:',
-          weDo: [
-            'Everything included in Standard (issuance + printing + onsite crew)',
-            'Master carton unboxing, SKU count, and size cross-checking',
-            'Piece-by-piece labeling of each individual unit and repacking',
-            'SSCC aggregation hierarchy generation (piece → carton → pallet)',
-            'Turnover release reporting to IS Tanba, legal activation, and ESF handover',
-          ],
-          clientDoTitle: 'What the client handles:',
-          clientDo: [
-            'Hands over the batch and receives merchandise 100% cleared and compliant',
-          ],
-        },
-      ],
+    {
+      id: 'cards',
+      label: lang === 'kz' ? 'Тауар карточкалары' : lang === 'en' ? 'Product Cards' : 'Карточки товаров',
     },
-  };
+    {
+      id: 'training',
+      label: lang === 'kz' ? 'Оқыту' : lang === 'en' ? 'Training' : 'Обучение',
+    },
+  ];
 
-  const current = content[lang] || content.ru;
+  const batchTariffs = [
+    {
+      code: 'DIGITAL' as const,
+      name: 'Цифровой',
+      badge: 'Только коды',
+      price: getTariffPrice('DIGITAL', 10),
+      desc: 'Для компаний со своим термотрансферным принтером и персоналом для оклейки.',
+      weDo: [
+        'Эмиссия кодов Data Matrix в ИС Танба / ИС МПТ',
+        'Выгрузка готовых файлов в PDF, CSV, Excel',
+        'Проверка валидности структуры криптозащиты',
+      ],
+      clientDo: 'Печать этикеток и оклейка товаров силами заказчика.',
+    },
+    {
+      code: 'PRINT' as const,
+      name: 'Печать',
+      badge: 'Печать рулонов',
+      price: getTariffPrice('PRINT', 25),
+      desc: 'Для компаний с персоналом для нанесения, но без промышленного печатного оборудования.',
+      weDo: [
+        'Эмиссия кодов Data Matrix в системе',
+        'Термотрансферная печать рулонов стикеров (смола / воск)',
+        '100% верификация считываемости 2D-сканером',
+        'Доставка готовых рулонов по Казахстану',
+      ],
+      clientDo: 'Приемка рулонов и оклейка продукции на своем складе.',
+    },
+    {
+      code: 'STANDARD' as const,
+      name: 'Стандарт',
+      badge: 'Печать и оклейка',
+      price: getTariffPrice('STANDARD', 50),
+      desc: 'Для моно-партий в стандартных коробках, когда требуется маркировка партии под ключ.',
+      weDo: [
+        'Эмиссия кодов и печать этикеток в рулонах',
+        'Выезд мобильной бригады оклейщиков на склад или СВХ',
+        'Поточная оклейка без вскрытия индивидуальных упаковок',
+        'Контрольное сканирование и закрывающие акты',
+      ],
+      clientDo: 'Предоставление доступа к партии товара на складе.',
+    },
+    {
+      code: 'PRO' as const,
+      name: 'PRO Склад',
+      badge: 'Полный цикл + SSCC',
+      price: getTariffPrice('PRO', 90),
+      desc: 'Для сборных грузов, обуви, одежды и поставок в маркетплейсы и ритейл с агрегацией.',
+      weDo: [
+        'Все этапы тарифа «Стандарт» (коды + печать + оклейка)',
+        'Вскрытие коробов, сверка артикулов и пересчет',
+        'Поштучная оклейка и переупаковка',
+        'Формирование групповых кодов коробов (SSCC)',
+        'Отчет о вводе в оборот и передача по ЭСФ',
+      ],
+      clientDo: 'Приемка готовой партии с закрывающими документами.',
+    },
+  ];
 
   return createPortal(
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-xs">
-      <div 
-        className="bg-white rounded-3xl w-full max-w-5xl my-8 overflow-hidden shadow-2xl border border-gray-200 flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150"
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-6 overflow-hidden bg-black/60 backdrop-blur-xs">
+      <div
+        className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-4xl my-auto overflow-hidden shadow-2xl border border-gray-200 flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 sm:p-7 border-b border-gray-100 flex items-start justify-between gap-4 bg-gradient-to-r from-blue-50/50 to-white">
-          <div className="space-y-1">
-            <h2 className="text-xl sm:text-2xl font-extrabold text-[#111827] tracking-tight">
-              {current.title}
+        <div className="px-6 py-4 sm:px-8 sm:py-5 border-b border-gray-200 flex items-center justify-between gap-4 bg-white shrink-0">
+          <div>
+            <h2 className="text-lg sm:text-xl font-bold text-[#111827]">
+              {lang === 'kz' ? 'Тарифтер мен қызметтер анықтамалығы' : lang === 'en' ? 'Pricing & Services Guide' : 'Справка по тарифам и услугам'}
             </h2>
-            <p className="text-xs sm:text-sm text-[#64748B]">
-              {current.subtitle}
+            <p className="text-xs text-gray-500 mt-0.5">
+              {lang === 'kz'
+                ? 'Регламент, жұмыс құрамы және жауапкершілік шекаралары'
+                : lang === 'en'
+                ? 'Service breakdown, deliverables, and scope of work'
+                : 'Регламент выполнения, состав работ и распределение ответственности'}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-10 h-10 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-all cursor-pointer shrink-0"
-            aria-label={current.close}
+            aria-label="Закрыть"
+            className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Scrollable Content */}
-        <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-            {current.tariffs.map((t) => (
-              <div
-                key={t.code}
-                className="rounded-2xl border border-gray-200/90 p-5 sm:p-6 space-y-4 hover:border-[#0082FB] transition-all bg-[#F8FAFC]/50 flex flex-col justify-between"
+        {/* Clean Underline Tabs - Perfectly aligned, no pills, no overflow glitch */}
+        <div className="flex border-b border-gray-200 px-6 sm:px-8 gap-6 sm:gap-8 bg-gray-50/70 shrink-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {tabsList.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`py-3.5 text-xs sm:text-sm font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap outline-none ${
+                  isActive
+                    ? 'border-[#0082FB] text-[#0082FB]'
+                    : 'border-transparent text-gray-500 hover:text-gray-900'
+                }`}
               >
-                <div className="space-y-3">
-                  {/* Top Bar */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-blue-50 text-[#0082FB] border border-blue-200/60">
-                      {t.badge}
-                    </span>
-                    <span className="text-sm font-black text-[#111827]">
-                      {t.price}
-                    </span>
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Scrollable Body - Styled thin scrollbar without clunky native 17px track */}
+        <div className="p-6 sm:p-8 overflow-y-auto flex-1 space-y-6 [scrollbar-width:thin] [scrollbar-color:#CBD5E1_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
+          {/* TAB 1: BATCH TARIFFS */}
+          {activeTab === 'batch' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {batchTariffs.map((t) => (
+                <div
+                  key={t.code}
+                  className="rounded-2xl border border-gray-200 p-5 space-y-3 bg-[#F8FAFC]/50 flex flex-col justify-between hover:border-gray-300 transition-colors"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-semibold text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-200">
+                        {t.badge}
+                      </span>
+                      <span className="text-sm font-bold text-[#111827]">
+                        {t.price}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-base font-bold text-[#111827]">
+                        Тариф «{t.name}»
+                      </h3>
+                      <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                        {t.desc}
+                      </p>
+                    </div>
+
+                    <div className="pt-3 border-t border-gray-100 space-y-1.5 text-xs">
+                      <span className="font-semibold text-gray-900 block text-[11px]">Что выполняет TANBOX:</span>
+                      <ul className="space-y-1 text-gray-600">
+                        {t.weDo.map((item, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-gray-400 font-bold">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="pt-2.5 border-t border-gray-100 text-xs text-gray-500">
+                      <span className="font-semibold text-gray-800 block text-[11px]">Действия клиента:</span>
+                      <p className="mt-0.5">{t.clientDo}</p>
+                    </div>
                   </div>
 
-                  <h3 className="text-lg font-bold text-[#111827]">
-                    {t.name}
-                  </h3>
+                  {onSelectTariff && (
+                    <div className="pt-3 border-t border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectTariff(t.code);
+                          onClose();
+                        }}
+                        className="w-full inline-flex items-center justify-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white font-semibold text-xs py-2 px-3 rounded-xl transition-all active:scale-95 cursor-pointer"
+                      >
+                        <span>Выбрать {t.name}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
-                  <p className="text-xs text-[#475569] bg-white p-3 rounded-xl border border-gray-200/70 leading-relaxed font-medium">
-                    {t.target}
-                  </p>
+          {/* TAB 2: OUTSOURCING */}
+          {activeTab === 'outsourcing' && (
+            <div className="space-y-5">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                  Полный аутсорсинг маркировки
+                </h3>
+                <p className="text-xs text-gray-600 mt-1 leading-relaxed max-w-2xl">
+                  Передача всех регулярных операций по маркировке выделенным специалистам TANBOX. Полноценная замена штатному оператору маркировки.
+                </p>
+              </div>
 
-                  {/* We Do */}
-                  <div className="space-y-2 pt-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#0082FB] block">
-                      {t.weDoTitle}
-                    </span>
-                    <ul className="space-y-1.5">
-                      {t.weDo.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-xs text-[#334155] leading-relaxed">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-5 rounded-2xl border border-gray-200 bg-[#F8FAFC]/50 space-y-3">
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+                    Зона ответственности TANBOX
+                  </span>
+                  <ul className="space-y-2 text-xs text-gray-600">
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#0082FB] font-bold">•</span>
+                      <span>Ведение личных кабинетов в ИС МПТ, СУЗ/OMS, НКТ</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#0082FB] font-bold">•</span>
+                      <span>Регулярный заказ кодов Data Matrix под поставки</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#0082FB] font-bold">•</span>
+                      <span>Формирование групповых упаковок и кодов SSCC</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#0082FB] font-bold">•</span>
+                      <span>Акты приема-передачи (АПП) и уведомления о ввозе</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-[#0082FB] font-bold">•</span>
+                      <span>Контроль регламентных сроков подачи сведений</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-gray-200 bg-[#F8FAFC]/50 space-y-3">
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+                    Зона ответственности заказчика
+                  </span>
+                  <ul className="space-y-2 text-xs text-gray-600">
+                    <li className="flex items-start gap-2">
+                      <span className="text-gray-400 font-bold">•</span>
+                      <span>Предоставление списков артикулов и спецификаций</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-gray-400 font-bold">•</span>
+                      <span>Делегирование прав оператора в кабинете через ЭЦП</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-gray-400 font-bold">•</span>
+                      <span>Пополнение баланса лицевого счета Единого оператора</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-gray-400 font-bold">•</span>
+                      <span>Физическое нанесение этикеток на складе</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: CARDS */}
+          {activeTab === 'cards' && (
+            <div className="space-y-5">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                  Карточки товаров и реестры
+                </h3>
+                <p className="text-xs text-gray-600 mt-1 leading-relaxed max-w-2xl">
+                  Регистрация номенклатуры в государственных реестрах маркировки Республики Казахстан.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-5 rounded-2xl border border-gray-200 bg-[#F8FAFC]/50 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-gray-900 text-sm">ИС МПТ</h4>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Каталог маркированных товаров. Необходим для заказа кодов Data Matrix. Заполнение атрибутивного состава (бренд, состав, размер, страна).
+                    </p>
                   </div>
-
-                  {/* Client Does */}
-                  <div className="space-y-1.5 pt-2 border-t border-gray-200/60">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-                      {t.clientDoTitle}
-                    </span>
-                    <ul className="space-y-1">
-                      {t.clientDo.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-[11px] text-[#64748B]">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0 mt-1.5" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="pt-2 border-t border-gray-200/60 text-[11px] text-gray-400">
+                    Срок модерации: 1–2 рабочих дня
                   </div>
                 </div>
 
-                {onSelectTariff && (
-                  <div className="pt-3 border-t border-gray-100">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSelectTariff(t.code);
-                        onClose();
-                      }}
-                      className="w-full inline-flex items-center justify-center gap-1.5 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs py-2.5 px-4 rounded-xl transition-all active:scale-95 shadow-sm cursor-pointer"
-                    >
-                      <span>{current.choose}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                <div className="p-5 rounded-2xl border border-gray-200 bg-[#F8FAFC]/50 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-gray-900 text-sm">НКТ</h4>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Национальный каталог товаров РК. Внесение существующих штрихкодов EAN-13 в реестр и привязка кодов ТН ВЭД.
+                    </p>
                   </div>
-                )}
+                  <div className="pt-2 border-t border-gray-200/60 text-[11px] text-gray-400">
+                    Срок модерации: до 24 часов
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-gray-200 bg-[#F8FAFC]/50 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-gray-900 text-sm">GS1 + МПТ + НКТ</h4>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Комплексный пакет для импортеров без штрихкодов: получение кодов GTIN в GS1 Kazakhstan, регистрация в НКТ и перенос в ИС МПТ.
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-gray-200/60 text-[11px] text-gray-400">
+                    Под ключ с присвоением GTIN
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* TAB 4: TRAINING */}
+          {activeTab === 'training' && (
+            <div className="space-y-5">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                  Корпоративное обучение маркировке
+                </h3>
+                <p className="text-xs text-gray-600 mt-1 leading-relaxed max-w-2xl">
+                  Практический онлайн-курс для бухгалтеров, логистов и складского персонала на реальных процессах вашей компании.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-5 rounded-2xl border border-gray-200 bg-[#F8FAFC]/50 space-y-2">
+                  <span className="text-[11px] font-semibold text-gray-500 block">Занятие 1 • 90 мин</span>
+                  <h4 className="font-bold text-gray-900 text-sm">Кабинеты и номенклатура</h4>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Настройка ЭЦП, роли сотрудников, работа в ИС МПТ и НКТ, сопоставление кодов ТН ВЭД.
+                  </p>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-gray-200 bg-[#F8FAFC]/50 space-y-2">
+                  <span className="text-[11px] font-semibold text-gray-500 block">Занятие 2 • 90 мин</span>
+                  <h4 className="font-bold text-gray-900 text-sm">Эмиссия и печать</h4>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Заказ кодов в СУЗ, печать на термотрансферных принтерах, агрегация коробов (SSCC).
+                  </p>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-gray-200 bg-[#F8FAFC]/50 space-y-2">
+                  <span className="text-[11px] font-semibold text-gray-500 block">Занятие 3 • 90 мин</span>
+                  <h4 className="font-bold text-gray-900 text-sm">Документооборот</h4>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Уведомления о ввозе из ЕАЭС и третьих стран, оформление актов приема-передачи (АПП), списание брака.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-gray-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-gray-600">
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-gray-900 block text-xs">Формат и материалы</span>
+                  <span>3 онлайн-сессии в Google Meet / Zoom с демонстрацией экрана. Записи сессий и регламенты в PDF передаются навсегда.</span>
+                </div>
+                <div className="shrink-0 text-left sm:text-right">
+                  <span className="text-xs font-semibold text-gray-700 block">до 5 сотрудников компании</span>
+                  <span className="text-[11px] text-gray-400">Индивидуальный график сессий</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-5 border-t border-gray-100 bg-gray-50 flex items-center justify-end">
+        <div className="px-6 py-3.5 sm:px-8 border-t border-gray-200 bg-gray-50/70 flex items-center justify-end shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-xs font-bold text-[#111827] hover:bg-gray-100 transition-colors cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-white border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
           >
-            {current.close}
+            Закрыть
           </button>
         </div>
       </div>
@@ -418,3 +440,4 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
     document.body
   );
 };
+
