@@ -287,6 +287,7 @@ export const TermsPage: React.FC = () => {
                       <td className="border border-gray-300 p-2.5">Tel: {COMPANY_CONTACTS.phones.hotline} • Email: {COMPANY_CONTACTS.emails.info}</td>
                     </tr>
                   </tbody>
+                </table>
               </div>
             </>
           ) : (
