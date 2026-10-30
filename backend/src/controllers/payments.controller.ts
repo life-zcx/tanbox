@@ -26,6 +26,10 @@ export async function initPayment(req: AuthRequest, res: Response) {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
+    return res.status(400).json({
+      message: 'Онлайн-оплата банковскими картами временно отключена. Оплата принимается по счету (безналичный расчет / Kaspi Pay) или с лицевого счета ЛК.',
+    });
+
     const {
       type = 'ORDER',
       orderId,

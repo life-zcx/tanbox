@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
-  ArrowRight,
-  Loader2,
   Wallet,
+  MessageCircle,
+  Copy,
+  Check,
+  Building2,
+  FileText,
+  Clock,
 } from 'lucide-react';
-import { apiClient } from '../../api/client';
 import { useNavigate } from 'react-router-dom';
 import { useModalBehavior } from '@shared';
+import { useAuth } from '../../context/AuthContext';
 
 interface TopUpBalanceModalProps {
   isOpen: boolean;
@@ -19,7 +23,7 @@ interface TopUpBalanceModalProps {
   onSuccess?: () => void;
 }
 
-const PRESET_AMOUNTS = [1000, 5000, 10000, 25000, 50000, 100000];
+const PRESET_AMOUNTS = [5000, 10000, 25000, 50000, 100000, 250000];
 
 export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
   isOpen,
@@ -29,11 +33,11 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
   initialTab = 'topup',
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [amountInput, setAmountInput] = useState<string>(
-    initialAmount ? initialAmount.toLocaleString('ru-RU') : '5 000'
+    initialAmount ? initialAmount.toLocaleString('ru-RU') : '25 000'
   );
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const { backdropProps, dialogProps } = useModalBehavior({ onClose, isOpen });
 
@@ -47,61 +51,44 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
       if (initialAmount) {
         setAmountInput(initialAmount.toLocaleString('ru-RU'));
       } else if (!amountInput) {
-        setAmountInput('5 000');
+        setAmountInput('25 000');
       }
-      setError(null);
     }
   }, [isOpen, initialTab, initialAmount, navigate, onClose]);
 
   if (!isOpen) return null;
 
   const effectiveAmount = parseInt(amountInput.replace(/\s/g, ''), 10) || 0;
-  const isAmountValid = effectiveAmount >= 500;
 
   const handleSelectPreset = (amount: number) => {
     setAmountInput(amount.toLocaleString('ru-RU'));
-    setError(null);
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '');
     if (!raw) {
       setAmountInput('');
-      setError(null);
       return;
     }
     const num = parseInt(raw, 10);
     if (num > 50000000) return;
     setAmountInput(num.toLocaleString('ru-RU'));
-    setError(null);
   };
 
-  const handleTopUp = async () => {
-    if (!isAmountValid) {
-      setError('Минимальная сумма пополнения — 500 ₸');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await apiClient.post('/payments/init', {
-        type: 'BALANCE',
-        amount: effectiveAmount,
-        description: `Пополнение лицевого счета TANBOX на сумму ${effectiveAmount.toLocaleString('ru-RU')} ₸`,
-      });
-
-      if (res.data?.redirectUrl) {
-        window.location.href = res.data.redirectUrl;
-      } else {
-        throw new Error(res.data?.message || 'Не удалось получить ссылку на оплату');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Ошибка запуска платежа');
-      setLoading(false);
-    }
+  const copyToClipboard = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(null), 2000);
   };
+
+  const companyTitle = user?.companyName || user?.email || 'Клиент TANBOX';
+  const binIin = user?.binIin ? ` (БИН/ИИН: ${user.binIin})` : '';
+  const formattedAmount = effectiveAmount > 0 ? `${effectiveAmount.toLocaleString('ru-RU')} ₸` : 'аванс';
+
+  const waText = encodeURIComponent(
+    `Здравствуйте! Прошу выставить счет на пополнение баланса Личного кабинета TANBOX.\n\nКомпания: ${companyTitle}${binIin}\nСумма: ${formattedAmount}`
+  );
+  const waUrl = `https://wa.me/77003048532?text=${waText}`;
 
   return createPortal(
     <div
@@ -119,8 +106,8 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
               <Wallet className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-[#111827]">Пополнение баланса</h3>
-              <p className="text-xs text-[#64748B]">Моментальное зачисление средств на лицевой счет</p>
+              <h3 className="text-base font-extrabold text-[#111827]">Пополнение лицевого счета</h3>
+              <p className="text-xs text-[#64748B]">Безналичный расчет для юридических лиц и ИП</p>
             </div>
           </div>
           <button
@@ -143,37 +130,30 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
           </div>
           <div className="text-right">
             <span className="text-[11px] font-bold text-[#0082FB] uppercase tracking-wider block">
-              После зачисления
+              Сумма к пополнению
             </span>
-            <span className="text-xl font-black text-emerald-600">
-              {(Number(currentBalance) + (isAmountValid ? effectiveAmount : 0)).toLocaleString('ru-RU')} ₸
+            <span className="text-xl font-black text-[#0082FB]">
+              {effectiveAmount > 0 ? `${effectiveAmount.toLocaleString('ru-RU')} ₸` : '0 ₸'}
             </span>
           </div>
         </div>
 
-        {/* TOPUP FORM */}
-        <div className="space-y-5 overflow-y-auto pr-1">
+        {/* Content Body */}
+        <div className="space-y-4 overflow-y-auto pr-1">
           {/* Amount input & quick presets */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-[#111827] uppercase tracking-wider">
-                Сумма пополнения
-              </label>
-              <span className="text-[11px] font-semibold text-gray-400">
-                мин. 500 ₸
-              </span>
-            </div>
+          <div className="space-y-2.5">
+            <label className="text-xs font-bold text-[#111827] uppercase tracking-wider block">
+              Желаемая сумма аванса
+            </label>
 
-            {/* Input field */}
             <div className="relative">
               <input
                 type="text"
                 inputMode="numeric"
                 value={amountInput}
                 onChange={handleAmountChange}
-                placeholder="5 000"
-                className="w-full text-xl sm:text-2xl font-black text-[#111827] bg-white border border-gray-300 focus:border-[#0082FB] rounded-2xl py-3 px-4 pr-12 transition-all outline-none"
-                autoFocus
+                placeholder="25 000"
+                className="w-full text-xl font-black text-[#111827] bg-white border border-gray-300 focus:border-[#0082FB] rounded-2xl py-2.5 px-4 pr-12 transition-all outline-none"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-400 pointer-events-none">
                 ₸
@@ -181,7 +161,7 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
             </div>
 
             {/* Presets grid */}
-            <div className="grid grid-cols-3 gap-2 pt-1">
+            <div className="grid grid-cols-3 gap-2">
               {PRESET_AMOUNTS.map((amt) => {
                 const isActive = effectiveAmount === amt;
                 return (
@@ -189,9 +169,9 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
                     key={amt}
                     type="button"
                     onClick={() => handleSelectPreset(amt)}
-                    className={`py-2 px-3 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                    className={`py-1.5 px-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                       isActive
-                        ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-sm shadow-[#0082FB]/20'
+                        ? 'bg-[#0082FB] text-white border-[#0082FB] shadow-xs'
                         : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50/40'
                     }`}
                   >
@@ -202,53 +182,69 @@ export const TopUpBalanceModal: React.FC<TopUpBalanceModalProps> = ({
             </div>
           </div>
 
-          {error && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold">
-              {error}
-            </div>
-          )}
-
-          {/* Action Button */}
-          <button
-            type="button"
-            onClick={handleTopUp}
-            disabled={loading || !isAmountValid}
-            className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-[#0082FB] hover:bg-[#0070DA] disabled:opacity-50 text-white rounded-2xl font-extrabold text-sm shadow-md shadow-[#0082FB]/20 transition-all cursor-pointer active:scale-95"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Переход на платежный шлюз...</span>
-              </>
-            ) : (
-              <>
-                <span>Оплатить {effectiveAmount > 0 ? `${effectiveAmount.toLocaleString('ru-RU')} ₸` : ''} картой</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-
-          {/* Agreement Notice */}
-          <p className="text-[11px] text-gray-500 text-center leading-relaxed">
-            Совершая оплату, вы соглашаетесь с{' '}
+          {/* Primary Action: Request invoice in WhatsApp */}
+          <div className="pt-2">
             <a
-              href="https://tanbox.kz/terms"
+              href={waUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#0082FB] hover:underline font-semibold"
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-2xl font-extrabold text-sm shadow-md shadow-emerald-500/20 transition-all cursor-pointer active:scale-95"
             >
-              Публичной офертой
-            </a>{' '}
-            и{' '}
-            <a
-              href="https://tanbox.kz/payment-procedure"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#0082FB] hover:underline font-semibold"
-            >
-              Правилами оплаты и возврата
+              <MessageCircle className="w-5 h-5 shrink-0" />
+              <span>Запросить счет на оплату в WhatsApp</span>
             </a>
-          </p>
+          </div>
+
+          {/* Direct Bank Requisites */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5 text-xs text-[#1e293b]">
+            <div className="flex items-center gap-2 font-bold text-[#111827]">
+              <Building2 className="w-4 h-4 text-[#0082FB]" />
+              <span>Реквизиты для оплаты со счета компании:</span>
+            </div>
+
+            <div className="space-y-1.5 text-[11px] leading-relaxed">
+              <div className="flex justify-between items-center py-1 border-b border-gray-200/60">
+                <span className="text-gray-500">Получатель:</span>
+                <span className="font-semibold text-right">ИП INTERSENSE (ИИН 990601301525)</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-gray-200/60">
+                <span className="text-gray-500">Банк:</span>
+                <span className="font-semibold text-right">АО «Kaspi Bank» (БИК CASPKZKA, КБЕ 19)</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-gray-200/60">
+                <span className="text-gray-500">IBAN (счет):</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono font-bold text-[#0082FB]">KZ58722S000055787378</span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard('KZ58722S000055787378', 'iban')}
+                    className="p-1 hover:bg-white rounded text-gray-500 hover:text-black transition-colors cursor-pointer"
+                    title="Скопировать IBAN"
+                  >
+                    {copiedField === 'iban' ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="py-1">
+                <span className="text-gray-500 block mb-0.5">Назначение платежа:</span>
+                <span className="font-medium text-gray-700 bg-white border border-gray-200 rounded-lg p-2 block text-[10px]">
+                  Авансовый платеж за полиграфические услуги маркировки (клиент: {companyTitle})
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Process explanation note */}
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-blue-50/60 border border-blue-100 text-blue-900 text-xs">
+            <Clock className="w-4 h-4 text-[#0082FB] shrink-0 mt-0.5" />
+            <p className="leading-snug">
+              После отправки платежки или подтверждения оплаты менеджер зачисляет средства на ваш баланс в течение <strong>5–15 минут</strong>.
+            </p>
+          </div>
         </div>
       </div>
     </div>,

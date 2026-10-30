@@ -175,35 +175,7 @@ export const Footer: React.FC = () => {
             : 'Все права защищены. Сервис цифровой маркировки в Казахстане.'}
         </p>
 
-        {/* Payment logos */}
-        <Link
-          to={getLocalizedPath('/payment-procedure')}
-          title={lang === 'kz' ? 'Төлем әдістері және қауіпсіздік' : lang === 'en' ? 'Payment methods & security' : 'Способы оплаты и безопасность'}
-          className="order-1 lg:order-2 flex items-center gap-3 hover:opacity-80 transition-opacity"
-        >
-          <img
-            src="/Visa.webp"
-            alt="Visa"
-            width={60}
-            height={24}
-            className="h-6 w-auto object-contain"
-          />
-          <img
-            src="/Mastercard.webp"
-            alt="Mastercard"
-            width={40}
-            height={24}
-            className="h-6 w-auto object-contain"
-          />
-          <span className="h-4 w-px bg-white/20 mx-0.5" />
-          <img
-            src="/Logo_white.svg"
-            alt="Freedom Pay"
-            width={100}
-            height={20}
-            className="h-5 w-auto object-contain"
-          />
-        </Link>
+
 
         {/* Legal links */}
         <div className="order-3 flex flex-wrap justify-center lg:justify-end gap-5">

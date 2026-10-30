@@ -83,9 +83,9 @@ export const TermsPage: React.FC = () => {
               {/* Section 2 KZ */}
               <div className="space-y-2">
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">2. Шарттың мәні</h2>
-                <p>2.1. Орындаушы Тапсырыс берушінің тапсырмасы бойынша тауарларды цифрлық таңбалауға байланысты қызметтер кешенін көрсетуге, ал Тапсырыс беруші осы Шартта белгіленген тәртіппен және шарттармен қызметтерді қабылдауға және ақысын төлеуге міндеттенеді.</p>
+                <p>2.1. Орындаушы Тапсырыс берушінің тапсырмасы бойынша тауарларды цифрлық таңбалауға байланысты полиграфиялық және қосалқы қызметтер кешенін көрсетуге, ал Тапсырыс беруші осы Шартта белгіленген тәртіппен және шарттармен қызметтерді қабылдауға және ақысын төлеуге міндеттенеді.</p>
                 <p>2.2. Қызметтердің нақты тізімі, көлемі, тарифі, мерзімдері мен құны Тапсырыс беруші Жеке кабинетте Тапсырысты қалыптастырған кезде анықталады және Төлем шотында және Орындалған жұмыстар актісінде көрсетіледі.</p>
-                <p>2.3. Қызметтер кешеніне мыналар кіруі мүмкін: «Таңба» АЖ-де (ИС МПТ) кодтарға тапсырыс беру және эмиссиялау, жапсырма макеттерін әзірлеу, өнеркәсіптік термотрансферлік басып шығару, Тапсырыс берушінің қоймасында тауарларды оклейка жасау, көліктік қаптама кодтарын (SSCC) қалыптастыру, ҚР бойынша курьерлік жеткізу, таңбалау процестерін толық аутсорсингке алу (мемлекеттік ақпараттық жүйелердегі жеке кабинеттерді жүргізу, әкелу туралы хабарламалар мен қабылдау-тапсыру актілерін ресімдеу), тауар карточкаларымен операциялар (номенклатураны ҰТК, ТМБ АЖ (ИС МПТ) жүйелеріне тіркеу, GS1 жүйесінде GTIN алу), сондай-ақ персоналды міндетті цифрлық таңбалау бойынша корпоративтік оқыту және консультациялық қызметтер көрсету.</p>
+                <p>2.3. Қызметтер кешеніне мыналар кіруі мүмкін: Тапсырыс беруші ұсынған файлдар мен тізілімдер бойынша Data Matrix кодтары мен штрихкодтары бар өзі жабысатын жапсырмаларды өнеркәсіптік термотрансферлік басып шығару, жапсырма макеттерін әзірлеу және графикалық бейімдеу, Тапсырыс берушінің қоймасында тауарларды оклейка жасау, көліктік қаптама кодтарын (SSCC) қалыптастыру, ҚР бойынша курьерлік жеткізу, таңбалауға арналған шығыс материалдарын жеткізу, сондай-ақ міндетті цифрлық таңбалаудың техникалық талаптары бойынша консультациялық қызметтер көрсету.</p>
               </div>
 
               {/* Section 3 KZ */}
@@ -101,8 +101,9 @@ export const TermsPage: React.FC = () => {
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">4. Қызметтердің құны және есеп айырысу тәртібі</h2>
                 <p>4.1. Қызметтердің құны Орындаушының қолданыстағы тарифтері негізінде анықталады және Қазақстан Республикасының ұлттық валютасында — теңгемен (₸) бекітіледі.</p>
                 <p>4.2. ҚР Салық кодексінің 367-бабы 1-тармағының 1-тармақшасына сәйкес Орындаушының қызметтеріне <strong>ҚҚС салынбайды</strong> (Орындаушы оңайлатылған декларация негізінде арнайы салық режимін қолданады).</p>
-                <p>4.3. Төлем Тапсырыс беруші тарапынан Төлем шоты негізінде Орындаушының банктік шотына қолма-қол ақшасыз аудару арқылы, немесе Freedom Pay қорғалған шлюзі арқылы VISA және MasterCard карталарымен онлайн-төлем жасау арқылы, сондай-ақ Kaspi Pay төлем сервистері арқылы жүзеге асырылады.</p>
-                <p>4.4. Банктік карталармен төлеу тәртібі, қаражатты қайтару және жеткізу ережелері Сайттағы <code>tanbox.kz/payment-procedure</code> мекенжайында жарияланған «Төлем тәртібі, жеткізу және қайтару ережелері» құжатымен реттеледі. Картамен төленген қаражатты қайтару тек төлем жасалған сол банктік картаға жүргізіледі.</p>
+                <p>4.3. Төлем Тапсырыс беруші тарапынан Төлем шоты негізінде Орындаушының банктік шотына қолма-қол ақшасыз аудару арқылы, Жеке кабинеттегі аванстық дербес шоттан (ішкі теңгерімнен), немесе Kaspi Pay төлем сервистері арқылы жүзеге асырылады.</p>
+                <p>4.4. Барлық банктік комиссияларды Тапсырыс беруші дербес төлейді.</p>
+                <p>4.5. Тапсырыс берушінің Жеке кабинетіндегі (<code>lk.tanbox.kz</code>) ішкі теңгерім (дербес шот) тек Орындаушының меншікті полиграфиялық және қосалқы қызметтері үшін аванстық төлем (алдын ала төлем) жасауға арналған. Денежные средства на балансе не являются банковским вкладом, электронными деньгами или платежным средством. Үшінші тұлғалардың қызметтеріне ақы төлеуге және басқа пайдаланушылар арасында аударымдар жасауға (P2P) тыйым салынады. Пайдаланылмаған аванс қалдығы Тапсырыс берушінің жазбаша өтініші бойынша оның ресми банктік шотына қайтарылады.</p>
               </div>
 
               {/* Section 5 KZ */}
@@ -119,7 +120,7 @@ export const TermsPage: React.FC = () => {
                 <p>6.1. Тапсырыс беруші «Тұтынушылардың құқықтарын қорғау туралы» ҚР Заңында және ҚР Азаматтық кодексінде көзделген тәртіппен және талаптармен қызметтерден бас тартуға құқылы.</p>
                 <p>6.2. Тапсырыс беруші тиісті сапада толық орындалған (көрсетілген) қызметтерден бас тартуға құқылы емес.</p>
                 <p>6.3. Тапсырыс беруші орындау басталғанға дейін бас тартқан кезде, Орындаушы Тапсырыс беруші төлеген соманы Орындаушының нақты шеккен шығыстарын шегергенде қайтарады.</p>
-                <p>6.4. Freedom Pay шлюзі арқылы банктік картамен төлеу кезінде ақшалай қаражатты қайтару қолма-қол ақшасыз тәртіппен тек төлем жасалған сол банктік картаға жүргізіледі (өтініш қаралғаннан кейін 10 жұмыс күніне дейін, банктердің есеп айырысуы 3-тен 21 жұмыс күніне дейін). Қолма-қол ақшамен қайтару жүргізілмейді.</p>
+                <p>6.4. Пайдаланылмаған аванстық қаражатты қайтару Тапсырыс берушінің жазбаша өтініші бойынша 10 (он) жұмыс күні ішінде Тапсырыс берушінің ресми банктік шотына қолма-қол ақшасыз аудару арқылы жүргізіледі.</p>
                 <p>6.5. Қайтару рәсімі туралы толық мәліметтер Сайттағы <code>tanbox.kz/payment-procedure</code> мекенжайындағы «Төлем тәртібі, жеткізу және қайтару ережелері» құжатында көрсетілген.</p>
               </div>
 
@@ -155,7 +156,6 @@ export const TermsPage: React.FC = () => {
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Банктік деректемелер</td>
                       <td className="border border-gray-300 p-2.5 space-y-1.5">
                         <div><span className="font-semibold">{COMPANY_CONTACTS.legal.bank}</span>, шот: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.iik}</span>, БИК: <span className="font-mono">{COMPANY_CONTACTS.legal.bik}</span></div>
-                        <div><span className="font-semibold">{COMPANY_CONTACTS.legal.freedomBank}</span>, шот: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.freedomIik}</span>, БИК: <span className="font-mono">{COMPANY_CONTACTS.legal.freedomBik}</span></div>
                       </td>
                     </tr>
                     <tr>
@@ -204,9 +204,9 @@ export const TermsPage: React.FC = () => {
               {/* Section 2 EN */}
               <div className="space-y-2">
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">2. Subject Matter</h2>
-                <p>2.1. The Contractor agrees to provide digital product serialization and marking services, and the Customer agrees to accept and pay for such services pursuant to this Agreement.</p>
+                <p>2.1. The Contractor agrees to provide printing and related product serialization services, and the Customer agrees to accept and pay for such services pursuant to this Agreement.</p>
                 <p>2.2. Batch volume, tariff tier, turnaround schedule, and pricing are configured by the Customer via the Portal order form and finalized in the Proforma Invoice and Completion Act.</p>
-                <p>2.3. Services include: code issuance in IS Tanba / IS MPT, label layout formatting, industrial roll printing, onsite labeling crews at Customer warehouses, SSCC aggregation, nationwide dispatch, full-scope serialization outsourcing (administering statutory portals, filing import notices and acceptance-transfer acts), product cataloging and SKU card registration (National Catalog NKT, IS MPT, GS1 Kazakhstan GTIN allocation), as well as corporate compliance training and consulting for customer personnel.</p>
+                <p>2.3. Services include: industrial thermal-transfer printing of self-adhesive labels with Data Matrix 2D codes and barcodes based on digital files and registries provided by the Customer, label layout design and formatting compliant with technical regulations, physical labeling operations at Customer warehouses, SSCC aggregation, nationwide delivery across Kazakhstan, supply of consumables, and technical consulting on mandatory product serialization requirements.</p>
               </div>
 
               {/* Section 3 EN */}
@@ -222,8 +222,9 @@ export const TermsPage: React.FC = () => {
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">4. Pricing & Payments</h2>
                 <p>4.1. Pricing is pegged to Contractor tariff sheets and invoiced in Kazakhstan Tenge (₸).</p>
                 <p>4.2. Pursuant to the Tax Code of RK, the Contractor operates under a simplified tax regime; services are <strong>exempt from VAT</strong>.</p>
-                <p>4.3. Payment is made via bank wire transfer or online via VISA/MasterCard through the secured Freedom Pay payment gateway (with 3D-Secure support).</p>
-                <p>4.4. Payment and refund details are governed by the "Payment, Delivery & Refund Policy" published at <code>tanbox.kz/payment-procedure</code>.</p>
+                <p>4.3. Payment is made via bank wire transfer against a Proforma Invoice to the Contractor's bank account, via Kaspi Pay services, or using the advance deposit balance in the Customer Portal.</p>
+                <p>4.4. All banking transfer commissions are borne by the Customer.</p>
+                <p>4.5. The internal balance in the Customer Portal (<code>lk.tanbox.kz</code>) constitutes an advance prepayment exclusively for the Contractor's own printing and labeling services. It does not constitute a bank deposit, electronic money, or a payment instrument. Third-party payments and peer-to-peer (P2P) transfers are strictly prohibited. Unused advance funds are refunded via non-cash bank transfer to the Customer's corporate bank account upon written request.</p>
               </div>
 
               {/* Section 5 EN */}
@@ -240,7 +241,8 @@ export const TermsPage: React.FC = () => {
                 <p>6.1. The Customer may cancel services subject to the Law of RK "On Consumer Rights Protection" and the Civil Code of RK.</p>
                 <p>6.2. The Customer may not cancel services that have already been properly and fully rendered.</p>
                 <p>6.3. If canceled prior to production kickoff, the Contractor refunds paid amounts less direct expenses actually incurred.</p>
-                <p>6.4. Online card payments are refunded strictly in non-cash format to the same bank card used for payment. Cash refunds for card transactions are strictly prohibited.</p>
+                <p>6.4. Refunds of unused advance payments are processed via non-cash bank transfer to the Customer's designated bank account within 10 (ten) business days of written application.</p>
+                <p>6.5. Detailed refund instructions are set forth in the "Payment, Delivery & Refund Policy" at <code>tanbox.kz/payment-procedure</code>.</p>
               </div>
 
               {/* Section 7 EN */}
@@ -274,7 +276,6 @@ export const TermsPage: React.FC = () => {
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Bank Details</td>
                       <td className="border border-gray-300 p-2.5 space-y-1.5">
                         <div><span className="font-semibold">{COMPANY_CONTACTS.legal.bank}</span>, Account: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.iik}</span>, BIC: <span className="font-mono">{COMPANY_CONTACTS.legal.bik}</span></div>
-                        <div><span className="font-semibold">{COMPANY_CONTACTS.legal.freedomBank}</span>, Account: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.freedomIik}</span>, BIC: <span className="font-mono">{COMPANY_CONTACTS.legal.freedomBik}</span></div>
                       </td>
                     </tr>
                     <tr>
@@ -286,7 +287,6 @@ export const TermsPage: React.FC = () => {
                       <td className="border border-gray-300 p-2.5">Tel: {COMPANY_CONTACTS.phones.hotline} • Email: {COMPANY_CONTACTS.emails.info}</td>
                     </tr>
                   </tbody>
-                </table>
               </div>
             </>
           ) : (
@@ -323,9 +323,9 @@ export const TermsPage: React.FC = () => {
               {/* Section 2 RU */}
               <div className="space-y-2">
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">2. Предмет договора</h2>
-                <p>2.1. Исполнитель обязуется по поручению Заказчика оказать комплекс услуг, связанных с цифровой маркировкой товаров, а Заказчик обязуется принять и оплатить услуги в порядке и на условиях, установленных настоящим Договором.</p>
+                <p>2.1. Исполнитель обязуется по поручению Заказчика оказать комплекс полиграфических и сопутствующих услуг, связанных с цифровой маркировкой товаров, а Заказчик обязуется принять и оплатить услуги в порядке и на условиях, установленных настоящим Договором.</p>
                 <p>2.2. Конкретный перечень, объем, тариф, сроки и стоимость услуг определяются Заказчиком при формировании Заказа в Личном кабинете и отражаются в выставленном Счете на оплату и Акте выполненных работ.</p>
-                <p>2.3. В комплекс услуг могут входить: заказ и эмиссия кодов в ИС Танба / ИС МПТ, разработка макетов этикеток, промышленная термотрансферная печать, оклейка товаров на складе Заказчика, формирование кодов транспортной упаковки (SSCC), курьерская доставка по РК, полный аутсорсинг процессов маркировки (администрирование личных кабинетов в государственных информационных системах, оформление актов приема-передачи АПП, уведомлений о ввозе из ЕАЭС и третьих стран), операции с карточками товаров и каталогами (заведение и модерация номенклатуры в ИС МПТ, Национальном каталоге товаров НКТ, присвоение кодов GTIN в GS1 Kazakhstan), а также корпоративное обучение персонала и консультационные услуги по работе с обязательной цифровой маркировкой.</p>
+                <p>2.3. В комплекс услуг могут входить: промышленная термотрансферная печать самоклеящихся этикеток и стикеров с двухмерными кодами Data Matrix и линейными штрихкодами по файлам и реестрам, предоставляемым Заказчиком; разработка и графическая верстка макетов этикеток согласно требованиям технических регламентов Таможенного союза / ЕАЭС; физическое нанесение (оклейка) этикеток на потребительскую и транспортную упаковку на складе Заказчика; формирование кодов транспортной упаковки (SSCC); курьерская доставка по РК; поставка расходных материалов для маркировки (рулоны этикеток, риббоны); консультационные услуги по техническим требованиям к обязательной маркировке товаров.</p>
               </div>
 
               {/* Section 3 RU */}
@@ -341,9 +341,9 @@ export const TermsPage: React.FC = () => {
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">4. Стоимость услуг и порядок расчетов</h2>
                 <p>4.1. Стоимость услуг определяется на основании действующих тарифов Исполнителя и фиксируется в национальной валюте Республики Казахстан — тенге (₸).</p>
                 <p>4.2. В соответствии с подпунктом 1 пункта 1 статьи 367 Налогового кодекса РК, услуги Исполнителя <strong>НДС не облагаются</strong> (Исполнитель применяет специальный налоговый режим на основе упрощенной декларации).</p>
-                <p>4.3. Оплата осуществляется Заказчиком в безналичном порядке путем банковского перевода на расчетный счет Исполнителя на основании Счета на оплату, либо онлайн-оплатой банковскими картами VISA и MasterCard через защищенный платежный шлюз Freedom Pay (с поддержкой технологии 3D-Secure), либо через платежные сервисы Kaspi Pay / банковский эквайринг.</p>
-                <p>4.4. Все комиссии банков и платежных систем, связанные с переводом денежных средств, оплачиваются Заказчиком самостоятельно.</p>
-                <p>4.5. Порядок оплаты банковскими картами, правила возврата денежных средств и доставка регламентируются документом «Порядок оплаты, доставки и правила возврата», размещенным на Сайте по адресу <code>tanbox.kz/payment-procedure</code>. При оплате картами возврат денежных средств осуществляется исключительно на ту банковскую карту, с которой была совершена исходная оплата.</p>
+                <p>4.3. Оплата осуществляется Заказчиком в безналичном порядке путем банковского перевода на расчетный счет Исполнителя на основании Счета на оплату, через платежные сервисы Kaspi Pay, либо с авансового лицевого счета (внутреннего баланса) в Личном кабинете.</p>
+                <p>4.4. Все комиссии банков, связанные с переводом денежных средств, оплачиваются Заказчиком самостоятельно.</p>
+                <p>4.5. Внутренний баланс (лицевой счет) в Личном кабинете <code>lk.tanbox.kz</code> является исключительно авансовым платежом (предоплатой) за собственные полиграфические и сопутствующие услуги Исполнителя. Денежные средства на балансе не являются банковским вкладом, электронными деньгами или универсальным платежным средством. Использование баланса для оплаты товаров или услуг третьих лиц, а также переводы между пользователями (P2P) технически невозможны и категорически запрещены. Возврат неиспользованного остатка авансового баланса осуществляется по письменному заявлению Заказчика безналичным перечислением на его банковский расчетный счет.</p>
               </div>
 
               {/* Section 5 RU */}
@@ -359,10 +359,9 @@ export const TermsPage: React.FC = () => {
                 <h2 className="text-xs sm:text-sm font-bold uppercase text-black">6. Отказ от услуг и порядок возврата денежных средств</h2>
                 <p>6.1. Заказчик вправе отказаться от услуг в порядке и на условиях, предусмотренных Законом РК «О защите прав потребителей» и Гражданским кодексом Республики Казахстан.</p>
                 <p>6.2. Заказчик не вправе отказаться от услуг, выполненных (оказанных) надлежащим образом в полном объеме.</p>
-                <p>6.3. При отказе Заказчика от услуг до момента начала фактического исполнения (до запуска печати тиража этикеток либо заказа кодов в ИС Танба), Исполнитель возвращает Заказчику уплаченную сумму за вычетом фактически понесенных расходов Исполнителя.</p>
-                <p>6.4. При оплате банковскими картами VISA или MasterCard через процессинговый шлюз Freedom Pay возврат денежных средств осуществляется исключительно в безналичном порядке на ту же банковскую карту, с которой был совершен первоначальный платеж. Выплата возврата наличными денежными средствами категорически не допускается правилами МПС Visa / MasterCard.</p>
-                <p>6.5. Срок рассмотрения заявления на возврат составляет до 10 (десяти) рабочих дней. Зачисление средств банком-эмитентом карты Заказчика осуществляется в течение от 3 до 21 рабочего дня в зависимости от регламентов обслуживающего банка.</p>
-                <p>6.6. Подробные условия, форма заявления и контактные данные для подачи запроса на возврат опубликованы на Сайте по адресу <code>tanbox.kz/payment-procedure</code>.</p>
+                <p>6.3. При отказе Заказчика от услуг до момента начала фактического исполнения (до запуска печати тиража этикеток), Исполнитель возвращает Заказчику уплаченную сумму за вычетом фактически понесенных расходов Исполнителя.</p>
+                <p>6.4. Возврат неиспользованных авансовых средств осуществляется в безналичном порядке путем перечисления на расчетный банковский счет Заказчика в течение 10 (десяти) рабочих дней с момента получения письменного заявления с реквизитами.</p>
+                <p>6.5. Подробные условия, форма заявления и контактные данные для подачи запроса на возврат опубликованы на Сайте по адресу <code>tanbox.kz/payment-procedure</code>.</p>
               </div>
 
               {/* Section 7 RU */}
@@ -397,7 +396,6 @@ export const TermsPage: React.FC = () => {
                       <td className="border border-gray-300 p-2.5 font-bold bg-gray-50">Банковские реквизиты</td>
                       <td className="border border-gray-300 p-2.5 space-y-1.5">
                         <div><span className="font-semibold">{COMPANY_CONTACTS.legal.bank}</span>, счет: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.iik}</span>, БИК: <span className="font-mono">{COMPANY_CONTACTS.legal.bik}</span></div>
-                        <div><span className="font-semibold">{COMPANY_CONTACTS.legal.freedomBank}</span>, счет: <span className="font-mono font-medium">{COMPANY_CONTACTS.legal.freedomIik}</span>, БИК: <span className="font-mono">{COMPANY_CONTACTS.legal.freedomBik}</span></div>
                       </td>
                     </tr>
                     <tr>

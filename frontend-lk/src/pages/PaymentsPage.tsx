@@ -231,7 +231,7 @@ export const PaymentsPage: React.FC = () => {
                   if (isManual) {
                     title = isCredit ? 'Пополнение администратором' : 'Корректировка администратором';
                   } else if (item.category === 'ONLINE_TOPUP') {
-                    title = 'Пополнение картой (Freedom Pay)';
+                    title = 'Пополнение лицевого счета';
                   } else if (item.category === 'ORDER_PAYMENT') {
                     title = item.order ? `Оплата заказа №${item.order.orderNumber}` : 'Оплата заказа';
                   } else if (item.category === 'LAYOUT_PAYMENT') {

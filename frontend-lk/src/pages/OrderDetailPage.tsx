@@ -2348,7 +2348,7 @@ export const OrderDetailPage: React.FC = () => {
                     <span>Оплатить заказ ({order.totalPrice.toLocaleString()} ₸)</span>
                   </button>
                   <p className="text-[10px] text-gray-500 text-center font-medium">
-                    С баланса ЛК или банковской картой онлайн (Freedom Pay)
+                    С баланса ЛК или по счету на оплату
                   </p>
                 </div>
               )}
