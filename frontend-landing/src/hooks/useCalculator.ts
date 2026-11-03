@@ -337,46 +337,49 @@ export const useCalculator = () => {
       return;
     }
 
-    // Authoritative backend calculation
+    // Authoritative backend calculation with 400ms debounce
     let isCancelled = false;
-    apiClient
-      .post('/calculator/calculate', {
-        tariffType,
-        itemsCount,
-        boxesCount: boxesCount > 0 ? boxesCount : undefined,
-        extraServices,
-        ssccNeeded,
-        includeOfficialCodeFee: includeOfficialCodes,
-      })
-      .then((res) => {
-        if (!isCancelled && res.data) {
-          setResult({
-            tariffType: res.data.tariffType || tariffType,
-            itemsCount: res.data.itemsCount || itemsCount,
-            unitPrice: res.data.unitPrice,
-            baseUnitPrice: res.data.baseUnitPrice ?? res.data.details?.unitBasePrice,
-            totalPrice: res.data.totalPrice,
-            tanboxServicesTotal: res.data.tanboxServicesTotal ?? res.data.totalPrice,
-            estimatedMarginTotal: 0,
-            consumableCostPerItem: 0,
-            estimatedDays: res.data.estimatedDays ?? res.data.estDays ?? 1,
-            estimatedTimeText: res.data.estimatedTimeText,
-            brackets: res.data.brackets,
-            breakdown: res.data.breakdown ?? {
-              baseUnitPrice: res.data.details?.unitBasePrice ?? res.data.unitPrice,
-              unitAdditions: res.data.details?.unitAdditions ?? 0,
-              flatAdditions: res.data.details?.flatAdditions ?? 0,
-              isUrgent: extraServices.includes('URGENT_PROCESSING'),
-            },
-          });
-        }
-      })
-      .catch(() => {
-        // Silently use instant calculation
-      });
+    const timer = setTimeout(() => {
+      apiClient
+        .post('/calculator/calculate', {
+          tariffType,
+          itemsCount,
+          boxesCount: boxesCount > 0 ? boxesCount : undefined,
+          extraServices,
+          ssccNeeded,
+          includeOfficialCodeFee: includeOfficialCodes,
+        })
+        .then((res) => {
+          if (!isCancelled && res.data) {
+            setResult({
+              tariffType: res.data.tariffType || tariffType,
+              itemsCount: res.data.itemsCount || itemsCount,
+              unitPrice: res.data.unitPrice,
+              baseUnitPrice: res.data.baseUnitPrice ?? res.data.details?.unitBasePrice,
+              totalPrice: res.data.totalPrice,
+              tanboxServicesTotal: res.data.tanboxServicesTotal ?? res.data.totalPrice,
+              estimatedMarginTotal: 0,
+              consumableCostPerItem: 0,
+              estimatedDays: res.data.estimatedDays ?? res.data.estDays ?? 1,
+              estimatedTimeText: res.data.estimatedTimeText,
+              brackets: res.data.brackets,
+              breakdown: res.data.breakdown ?? {
+                baseUnitPrice: res.data.details?.unitBasePrice ?? res.data.unitPrice,
+                unitAdditions: res.data.details?.unitAdditions ?? 0,
+                flatAdditions: res.data.details?.flatAdditions ?? 0,
+                isUrgent: extraServices.includes('URGENT_PROCESSING'),
+              },
+            });
+          }
+        })
+        .catch(() => {
+          // Silently use instant calculation
+        });
+    }, 400);
 
     return () => {
       isCancelled = true;
+      clearTimeout(timer);
     };
   }, [
     tariffType,

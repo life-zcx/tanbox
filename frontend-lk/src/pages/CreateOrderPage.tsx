@@ -860,7 +860,7 @@ export const CreateOrderPage: React.FC = () => {
       } finally {
         setLoading(false);
       }
-    }, 200);
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [tariffType, itemsCount, ssccNeeded, extraServices]);
