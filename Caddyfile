@@ -83,63 +83,48 @@ tanbox.kz {
     }
 
     # SEO 301 Redirects: consolidate alias routes to canonical primary URLs
-    handle /blog {
-        redir /articles permanent
-    }
+    redir /blog /articles permanent
+    redir /blog/ /articles permanent
     handle_path /blog/* {
-        redir /articles{uri} permanent
+        redir * /articles{uri} permanent
     }
-    handle /kz/blog {
-        redir /kz/articles permanent
-    }
+    redir /kz/blog /kz/articles permanent
+    redir /kz/blog/ /kz/articles permanent
     handle_path /kz/blog/* {
-        redir /kz/articles{uri} permanent
+        redir * /kz/articles{uri} permanent
     }
-    handle /en/blog {
-        redir /en/articles permanent
-    }
+    redir /en/blog /en/articles permanent
+    redir /en/blog/ /en/articles permanent
     handle_path /en/blog/* {
-        redir /en/articles{uri} permanent
+        redir * /en/articles{uri} permanent
     }
 
-    handle /tariffs {
-        redir /services permanent
-    }
-    handle /kz/tariffs {
-        redir /kz/services permanent
-    }
-    handle /en/tariffs {
-        redir /en/services permanent
-    }
+    redir /tariffs /services permanent
+    redir /tariffs/ /services permanent
+    redir /kz/tariffs /kz/services permanent
+    redir /kz/tariffs/ /kz/services permanent
+    redir /en/tariffs /en/services permanent
+    redir /en/tariffs/ /en/services permanent
 
-    handle /payment {
-        redir /payment-procedure permanent
-    }
-    handle /payments {
-        redir /payment-procedure permanent
-    }
-    handle /kz/payment {
-        redir /kz/payment-procedure permanent
-    }
-    handle /kz/payments {
-        redir /kz/payment-procedure permanent
-    }
-    handle /en/payment {
-        redir /en/payment-procedure permanent
-    }
-    handle /en/payments {
-        redir /en/payment-procedure permanent
-    }
+    redir /payment /payment-procedure permanent
+    redir /payment/ /payment-procedure permanent
+    redir /payments /payment-procedure permanent
+    redir /payments/ /payment-procedure permanent
+    redir /kz/payment /kz/payment-procedure permanent
+    redir /kz/payment/ /kz/payment-procedure permanent
+    redir /kz/payments /kz/payment-procedure permanent
+    redir /kz/payments/ /kz/payment-procedure permanent
+    redir /en/payment /en/payment-procedure permanent
+    redir /en/payment/ /en/payment-procedure permanent
+    redir /en/payments /en/payment-procedure permanent
+    redir /en/payments/ /en/payment-procedure permanent
 
-    handle /cookies {
-        redir /cookie-policy permanent
-    }
-    handle /kz/cookies {
-        redir /kz/cookie-policy permanent
-    }
-    handle /en/cookies {
-        redir /en/cookie-policy permanent
-    }
+    redir /cookies /cookie-policy permanent
+    redir /cookies/ /cookie-policy permanent
+    redir /kz/cookies /kz/cookie-policy permanent
+    redir /kz/cookies/ /kz/cookie-policy permanent
+    redir /en/cookies /en/cookie-policy permanent
+    redir /en/cookies/ /en/cookie-policy permanent
     handle /admin {
         redir https://admin.tanbox.kz/ permanent
     }
