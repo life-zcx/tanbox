@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 const ServiceOrderModal = React.lazy(() => import('../components/modals/ServiceOrderModal').then(module => ({ default: module.ServiceOrderModal })));
 import { setPageSeo } from '../utils/seo';
+import { apiClient } from '../api/client';
 
 export interface ServiceItem {
   id: string;
@@ -56,6 +57,23 @@ export const ServicesPage: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedServiceTitle, setSelectedServiceTitle] = useState('');
+  const [dbTariffs, setDbTariffs] = useState<any[]>([]);
+  const [dbPricingSettings, setDbPricingSettings] = useState<any>(null);
+
+  useEffect(() => {
+    let active = true;
+    apiClient
+      .get('/tariffs')
+      .then((res) => {
+        if (!active) return;
+        if (res.data?.tariffs) setDbTariffs(res.data.tariffs);
+        if (res.data?.pricingSettings) setDbPricingSettings(res.data.pricingSettings);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleOpenModal = (title: string) => {
     setSelectedServiceTitle(title);
@@ -63,13 +81,20 @@ export const ServicesPage: React.FC = () => {
   };
 
   const services: ServiceItem[] = useMemo(() => {
+    const pCustoms = dbTariffs.find((t) => t.code === 'PRO')?.priceRetail ?? 72;
+    const pNkt = dbPricingSettings?.cardNktPrice ?? 150;
+    const pPrint = dbTariffs.find((t) => t.code === 'PRINT')?.priceRetail ?? 18;
+    const pOutsourcing = dbPricingSettings?.outsourcingOneTimePrice ?? 79900;
+    const pSscc = dbPricingSettings?.ssccPrice ?? 50;
+    const pStandard = dbTariffs.find((t) => t.code === 'STANDARD')?.priceRetail ?? 42;
+    const pTraining = dbPricingSettings?.trainingCoursePrice ?? 85000;
     if (lang === 'kz') {
       return [
         {
           id: 'customs',
           title: 'Тауарларды кедендік қоймаларда таңбалау (ИМ-70)',
           badge: 'Қойма және Логистика',
-          price: '75 ₸ бастап / дана',
+          price: `${pCustoms} ₸ бастап / дана`,
           desc: 'Еркін айналымға шығарылғанға дейін кедендік қоймаларда (ИМ-70 режимінде) Data Matrix кодтарын басу және жапсыру бойынша толық қызметтер кешені.',
           icon: Truck,
           features: [
@@ -83,7 +108,7 @@ export const ServicesPage: React.FC = () => {
           id: 'nkt',
           title: 'Тауарларды ҰТК каталогына енгізу (Ұлттық каталог)',
           badge: 'Тіркеу және Каталогтау',
-          price: '150 ₸ бастап / SKU',
+          price: `${pNkt} ₸ бастап / SKU`,
           desc: 'ҚР Бірыңғай ұлттық тауарлар каталогына (ҰТК) номенклатураны енгізу және GTIN / NTIN кодтарын алу. Атрибуттарды толтыру және модерациядан өткізу.',
           icon: FileSpreadsheet,
           features: [
@@ -97,7 +122,7 @@ export const ServicesPage: React.FC = () => {
           id: 'datamatrix',
           title: 'Data Matrix кодтарын эмиссиялау және жапсыру',
           badge: 'ҚР Таңбалауы',
-          price: '18 ₸ бастап / дана',
+          price: `${pPrint} ₸ бастап / дана`,
           desc: '«Таңба» АЖ-де кодтарға тапсырыс беру, төзімді стикерлерді жоғары жылдамдықта басу және қаптаманың кез келген түріне жапсыру.',
           icon: QrCode,
           features: [
@@ -111,7 +136,7 @@ export const ServicesPage: React.FC = () => {
           id: 'outsourcing',
           title: 'Таңбалау процестерін кілтке дейін аутсорсингке алу',
           badge: 'B2B Аутсорсинг',
-          price: '85 990 ₸ бастап',
+          price: `${pOutsourcing.toLocaleString()} ₸ бастап`,
           desc: 'Таңбалау процестерін толық сенімді сыртқы басқаруға беру: номенклатура, кодтарға тапсырыс, есептер және 24/7 техникалық сүйемелдеу.',
           icon: ShieldCheck,
           features: [
@@ -125,7 +150,7 @@ export const ServicesPage: React.FC = () => {
           id: 'aggregation',
           title: 'Қораптар мен паллеттерге агрегациялау (SSCC)',
           badge: 'Логистикалық агрегация',
-          price: '5 ₸ / SSCC',
+          price: `${pSscc} ₸ / короб (SSCC)`,
           desc: 'Қораптар мен паллеттер үшін көліктік SSCC кодтарын қалыптастыру және басып шығару. Қоймада қабылдауды және кедендік тексеруден өтуді жеңілдету.',
           icon: Layers,
           features: [
@@ -139,7 +164,7 @@ export const ServicesPage: React.FC = () => {
           id: 'mobile-teams',
           title: 'Көшпелі мобильді стикерлеушілер тобы (24/7)',
           badge: 'Қоймаға шығу',
-          price: '48 ₸ бастап / дана',
+          price: `${pStandard} ₸ бастап / дана`,
           desc: 'Қазақстанның кез келген аймағындағы қоймаңызға өз жабдықтарымен және шығын материалдарымен кәсіби таңбалаушылар тобының шығуы.',
           icon: Users,
           features: [
@@ -153,7 +178,7 @@ export const ServicesPage: React.FC = () => {
           id: 'integration',
           title: 'Қызметкерлерді оқыту және «Таңба» АЖ / 1С интеграциясы',
           badge: 'АТ, Оқыту және Аудит',
-          price: '85 000 ₸ бастап',
+          price: `${pTraining.toLocaleString()} ₸ бастап`,
           desc: 'Қоймашылар мен операторларды оқыту, есеп жүйеңізде толық прослеживаемостьты баптау және мемлекеттік тексерулерге дайындық.',
           icon: Cpu,
           features: [
@@ -172,7 +197,7 @@ export const ServicesPage: React.FC = () => {
           id: 'customs',
           title: 'Customs Warehouse Serialization (IM-70)',
           badge: 'Warehouse & Logistics',
-          price: 'from 75 ₸ / unit',
+          price: `from ${pCustoms} ₸ / unit`,
           desc: 'Full-scope Data Matrix printing and stickering services at customs bonded warehouses (IM-70 regime) prior to release into free circulation.',
           icon: Truck,
           features: [
@@ -186,7 +211,7 @@ export const ServicesPage: React.FC = () => {
           id: 'nkt',
           title: 'Product Cataloging in NKT (GS1 KZ)',
           badge: 'Registration & Cataloging',
-          price: 'from 150 ₸ / SKU',
+          price: `from ${pNkt} ₸ / SKU`,
           desc: 'Submitting SKU master data to the National Product Catalog of Kazakhstan to obtain official GTIN/NTIN codes with full attribute approval.',
           icon: FileSpreadsheet,
           features: [
@@ -200,7 +225,7 @@ export const ServicesPage: React.FC = () => {
           id: 'datamatrix',
           title: 'Data Matrix Code Emission & Stickering',
           badge: 'Kazakhstan Serialization',
-          price: 'from 18 ₸ / unit',
+          price: `from ${pPrint} ₸ / unit`,
           desc: 'Ordering official Data Matrix pools from IS Tanba, high-speed thermal label printing, and applying stickers onto any product packaging.',
           icon: QrCode,
           features: [
@@ -214,7 +239,7 @@ export const ServicesPage: React.FC = () => {
           id: 'outsourcing',
           title: 'Turnkey Marking & Serialization Outsourcing',
           badge: 'B2B Outsourcing',
-          price: 'from 85,990 ₸',
+          price: `from ${pOutsourcing.toLocaleString()} ₸`,
           desc: 'Complete delegation of track & trace compliance: catalog registrations, code issuance, reports, and 24/7 technical oversight.',
           icon: ShieldCheck,
           features: [
@@ -228,7 +253,7 @@ export const ServicesPage: React.FC = () => {
           id: 'aggregation',
           title: 'Carton & Pallet Aggregation (SSCC)',
           badge: 'Logistics Aggregation',
-          price: '5 ₸ / SSCC',
+          price: `${pSscc} ₸ / короб (SSCC)`,
           desc: 'Generating and printing SSCC transport barcodes for cartons and pallets. Accelerating terminal intake and customs verification.',
           icon: Layers,
           features: [
@@ -242,7 +267,7 @@ export const ServicesPage: React.FC = () => {
           id: 'mobile-teams',
           title: 'Onsite Mobile Stickering Crews (24/7)',
           badge: 'Warehouse Dispatch',
-          price: 'from 48 ₸ / unit',
+          price: `from ${pStandard} ₸ / unit`,
           desc: 'Deploying professional stickering crews equipped with mobile thermal printers directly to your warehouse across Kazakhstan.',
           icon: Users,
           features: [
@@ -256,7 +281,7 @@ export const ServicesPage: React.FC = () => {
           id: 'integration',
           title: 'Staff Training & 1C / ERP IS Tanba Integration',
           badge: 'IT, Training & Audit',
-          price: 'from 85,000 ₸',
+          price: `from ${pTraining.toLocaleString()} ₸`,
           desc: 'Hands-on staff training for warehouse operators, configuring ERP data exchange, and regulatory audit compliance.',
           icon: Cpu,
           features: [
@@ -274,7 +299,7 @@ export const ServicesPage: React.FC = () => {
         id: 'customs',
         title: 'Маркировка на таможенных складах (ИМ-70)',
         badge: 'Склады и Логистика',
-        price: 'от 75 ₸ / шт',
+        price: `от ${pCustoms} ₸ / шт`,
         desc: 'Комплекс услуг по нанесению кодов Data Matrix и оклейке партий на таможенных складах (режим ИМ-70) до выпуска товаров в свободное обращение.',
         icon: Truck,
         features: [
@@ -288,7 +313,7 @@ export const ServicesPage: React.FC = () => {
         id: 'nkt',
         title: 'Заведение товаров в НКТ (Каталог товаров)',
         badge: 'Регистрация и Каталогизация',
-        price: 'от 150 ₸ / SKU',
+        price: `от ${pNkt} ₸ / SKU`,
         desc: 'Внесение номенклатуры продукции и получение кодов GTIN / NTIN в Едином национальном каталоге товаров РК. Заполнение аттрибутов и прохождение модерации.',
         icon: FileSpreadsheet,
         features: [
@@ -302,7 +327,7 @@ export const ServicesPage: React.FC = () => {
         id: 'datamatrix',
         title: 'Эмиссия и нанесение кодов Data Matrix',
         badge: 'Маркировка РК',
-        price: 'от 18 ₸ / шт',
+        price: `от ${pPrint} ₸ / шт`,
         desc: 'Заказ кодов в ИС Танба, высокоскоростная печать устойчивых стикеров и их нанесение на любые виды потребительской упаковки товаров.',
         icon: QrCode,
         features: [
@@ -316,7 +341,7 @@ export const ServicesPage: React.FC = () => {
         id: 'outsourcing',
         title: 'Комплексный аутсорсинг процессов маркировки под ключ',
         badge: 'B2B Аутсорсинг',
-        price: 'от 85 990 ₸',
+        price: `от ${pOutsourcing.toLocaleString()} ₸`,
         desc: 'Полная передача рутины по маркировке на внешнее управление: карточки, заказ кодов, ввод в оборот, отчетность и техподдержка 24/7.',
         icon: ShieldCheck,
         features: [
@@ -330,7 +355,7 @@ export const ServicesPage: React.FC = () => {
         id: 'aggregation',
         title: 'Агрегация в короба и паллеты (SSCC)',
         badge: 'Логистическая агрегация',
-        price: '5 ₸ / SSCC',
+        price: `${pSscc} ₸ / короб (SSCC)`,
         desc: 'Формирование и печать транспортных кодов SSCC для коробов и паллет. Упрощение приемки грузов на складах и прохождения таможенного контроля.',
         icon: Layers,
         features: [
@@ -344,7 +369,7 @@ export const ServicesPage: React.FC = () => {
         id: 'mobile-teams',
         title: 'Выездные мобильные бригады оклейщиков (24/7)',
         badge: 'Выезд на склад',
-        price: 'от 48 ₸ / шт',
+        price: `от ${pStandard} ₸ / шт`,
         desc: 'Выезд квалифицированных бригад маркировщиков со своим оборудованием и риббонами непосредственно на ваш склад в любом регионе Казахстана.',
         icon: Users,
         features: [
@@ -358,7 +383,7 @@ export const ServicesPage: React.FC = () => {
         id: 'integration',
         title: 'Обучение сотрудников и интеграция ИС Танба с 1С',
         badge: 'Обучение, ИТ и Аудит',
-        price: 'от 85 000 ₸',
+        price: `от ${pTraining.toLocaleString()} ₸`,
         desc: 'Практическое обучение персонала, настройка обмена данными в 1С / ERP и подготовка к проверкам государственных органов.',
         icon: Cpu,
         features: [
@@ -369,7 +394,7 @@ export const ServicesPage: React.FC = () => {
         ],
       },
     ];
-  }, [lang]);
+  }, [lang, dbTariffs, dbPricingSettings]);
 
   return (
     <div className="bg-[#F4F6F9] min-h-screen pb-20 space-y-6 sm:space-y-12">

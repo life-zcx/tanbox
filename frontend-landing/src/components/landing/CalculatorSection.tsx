@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useCalculator } from '../../hooks/useCalculator';
 import { TariffCode } from '../../types';
-import {
+import { Clock,
   ArrowRight,
   Check,
   ChevronDown,
@@ -29,10 +29,14 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
     setTariffType,
     itemsCount,
     setItemsCount,
+    boxesCount,
+    setBoxesCount,
     ssccNeeded,
     setSsccNeeded,
     extraServices,
     toggleExtraService,
+    includeOfficialCodes,
+    setIncludeOfficialCodes,
     result,
     dbTariffs,
     dbPricingSettings,
@@ -66,17 +70,17 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
   }, [itemsCount]);
 
   // Derived prices from dbPricingSettings (with rock-solid fallbacks)
-  const outsourcingOneTime = dbPricingSettings?.outsourcingOneTimePrice ?? 100000;
-  const outsourcingTier1 = dbPricingSettings?.outsourcingTier1Price ?? 200000;
-  const outsourcingTier2 = dbPricingSettings?.outsourcingTier2Price ?? 300000;
-  const outsourcingTier3 = dbPricingSettings?.outsourcingTier3Price ?? 400000;
-  const outsourcingTier4 = dbPricingSettings?.outsourcingTier4Price ?? 500000;
+  const outsourcingOneTime = dbPricingSettings?.outsourcingOneTimePrice ?? 79900;
+  const outsourcingTier1 = dbPricingSettings?.outsourcingTier1Price ?? 119900;
+  const outsourcingTier2 = dbPricingSettings?.outsourcingTier2Price ?? 189900;
+  const outsourcingTier3 = dbPricingSettings?.outsourcingTier3Price ?? 349900;
+  const outsourcingTier4 = dbPricingSettings?.outsourcingTier4Price ?? 549900;
 
-  const cardNktPrice = dbPricingSettings?.cardNktPrice ?? 200;
-  const cardMptPrice = dbPricingSettings?.cardMptPrice ?? 300;
-  const cardFullPrice = dbPricingSettings?.cardFullPackagePrice ?? 400;
+  const cardNktPrice = dbPricingSettings?.cardNktPrice ?? 150;
+  const cardMptPrice = dbPricingSettings?.cardMptPrice ?? 200;
+  const cardFullPrice = dbPricingSettings?.cardFullPackagePrice ?? 300;
 
-  const trainingCoursePrice = dbPricingSettings?.trainingCoursePrice ?? 100000;
+  const trainingCoursePrice = dbPricingSettings?.trainingCoursePrice ?? 85000;
 
   const getTariffPriceFrom = (code: TariffCode, fallback: number) => {
     const found = dbTariffs?.find((t) => t.code === code);
@@ -93,7 +97,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'DIGITAL' as TariffCode,
           name: 'Сандық',
           desc: 'Тек Data Matrix кодтарының эмиссиясы',
-          priceFrom: getTariffPriceFrom('DIGITAL', 10),
+          priceFrom: getTariffPriceFrom('DIGITAL', 5),
           includes: [
             '«Таңба» АЖ-де кодтардың эмиссиясы',
             'Дайын макеттерді жүктеу (PDF / Excel)',
@@ -104,7 +108,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'PRINT' as TariffCode,
           name: 'Баспа',
           desc: 'Жапсырма рулондарын басып шығару',
-          priceFrom: getTariffPriceFrom('PRINT', 25),
+          priceFrom: getTariffPriceFrom('PRINT', 13),
           includes: [
             'Data Matrix кодтарының эмиссиясы',
             'Рулондарды термотрансферлік баспа',
@@ -115,7 +119,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'STANDARD' as TariffCode,
           name: 'Стандарт',
           desc: 'Басып шығару және кілтке дейін оклейка',
-          priceFrom: getTariffPriceFrom('STANDARD', 50),
+          priceFrom: getTariffPriceFrom('STANDARD', 32),
           includes: [
             'Эмиссия + стикерлерді басып шығару',
             'Стикерлеушілер тобының қоймаға шығуы',
@@ -127,12 +131,13 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'PRO' as TariffCode,
           name: 'PRO Қойма',
           desc: 'Оклейка және қораптарға агрегациялау (SSCC)',
-          priceFrom: getTariffPriceFrom('PRO', 90),
+          priceFrom: getTariffPriceFrom('PRO', 55),
           includes: [
             '«Стандарт» тарифіндегі барлық қызметтер',
             'Қораптарды ашу және артикулдарды тексеру',
             'Өнімді жекелеп жапсырып, қайта жинау',
             'SSCC кодтарын қалыптастыру және басу',
+          'Ең аз партия көлемі: 500 дана',
           ],
         },
       ];
@@ -144,7 +149,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'DIGITAL' as TariffCode,
           name: 'Digital',
           desc: 'Data Matrix code emission only',
-          priceFrom: getTariffPriceFrom('DIGITAL', 10),
+          priceFrom: getTariffPriceFrom('DIGITAL', 5),
           includes: [
             'Code emission in IS Tanba',
             'Ready layout export (PDF / Excel)',
@@ -155,7 +160,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'PRINT' as TariffCode,
           name: 'Print',
           desc: 'Industrial roll printing',
-          priceFrom: getTariffPriceFrom('PRINT', 25),
+          priceFrom: getTariffPriceFrom('PRINT', 13),
           includes: [
             'Data Matrix code generation',
             'Thermal transfer roll printing',
@@ -166,7 +171,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'STANDARD' as TariffCode,
           name: 'Standard',
           desc: 'Turnkey printing & stickering',
-          priceFrom: getTariffPriceFrom('STANDARD', 50),
+          priceFrom: getTariffPriceFrom('STANDARD', 32),
           includes: [
             'Emission + roll sticker printing',
             'Onsite stickering crew dispatch',
@@ -178,12 +183,13 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'PRO' as TariffCode,
           name: 'PRO Warehouse',
           desc: 'Unboxing, labeling & SSCC aggregation',
-          priceFrom: getTariffPriceFrom('PRO', 90),
+          priceFrom: getTariffPriceFrom('PRO', 55),
           includes: [
             'Everything included in Standard',
             'Unpacking boxes & SKU cross-checking',
             'Piece-by-piece relabeling & repacking',
             'SSCC aggregation code generation & print',
+          'Minimum batch size: 500 pcs',
           ],
         },
       ];
@@ -194,7 +200,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         code: 'DIGITAL' as TariffCode,
         name: 'Цифровой',
         desc: 'Только эмиссия кодов Data Matrix',
-        priceFrom: getTariffPriceFrom('DIGITAL', 10),
+        priceFrom: getTariffPriceFrom('DIGITAL', 5),
         includes: [
           'Эмиссия кодов в ИС Танба',
           'Выгрузка готовых макетов (PDF / Excel)',
@@ -205,7 +211,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         code: 'PRINT' as TariffCode,
         name: 'Печать',
         desc: 'Печать рулонов стикеров',
-        priceFrom: getTariffPriceFrom('PRINT', 25),
+        priceFrom: getTariffPriceFrom('PRINT', 13),
         includes: [
           'Эмиссия кодов Data Matrix',
           'Термотрансферная печать в рулонах',
@@ -216,7 +222,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         code: 'STANDARD' as TariffCode,
         name: 'Стандарт',
         desc: 'Печать и оклейка под ключ',
-        priceFrom: getTariffPriceFrom('STANDARD', 50),
+        priceFrom: getTariffPriceFrom('STANDARD', 32),
         includes: [
           'Эмиссия + печать этикеток в рулонах',
           'Выезд бригады оклейщиков на склад',
@@ -228,12 +234,13 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         code: 'PRO' as TariffCode,
         name: 'PRO Склад',
         desc: 'Оклейка и агрегация в короба (SSCC)',
-        priceFrom: getTariffPriceFrom('PRO', 90),
+        priceFrom: getTariffPriceFrom('PRO', 55),
         includes: [
           'Всё, что входит в тариф «Стандарт»',
           'Вскрытие коробов и сверка артикулов',
           'Поштучная оклейка и переупаковка',
           'Формирование и печать кодов SSCC',
+          'Минимальный объём партии: 500 шт.',
         ],
       },
     ];
@@ -505,6 +512,25 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   </div>
                 </div>
 
+                {tariffType === 'PRO' && itemsCount > 0 && itemsCount < 500 && (
+                  <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200/80 rounded-xl px-3.5 py-2.5 font-medium flex items-center justify-between gap-3 animate-in fade-in duration-150">
+                    <span className="leading-snug">
+                      {lang === 'kz'
+                        ? '«PRO» тарифі үшін ең аз партия көлемі — 500 дана. 500 данадан аз көлемдер үшін «Стандарт» немесе «Басып шығару» тарифін таңдауды ұсынамыз.'
+                        : lang === 'en'
+                        ? 'Minimum batch volume for the PRO tariff is 500 pcs. For smaller quantities, consider Standard or Print tariffs.'
+                        : 'Минимальный объем партии для тарифа «PRO» — 500 шт. Для меньших объемов рекомендуем выбрать тариф «Стандарт» или «Печать».'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setItemsCount(500)}
+                      className="px-3 py-1 bg-amber-200/80 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold shrink-0 transition-colors cursor-pointer"
+                    >
+                      {lang === 'kz' ? '500 дана қою' : lang === 'en' ? 'Set 500 pcs' : 'Указать 500 шт.'}
+                    </button>
+                  </div>
+                )}
+
                 {itemsCount >= 5000000 && (
                   <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200/80 rounded-xl px-3.5 py-2 font-medium">
                     {lang === 'kz'
@@ -526,31 +552,68 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* SSCC */}
                 <div
-                  onClick={() => setSsccNeeded(!ssccNeeded)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
-                    ssccNeeded
+                  onClick={() => {
+                    if (tariffType === 'PRO') return;
+                    setSsccNeeded(!ssccNeeded);
+                  }}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                    tariffType === 'PRO'
+                      ? 'border-emerald-300 bg-emerald-50/40 cursor-default'
+                      : ssccNeeded
                       ? 'border-[#0082FB] bg-blue-50/30'
                       : 'border-gray-200/80 hover:border-gray-300 bg-white'
                   }`}
                 >
-                  <div
-                    className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                      ssccNeeded ? 'border-[#0082FB] bg-[#0082FB]' : 'border-gray-300 bg-white'
-                    }`}
-                  >
-                    {ssccNeeded && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                        tariffType === 'PRO'
+                          ? 'border-emerald-600 bg-emerald-600'
+                          : ssccNeeded
+                          ? 'border-[#0082FB] bg-[#0082FB]'
+                          : 'border-gray-300 bg-white'
+                      }`}
+                    >
+                      {(tariffType === 'PRO' || ssccNeeded) && (
+                        <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-[#111827]">
+                        {lang === 'kz' ? 'SSCC агрегациясы' : lang === 'en' ? 'SSCC Aggregation' : 'Агрегация коробов (SSCC)'}
+                      </h4>
+                      <p className="text-[11px] text-[#64748B] mt-0.5">
+                        {tariffType === 'PRO'
+                          ? 'Включено в тариф «PRO» (0 ₸)'
+                          : `+${dbPricingSettings?.ssccPrice ?? 50} ₸ / короб`}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-[#111827]">
-                      {lang === 'kz' ? 'SSCC агрегациясы' : lang === 'en' ? 'SSCC Aggregation' : 'Агрегация коробов (SSCC)'}
-                    </h4>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">
-                      +{dbPricingSettings?.ssccPrice ?? 5} ₸ / короб
-                    </p>
-                  </div>
+
+                  {/* Box counter input when active */}
+                  {ssccNeeded && tariffType !== 'PRO' && (
+                    <div
+                      className="mt-3 pt-3 border-t border-blue-200/60 flex items-center justify-between gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span className="text-[11px] text-gray-600 font-medium">Коробов:</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={100000}
+                        value={boxesCount > 0 ? boxesCount : ''}
+                        placeholder={String(Math.max(1, Math.ceil((itemsCount || 1) / 20)))}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          setBoxesCount(isNaN(val) || val <= 0 ? 0 : val);
+                        }}
+                        className="w-20 px-2 py-1 text-xs font-bold text-center border border-gray-300 rounded-lg focus:border-[#0082FB] focus:outline-none bg-white"
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {/* Sticker layout */}
+                {/* Sticker layout Designer */}
                 <div
                   onClick={() => toggleExtraService('STICKER_LAYOUT_DESIGN')}
                   className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
@@ -568,7 +631,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-[#111827]">
-                      {lang === 'kz' ? 'Стикер макетін әзірлеу' : lang === 'en' ? 'Sticker Layout Design' : 'Разработка макета'}
+                      {lang === 'kz' ? 'Дизайнерлік макет әзірлеу' : lang === 'en' ? 'Designer Layout Creation' : 'Разработка дизайнером'}
                     </h4>
                     <p className="text-[11px] text-[#64748B] mt-0.5">
                       +{(dbPricingSettings?.stickerLayoutPrice ?? 5000).toLocaleString()} ₸
@@ -620,40 +683,87 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-[#111827]">
-                      {lang === 'kz' ? 'Шұғыл орындау (24 сағат)' : lang === 'en' ? 'Urgent (24h turnaround)' : 'Срочное исполнение'}
+                      {lang === 'kz' ? 'Шұғыл орындау' : lang === 'en' ? 'Urgent Processing' : 'Срочное исполнение'}
                     </h4>
                     <p className="text-[11px] text-[#64748B] mt-0.5">
-                      +{dbPricingSettings?.urgentPercent ?? 20}% к заказу
+                      +{dbPricingSettings?.urgentPercent ?? 25}% к маркировке
                     </p>
+                    <span className="text-[10px] text-amber-700 font-semibold block mt-0.5">
+                      (по согласованию с менеджером)
+                    </span>
                   </div>
+                </div>
+              </div>
+
+              {/* Official State Codes Information Card */}
+              <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-blue-100 flex items-start gap-3.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0 border border-blue-200/60 mt-0.5">
+                  <HelpCircle className="w-4 h-4" />
+                </div>
+                <div className="space-y-1 text-xs">
+                  <h4 className="font-bold text-[#111827]">
+                    {lang === 'kz'
+                      ? '«Танба» АЖ Data Matrix кодтарын төлеу'
+                      : lang === 'en'
+                      ? 'Official Data Matrix Code Payment'
+                      : 'Оплата кодов Data Matrix в ИС «Танба»'}
+                  </h4>
+                  <p className="text-[#475569] leading-relaxed">
+                    {lang === 'kz'
+                      ? 'Таңбалау кодтары тапсырыс берушімен тікелей Бірыңғай операторға («Қазақтелеком» АҚ / «Танба» АЖ) компанияңыздың дербес шотынан мемлекеттік тарифтер бойынша төленеді. TANBOX кодтар үшін комиссия алмайды — калькуляторда тек біздің қызметтеріміздің құны есептеледі (эмиссия, басу, оклейка, агрегация).'
+                      : lang === 'en'
+                      ? 'Marking codes are paid by the customer directly to the National Operator (JSC Kazakhtelecom / IS Tanba) from your company account at official state rates. TANBOX does not charge code fees — the calculator covers only our fulfillment services (emission, print, labeling, aggregation).'
+                      : 'Коды маркировки оплачиваются заказчиком напрямую Единому оператору (АО «Казахтелеком» / ИС «Танба») с лицевого счёта вашей компании по государственным тарифам. TANBOX комиссию за коды не взимает — в калькуляторе рассчитывается стоимость наших услуг (эмиссия, печать, оклейка, агрегация).'}
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* 4. Results Bar */}
-            <div className="pt-6 border-t border-gray-200/80 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-1">
+            <div className="pt-6 border-t border-gray-200/80 flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
+              <div className="space-y-2 min-w-0">
                 <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider block">
                   {lang === 'kz' ? 'Жалпы есептік құны' : lang === 'en' ? 'Total Estimated Price' : 'Итоговая расчетная стоимость'}
                 </span>
+                
+                {/* Price and average rate */}
                 <div className="flex items-baseline gap-3 flex-wrap">
-                  <span className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight">
+                  <span className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight whitespace-nowrap">
                     {result.totalPrice > 0 ? `${result.totalPrice.toLocaleString('ru-RU')} ₸` : '0 ₸'}
                   </span>
                   {result.itemsCount > 0 && (
-                    <span className="text-xs sm:text-sm font-semibold text-[#0082FB]">
-                      ≈ {result.unitPrice} ₸ / {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}
-                    </span>
-                  )}
-                  {result.estimatedDays > 0 && itemsCount > 0 && (
-                    <span className="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg font-bold border border-emerald-200/60">
-                      Срок: ~{result.estimatedDays} {result.estimatedDays === 1 ? 'день' : 'дня'}
+                    <span className="text-xs sm:text-sm font-semibold text-[#0082FB] whitespace-nowrap">
+                      ≈ {result.unitPrice} ₸ / {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'} (средняя цена)
                     </span>
                   )}
                 </div>
+
+                {/* Estimated Turnaround on dedicated line */}
+                {itemsCount > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                    <span
+                      className="text-xs text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl font-bold border border-emerald-200/60 inline-flex items-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0"
+                      title="Примерный срок выполнения. Точный график фиксируется менеджером при подтверждении заказа."
+                    >
+                      <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>
+                        {lang === 'kz' ? 'Болжамды мерзімі:' : lang === 'en' ? 'Estimated turnaround:' : 'Примерный срок:'}{' '}
+                        <strong className="text-emerald-900">{result.estimatedTimeText || `~${result.estimatedDays} ${result.estimatedDays === 1 ? 'день' : 'дня'}`}</strong>
+                      </span>
+                    </span>
+                    <span className="text-[11px] text-[#64748B]">
+                      {lang === 'kz'
+                        ? '*нақты мерзім кезек пен тауар дайындығына байланысты'
+                        : lang === 'en'
+                        ? '*exact schedule confirmed by manager based on queue'
+                        : '*точный срок согласуется с менеджером'}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+              {/* Action buttons: Stack vertically on mobile, side-by-side on sm+ */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full lg:w-auto shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -662,23 +772,29 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       input?.focus();
                       return;
                     }
+                    if (tariffType === 'PRO' && itemsCount < 500) {
+                      setItemsCount(500);
+                      return;
+                    }
                     onOrderQuick(tariffType, itemsCount, result.totalPrice);
                   }}
-                  className="w-full sm:w-auto bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 px-7 rounded-xl transition-all shadow-md shadow-[#0082FB]/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full sm:w-auto h-12 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm px-6 sm:px-7 rounded-xl transition-all shadow-md shadow-[#0082FB]/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <span>{lang === 'kz' ? 'Тапсырыс беру' : lang === 'en' ? 'Order Batch' : 'Оформить партию'}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 shrink-0" />
                 </button>
 
                 <a
                   href={`https://wa.me/77003048532?text=${encodeURIComponent(
-                    `Здравствуйте! Хочу заказать маркировку партии в TANBOX:\nТариф: ${selectedTariff.name}\nКоличество: ${itemsCount.toLocaleString()} шт.\nРасчетная стоимость: ${result.totalPrice.toLocaleString()} ₸`
+                    `Здравствуйте! Хочу заказать маркировку партии в TANBOX:\nТариф: ${selectedTariff.name}\nКоличество: ${itemsCount.toLocaleString()} шт.\n${
+                      ssccNeeded && tariffType !== 'PRO' ? `Агрегация: ${boxesCount || Math.ceil(itemsCount / 20)} кор.\n` : ''
+                    }Примерный срок: ${result.estimatedTimeText || `~${result.estimatedDays} дн.`}\nРасчетная стоимость: ${result.totalPrice.toLocaleString()} ₸`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3.5 px-5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  className="w-full sm:w-auto h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-5 sm:px-6 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap shrink-0"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircle className="w-4 h-4 shrink-0" />
                   <span>WhatsApp</span>
                 </a>
               </div>

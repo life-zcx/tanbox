@@ -22,13 +22,6 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
   const { lang } = useLanguage();
   const [activeTab, setActiveTab] = useState<'batch' | 'outsourcing' | 'cards' | 'training'>(initialTab);
 
-  const getTariffPrice = (code: string, fallback: number) => {
-    const found = dbTariffs?.find((t) => t.code === code);
-    const minPrice = found?.priceLargeWholesale ?? found?.priceMin ?? fallback;
-    if (lang === 'kz') return `${minPrice} ₸ / данадан`;
-    if (lang === 'en') return `from ${minPrice} ₸ / pcs`;
-    return `от ${minPrice} ₸ / шт.`;
-  };
 
   useEffect(() => {
     if (isOpen) {
@@ -81,7 +74,6 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
       code: 'DIGITAL' as const,
       name: 'Цифровой',
       badge: 'Только коды',
-      price: getTariffPrice('DIGITAL', 10),
       desc: 'Для компаний со своим термотрансферным принтером и персоналом для оклейки.',
       weDo: [
         'Эмиссия кодов Data Matrix в ИС Танба / ИС МПТ',
@@ -94,7 +86,6 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
       code: 'PRINT' as const,
       name: 'Печать',
       badge: 'Печать рулонов',
-      price: getTariffPrice('PRINT', 25),
       desc: 'Для компаний с персоналом для нанесения, но без промышленного печатного оборудования.',
       weDo: [
         'Эмиссия кодов Data Matrix в системе',
@@ -108,7 +99,6 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
       code: 'STANDARD' as const,
       name: 'Стандарт',
       badge: 'Печать и оклейка',
-      price: getTariffPrice('STANDARD', 50),
       desc: 'Для моно-партий в стандартных коробках, когда требуется маркировка партии под ключ.',
       weDo: [
         'Эмиссия кодов и печать этикеток в рулонах',
@@ -122,7 +112,6 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
       code: 'PRO' as const,
       name: 'PRO Склад',
       badge: 'Полный цикл + SSCC',
-      price: getTariffPrice('PRO', 90),
       desc: 'Для сборных грузов, обуви, одежды и поставок в маркетплейсы и ритейл с агрегацией.',
       weDo: [
         'Все этапы тарифа «Стандарт» (коды + печать + оклейка)',
@@ -200,9 +189,6 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-semibold text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-200">
                         {t.badge}
-                      </span>
-                      <span className="text-sm font-bold text-[#111827]">
-                        {t.price}
                       </span>
                     </div>
 

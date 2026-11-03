@@ -209,9 +209,9 @@ export const CreateOrderPage: React.FC = () => {
   // Active tariffs & pricing settings from database (managed in admin panel)
   const [dbTariffs, setDbTariffs] = useState<any[]>([]);
   const [dbPricingSettings, setDbPricingSettings] = useState<any>({
-    ssccPrice: 5,
+    ssccPrice: 50,
     stickerLayoutPrice: 5000,
-    urgentPercent: 20,
+    urgentPercent: 25,
     expressDeliveryPrice: 15000,
   });
 
@@ -921,7 +921,7 @@ export const CreateOrderPage: React.FC = () => {
         name: 'PRO Склад',
         desc: 'Оклейка, вскрытие, сверка + SSCC короба',
         priceFrom: getPriceFrom('PRO', 90),
-        features: ['Агрегация SSCC коробов', 'Сверка артикулов и брак-контроль'],
+        features: ['Агрегация SSCC коробов', 'Сверка артикулов и брак-контроль', 'Мин. объём — 500 шт.'],
       },
     ];
   }, [dbTariffs]);
@@ -1010,6 +1010,12 @@ export const CreateOrderPage: React.FC = () => {
     // Шаг 3: Тариф
     if (!tariffType) {
       setErrorMsg('Пожалуйста, выберите тариф маркировки (Шаг 3). Без тарифа создание заявки невозможно.');
+      document.getElementById('step-tariff-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (tariffType === 'PRO' && itemsCount < 500) {
+      setErrorMsg('Минимальный объём партии для тарифа PRO — 500 шт. Увеличьте тираж или выберите тариф «Стандарт» / «Печатный».');
       document.getElementById('step-tariff-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
@@ -2312,7 +2318,7 @@ export const CreateOrderPage: React.FC = () => {
                   <div className="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between">
                     <span className="text-[10px] text-gray-400 font-bold uppercase">Тариф</span>
                     <span className="text-xs font-extrabold text-[#0082FB]">
-                      {tariffType === 'PRO' ? 'Включено' : `+${dbPricingSettings?.ssccPrice ?? 5} ₸ / шт.`}
+                      {tariffType === 'PRO' ? 'Включено' : `+${dbPricingSettings?.ssccPrice ?? 50} ₸ / короб`}
                     </span>
                   </div>
                 </label>
@@ -2354,7 +2360,7 @@ export const CreateOrderPage: React.FC = () => {
                 <div className="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between">
                   <span className="text-[10px] text-gray-400 font-bold uppercase">Наценка</span>
                   <span className="text-xs font-extrabold text-[#0082FB]">
-                    +{dbPricingSettings?.urgentPercent ?? 20}%
+                    +{dbPricingSettings?.urgentPercent ?? 25}%
                   </span>
                 </div>
               </label>
@@ -2765,6 +2771,7 @@ export const CreateOrderPage: React.FC = () => {
               (markirovkaMode === 'EMISSION' &&
                 (!markirovkaAccountId || !positions.some((p) => p.gtin && p.gtin.trim().length >= 8))) ||
               itemsCount < 1 ||
+              (tariffType === 'PRO' && itemsCount < 500) ||
               !tariffType ||
               (tariffType !== 'DIGITAL' && !warehouseAddress.trim())
             }
@@ -2789,6 +2796,8 @@ export const CreateOrderPage: React.FC = () => {
               <span>Укажите тираж заказа (Шаг 2)</span>
             ) : !tariffType ? (
               <span>Выберите тариф (Шаг 3)</span>
+            ) : tariffType === 'PRO' && itemsCount < 500 ? (
+              <span>Тираж для PRO — от 500 шт.</span>
             ) : tariffType !== 'DIGITAL' && !warehouseAddress.trim() ? (
               <span>
                 {tariffType === 'PRINT'

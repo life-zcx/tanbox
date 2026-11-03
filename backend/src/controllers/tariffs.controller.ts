@@ -18,7 +18,10 @@ const formatTariff = (t: any, isAdmin: boolean) => ({
   priceMax: Number(t.priceMax) || 0,
   ...(isAdmin
     ? {
-        costEstimate: Number(t.costEstimate) || 0,
+        costEstimate:
+          t.costEstimate !== null && t.costEstimate !== undefined && Number(t.costEstimate) > 0
+            ? Number(t.costEstimate)
+            : null,
         marginEst: t.marginEst || '',
       }
     : {}),
@@ -34,17 +37,17 @@ const formatPricingSettings = (s: any) => ({
   selfLayoutPrice: Number(s.selfLayoutPrice) || 1000,
   urgentPercent: Number(s.urgentPercent) || 0,
   expressDeliveryPrice: Number(s.expressDeliveryPrice) || 0,
-  volumeTier1: Math.floor(Number(s.volumeTier1) || 20000),
-  volumeTier2: Math.floor(Number(s.volumeTier2) || 100000),
-  outsourcingOneTimePrice: Number(s.outsourcingOneTimePrice) || 100000,
-  outsourcingTier1Price: Number(s.outsourcingTier1Price) || 200000,
-  outsourcingTier2Price: Number(s.outsourcingTier2Price) || 300000,
-  outsourcingTier3Price: Number(s.outsourcingTier3Price) || 400000,
-  outsourcingTier4Price: Number(s.outsourcingTier4Price) || 500000,
-  cardNktPrice: Number(s.cardNktPrice) || 200,
-  cardMptPrice: Number(s.cardMptPrice) || 300,
-  cardFullPackagePrice: Number(s.cardFullPackagePrice) || 400,
-  trainingCoursePrice: Number(s.trainingCoursePrice) || 100000,
+  volumeTier1: Math.floor(Number(s.volumeTier1) || 5000),
+  volumeTier2: Math.floor(Number(s.volumeTier2) || 25000),
+  outsourcingOneTimePrice: Number(s.outsourcingOneTimePrice) || 79900,
+  outsourcingTier1Price: Number(s.outsourcingTier1Price) || 119900,
+  outsourcingTier2Price: Number(s.outsourcingTier2Price) || 189900,
+  outsourcingTier3Price: Number(s.outsourcingTier3Price) || 349900,
+  outsourcingTier4Price: Number(s.outsourcingTier4Price) || 549900,
+  cardNktPrice: Number(s.cardNktPrice) || 150,
+  cardMptPrice: Number(s.cardMptPrice) || 200,
+  cardFullPackagePrice: Number(s.cardFullPackagePrice) || 300,
+  trainingCoursePrice: Number(s.trainingCoursePrice) || 85000,
   createdAt: s.createdAt,
   updatedAt: s.updatedAt,
 });
@@ -63,22 +66,22 @@ export const getTariffs = async (req: Request, res: Response) => {
       pricingSettings = await prisma.pricingSettings.create({
         data: {
           key: 'GLOBAL',
-          ssccPrice: 5,
+          ssccPrice: 50,
           stickerLayoutPrice: 5000,
           selfLayoutPrice: 1000,
-          urgentPercent: 20,
+          urgentPercent: 25,
           expressDeliveryPrice: 15000,
-          volumeTier1: 20000,
-          volumeTier2: 100000,
-          outsourcingOneTimePrice: 100000,
-          outsourcingTier1Price: 200000,
-          outsourcingTier2Price: 300000,
-          outsourcingTier3Price: 400000,
-          outsourcingTier4Price: 500000,
-          cardNktPrice: 200,
-          cardMptPrice: 300,
-          cardFullPackagePrice: 400,
-          trainingCoursePrice: 100000,
+          volumeTier1: 5000,
+          volumeTier2: 25000,
+          outsourcingOneTimePrice: 79900,
+          outsourcingTier1Price: 119900,
+          outsourcingTier2Price: 189900,
+          outsourcingTier3Price: 349900,
+          outsourcingTier4Price: 549900,
+          cardNktPrice: 150,
+          cardMptPrice: 200,
+          cardFullPackagePrice: 300,
+          trainingCoursePrice: 85000,
         },
       });
     }
@@ -97,6 +100,8 @@ export const getTariffs = async (req: Request, res: Response) => {
         // Not admin or invalid token, treat as public
       }
     }
+
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
     return res.json({
       tariffs: rawTariffs.map((t) => formatTariff(t, isAdmin)),
@@ -147,25 +152,25 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
         return Number.isFinite(n) ? n : fallback;
       };
 
-      const safeSscc = Math.max(0, toSafeNum(pricingSettings.ssccPrice, 5));
+      const safeSscc = Math.max(0, toSafeNum(pricingSettings.ssccPrice, 50));
       const safeLayout = Math.max(0, toSafeNum(pricingSettings.stickerLayoutPrice, 5000));
       const safeSelfLayout = Math.max(0, toSafeNum(pricingSettings.selfLayoutPrice, 1000));
-      const safeUrgent = Math.min(200, Math.max(0, toSafeNum(pricingSettings.urgentPercent, 20)));
+      const safeUrgent = Math.min(200, Math.max(0, toSafeNum(pricingSettings.urgentPercent, 25)));
       const safeExpress = Math.max(0, toSafeNum(pricingSettings.expressDeliveryPrice, 15000));
-      const safeTier1 = Math.max(100, Math.floor(toSafeNum(pricingSettings.volumeTier1, 20000)));
-      const safeTier2 = Math.max(safeTier1 + 100, Math.floor(toSafeNum(pricingSettings.volumeTier2, 100000)));
+      const safeTier1 = Math.max(100, Math.floor(toSafeNum(pricingSettings.volumeTier1, 5000)));
+      const safeTier2 = Math.max(safeTier1 + 100, Math.floor(toSafeNum(pricingSettings.volumeTier2, 25000)));
 
-      const safeOutsourcingOneTime = Math.max(0, toSafeNum(pricingSettings.outsourcingOneTimePrice, 100000));
-      const safeOutsourcingTier1 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier1Price, 200000));
-      const safeOutsourcingTier2 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier2Price, 300000));
-      const safeOutsourcingTier3 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier3Price, 400000));
-      const safeOutsourcingTier4 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier4Price, 500000));
+      const safeOutsourcingOneTime = Math.max(0, toSafeNum(pricingSettings.outsourcingOneTimePrice, 79900));
+      const safeOutsourcingTier1 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier1Price, 119900));
+      const safeOutsourcingTier2 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier2Price, 189900));
+      const safeOutsourcingTier3 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier3Price, 349900));
+      const safeOutsourcingTier4 = Math.max(0, toSafeNum(pricingSettings.outsourcingTier4Price, 549900));
 
-      const safeCardNkt = Math.max(0, toSafeNum(pricingSettings.cardNktPrice, 200));
-      const safeCardMpt = Math.max(0, toSafeNum(pricingSettings.cardMptPrice, 300));
-      const safeCardFull = Math.max(0, toSafeNum(pricingSettings.cardFullPackagePrice, 400));
+      const safeCardNkt = Math.max(0, toSafeNum(pricingSettings.cardNktPrice, 150));
+      const safeCardMpt = Math.max(0, toSafeNum(pricingSettings.cardMptPrice, 200));
+      const safeCardFull = Math.max(0, toSafeNum(pricingSettings.cardFullPackagePrice, 300));
 
-      const safeTrainingCourse = Math.max(0, toSafeNum(pricingSettings.trainingCoursePrice, 100000));
+      const safeTrainingCourse = Math.max(0, toSafeNum(pricingSettings.trainingCoursePrice, 85000));
 
       await prisma.pricingSettings.upsert({
         where: { key: 'GLOBAL' },
@@ -208,6 +213,8 @@ export const updateTariffs = async (req: AuthRequest, res: Response) => {
         },
       });
     }
+
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
     const updatedTariffs = await prisma.tariff.findMany({ orderBy: { code: 'asc' } });
     const updatedSettings = await prisma.pricingSettings.findUnique({ where: { key: 'GLOBAL' } });

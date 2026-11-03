@@ -130,6 +130,13 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Количество должно быть положительным целым числом до 10 000 000' });
     }
 
+    if (tariffType === TariffType.PRO && countNum < 500) {
+      return res.status(400).json({
+        message: 'Минимальный объем партии для тарифа PRO — 500 шт.',
+        minVolume: 500,
+      });
+    }
+
     let extractedAddress: string | null = null;
     if (typeof req.body.warehouseAddress === 'string' && req.body.warehouseAddress.trim().length > 0) {
       extractedAddress = req.body.warehouseAddress.trim();
@@ -219,11 +226,14 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     }
 
     // Authoritative server-side price calculation (tamper-proof)
+    const parsedBoxes = req.body.boxesCount ? parseInt(String(req.body.boxesCount), 10) : undefined;
     const pricing = await computeOrderPricing({
       tariffType: tariffType as TariffType,
       itemsCount: countNum,
+      boxesCount: parsedBoxes && !isNaN(parsedBoxes) && parsedBoxes > 0 ? parsedBoxes : undefined,
       extraServices: servicesList,
       ssccNeeded: Boolean(ssccNeeded),
+      includeOfficialCodeFee: Boolean(req.body.includeOfficialCodeFee),
     });
 
     // Find starting order sequence number

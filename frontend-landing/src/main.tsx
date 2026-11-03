@@ -9,3 +9,17 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <AppErrorBoundary><App /></AppErrorBoundary>
   </React.StrictMode>,
 );
+
+// Gracefully dismiss initial splash overlay once React is ready
+requestAnimationFrame(() => {
+  const splash = document.getElementById('app-splash');
+  if (splash) {
+    splash.style.opacity = '0';
+    splash.style.pointerEvents = 'none';
+    setTimeout(() => {
+      if (splash.parentNode) {
+        splash.parentNode.removeChild(splash);
+      }
+    }, 220);
+  }
+});

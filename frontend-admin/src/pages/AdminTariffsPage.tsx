@@ -338,30 +338,47 @@ export const AdminTariffsPage: React.FC = () => {
     setTimeout(() => setCopiedText(false), 3000);
   };
 
-  // Simulator calculation
+  // Simulator progressive calculation (piecewise linear, volume brackets)
   const simSelectedTariff = tariffs.find((t) => t.code === simTariff) || tariffs[0];
-  const simUnitPriceBase =
-    simCount > pricingSettings.volumeTier2
-      ? Number(simSelectedTariff?.priceLargeWholesale) || 0
-      : simCount > pricingSettings.volumeTier1
-        ? Number(simSelectedTariff?.priceWholesale) || 0
-        : Number(simSelectedTariff?.priceRetail) || 0;
+  const simRetail = Number(simSelectedTariff?.priceRetail) || 0;
+  const simWholesale = Number(simSelectedTariff?.priceWholesale) || simRetail;
+  const simLarge = Number(simSelectedTariff?.priceLargeWholesale) || simWholesale;
 
-  const simUnitAdditions =
-    simSscc && simTariff !== 'PRO' ? Number(pricingSettings.ssccPrice) || 0 : 0;
+  const simT1 = Math.max(1, Number(pricingSettings.volumeTier1) || 5000);
+  const simT2 = Math.max(simT1 + 1, Number(pricingSettings.volumeTier2) || 25000);
+
+  const simQ1 = Math.min(simCount, simT1);
+  const simQ2 = Math.max(0, Math.min(simCount - simT1, Math.max(0, simT2 - simT1)));
+  const simQ3 = Math.max(0, simCount - Math.max(simT1, simT2));
+
+  const simBaseBatchTotal = simQ1 * simRetail + simQ2 * simWholesale + simQ3 * simLarge;
+  const simAverageBaseUnitPrice = simCount > 0 ? Number((simBaseBatchTotal / simCount).toFixed(2)) : 0;
+
+  // SSCC per box, included in PRO
+  const simBoxesCount = Math.max(1, Math.ceil(simCount / 20));
+  const simSsccTotal = simSscc && simTariff !== 'PRO' ? (Number(pricingSettings.ssccPrice) || 50) * simBoxesCount : 0;
   const simFlatAdditions =
-    (simLayout ? Number(pricingSettings.stickerLayoutPrice) || 0 : 0) +
-    (simDelivery ? Number(pricingSettings.expressDeliveryPrice) || 0 : 0);
+    (simLayout ? Number(pricingSettings.stickerLayoutPrice) || 5000 : 0) +
+    (simDelivery ? Number(pricingSettings.expressDeliveryPrice) || 15000 : 0);
 
-  const simFinalUnitPrice = simUnitPriceBase + simUnitAdditions;
-  let simTotalPrice = simFinalUnitPrice * simCount + simFlatAdditions;
-  if (simUrgent) simTotalPrice *= 1 + (Number(pricingSettings.urgentPercent) || 0) / 100;
-  simTotalPrice = Math.round(simTotalPrice);
+  // Urgent surcharge on marking production services only
+  const simProductionSubtotal = simBaseBatchTotal + simSsccTotal;
+  const simUrgentAddition = simUrgent ? Math.round(simProductionSubtotal * ((Number(pricingSettings.urgentPercent) || 25) / 100)) : 0;
+  const simTotalPrice = Math.round(simProductionSubtotal + simFlatAdditions + simUrgentAddition);
+  const simFinalUnitPrice = simCount > 0 ? Number((simTotalPrice / simCount).toFixed(2)) : 0;
 
-  const simCostBase = Number(simSelectedTariff?.costEstimate) || 0;
+  // Gross margin formula: (Selling Price - Cost) / Selling Price * 100%
+  const rawSimCost = simSelectedTariff?.costEstimate !== undefined && simSelectedTariff?.costEstimate !== null
+    ? Number(simSelectedTariff.costEstimate)
+    : null;
+  const hasSimCost = rawSimCost !== null && !isNaN(rawSimCost) && rawSimCost > 0;
+  const simCostBase = hasSimCost ? rawSimCost : 0;
   const simTotalCost = Math.round(simCostBase * simCount);
   const simTotalProfit = Math.round(simTotalPrice - simTotalCost);
-  const simMarginPercent = simTotalPrice > 0 ? ((simTotalProfit / simTotalPrice) * 100).toFixed(1) : '0';
+  const simMarginPercent = hasSimCost && simTotalPrice > 0
+    ? (((simTotalPrice - simTotalCost) / simTotalPrice) * 100).toFixed(1)
+    : null;
+  const isSimBelowCost = hasSimCost && simAverageBaseUnitPrice < simCostBase;
 
   if (loading) {
     return (
@@ -825,16 +842,23 @@ export const AdminTariffsPage: React.FC = () => {
             2. Точные цены по тарифам (₸ / шт.)
           </h2>
           <p className="text-xs text-gray-500">
-            Укажите точные цены для каждой градации объема и оценочную себестоимость единицы
+            Укажите точные ставки для каждого диапазона объёма и себестоимость. Внимание: ставки применяются прогрессивно к диапазонам тиража (а не ко всей партии), поэтому общая сумма никогда не падает при росте объёма.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {tariffs.map((t, idx) => {
             const retail = Number(t.priceRetail) || 0;
-            const cost = Number(t.costEstimate) || 0;
-            const marginRetail = Math.max(0, retail - cost);
-            const marginPercent = retail > 0 ? ((marginRetail / retail) * 100).toFixed(0) : 0;
+            const wholesale = Number(t.priceWholesale) || 0;
+            const large = Number(t.priceLargeWholesale) || 0;
+            const rawCost = t.costEstimate !== undefined && t.costEstimate !== null ? Number(t.costEstimate) : null;
+            const hasCost = rawCost !== null && !isNaN(rawCost) && rawCost > 0;
+            const cost = hasCost ? rawCost : null;
+
+            const marginRetail = hasCost && retail > 0 ? Math.round(((retail - cost!) / retail) * 1000) / 10 : null;
+            const marginWholesale = hasCost && wholesale > 0 ? Math.round(((wholesale - cost!) / wholesale) * 1000) / 10 : null;
+            const marginLarge = hasCost && large > 0 ? Math.round(((large - cost!) / large) * 1000) / 10 : null;
+            const isBelowCost = hasCost && (retail < cost! || wholesale < cost! || large < cost!);
 
             return (
               <div
@@ -925,10 +949,22 @@ export const AdminTariffsPage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500 font-semibold">Чистая маржа (розница):</span>
-                    <span className="font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                      +{marginRetail.toFixed(2)} ₸ ({marginPercent}%)
-                    </span>
+                    <span className="text-gray-500 font-semibold">Валовая маржа (розница):</span>
+                    {hasCost ? (
+                      <span className={`font-extrabold px-2.5 py-0.5 rounded-lg border text-xs ${
+                        marginRetail! >= 20
+                          ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                          : marginRetail! > 0
+                          ? 'text-amber-700 bg-amber-50 border-amber-200'
+                          : 'text-red-700 bg-red-50 border-red-200'
+                      }`}>
+                        {marginRetail}% ({(retail - cost!).toFixed(2)} ₸/шт)
+                      </span>
+                    ) : (
+                      <span className="text-gray-500 bg-gray-100 px-2 py-0.5 rounded-lg text-xs font-semibold border border-gray-200">
+                        Не указана
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1054,18 +1090,29 @@ export const AdminTariffsPage: React.FC = () => {
 
             <div className="pt-2 border-t border-gray-200 flex items-center justify-between text-xs">
               <span className="text-gray-600">Себестоимость:</span>
-              <span className="text-xs font-bold text-gray-700">{simTotalCost.toLocaleString()} ₸</span>
+              <span className="text-xs font-bold text-gray-700">
+                {hasSimCost ? `${simTotalCost.toLocaleString()} ₸` : 'Не указана'}
+              </span>
             </div>
 
             <div className="flex items-center justify-between text-xs">
-              <span className="text-xs font-extrabold text-emerald-800">Чистая прибыль TANBOX:</span>
-              <span className="text-sm font-black text-emerald-700">+{simTotalProfit.toLocaleString()} ₸</span>
+              <span className="text-xs font-extrabold text-emerald-800">Валовая прибыль TANBOX:</span>
+              <span className="text-sm font-black text-emerald-700">
+                {hasSimCost ? `+${simTotalProfit.toLocaleString()} ₸` : '—'}
+              </span>
             </div>
 
             <div className="pt-2 border-t border-gray-200 text-[10px] text-gray-500 flex justify-between">
-              <span>Рентабельность сделки:</span>
-              <span className="text-black font-extrabold">{simMarginPercent}%</span>
+              <span>Валовая маржа сделки:</span>
+              <span className={`font-extrabold ${isSimBelowCost ? 'text-red-600' : 'text-black'}`}>
+                {hasSimCost ? `${simMarginPercent}%` : 'Не указана'}
+              </span>
             </div>
+            {isSimBelowCost && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-[11px] font-bold p-2 rounded-lg">
+                ⚠️ Внимание: Продажа ниже себестоимости!
+              </div>
+            )}
           </div>
         </div>
       </div>

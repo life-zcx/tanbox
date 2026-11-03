@@ -27,7 +27,6 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
     {
       type: 'DIGITAL' as TariffType,
       name: 'Цифровой',
-      price: 'от 10 ₸ / шт.',
       badge: 'Электронный',
       icon: FileCode,
       target: 'Для тех, у кого есть свои принтеры этикеток и складские сотрудники.',
@@ -41,7 +40,6 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
     {
       type: 'PRINT' as TariffType,
       name: 'Печатный',
-      price: 'от 25 ₸ / шт.',
       badge: 'Печать рулонов',
       icon: Printer,
       target: 'Для тех, кто клеит сам, но нет промышленного принтера и качественной ленты.',
@@ -56,7 +54,6 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
     {
       type: 'STANDARD' as TariffType,
       name: 'Стандарт',
-      price: 'от 50 ₸ / шт.',
       badge: 'Под ключ',
       icon: Users,
       target: 'Импортерам и оптовым поставщикам для оклейки партии без отвлечения своих сотрудников.',
@@ -71,7 +68,6 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
     {
       type: 'PRO' as TariffType,
       name: 'PRO Склад',
-      price: 'от 90 ₸ / шт.',
       badge: 'Полный цикл + SSCC',
       icon: Box,
       target: 'Крупным поставкам на склады Wildberries / Ozon и в торговые сети с агрегацией.',
@@ -168,7 +164,6 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
                               </span>
                             )}
                           </div>
-                          <span className="text-xs font-black text-[#0082FB]">{t.price}</span>
                         </div>
                       </div>
                     </div>

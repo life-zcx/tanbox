@@ -5,8 +5,8 @@ export interface TariffItem {
   name: string;
   description: string;
   fitFor: string;
-  priceRange: string;
-  marginEst: string;
+  priceRange?: string;
+  marginEst?: string;
   priceMin: number;
   priceMax: number;
   priceRetail?: number;
@@ -17,6 +17,7 @@ export interface TariffItem {
 export interface PricingSettings {
   ssccPrice: number;
   stickerLayoutPrice: number;
+  selfLayoutPrice?: number;
   urgentPercent: number;
   expressDeliveryPrice: number;
   volumeTier1: number;
@@ -32,18 +33,46 @@ export interface PricingSettings {
   trainingCoursePrice?: number;
 }
 
+export interface PriceBracket {
+  tier: 'RETAIL' | 'WHOLESALE' | 'LARGE_WHOLESALE';
+  label: string;
+  from: number;
+  to: number | null;
+  rate: number;
+  count: number;
+  subtotal: number;
+}
+
 export interface CalculationResult {
   tariffType: TariffCode;
   itemsCount: number;
   unitPrice: number;
+  baseUnitPrice?: number;
   totalPrice: number;
+  tanboxServicesTotal?: number;
   estimatedMarginTotal: number;
   consumableCostPerItem: number;
   estimatedDays: number;
+  estimatedTimeText?: string;
+  brackets?: PriceBracket[];
   breakdown: {
     baseUnitPrice: number;
+    baseBatchTotal?: number;
     unitAdditions: number;
     flatAdditions: number;
+    ssccTotal?: number;
+    ssccPricePerBox?: number;
+    resolvedBoxesCount?: number;
+    isSsccIncludedInTariff?: boolean;
+    layoutTotal?: number;
+    layoutType?: 'NONE' | 'DESIGNER' | 'CLIENT_APPROVAL';
+    deliveryTotal?: number;
     isUrgent: boolean;
+    urgentPercent?: number;
+    urgentAddition?: number;
+    officialCodeUnitPrice?: number;
+    officialCodesTotal?: number;
+    isOfficialCodeIncluded?: boolean;
+    tier?: 'LARGE_WHOLESALE' | 'WHOLESALE' | 'RETAIL';
   };
 }

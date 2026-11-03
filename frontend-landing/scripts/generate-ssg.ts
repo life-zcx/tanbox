@@ -415,9 +415,9 @@ function resolvePageMeta(route: string): PageMeta {
         offers: {
           '@type': 'AggregateOffer',
           priceCurrency: 'KZT',
-          lowPrice: '18',
-          highPrice: '75',
-          offerCount: '3',
+          lowPrice: '5',
+          highPrice: '72',
+          offerCount: '4',
         },
       };
 
@@ -594,13 +594,13 @@ function resolvePageMeta(route: string): PageMeta {
           '@type': 'Offer',
           name: 'Маркировка товаров под ключ «Стандарт»',
           priceCurrency: 'KZT',
-          price: '48',
+          price: '42',
         },
         {
           '@type': 'Offer',
           name: 'Маркировка на СВХ и таможенных складах «PRO» (ИМ-70)',
           priceCurrency: 'KZT',
-          price: '75',
+          price: '72',
         },
         {
           '@type': 'Offer',
@@ -618,13 +618,13 @@ function resolvePageMeta(route: string): PageMeta {
           '@type': 'Offer',
           name: 'Комплексный аутсорсинг процессов маркировки под ключ',
           priceCurrency: 'KZT',
-          price: '85990',
+          price: '79900',
         },
         {
           '@type': 'Offer',
           name: 'Агрегация групповой тары в короба и паллеты (SSCC)',
           priceCurrency: 'KZT',
-          price: '5',
+          price: '50',
         },
       ],
     };
