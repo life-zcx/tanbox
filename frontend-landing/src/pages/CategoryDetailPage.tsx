@@ -152,6 +152,10 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
         <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
 
           {/* Desktop View (md+): Widescreen infographic banner */}
+          {/* Canonical H1 Heading for SEO & Screen Readers */}
+          <h1 className="sr-only">{category.title}</h1>
+
+          {/* Desktop Banner */}
           {category.bannerUrl && (
             <div className="hidden md:block relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-gray-200/80 bg-white">
               <img
@@ -160,7 +164,6 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
                 className="w-full h-auto object-cover block"
                 loading="eager"
               />
-              <h1 className="sr-only">{category.title}</h1>
             </div>
           )}
 
@@ -178,10 +181,10 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
               <span>{category.dateFull}</span>
             </div>
 
-            {/* Clear, bold H1 title */}
-            <h1 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] leading-tight tracking-tight pt-0.5">
+            {/* Clear, bold heading title */}
+            <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] leading-tight tracking-tight pt-0.5">
               {category.title}
-            </h1>
+            </h2>
 
             {/* Human description (fullDesc or clean summary) */}
             <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">

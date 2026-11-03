@@ -38,14 +38,11 @@ for (const prefix of ['', '/kz', '/en']) {
   for (const route of STATIC_LANDING_PATHS) routes.add(prefix + (route === '/' ? (prefix ? '' : '/') : route));
 }
 
-// Ensure all articles are in the pre-render routes
+// Ensure all canonical articles are in the pre-render routes (/blog is redirected 301 to /articles)
 for (const art of ARTICLES_DATA) {
   routes.add(`/articles/${art.slug}`);
   routes.add(`/kz/articles/${art.slug}`);
   routes.add(`/en/articles/${art.slug}`);
-  routes.add(`/blog/${art.slug}`);
-  routes.add(`/kz/blog/${art.slug}`);
-  routes.add(`/en/blog/${art.slug}`);
 }
 for (const category of CATEGORIES_DATA) {
   for (const prefix of ['', '/kz', '/en']) routes.add(`${prefix}/categories/${category.id}`);
@@ -88,7 +85,19 @@ const COMMON_FAQ = [
 ];
 
 function resolvePageMeta(route: string): PageMeta {
-  const canonical = `https://tanbox.kz${route === '/' ? '/' : route}`;
+  // Normalize canonical URL to always point to primary canonical route (eliminates duplicate content)
+  let canonicalPath = route === '/' ? '/' : route;
+  canonicalPath = canonicalPath
+    .replace(/^\/(?:kz|en)\/blog(?=\/|$)/, (m) => m.replace('/blog', '/articles'))
+    .replace(/^\/blog(?=\/|$)/, '/articles')
+    .replace(/^\/(?:kz|en)\/tariffs(?=\/|$)/, (m) => m.replace('/tariffs', '/services'))
+    .replace(/^\/tariffs(?=\/|$)/, '/services')
+    .replace(/^\/(?:kz|en)\/payments?(?=\/|$)/, (m) => m.replace(/\/payments?/, '/payment-procedure'))
+    .replace(/^\/payments?(?=\/|$)/, '/payment-procedure')
+    .replace(/^\/(?:kz|en)\/cookies(?=\/|$)/, (m) => m.replace('/cookies', '/cookie-policy'))
+    .replace(/^\/cookies(?=\/|$)/, '/cookie-policy');
+
+  const canonical = `https://tanbox.kz${canonicalPath}`;
   let lang: 'ru' | 'kz' | 'en' = 'ru';
   let cleanRoute = route;
 
@@ -388,6 +397,30 @@ function resolvePageMeta(route: string): PageMeta {
   }
 </main>`;
 
+      const serviceSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'Service',
+        name: `Маркировка: ${title} в Казахстане`,
+        serviceType: 'Обязательная цифровая маркировка Data Matrix',
+        provider: {
+          '@type': 'Organization',
+          name: 'TANBOX.KZ',
+          url: 'https://tanbox.kz',
+        },
+        areaServed: {
+          '@type': 'Country',
+          name: 'Казахстан',
+        },
+        description: `${shortDesc}. ${fullDesc}`.slice(0, 300),
+        offers: {
+          '@type': 'AggregateOffer',
+          priceCurrency: 'KZT',
+          lowPrice: '18',
+          highPrice: '75',
+          offerCount: '3',
+        },
+      };
+
       return {
         title: pageTitle,
         description: pageDesc,
@@ -396,6 +429,7 @@ function resolvePageMeta(route: string): PageMeta {
         bodyContent,
         faqItems: faq,
         breadcrumbs: catBreadcrumbs,
+        customSchemas: [serviceSchema],
       };
     }
   }
@@ -439,6 +473,33 @@ function resolvePageMeta(route: string): PageMeta {
   </main>
 </article>`;
 
+      const articleSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: title,
+        description: metaDesc,
+        author: {
+          '@type': 'Organization',
+          name: 'TANBOX.KZ',
+          url: 'https://tanbox.kz',
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: 'TANBOX.KZ',
+          logo: {
+            '@type': 'ImageObject',
+            url: 'https://tanbox.kz/tanbox-white.svg',
+          },
+        },
+        datePublished: artBase.publishedAt || '2026-09-01',
+        dateModified: '2026-11-03',
+        mainEntityOfPage: {
+          '@type': 'WebPage',
+          '@id': canonical,
+        },
+        inLanguage: lang === 'kz' ? 'kk' : lang === 'en' ? 'en' : 'ru',
+      };
+
       return {
         title: pageTitle,
         description: metaDesc.slice(0, 200),
@@ -447,6 +508,7 @@ function resolvePageMeta(route: string): PageMeta {
         bodyContent,
         faqItems: faq,
         breadcrumbs: artBreadcrumbs,
+        customSchemas: [articleSchema],
       };
     }
   }
@@ -868,12 +930,12 @@ for (const route of routes) {
     html = html.replace('</head>', `${schemaScript}\n</head>`);
   }
 
-  // Inject semantic SEO content inside <noscript> so users never experience FOUC / text flashes
-  // Crawlers and non-JS engines still index the semantic markup, and Googlebot executes full JS.
+  // Inject semantic SEO content directly inside #root for instantaneous FCP/LCP and seamless indexing
+  // When React client code runs, createRoot seamlessly mounts and replaces this initial static view.
   if (meta.bodyContent) {
     html = html.replace(
       '<div id="root"></div>',
-      `<div id="root"></div>\n  <noscript>\n    <div class="ssg-seo-content" style="max-width:1200px;margin:0 auto;padding:24px;font-family:sans-serif;color:#111;">\n${meta.bodyContent}\n    </div>\n  </noscript>`
+      `<div id="root">\n    <div class="ssg-seo-content" style="max-width:1200px;margin:0 auto;padding:24px;font-family:sans-serif;color:#111;">\n${meta.bodyContent}\n    </div>\n  </div>`
     );
   }
 
