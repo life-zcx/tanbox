@@ -2,6 +2,7 @@ import { prisma } from '../config/db';
 import { OrderCategory, MarkirovkaCardStatus } from '@prisma/client';
 import { CATEGORY_SCHEMAS } from '../config/categorySchemas';
 import { getNktSettings } from './nktSettings.service';
+import { isBlockedSsrfHostname, validateAndSanitizeNktBaseUrl } from './markirovkaClient.service';
 import { logger } from '../utils/logger';
 import fs from 'fs';
 import path from 'path';
@@ -226,7 +227,8 @@ export class MarkirovkaCardsService {
         const settings = getNktSettings();
         const cleanUserKey = account?.nktApiKey ? account.nktApiKey.replace(/[^\x20-\x7E]/g, '').trim() : '';
         const effectiveApiKey = cleanUserKey || settings.apiKey;
-        const effectiveBaseUrl = (account?.nktBaseUrl && account.nktBaseUrl.trim()) || settings.baseUrl || 'https://nationalcatalog.kz/gwp';
+        const rawBaseUrl = (account?.nktBaseUrl && account.nktBaseUrl.trim()) || settings.baseUrl || 'https://nationalcatalog.kz/gwp';
+        const effectiveBaseUrl = validateAndSanitizeNktBaseUrl(rawBaseUrl);
 
         if (effectiveApiKey) {
           logger.info(`[NKT Delete] Removing request #${existing.nktRequestId} from NKT for card ${cardId}`);
@@ -297,10 +299,11 @@ export class MarkirovkaCardsService {
     const settings = getNktSettings();
     const cleanUserKey = account?.nktApiKey ? account.nktApiKey.replace(/[^\x20-\x7E]/g, '').trim() : '';
     const effectiveApiKey = cleanUserKey || settings.apiKey;
-    const effectiveBaseUrl =
+    const rawBaseUrl =
       (account?.nktBaseUrl && account.nktBaseUrl.trim()) ||
       settings.baseUrl ||
       'https://nationalcatalog.kz/gwp';
+    const effectiveBaseUrl = validateAndSanitizeNktBaseUrl(rawBaseUrl);
 
     if (!effectiveApiKey) {
       throw new Error(
@@ -559,6 +562,21 @@ export class MarkirovkaCardsService {
             let filename = `photo_${i + 1}.jpg`;
 
             if (photoItem.startsWith('http://') || photoItem.startsWith('https://')) {
+              let photoUrl: URL;
+              try {
+                photoUrl = new URL(photoItem);
+              } catch {
+                logger.warn(`[NKT Storage] Некорректный URL фотографии пропущен: ${photoItem}`);
+                continue;
+              }
+              if (photoUrl.protocol !== 'http:' && photoUrl.protocol !== 'https:') {
+                logger.warn(`[NKT Storage] Запрещенный протокол URL фотографии: ${photoItem}`);
+                continue;
+              }
+              if (isBlockedSsrfHostname(photoUrl.hostname)) {
+                logger.warn(`[NKT Storage] Заблокирована попытка SSRF для фото: ${photoItem}`);
+                continue;
+              }
               const fetchImg = await fetch(photoItem, { signal: AbortSignal.timeout(10000) });
               if (fetchImg.ok) {
                 const arrBuf = await fetchImg.arrayBuffer();
@@ -726,10 +744,11 @@ export class MarkirovkaCardsService {
     const settings = getNktSettings();
     const cleanUserKey = account?.nktApiKey ? account.nktApiKey.replace(/[^\x20-\x7E]/g, '').trim() : '';
     const effectiveApiKey = cleanUserKey || settings.apiKey;
-    const effectiveBaseUrl =
+    const rawBaseUrl =
       (account?.nktBaseUrl && account.nktBaseUrl.trim()) ||
       settings.baseUrl ||
       'https://nationalcatalog.kz/gwp';
+    const effectiveBaseUrl = validateAndSanitizeNktBaseUrl(rawBaseUrl);
 
     if (!effectiveApiKey) {
       throw new Error('API-ключ НКТ не настроен в аккаунте');
@@ -910,10 +929,11 @@ export class MarkirovkaCardsService {
     const settings = getNktSettings();
     const cleanUserKey = account?.nktApiKey ? account.nktApiKey.replace(/[^\x20-\x7E]/g, '').trim() : '';
     const effectiveApiKey = cleanUserKey || settings.apiKey;
-    const effectiveBaseUrl =
+    const rawBaseUrl =
       (account?.nktBaseUrl && account.nktBaseUrl.trim()) ||
       settings.baseUrl ||
       'https://nationalcatalog.kz/gwp';
+    const effectiveBaseUrl = validateAndSanitizeNktBaseUrl(rawBaseUrl);
 
     if (!effectiveApiKey) {
       throw new Error('Отсутствует API-ключ НКТ в настройках аккаунта');

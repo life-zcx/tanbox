@@ -15,6 +15,11 @@ test('a fresh PostgreSQL database accepts the baseline and every historical migr
     const { rows } = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'User'`);
     assert.ok(rows.some(row => row.column_name === 'tokenVersion'));
     assert.ok(rows.some(row => row.column_name === 'balance'));
+    const constraints = await db.query(`SELECT conname FROM pg_constraint WHERE conname = 'user_balance_non_negative'`);
+    assert.equal(constraints.rows.length, 1);
+    await assert.rejects(async () => {
+      await db.query(`INSERT INTO "User" ("id", "email", "password", "companyName", "binIin", "phone", "balance", "updatedAt") VALUES ('test-neg', 'neg@test.kz', 'hash', 'Test', '123456789012', '77777777777', -10.00, NOW())`);
+    }, /user_balance_non_negative/);
     const result = await db.query(`SELECT count(*)::int AS count FROM information_schema.tables WHERE table_schema = 'public'`);
     assert.ok(result.rows[0].count >= 10);
   } finally { await db.close(); }

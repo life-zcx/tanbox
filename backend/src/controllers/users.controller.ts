@@ -388,15 +388,20 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
  * Admin adjusts (tops up or decrements) user balance with audit trail
  */
 export const adjustUserBalance = async (req: AuthRequest, res: Response) => {
+  let requestedAmount = 0;
   try {
     if (!req.user || req.user.role !== Role.ADMIN) {
       return res.status(403).json({ message: 'Доступ разрешен только администраторам' });
     }
 
+    const adminId = req.user.id;
+    const adminEmail = req.user.email;
+
     const { id } = req.params;
     const { amount, action = 'ADD', comment } = req.body;
 
     const numAmount = Math.round(Number(amount));
+    requestedAmount = numAmount;
     if (!numAmount || numAmount <= 0 || isNaN(numAmount)) {
       return res.status(400).json({ message: 'Сумма операции должна быть положительным числом' });
     }
@@ -425,20 +430,39 @@ export const adjustUserBalance = async (req: AuthRequest, res: Response) => {
       ? comment.trim().slice(0, 300)
       : (isAdd ? 'Ручное пополнение администратором' : 'Ручное списание администратором');
 
-    const [updatedUser, paymentRecord] = await prisma.$transaction([
-      prisma.user.update({
+    const [updatedUser, paymentRecord] = await prisma.$transaction(async (tx) => {
+      let previousBalance = 0;
+      if (action === 'SUBTRACT') {
+        const debit = await tx.user.updateMany({
+          where: { id, balance: { gte: numAmount } },
+          data: { balance: { decrement: numAmount } },
+        });
+        if (!debit.count) {
+          const freshUser = await tx.user.findUnique({ where: { id }, select: { balance: true } });
+          const freshBalance = freshUser ? Number(freshUser.balance) : 0;
+          throw new Error(`INSUFFICIENT_FUNDS:${freshBalance}`);
+        }
+      } else {
+        await tx.user.update({
+          where: { id },
+          data: { balance: { increment: numAmount } },
+        });
+      }
+
+      const updated = await tx.user.findUniqueOrThrow({
         where: { id },
-        data: {
-          balance: isAdd ? { increment: numAmount } : { decrement: numAmount },
-        },
         select: {
           id: true,
           email: true,
           companyName: true,
           balance: true,
         },
-      }),
-      prisma.onlinePayment.create({
+      });
+
+      const newBalanceNum = Number(updated.balance);
+      previousBalance = isAdd ? newBalanceNum - numAmount : newBalanceNum + numAmount;
+
+      const payment = await tx.onlinePayment.create({
         data: {
           paymentNumber,
           userId: id,
@@ -451,17 +475,19 @@ export const adjustUserBalance = async (req: AuthRequest, res: Response) => {
           metadata: {
             manualByAdmin: true,
             action: isAdd ? 'CREDIT' : 'DEBIT',
-            adminId: req.user.id,
-            adminEmail: req.user.email,
+            adminId,
+            adminEmail,
             comment: cleanComment,
-            previousBalance: currentBalance,
-            newBalance: isAdd ? currentBalance + numAmount : currentBalance - numAmount,
+            previousBalance,
+            newBalance: newBalanceNum,
           },
         },
-      }),
-    ]);
+      });
 
-    logger.info(`[Admin Balance] Admin ${req.user.email} adjusted balance for user ${user.email}: ${action} ${numAmount} KZT. New balance: ${updatedUser.balance}`);
+      return [updated, payment];
+    });
+
+    logger.info(`[Admin Balance] Admin ${adminEmail} adjusted balance for user ${user.email}: ${action} ${numAmount} KZT. New balance: ${updatedUser.balance}`);
 
     return res.json({
       success: true,
@@ -471,6 +497,12 @@ export const adjustUserBalance = async (req: AuthRequest, res: Response) => {
       payment: paymentRecord,
     });
   } catch (error: any) {
+    if (error?.message?.startsWith('INSUFFICIENT_FUNDS:')) {
+      const curBal = Number(error.message.split(':')[1]) || 0;
+      return res.status(400).json({
+        message: `Невозможно списать ${requestedAmount.toLocaleString('ru-RU')} ₸. Текущий баланс пользователя: ${curBal.toLocaleString('ru-RU')} ₸`,
+      });
+    }
     logger.error('adjustUserBalance error:', error);
     return res.status(500).json({ message: 'Ошибка при корректировке баланса: ' + error.message });
   }

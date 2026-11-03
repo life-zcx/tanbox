@@ -253,6 +253,16 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
+    // Atomic consumption: ensure code cannot be replayed or used concurrently
+    const consumed = await prisma.verificationCode.deleteMany({
+      where: { id: tokenRecord.id, email: cleanEmail, expiresAt: { gt: new Date() } },
+    });
+    if (consumed.count !== 1) {
+      return res.status(400).json({
+        message: 'Код подтверждения уже был использован или истек. Запросите новый код.',
+      });
+    }
+
     // Check unique constraints one more time
     const existing = await prisma.user.findFirst({
       where: {
@@ -329,13 +339,15 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
+    const clientIp = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    const lockKey = `${clientIp}:${cleanEmail}`;
 
-    // Check account lockout from repeated failed attempts
-    const lockInfo = clientLoginFailures.get(cleanEmail);
+    // Check account lockout from repeated failed attempts from this client
+    const lockInfo = clientLoginFailures.get(lockKey);
     if (lockInfo && lockInfo.lockedUntil > Date.now()) {
       const waitMin = Math.ceil((lockInfo.lockedUntil - Date.now()) / 60000);
       return res.status(429).json({
-        message: `Слишком много неверных попыток входа. Аккаунт временно заблокирован на ${waitMin} мин. для защиты от подбора.`,
+        message: `Слишком много неверных попыток входа. Вход временно заблокирован на ${waitMin} мин. для защиты от подбора.`,
       });
     }
 
@@ -348,7 +360,7 @@ export const login = async (req: Request, res: Response) => {
     if (!isMatch) {
       const fails = (lockInfo?.count || 0) + 1;
       const lockedUntil = fails >= 5 ? Date.now() + 15 * 60 * 1000 : 0;
-      clientLoginFailures.set(cleanEmail, { count: fails, lockedUntil });
+      clientLoginFailures.set(lockKey, { count: fails, lockedUntil });
 
       const remaining = 5 - fails;
       const warning = remaining > 0 && remaining <= 3 ? ` (Осталось попыток: ${remaining})` : '';
@@ -356,7 +368,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // Reset failed login counter on successful password authentication
-    clientLoginFailures.delete(cleanEmail);
+    clientLoginFailures.delete(lockKey);
 
     // Check account block status
     if (user.isBlocked) {
@@ -709,6 +721,16 @@ export const resetPasswordWithCode = async (req: Request, res: Response) => {
       });
     }
 
+    // ATOMIC CONSUMPTION: consume this exact code record once; concurrent replays cannot proceed
+    const consumed = await prisma.verificationCode.deleteMany({
+      where: { id: tokenRecord.id, email: cleanEmail, expiresAt: { gt: new Date() } },
+    });
+    if (consumed.count !== 1) {
+      return res.status(400).json({
+        message: 'Код подтверждения уже был использован или истек. Запросите новый код.',
+      });
+    }
+
     const user = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (!user) {
       return res.status(404).json({ message: 'Пользователь не найден' });
@@ -724,7 +746,6 @@ export const resetPasswordWithCode = async (req: Request, res: Response) => {
     });
     invalidateUserBlockCache(user.id);
 
-    await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
     memoryAttempts.delete(cleanEmail);
     memoryCooldowns.delete(cleanEmail);
 

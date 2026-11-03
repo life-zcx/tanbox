@@ -69,6 +69,18 @@ tanbox.kz {
     handle_path /lk/* {
         redir https://lk.tanbox.kz{uri} permanent
     }
+    handle /login {
+        redir https://lk.tanbox.kz/login permanent
+    }
+    handle_path /login/* {
+        redir https://lk.tanbox.kz/login{uri} permanent
+    }
+    handle /register {
+        redir https://lk.tanbox.kz/register permanent
+    }
+    handle_path /register/* {
+        redir https://lk.tanbox.kz/register{uri} permanent
+    }
     handle /admin {
         redir https://admin.tanbox.kz/ permanent
     }
