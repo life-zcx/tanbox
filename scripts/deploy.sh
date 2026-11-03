@@ -3,10 +3,12 @@
 # TANBOX Production Deployment Script (2 CPU / 4GB RAM Optimized)
 # ==============================================================================
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$PROJECT_DIR"
 
 echo "🚀 [TANBOX] Начинаем боевой деплой..."
 
@@ -40,17 +42,12 @@ fi
 
 echo "✅ Конфигурация .env проверена и готова."
 
-# Экспортируем переменные из .env в текущий шелл (для POSTGRES_USER, POSTGRES_DB и др.)
-set -a
-[ -f .env ] && . .env
-set +a
-
 # 2. Сборка оптимизированных продакшн-контейнеров
 echo "🔨 [TANBOX] Сборка продакшн Docker-контейнеров..."
 docker compose build
 
 # 2.5 Автоматический бэкап базы данных перед любыми изменениями схемы
-if docker ps | grep -q "tanbox_postgres"; then
+if [ "$(docker inspect --format '{{.State.Running}}' tanbox_postgres 2>/dev/null || true)" = "true" ]; then
     echo "💾 [TANBOX] Создание резервной копии базы данных перед миграцией..."
     bash scripts/backup-db.sh || {
         echo "❌ Ошибка создания бэкапа! Деплой остановлен для защиты данных."
@@ -60,13 +57,15 @@ fi
 
 # 3. Применение безопасных миграций схемы БД (zero-data-loss)
 echo "🗄️ [TANBOX] Применение безопасных миграций Prisma..."
-docker compose run --rm backend sh -c "npx prisma migrate deploy || npx prisma db push --skip-generate"
+docker compose up -d --wait postgres
+docker compose run --rm --no-deps backend node scripts/prepare-migrations.cjs
+docker compose run --rm --no-deps backend node_modules/.bin/prisma migrate deploy
 # [ОТКЛЮЧЕНО] Сидинг админа (раскомментируйте, когда понадобится создать учетную запись):
 # docker compose run --rm backend node dist/seed.js
 
 # 4. Запуск всех сервисов в фоновом режиме
 echo "🚢 [TANBOX] Запуск продакшн-стека..."
-docker compose up -d
+docker compose up -d --wait --wait-timeout 180
 
 # 5. Очистка неиспользуемых старых образов для экономии диска (50 ГБ SSD)
 echo "🧹 [TANBOX] Очистка кэша старых слоев Docker..."
@@ -86,9 +85,6 @@ if [ -f "$BACKUP_SCRIPT" ]; then
     echo "⏰ [TANBOX] Ежедневный ночной бэкап БД (03:00) зарегистрирован в crontab."
 fi
 
-# 7. Чтение учетных данных админа из .env
-ADMIN_PASS=$(grep '^INITIAL_ADMIN_PASSWORD=' .env | cut -d '=' -f2- || echo "(указан в .env)")
-
 # 8. Статус запущенных сервисов
 echo "=============================================================================="
 echo "🎉 Продакшн TANBOX успешно запущен и работает!"
@@ -101,7 +97,4 @@ echo "🌐 Личный кабинет:     https://lk.tanbox.kz"
 echo "🌐 Панель админа:      https://admin.tanbox.kz"
 echo "🌐 API Healthcheck:    https://api.tanbox.kz/api/health"
 echo "=============================================================================="
-echo "🔑 Учетные данные супер-администратора (сохранены в .env):"
-echo "   Email:  admin@tanbox.kz"
-echo "   Пароль: $ADMIN_PASS"
-echo "=============================================================================="
+echo "Учетные данные администратора хранятся в защищенном окружении сервера."

@@ -1,4 +1,3 @@
-import html2pdf from 'html2pdf.js';
 
 export interface ClientPdfOptions {
   filename: string;
@@ -14,6 +13,7 @@ export async function downloadHtmlAsPdf(
   options: ClientPdfOptions
 ): Promise<void> {
   const { filename, landscape = false } = options;
+  const { default: html2pdf } = await import('html2pdf.js');
 
   // Create isolated container
   const container = document.createElement('div');

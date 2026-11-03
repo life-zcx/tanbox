@@ -1,0 +1,40 @@
+name: Project checks
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [backend, label-generator, frontend-landing, frontend-lk, frontend-admin]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+      - run: npm ci
+      - run: npm audit
+      - run: npm run build
+      - if: matrix.project == 'backend'
+        run: node --test tests/*.test.cjs
+  browser-and-backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python3 -m unittest discover -s scripts/tests -v
+      - run: |
+          for project in frontend-landing frontend-lk frontend-admin; do
+            npm ci --prefix "$project"
+            npm run build --prefix "$project"
+          done
+      - run: node scripts/browser-smoke.cjs
+        env:
+          CHROME_PATH: /usr/bin/google-chrome

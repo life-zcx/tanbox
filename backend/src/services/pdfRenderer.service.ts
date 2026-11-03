@@ -2,6 +2,8 @@ import puppeteer, { Browser } from 'puppeteer-core';
 import fs from 'fs';
 
 let browserInstance: Browser | null = null;
+let browserLaunch: Promise<Browser> | null = null;
+let activeRenders = 0;
 
 function resolveChromiumPath(): string {
   if (process.env.CHROMIUM_PATH && fs.existsSync(process.env.CHROMIUM_PATH)) {
@@ -31,26 +33,18 @@ async function getBrowser(): Promise<Browser> {
     return browserInstance;
   }
 
-  const executablePath = resolveChromiumPath();
-
-  browserInstance = await puppeteer.launch({
-    executablePath,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--no-first-run',
-      '--disable-extensions',
-    ],
-    headless: true,
-  });
-
-  browserInstance.on('disconnected', () => {
-    browserInstance = null;
-  });
-
-  return browserInstance;
+  if (!browserLaunch) {
+    browserLaunch = puppeteer.launch({
+      executablePath: resolveChromiumPath(),
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-first-run', '--disable-extensions'],
+      headless: true,
+    }).then((browser) => {
+      browserInstance = browser;
+      browser.on('disconnected', () => { if (browserInstance === browser) browserInstance = null; });
+      return browser;
+    }).finally(() => { browserLaunch = null; });
+  }
+  return browserLaunch;
 }
 
 export interface PdfRenderOptions {
@@ -63,10 +57,12 @@ export async function renderHtmlToPdf(
   html: string,
   options: PdfRenderOptions = {}
 ): Promise<Buffer> {
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-
+  activeRenders++;
+  let page: Awaited<ReturnType<Browser['newPage']>> | undefined;
+  let browser: Browser | undefined;
   try {
+    browser = await getBrowser();
+    page = await browser.newPage();
     // 1. Disable JavaScript execution for static document rendering
     await page.setJavaScriptEnabled(false);
 
@@ -101,28 +97,21 @@ export async function renderHtmlToPdf(
     });
 
     renderCount++;
-    // Periodically recycle Chromium process to prevent memory fragmentation on 4GB RAM VPS
-    if (renderCount >= 50) {
-      renderCount = 0;
-      setTimeout(async () => {
-        try {
-          if (browserInstance) {
-            const oldBrowser = browserInstance;
-            browserInstance = null;
-            await oldBrowser.close();
-          }
-        } catch {}
-      }, 100);
-    }
-
     return Buffer.from(pdfBuffer);
   } catch (err) {
     // If page or browser crashed, reset instance so next request launches a clean Chromium
-    if (!browser.connected) {
+    if (browser && browserInstance === browser && !browser.connected) {
       browserInstance = null;
     }
     throw err;
   } finally {
-    await page.close().catch(() => {});
+    await page?.close().catch(() => {});
+    activeRenders--;
+    if (activeRenders === 0 && renderCount >= 50 && browserInstance) {
+      renderCount = 0;
+      const oldBrowser = browserInstance;
+      browserInstance = null;
+      await oldBrowser.close().catch(() => {});
+    }
   }
 }

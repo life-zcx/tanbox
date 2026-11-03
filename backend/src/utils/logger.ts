@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { redactLogText, serializeLogMeta } from './redact';
 
 const logsDir = path.join(__dirname, '../../logs');
 
@@ -33,6 +34,7 @@ class RotatingLogStream {
       this.currentSize = 0;
     }
     this.stream = fs.createWriteStream(this.filePath, { flags: 'a' });
+    this.stream.on('error', (err) => { this.stream = null; process.stderr.write(`Log stream failed: ${err.message}\n`); });
   }
 
   public write(line: string) {
@@ -100,14 +102,14 @@ export function resetLogStreams(type: string = 'all') {
 }
 
 function sanitizeLog(text: string): string {
-  return String(text).replace(/[\r\n]+/g, ' ').slice(0, 1000);
+  return redactLogText(String(text)).replace(/[\r\n]+/g, ' ').slice(0, 1000);
 }
 
 export const logger = {
   info: (message: string, meta?: any) => {
     const time = new Date().toISOString();
     const safeMsg = sanitizeLog(message);
-    const safeMeta = meta ? ' ' + JSON.stringify(meta).slice(0, 500) : '';
+    const safeMeta = meta ? ' ' + serializeLogMeta(meta).slice(0, 500) : '';
     const logLine = `[${time}] [INFO] ${safeMsg}${safeMeta}\n`;
     process.stdout.write(logLine);
     accessStream.write(logLine);
@@ -116,7 +118,7 @@ export const logger = {
   warn: (message: string, meta?: any) => {
     const time = new Date().toISOString();
     const safeMsg = sanitizeLog(message);
-    const safeMeta = meta ? ' ' + JSON.stringify(meta).slice(0, 500) : '';
+    const safeMeta = meta ? ' ' + serializeLogMeta(meta).slice(0, 500) : '';
     const logLine = `[${time}] [WARN] ${safeMsg}${safeMeta}\n`;
     process.stdout.write(logLine);
     accessStream.write(logLine);
@@ -130,7 +132,7 @@ export const logger = {
       if (error instanceof Error) {
         errStr = ` ${error.message} - Stack: ${error.stack}`;
       } else if (typeof error === 'object') {
-        errStr = ` ${JSON.stringify(error)}`;
+        errStr = ` ${serializeLogMeta(error)}`;
       } else {
         errStr = ` ${error}`;
       }
@@ -145,7 +147,7 @@ export const logger = {
     const time = new Date().toISOString();
     const safeLevel = sanitizeLog(level).toUpperCase();
     const safeMsg = sanitizeLog(message);
-    const safeMeta = meta ? ' ' + JSON.stringify(meta).slice(0, 500) : '';
+    const safeMeta = meta ? ' ' + serializeLogMeta(meta).slice(0, 500) : '';
     const logLine = `[${time}] [FRONTEND-${safeLevel}] ${safeMsg}${safeMeta}\n`;
     process.stdout.write(logLine);
     frontendStream.write(logLine);

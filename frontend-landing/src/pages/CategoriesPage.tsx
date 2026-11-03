@@ -15,7 +15,7 @@ import {
   Flame,
   Cpu
 } from 'lucide-react';
-import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
+const ServiceOrderModal = React.lazy(() => import('../components/modals/ServiceOrderModal').then(module => ({ default: module.ServiceOrderModal })));
 import { setPageSeo } from '../utils/seo';
 import { useLanguage } from '../context/LanguageContext';
 

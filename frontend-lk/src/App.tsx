@@ -7,18 +7,18 @@ import { Sidebar } from './components/common/Sidebar';
 import { Header } from './components/common/Header';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { OrdersPage } from './pages/OrdersPage';
-import { CreateOrderPage } from './pages/CreateOrderPage';
-import { OrderDetailPage } from './pages/OrderDetailPage';
-import { LabelsRegistryPage } from './pages/LabelsRegistryPage';
-import { InvoicesPage } from './pages/InvoicesPage';
-import { PaymentsPage } from './pages/PaymentsPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { MarkirovkaPage } from './pages/MarkirovkaPage';
-import { ProductCardsPage } from './pages/ProductCardsPage';
-import { MyCardsMptPage } from './pages/MyCardsMptPage';
-import { LabelDesignerPage } from './pages/LabelDesignerPage';
+const DashboardPage = React.lazy(() => import('./pages/DashboardPage').then(module => ({ default: module.DashboardPage })));
+const OrdersPage = React.lazy(() => import('./pages/OrdersPage').then(module => ({ default: module.OrdersPage })));
+const CreateOrderPage = React.lazy(() => import('./pages/CreateOrderPage').then(module => ({ default: module.CreateOrderPage })));
+const OrderDetailPage = React.lazy(() => import('./pages/OrderDetailPage').then(module => ({ default: module.OrderDetailPage })));
+const LabelsRegistryPage = React.lazy(() => import('./pages/LabelsRegistryPage').then(module => ({ default: module.LabelsRegistryPage })));
+const InvoicesPage = React.lazy(() => import('./pages/InvoicesPage').then(module => ({ default: module.InvoicesPage })));
+const PaymentsPage = React.lazy(() => import('./pages/PaymentsPage').then(module => ({ default: module.PaymentsPage })));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage').then(module => ({ default: module.ProfilePage })));
+const MarkirovkaPage = React.lazy(() => import('./pages/MarkirovkaPage').then(module => ({ default: module.MarkirovkaPage })));
+const ProductCardsPage = React.lazy(() => import('./pages/ProductCardsPage').then(module => ({ default: module.ProductCardsPage })));
+const MyCardsMptPage = React.lazy(() => import('./pages/MyCardsMptPage').then(module => ({ default: module.MyCardsMptPage })));
+const LabelDesignerPage = React.lazy(() => import('./pages/LabelDesignerPage').then(module => ({ default: module.LabelDesignerPage })));
 import { MaintenanceScreen } from './components/common/MaintenanceScreen';
 import { apiClient } from './api/client';
 
@@ -226,7 +226,7 @@ const LkRouter: React.FC = () => {
 
   return (
     <BrowserRouter>
-      <Routes>
+      <React.Suspense fallback={<LoadingScreen />}><Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
@@ -350,7 +350,7 @@ const LkRouter: React.FC = () => {
         />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+      </Routes></React.Suspense>
     </BrowserRouter>
   );
 };

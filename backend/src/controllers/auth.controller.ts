@@ -65,6 +65,13 @@ export const sendRegisterCode = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Все поля обязательны для заполнения' });
     }
 
+    if (![email, password, companyName, binIin, phone].every((value) => typeof value === 'string')) {
+      return res.status(400).json({ message: 'Поля регистрации должны быть строками' });
+    }
+    if (!companyName.trim() || companyName.length > 200 || email.length > 254 || Buffer.byteLength(password, 'utf8') > 72) {
+      return res.status(400).json({ message: 'Проверьте название компании, email и длину пароля (до 72 байт)' });
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: 'Укажите корректный адрес электронной почты' });
@@ -184,6 +191,34 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Пожалуйста, введите 6-значный код подтверждения из письма' });
     }
 
+    if (![email, password, companyName, binIin, phone].every((value) => typeof value === 'string')) {
+      return res.status(400).json({ message: 'Поля регистрации должны быть строками' });
+    }
+    if (!companyName.trim() || companyName.length > 200 || email.length > 254 || Buffer.byteLength(password, 'utf8') > 72) {
+      return res.status(400).json({ message: 'Проверьте название компании, email и длину пароля (до 72 байт)' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Укажите корректный адрес электронной почты' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Пароль должен содержать минимум 8 символов' });
+    }
+
+    const binDigits = binIin.replace(/\D/g, '');
+    if (binDigits.length !== 12) {
+      return res.status(400).json({ message: 'БИН/ИИН должен содержать ровно 12 цифр' });
+    }
+
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10 || phoneDigits.length > 12) {
+      return res.status(400).json({ message: 'Укажите корректный номер телефона (10–11 цифр)' });
+    }
+
+    if (!/^\d{6}$/.test(String(code))) return res.status(400).json({ message: 'Введите 6-значный код подтверждения' });
+
     const cleanEmail = email.trim().toLowerCase();
     const cleanCode = String(code).trim();
 
@@ -219,15 +254,13 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    const binDigits = binIin.replace(/\D/g, '');
-    const phoneDigits = phone.replace(/\D/g, '');
-
     // Check unique constraints one more time
     const existing = await prisma.user.findFirst({
       where: {
         OR: [
           { email: { equals: cleanEmail, mode: 'insensitive' } },
           { binIin: binDigits },
+          { phone: { contains: phoneDigits.slice(-10) } },
         ],
       },
     });

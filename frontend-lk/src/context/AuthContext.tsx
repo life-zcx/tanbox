@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { SessionRecovery } from '../../../shared/SessionRecovery';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserProfile } from '../types';
 import { apiClient } from '../api/client';
 
@@ -16,8 +17,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    const fetchMe = async () => {
+  const [sessionError, setSessionError] = useState(false);
+  const fetchMe = useCallback(async () => {
+      setLoading(true);
+      setSessionError(false);
       const token = localStorage.getItem('tanbox_token');
       if (!token) {
         setLoading(false);
@@ -26,16 +29,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const res = await apiClient.get('/auth/me');
         setUser(res.data);
-      } catch (err) {
-        localStorage.removeItem('tanbox_token');
-        setUser(null);
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          localStorage.removeItem('tanbox_token');
+          setUser(null);
+        } else {
+          setSessionError(true);
+        }
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchMe();
   }, []);
+
+  useEffect(() => { void fetchMe(); }, [fetchMe]);
 
   const login = async (email: string, password: string) => {
     const res = await apiClient.post('/auth/login', { email, password });
@@ -58,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout }}>
-      {children}
+      {sessionError ? <SessionRecovery retry={() => { void fetchMe(); }} loading={loading} /> : children}
     </AuthContext.Provider>
   );
 };

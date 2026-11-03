@@ -13,7 +13,7 @@ import {
   PhoneCall,
   Calculator 
 } from 'lucide-react';
-import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
+const ServiceOrderModal = React.lazy(() => import('../components/modals/ServiceOrderModal').then(module => ({ default: module.ServiceOrderModal })));
 import { setPageSeo } from '../utils/seo';
 
 export interface ServiceItem {

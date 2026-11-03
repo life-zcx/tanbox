@@ -17,7 +17,7 @@ import {
 import { getArticleBySlug, ARTICLES_DATA, ArticleData } from '../data/articlesData';
 import { setPageSeo } from '../utils/seo';
 import { useLanguage } from '../context/LanguageContext';
-import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
+const ServiceOrderModal = React.lazy(() => import('../components/modals/ServiceOrderModal').then(module => ({ default: module.ServiceOrderModal })));
 
 export const ArticleDetailPage: React.FC = () => {
   const { articleId } = useParams<{ articleId: string }>();

@@ -65,6 +65,9 @@ interface InFlightTask<T> {
   reject: (err: any) => void;
   queuedAt: number;
   startedAt?: number;
+  cancelError?: Error;
+  finished?: boolean;
+  timeoutHandle?: ReturnType<typeof setTimeout>;
   progress?: {
     current: number;
     total: number;
@@ -72,7 +75,7 @@ interface InFlightTask<T> {
   };
 }
 
-class PdfGenerationQueue extends EventEmitter {
+export class PdfGenerationQueue extends EventEmitter {
   private maxConcurrency: number;
   private activeCount: number = 0;
   private waitingQueue: InFlightTask<any>[] = [];
@@ -83,9 +86,10 @@ class PdfGenerationQueue extends EventEmitter {
   private totalFailed: number = 0;
   private stateFilePath = path.resolve(process.cwd(), 'uploads', 'pdf_queue_state.json');
 
-  constructor(maxConcurrency: number = 2) {
+  constructor(maxConcurrency: number = 2, stateFilePath?: string) {
     super();
-    this.maxConcurrency = maxConcurrency;
+    this.maxConcurrency = Math.max(1, Math.min(10, maxConcurrency));
+    if (stateFilePath) this.stateFilePath = stateFilePath;
     this.loadPersistentState();
   }
 
@@ -217,131 +221,52 @@ class PdfGenerationQueue extends EventEmitter {
   /**
    * Cancel a task by its ID or Key
    */
-  public cancelTask(jobIdOrKey: string): boolean {
-    const now = Date.now();
-    // 1. Check waiting queue
-    const waitingIdx = this.waitingQueue.findIndex(
-      (t) => t.id === jobIdOrKey || t.key === jobIdOrKey
-    );
+  public cancelTask(jobIdOrKey: string, reason = 'Задача отменена администратором'): boolean {
+    const waitingIdx = this.waitingQueue.findIndex(t => t.id === jobIdOrKey || t.key === jobIdOrKey);
     if (waitingIdx !== -1) {
       const [task] = this.waitingQueue.splice(waitingIdx, 1);
-      this.inFlightMap.delete(task.key);
-      try {
-        task.abort?.();
-      } catch {}
-      task.reject(new Error('Задача отменена администратором'));
-      this.totalFailed++;
-      this.recentHistory.unshift({
-        id: task.id,
-        key: task.key,
-        description: task.description,
-        orderId: task.orderId,
-        status: 'failed',
-        durationSec: 0,
-        completedAt: now,
-        error: 'Отменено из очереди ожидания',
-      });
-      if (this.recentHistory.length > 50) this.recentHistory.pop();
-      this.savePersistentState();
-      console.log(`[PdfQueue] 🚫 Task cancelled from waiting queue: "${task.description}" (ID: ${task.id})`);
+      this.finishTask(task, new Error(reason));
       return true;
     }
-
-    // 2. Check running tasks
-    for (const [key, task] of this.runningTasksMap.entries()) {
-      if (task.id === jobIdOrKey || task.key === jobIdOrKey) {
-        this.runningTasksMap.delete(key);
-        this.inFlightMap.delete(key);
-        this.activeCount = Math.max(0, this.activeCount - 1);
-        this.totalFailed++;
-        const durationSec = task.startedAt
-          ? parseFloat(((now - task.startedAt) / 1000).toFixed(1))
-          : 0;
-        try {
-          task.abort?.();
-        } catch {}
-        this.recentHistory.unshift({
-          id: task.id,
-          key: task.key,
-          description: task.description,
-          orderId: task.orderId,
-          status: 'failed',
-          durationSec,
-          completedAt: now,
-          error: 'Принудительно остановлено администратором',
-        });
-        if (this.recentHistory.length > 50) this.recentHistory.pop();
-        this.savePersistentState();
-        task.reject(new Error('Задача принудительно остановлена администратором'));
-        console.log(`[PdfQueue] 🛑 Running task stopped by admin: "${task.description}" (ID: ${task.id})`);
-        this.processNext();
-        return true;
-      }
-    }
-
-    return false;
+    const task = Array.from(this.runningTasksMap.values()).find(t => t.id === jobIdOrKey || t.key === jobIdOrKey);
+    if (!task || task.cancelError || task.finished) return false;
+    task.cancelError = new Error(reason);
+    if (task.timeoutHandle) clearTimeout(task.timeoutHandle);
+    // Reject the caller immediately, but retain the execution slot until the worker exits.
+    // An abort callback may only request cancellation; it does not prove the task has stopped.
+    task.reject(task.cancelError);
+    try { task.abort?.(); } catch (err) { console.warn('[PdfQueue] Abort failed:', err); }
+    return true;
   }
 
-  /**
-   * Clear and abort all running and waiting tasks
-   */
   public clearAll(): number {
-    const now = Date.now();
     let count = 0;
-    // Cancel running
-    for (const [key, task] of this.runningTasksMap.entries()) {
-      this.runningTasksMap.delete(key);
-      this.inFlightMap.delete(key);
-      this.totalFailed++;
-      const durationSec = task.startedAt
-        ? parseFloat(((now - task.startedAt) / 1000).toFixed(1))
-        : 0;
-      try {
-        task.abort?.();
-      } catch {}
-      this.recentHistory.unshift({
-        id: task.id,
-        key: task.key,
-        description: task.description,
-        orderId: task.orderId,
-        status: 'failed',
-        durationSec,
-        completedAt: now,
-        error: 'Остановлено при сбросе очереди',
-      });
-      task.reject(new Error('Очередь сброшена администратором'));
-      count++;
-    }
-    this.activeCount = 0;
-
-    // Cancel waiting
-    while (this.waitingQueue.length > 0) {
-      const task = this.waitingQueue.shift()!;
-      this.inFlightMap.delete(task.key);
-      this.totalFailed++;
-      try {
-        task.abort?.();
-      } catch {}
-      this.recentHistory.unshift({
-        id: task.id,
-        key: task.key,
-        description: task.description,
-        orderId: task.orderId,
-        status: 'failed',
-        durationSec: 0,
-        completedAt: now,
-        error: 'Отменено при сбросе очереди',
-      });
-      task.reject(new Error('Очередь сброшена администратором'));
-      count++;
-    }
-
-    if (this.recentHistory.length > 50) {
-      this.recentHistory = this.recentHistory.slice(0, 50);
-    }
-    this.savePersistentState();
-    console.log(`[PdfQueue] 🧹 Cleared all ${count} tasks from queue`);
+    const tasks = [...this.waitingQueue, ...this.runningTasksMap.values()];
+    for (const task of tasks) if (this.cancelTask(task.id)) count++;
     return count;
+  }
+
+  private finishTask(task: InFlightTask<any>, error?: any, result?: any) {
+    if (task.finished) return;
+    task.finished = true;
+    if (task.timeoutHandle) clearTimeout(task.timeoutHandle);
+    if (this.runningTasksMap.get(task.key)?.id === task.id) {
+      this.runningTasksMap.delete(task.key);
+      this.activeCount = Math.max(0, this.activeCount - 1);
+    }
+    this.inFlightMap.delete(task.key);
+    const failure = task.cancelError || error;
+    if (failure) this.totalFailed++; else this.totalCompleted++;
+    this.recentHistory.unshift({
+      id: task.id, key: task.key, description: task.description, orderId: task.orderId,
+      status: failure ? 'failed' : 'completed',
+      durationSec: task.startedAt ? (Date.now() - task.startedAt) / 1000 : 0,
+      completedAt: Date.now(), error: failure ? String(failure.message || failure) : undefined,
+    });
+    this.recentHistory = this.recentHistory.slice(0, 50);
+    this.savePersistentState();
+    if (failure) task.reject(failure); else task.resolve(result);
+    this.processNext();
   }
 
   /**
@@ -373,16 +298,8 @@ class PdfGenerationQueue extends EventEmitter {
         orderId,
         fn: taskFn,
         abort: abortFn,
-        resolve: (val) => {
-          this.inFlightMap.delete(key);
-          this.runningTasksMap.delete(key);
-          resolve(val);
-        },
-        reject: (err) => {
-          this.inFlightMap.delete(key);
-          this.runningTasksMap.delete(key);
-          reject(err);
-        },
+        resolve,
+        reject,
         queuedAt,
       };
 
@@ -393,10 +310,10 @@ class PdfGenerationQueue extends EventEmitter {
       );
 
       this.emit('enqueued', { jobId, key, description, position, orderId });
-      this.processNext();
     });
 
     this.inFlightMap.set(key, promise);
+    this.processNext();
     return promise;
   }
 
@@ -544,80 +461,18 @@ class PdfGenerationQueue extends EventEmitter {
     const timeoutMs = estimatedSec * 1000;
     const timeoutMin = Math.round(estimatedSec / 60);
 
-    let timedOut = false;
-    const timeoutHandle = setTimeout(() => {
-      timedOut = true;
-      console.error(`[PdfQueue] ⚠️ Task "${task.description}" exceeded ${timeoutMin} minute timeout guard!`);
-      telegram.sendPdfWorkerAlert(task.description, `Превышен максимальный лимит времени генерации (${timeoutMin} минут)`).catch(() => {});
-      this.runningTasksMap.delete(task.key);
-      this.inFlightMap.delete(task.key);
-      this.activeCount = Math.max(0, this.activeCount - 1);
-      this.totalFailed++;
-      this.recentHistory.unshift({
-        id: task.id,
-        key: task.key,
-        description: task.description,
-        orderId: task.orderId,
-        status: 'failed',
-        durationSec: estimatedSec,
-        completedAt: Date.now(),
-        error: `Превышен лимит времени (${timeoutMin} мин)`,
-      });
-      if (this.recentHistory.length > 50) this.recentHistory.pop();
-      this.savePersistentState();
-      task.reject(new Error(`Время генерации PDF превысило лимит ${timeoutMin} минут`));
-      this.processNext();
+    task.timeoutHandle = setTimeout(() => {
+      const message = `Превышен лимит времени генерации (${timeoutMin} минут)`;
+      this.cancelTask(task.id, message);
+      telegram.sendPdfWorkerAlert(task.description, message).catch(() => {});
     }, timeoutMs);
 
     try {
       const result = await task.fn();
-      if (!timedOut) {
-        clearTimeout(timeoutHandle);
-        const durationSec = parseFloat(((Date.now() - (task.startedAt || task.queuedAt)) / 1000).toFixed(1));
-        console.log(`[PdfQueue] ✅ Completed task "${task.description}" in ${durationSec}s`);
-        this.totalCompleted++;
-        this.runningTasksMap.delete(task.key);
-        this.inFlightMap.delete(task.key);
-        this.activeCount = Math.max(0, this.activeCount - 1);
-        this.recentHistory.unshift({
-          id: task.id,
-          key: task.key,
-          description: task.description,
-          orderId: task.orderId,
-          status: 'completed',
-          durationSec,
-          completedAt: Date.now(),
-        });
-        if (this.recentHistory.length > 50) this.recentHistory.pop();
-        this.savePersistentState();
-        task.resolve(result);
-        this.processNext();
-      }
+      this.finishTask(task, undefined, result);
     } catch (err: any) {
-      if (!timedOut) {
-        clearTimeout(timeoutHandle);
-        const durationSec = parseFloat(((Date.now() - (task.startedAt || task.queuedAt)) / 1000).toFixed(1));
-        console.error(`[PdfQueue] ❌ Failed task "${task.description}":`, err.message);
-        telegram.sendPdfWorkerAlert(task.description, err.message || 'Ошибка генератора PDF').catch(() => {});
-        this.totalFailed++;
-        this.runningTasksMap.delete(task.key);
-        this.inFlightMap.delete(task.key);
-        this.activeCount = Math.max(0, this.activeCount - 1);
-        this.recentHistory.unshift({
-          id: task.id,
-          key: task.key,
-          description: task.description,
-          orderId: task.orderId,
-          status: 'failed',
-          durationSec,
-          completedAt: Date.now(),
-          error: err.message,
-        });
-        if (this.recentHistory.length > 50) this.recentHistory.pop();
-        this.savePersistentState();
-        task.reject(err);
-        this.processNext();
-      }
+      this.finishTask(task, err);
+      if (!task.cancelError) telegram.sendPdfWorkerAlert(task.description, err.message || 'Ошибка генератора PDF').catch(() => {});
     }
   }
 }

@@ -17,6 +17,7 @@ export interface AuthRequest extends Request {
 import { prisma } from '../config/db';
 
 interface CachedUserStatus {
+  profile: NonNullable<AuthRequest['user']>;
   isBlocked: boolean;
   blockedReason: string | null;
   tokenVersion: number;
@@ -47,17 +48,24 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
-  } else if (req.query?.token && typeof req.query.token === 'string') {
-    token = req.query.token;
   }
 
   if (!token) {
     return res.status(401).json({ message: 'Авторизация отсутствует' });
   }
 
+  let decoded: jwt.JwtPayload;
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as any;
-    req.user = decoded;
+    const payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] });
+    if (typeof payload === 'string' || typeof payload.id !== 'string' || !payload.id) {
+      return res.status(401).json({ message: 'Недействительный токен' });
+    }
+    decoded = payload;
+  } catch {
+    return res.status(401).json({ message: 'Недействительный или просроченный токен' });
+  }
+
+  try {
 
     // Verify account active status and token version in DB (blocked or invalidated sessions are rejected)
     if (decoded?.id) {
@@ -66,6 +74,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
       const cached = userBlockCache.get(decoded.id);
 
       if (cached && now - cached.cachedAt < CACHE_TTL_MS) {
+        req.user = cached.profile;
         if (cached.isBlocked) {
           return res.status(403).json({
             code: 'USER_BLOCKED',
@@ -83,7 +92,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
       } else {
         const dbUser = await prisma.user.findUnique({
           where: { id: decoded.id },
-          select: { id: true, isBlocked: true, blockedReason: true, tokenVersion: true },
+          select: { id: true, email: true, role: true, companyName: true, binIin: true, phone: true, isBlocked: true, blockedReason: true, tokenVersion: true },
         });
 
         if (!dbUser) {
@@ -97,11 +106,13 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
         }
 
         userBlockCache.set(decoded.id, {
+          profile: { id: dbUser.id, email: dbUser.email, role: dbUser.role, companyName: dbUser.companyName, binIin: dbUser.binIin, phone: dbUser.phone },
           isBlocked: dbUser.isBlocked,
           blockedReason: dbUser.blockedReason,
           tokenVersion: dbUser.tokenVersion,
           cachedAt: now,
         });
+        req.user = { id: dbUser.id, email: dbUser.email, role: dbUser.role, companyName: dbUser.companyName, binIin: dbUser.binIin, phone: dbUser.phone };
 
         if (dbUser.isBlocked) {
           return res.status(403).json({
@@ -123,7 +134,7 @@ export const authenticateJWT = async (req: AuthRequest, res: Response, next: Nex
 
     next();
   } catch (error) {
-    return res.status(403).json({ message: 'Недействительный или просроченный токен' });
+    return res.status(503).json({ message: 'Сервис авторизации временно недоступен. Повторите попытку.' });
   }
 };
 

@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 /**
  * Extracts true client IP address. Uses Express's validated req.ip
@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
  * to prevent IP spoofing and rate limit bypasses.
  */
 export const getClientIp = (req: any): string => {
-  return req.ip || req.socket?.remoteAddress || '127.0.0.1';
+  return ipKeyGenerator(req.ip || req.socket?.remoteAddress || '127.0.0.1');
 };
 
 // Strict rate limit for authentication (login / register) to prevent brute-force attacks
@@ -47,6 +47,7 @@ export const logsRateLimiter = rateLimit({
 
 // General public API limiter
 export const generalApiLimiter = rateLimit({
+  skip: (req) => req.path === '/health' || req.path === '/ready',
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 300, // max 300 requests per minute
   standardHeaders: true,

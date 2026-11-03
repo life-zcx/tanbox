@@ -17,7 +17,11 @@ export const WhatsAppWidget: React.FC = () => {
     };
     checkBanner();
     window.addEventListener('storage', checkBanner);
-    return () => window.removeEventListener('storage', checkBanner);
+    window.addEventListener('tanbox:cookie-banner', checkBanner);
+    return () => {
+      window.removeEventListener('storage', checkBanner);
+      window.removeEventListener('tanbox:cookie-banner', checkBanner);
+    };
   }, []);
 
   // Show tooltip after 3 seconds if user has not dismissed it in this session

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { TariffHelpModal } from '../modals/TariffHelpModal';
-import { ServiceOrderModal } from '../modals/ServiceOrderModal';
+const ServiceOrderModal = React.lazy(() => import('../modals/ServiceOrderModal').then(module => ({ default: module.ServiceOrderModal })));
 
 interface CalculatorSectionProps {
   onOrderQuick: (tariff: TariffCode, count: number, price: number) => void;

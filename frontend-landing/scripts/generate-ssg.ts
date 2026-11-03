@@ -1,3 +1,4 @@
+import { STATIC_LANDING_PATHS } from '../src/routes';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -32,52 +33,22 @@ for (const match of locMatches) {
   routes.add(route);
 }
 
-// Ensure key core routes are present
-routes.add('/');
-routes.add('/kz');
-routes.add('/en');
-routes.add('/calculator');
-routes.add('/kz/calculator');
-routes.add('/en/calculator');
-routes.add('/categories');
-routes.add('/kz/categories');
-routes.add('/en/categories');
-routes.add('/articles');
-routes.add('/kz/articles');
-routes.add('/en/articles');
-routes.add('/services');
-routes.add('/kz/services');
-routes.add('/en/services');
-routes.add('/tariffs');
-routes.add('/kz/tariffs');
-routes.add('/en/tariffs');
-routes.add('/blog');
-routes.add('/kz/blog');
-routes.add('/en/blog');
-routes.add('/contacts');
-routes.add('/kz/contacts');
-routes.add('/en/contacts');
-routes.add('/terms');
-routes.add('/kz/terms');
-routes.add('/en/terms');
-routes.add('/privacy');
-routes.add('/kz/privacy');
-routes.add('/en/privacy');
-routes.add('/cookies');
-routes.add('/kz/cookies');
-routes.add('/en/cookies');
-routes.add('/cookie-policy');
-routes.add('/payment-procedure');
-routes.add('/kz/payment-procedure');
-routes.add('/en/payment-procedure');
-routes.add('/payments');
-routes.add('/payment');
+// Every static React route must also support a direct HTTP navigation.
+for (const prefix of ['', '/kz', '/en']) {
+  for (const route of STATIC_LANDING_PATHS) routes.add(prefix + (route === '/' ? (prefix ? '' : '/') : route));
+}
 
 // Ensure all articles are in the pre-render routes
 for (const art of ARTICLES_DATA) {
   routes.add(`/articles/${art.slug}`);
   routes.add(`/kz/articles/${art.slug}`);
   routes.add(`/en/articles/${art.slug}`);
+  routes.add(`/blog/${art.slug}`);
+  routes.add(`/kz/blog/${art.slug}`);
+  routes.add(`/en/blog/${art.slug}`);
+}
+for (const category of CATEGORIES_DATA) {
+  for (const prefix of ['', '/kz', '/en']) routes.add(`${prefix}/categories/${category.id}`);
 }
 
 console.log(`🚀 Starting SSG Pre-rendering for ${routes.size} routes...`);
@@ -430,7 +401,7 @@ function resolvePageMeta(route: string): PageMeta {
   }
 
   // 4. Article Detail Page: /articles/:slug
-  const artMatch = cleanRoute.match(/^\/articles\/([a-zA-Z0-9_-]+)$/);
+  const artMatch = cleanRoute.match(/^\/(?:articles|blog)\/([a-zA-Z0-9_-]+)$/);
   if (artMatch) {
     const slug = artMatch[1];
     const artBase = ARTICLES_DATA.find((a) => a.slug === slug);

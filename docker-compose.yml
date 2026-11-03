@@ -1,5 +1,6 @@
 services:
   postgres:
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-256m}
     image: postgres:15-alpine
     container_name: tanbox_postgres
     restart: always
@@ -7,7 +8,7 @@ services:
       POSTGRES_USER: "${POSTGRES_USER:-tanbox_user}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD must be defined in .env}"
       POSTGRES_DB: "${POSTGRES_DB:-tanbox_db}"
-    command: postgres -c log_min_duration_statement=500 -c log_statement=ddl
+    command: postgres -c shared_buffers=64MB -c max_connections=40 -c log_min_duration_statement=500 -c log_statement=ddl
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -26,6 +27,7 @@ services:
       - tanbox_net
 
   backend:
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-640m}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -37,7 +39,7 @@ services:
       JWT_SECRET: "${JWT_SECRET:?Error: JWT_SECRET must be defined in .env}"
       ENCRYPTION_SECRET: "${ENCRYPTION_SECRET:?Error: ENCRYPTION_SECRET must be defined in .env}"
       NODE_ENV: production
-      NODE_OPTIONS: "--max-old-space-size=768"
+      NODE_OPTIONS: "--max-old-space-size=${BACKEND_HEAP_MB:-384}"
       LABEL_GENERATOR_HOST: label-generator
       LABEL_GENERATOR_PORT: 5060
       PDF_CONCURRENCY: ${PDF_CONCURRENCY:-1}
@@ -52,7 +54,8 @@ services:
       SMTP_PORT: ${SMTP_PORT:-465}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-      ALLOW_SELF_SIGNED_SMTP: ${ALLOW_SELF_SIGNED_SMTP:-true}
+      SMTP_TLS_SERVERNAME: ${SMTP_TLS_SERVERNAME:-}
+      ALLOW_SELF_SIGNED_SMTP: ${ALLOW_SELF_SIGNED_SMTP:-false}
       FREEDOM_PAY_MERCHANT_ID: ${FREEDOM_PAY_MERCHANT_ID:-}
       FREEDOM_PAY_SECRET_KEY: ${FREEDOM_PAY_SECRET_KEY:-}
       FREEDOM_PAY_API_URL: ${FREEDOM_PAY_API_URL:-https://api.freedompay.kz}
@@ -68,7 +71,7 @@ services:
       - tanbox_logs:/app/logs
       - tanbox_backups:/app/backups
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5050/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5050/api/ready || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -82,6 +85,7 @@ services:
       - tanbox_net
 
   frontend-landing:
+    mem_limit: ${FRONTEND_LANDING_MEMORY_LIMIT:-64m}
     build:
       context: ./frontend-landing
       dockerfile: Dockerfile
@@ -98,6 +102,7 @@ services:
       - tanbox_net
 
   frontend-lk:
+    mem_limit: ${FRONTEND_LK_MEMORY_LIMIT:-64m}
     build:
       context: .
       dockerfile: ./frontend-lk/Dockerfile
@@ -114,6 +119,7 @@ services:
       - tanbox_net
 
   frontend-admin:
+    mem_limit: ${FRONTEND_ADMIN_MEMORY_LIMIT:-64m}
     build:
       context: .
       dockerfile: ./frontend-admin/Dockerfile
@@ -132,6 +138,7 @@ services:
       - tanbox_net
 
   label-generator:
+    mem_limit: ${LABEL_GENERATOR_MEMORY_LIMIT:-512m}
     build:
       context: ./label-generator
       dockerfile: Dockerfile
@@ -140,7 +147,7 @@ services:
     environment:
       PORT: 5060
       NODE_ENV: production
-      NODE_OPTIONS: "--expose-gc --max-old-space-size=1024"
+      NODE_OPTIONS: "--expose-gc --max-old-space-size=${LABEL_HEAP_MB:-384}"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5060/health || exit 1"]
       interval: 15s
@@ -156,12 +163,14 @@ services:
       - tanbox_net
 
   caddy:
+    mem_limit: ${CADDY_MEMORY_LIMIT:-128m}
     image: caddy:2-alpine
     container_name: tanbox_caddy
     restart: always
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

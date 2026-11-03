@@ -18,6 +18,10 @@ export const CookieBanner: React.FC = () => {
     } catch {}
   }, []);
 
+  useEffect(() => {
+    window.dispatchEvent(new Event('tanbox:cookie-banner'));
+  }, [visible]);
+
   const handleAccept = () => {
     try {
       localStorage.setItem('tanbox_cookie_consent', 'true');

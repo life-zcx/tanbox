@@ -34,6 +34,7 @@ import { initNktSettings } from './services/nktSettings.service';
 import { clientTelegramBot } from './services/clientTelegram.service';
 
 import { env } from './config/env';
+import { prisma } from './config/db';
 
 dotenv.config();
 
@@ -118,8 +119,23 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.get('/api/ready', async (_req, res) => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Readiness timeout')), 3000); }),
+    ]);
+    return res.json({ status: 'ok' });
+  } catch {
+    return res.status(503).json({ status: 'unavailable' });
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+});
+
 // Maintenance mode guard (returns 503 for all public & non-admin requests when active)
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   if (isMaintenanceActive()) {
     const isExcluded = 
       req.path.startsWith('/api/system') || 
@@ -133,9 +149,10 @@ app.use((req, res, next) => {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         try {
           const token = authHeader.split(' ')[1];
-          const decoded = jwt.verify(token, env.JWT_SECRET) as any;
-          if (decoded && decoded.role === 'ADMIN') {
-            return next(); // Admins bypass maintenance mode
+          const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as any;
+          if (typeof decoded?.id === 'string') {
+            const current = await prisma.user.findUnique({ where: { id: decoded.id }, select: { role: true, isBlocked: true, tokenVersion: true } });
+            if (current?.role === 'ADMIN' && !current.isBlocked && current.tokenVersion === (decoded.tokenVersion ?? 0)) return next();
           }
         } catch {}
       }
@@ -222,5 +239,5 @@ const server = app.listen(PORT, () => {
 // Configure server timeouts for heavy operations (large PDF batches up to 150k items)
 server.setTimeout(3600000);
 server.requestTimeout = 3600000;
-server.headersTimeout = 3600000;
+server.headersTimeout = 70000;
 server.keepAliveTimeout = 65000;

@@ -47,17 +47,35 @@ else
 fi
 
 # 4. Тюнинг системных параметров ядра (sysctl)
-echo "⚙️ [4/6] Тюнинг ядра Linux (swappiness, лимиты файлов)..."
+echo "⚙️ [4/6] Тюнинг ядра Linux (swappiness, очереди сокетов, лимиты файлов)..."
 cat << 'EOF' > /etc/sysctl.d/99-tanbox.conf
-# Использовать SWAP только при острой нехватке памяти (10%)
+# Память и Swap
 vm.swappiness = 10
+vm.dirty_ratio = 15
+vm.dirty_background_ratio = 5
+
 # Увеличение лимитов на файловые дескрипторы для Docker
 fs.file-max = 2097152
 fs.inotify.max_user_watches = 524288
 fs.inotify.max_user_instances = 8192
-# Оптимизация сети
-net.core.somaxconn = 4096
-net.ipv4.tcp_max_syn_backlog = 4096
+
+# Оптимизация сети (защита от ложного SYN-флуда и таймаутов прокси/Cloudflare 522)
+net.core.somaxconn = 65535
+net.ipv4.tcp_max_syn_backlog = 65535
+net.core.netdev_max_backlog = 16384
+
+# Быстрое переиспользование сокетов
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_fin_timeout = 15
+net.ipv4.ip_local_port_range = 1024 65535
+
+# Keep-Alive и повторные попытки SYN
+net.ipv4.tcp_synack_retries = 3
+net.ipv4.tcp_syn_retries = 3
+net.ipv4.tcp_keepalive_time = 300
+net.ipv4.tcp_keepalive_intvl = 15
+net.ipv4.tcp_keepalive_probes = 5
+net.ipv4.tcp_slow_start_after_idle = 0
 EOF
 sysctl --system > /dev/null 2>&1
 
@@ -79,6 +97,7 @@ ufw default allow outgoing
 ufw allow 22/tcp comment 'SSH'
 ufw allow 80/tcp comment 'HTTP (Caddy LetEncrypt)'
 ufw allow 443/tcp comment 'HTTPS (Caddy SSL)'
+ufw allow 443/udp comment 'HTTP/3 (QUIC)'
 # Включение UFW без интерактивного вопроса
 echo "y" | ufw enable || true
 

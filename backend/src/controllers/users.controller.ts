@@ -226,6 +226,10 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       updateData.password = await bcrypt.hash(cleanPassword, 10);
     }
 
+    if (updateData.password || (updateData.role && updateData.role !== existingUser.role)) {
+      updateData.tokenVersion = { increment: 1 };
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id },
       data: updateData,
@@ -243,6 +247,8 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
         },
       },
     });
+
+    invalidateUserBlockCache(id);
 
     logger.info(`Admin ${req.user.email} updated user ${updatedUser.email} (role: ${updatedUser.role})`);
 

@@ -1,3 +1,4 @@
+import { payWithBalance, BalancePaymentError } from '../services/balancePayment.service';
 import { Response } from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -3695,160 +3696,18 @@ export const syncOrderNkt = async (req: AuthRequest, res: Response) => {
  * Client pays order using personal balance in LK
  */
 export async function payOrderWithBalance(req: AuthRequest, res: Response) {
+  if (!req.user) return res.status(401).json({ message: 'Требуется авторизация' });
   try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ message: 'Требуется авторизация' });
+    const result = await payWithBalance(req.user.id, req.user.role === 'ADMIN', 'order', req.params.id);
+    if (result.orderId) {
+      // Notifications and lifecycle follow-ups happen only after the accounting transaction commits.
+      advanceOrderStatus(result.orderId, 'PAYMENT_RECEIVED').catch(err => logger.warn('Payment lifecycle follow-up failed', { error: String(err) }));
+      clientTelegramBot.notifyPaymentStatusChanged(result.orderId, 'PAID').catch(() => {});
     }
-
-    const { id } = req.params;
-
-    const order = await prisma.order.findUnique({
-      where: { id },
-      include: { invoices: true },
-    });
-
-    if (!order) {
-      return res.status(404).json({ message: 'Заказ не найден' });
-    }
-
-    if (order.userId !== userId && req.user?.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'Нет доступа к данному заказу' });
-    }
-
-    if (order.paymentStatus === PaymentStatus.PAID) {
-      return res.status(400).json({ message: 'Заказ уже полностью оплачен' });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, balance: true, companyName: true, email: true },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'Пользователь не найден' });
-    }
-
-    const orderAmount = Number(order.totalPrice);
-    const currentBalance = Number(user.balance);
-
-    if (currentBalance < orderAmount) {
-      return res.status(400).json({
-        message: `Недостаточно средств на балансе. Требуется: ${orderAmount.toLocaleString('ru-RU')} ₸, на балансе: ${currentBalance.toLocaleString('ru-RU')} ₸`,
-        requiredAmount: orderAmount,
-        currentBalance,
-        difference: orderAmount - currentBalance,
-      });
-    }
-
-    // Process payment atomically in an interactive transaction with SQL-level balance checks
-    let txResult: { updatedUser: any; updatedOrder: any };
-    try {
-      txResult = await prisma.$transaction(async (tx) => {
-        // 1. Atomic decrement with strict balance check directly in DB
-        const userUpdateRes = await tx.user.updateMany({
-          where: {
-            id: userId,
-            balance: { gte: orderAmount },
-          },
-          data: {
-            balance: { decrement: orderAmount },
-          },
-        });
-
-        if (userUpdateRes.count === 0) {
-          throw new Error('INSUFFICIENT_BALANCE');
-        }
-
-        // 2. Atomic order update verifying it hasn't been paid yet
-        const orderUpdateRes = await tx.order.updateMany({
-          where: {
-            id: order.id,
-            paymentStatus: { not: PaymentStatus.PAID },
-          },
-          data: {
-            paymentStatus: PaymentStatus.PAID,
-            printAllowed: true,
-          },
-        });
-
-        if (orderUpdateRes.count === 0) {
-          throw new Error('ALREADY_PAID');
-        }
-
-        const freshUser = await tx.user.findUnique({
-          where: { id: userId },
-          select: { id: true, balance: true, companyName: true, email: true },
-        });
-
-        const freshOrder = await tx.order.findUnique({
-          where: { id: order.id },
-        });
-
-        return { updatedUser: freshUser, updatedOrder: freshOrder };
-      });
-    } catch (txErr: any) {
-      if (txErr.message === 'INSUFFICIENT_BALANCE') {
-        return res.status(400).json({
-          message: `Недостаточно средств на балансе. Требуется: ${orderAmount.toLocaleString('ru-RU')} ₸`,
-          requiredAmount: orderAmount,
-        });
-      }
-      if (txErr.message === 'ALREADY_PAID') {
-        return res.status(400).json({ message: 'Заказ уже был оплачен ранее' });
-      }
-      throw txErr;
-    }
-
-    const { updatedUser, updatedOrder } = txResult;
-
-    // Advance order lifecycle status on payment
-    await advanceOrderStatus(order.id, 'PAYMENT_RECEIVED').catch((err) => logger.warn(`Failed to advance order status on balance payment: ${err.message}`));
-
-    // Also mark associated invoices as PAID
-    await prisma.invoice.updateMany({
-      where: { orderId: order.id },
-      data: { status: 'PAID' },
-    }).catch((e) => logger.warn(`Failed to update linked invoice status: ${e}`));
-
-    clientTelegramBot.notifyPaymentStatusChanged(order.id, 'PAID').catch((err) => logger.warn(`Failed to dispatch payment telegram alert: ${err.message}`));
-
-    // Create OnlinePayment record for accounting & history
-    const timestamp = Date.now().toString().slice(-8);
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const paymentNumber = `TB-BAL-${timestamp}-${randomSuffix}`;
-
-    await prisma.onlinePayment.create({
-      data: {
-        paymentNumber,
-        userId,
-        orderId: order.id,
-        type: OnlinePaymentType.ORDER,
-        amount: orderAmount,
-        currency: 'KZT',
-        status: OnlinePaymentStatus.PAID,
-        description: `Оплата заказа маркировки #${order.orderNumber} с баланса ЛК`,
-        pgPaymentDate: new Date(),
-        metadata: {
-          paidVia: 'BALANCE',
-          companyName: user.companyName,
-        },
-      },
-    }).catch((e) => logger.warn(`Failed to create OnlinePayment record for balance pay: ${e}`));
-
-    return res.json({
-      success: true,
-      message: 'Заказ успешно оплачен с баланса',
-      newBalance: Number(updatedUser.balance),
-      order: updatedOrder,
-    });
+    return res.json({ success: true, message: 'Заказ успешно оплачен с баланса', newBalance: result.newBalance, order: result.order });
   } catch (error) {
-    logger.error('Error paying order with balance:', error);
-    return res.status(500).json({ message: 'Ошибка при оплате заказа с баланса' });
+    if (error instanceof BalancePaymentError) return res.status(error.status).json({ code: error.code, message: error.message });
+    logger.error('Balance payment failed:', error);
+    return res.status(500).json({ message: 'Ошибка при оплате с баланса' });
   }
 }
-
-
-
-
-

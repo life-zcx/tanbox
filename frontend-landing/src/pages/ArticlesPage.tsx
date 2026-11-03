@@ -11,7 +11,7 @@ import { ARTICLES_DATA, ArticleData, getLocalizedArticles } from '../data/articl
 import { setPageSeo } from '../utils/seo';
 import { useLanguage } from '../context/LanguageContext';
 
-import { ServiceOrderModal } from '../components/modals/ServiceOrderModal';
+const ServiceOrderModal = React.lazy(() => import('../components/modals/ServiceOrderModal').then(module => ({ default: module.ServiceOrderModal })));
 
 export const ArticlesPage: React.FC = () => {
   const { lang, getLocalizedPath } = useLanguage();

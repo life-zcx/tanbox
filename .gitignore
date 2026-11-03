@@ -35,3 +35,7 @@ backend/backups/
 # Local storage & runtime settings
 storage/
 backend/storage/
+
+# Python diagnostic/test cache
+__pycache__/
+*.py[cod]

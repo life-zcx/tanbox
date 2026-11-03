@@ -81,37 +81,33 @@ const parseBugPayload = (notes?: string | null): BugPayload => {
   return { type: 'BUG_REPORT', description: notes };
 };
 
-/**
- * Resolves screenshot URL with JWT authentication token for both local dev (localhost:5050) and production
- */
-const resolveAttachmentUrl = (path?: string) => {
-  if (!path) return '';
-  const token =
-    typeof window !== 'undefined'
-      ? localStorage.getItem('tanbox_admin_token') || localStorage.getItem('tanbox_token')
-      : null;
+const attachmentEndpoint = (value: string) => {
+  const filename = value.split('/').pop()?.split('?')[0];
+  if (!filename) throw new Error('Некорректное имя вложения');
+  return `/support/bug-reports/attachment/${encodeURIComponent(filename)}`;
+};
 
-  let cleanPath = path;
-  if (cleanPath.includes('/uploads/bug-reports/')) {
-    const filename = cleanPath.split('/uploads/bug-reports/').pop();
-    cleanPath = `/api/support/bug-reports/attachment/${filename}`;
-  }
-
-  const isLocalDev =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
-  let fullUrl = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-  if (isLocalDev && !fullUrl.startsWith('http')) {
-    fullUrl = `http://localhost:5050${fullUrl}`;
-  }
-
-  if (token) {
-    const sep = fullUrl.includes('?') ? '&' : '?';
-    fullUrl = `${fullUrl}${sep}token=${encodeURIComponent(token)}`;
-  }
-
-  return fullUrl;
+const AuthenticatedAttachment: React.FC<{ path: string }> = ({ path }) => {
+  const [url, setUrl] = useState('');
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    const abort = new AbortController();
+    let objectUrl = '';
+    setUrl(''); setError(false);
+    apiClient.get(attachmentEndpoint(path), { responseType: 'blob', signal: abort.signal })
+      .then(response => {
+        if (abort.signal.aborted) return;
+        objectUrl = URL.createObjectURL(response.data);
+        setUrl(objectUrl);
+      }).catch(() => { if (!abort.signal.aborted) setError(true); });
+    return () => { abort.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [path]);
+  if (error) return <p>Не удалось загрузить вложение. Закройте и откройте отчет повторно.</p>;
+  if (!url) return <p>?Открыть оригинал?</p>;
+  return <div className="space-y-2">
+    <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#0082FB] font-bold hover:underline">Открыть оригинал</a>
+    {!path.toLowerCase().endsWith('.pdf') && <img src={url} alt="Скриншот ошибки" className="max-h-[350px] w-auto object-contain rounded-lg" />}
+  </div>;
 };
 
 export const AdminBugReportsPage: React.FC = () => {
@@ -340,7 +336,7 @@ export const AdminBugReportsPage: React.FC = () => {
                     selectStyle: 'bg-gray-50 text-gray-700 border-gray-300',
                   };
                   const categoryLabel = bug.categoryTitle || bug.category || 'Общая ошибка';
-                  const screenshotUrl = resolveAttachmentUrl(bug.screenshotPath);
+                  const screenshotUrl = bug.screenshotPath;
                   const isUpdating = updatingId === report.id;
 
                   return (
@@ -593,39 +589,8 @@ export const AdminBugReportsPage: React.FC = () => {
               )}
             </div>
 
-            {/* Attached Screenshot */}
-            {activeModalReport.bug.screenshotPath && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-gray-700 uppercase tracking-wider">
-                    Скриншот пользователя:
-                  </span>
-                  <a
-                    href={resolveAttachmentUrl(activeModalReport.bug.screenshotPath)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-[#0082FB] font-bold hover:underline"
-                  >
-                    <span>Открыть оригинал</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-                <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center p-2">
-                  <img
-                    src={resolveAttachmentUrl(activeModalReport.bug.screenshotPath)}
-                    alt="Скриншот ошибки"
-                    className="max-h-[350px] w-auto object-contain rounded-lg shadow-xs"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      if (!target.dataset.triedFallback && activeModalReport.bug.screenshotPath) {
-                        target.dataset.triedFallback = 'true';
-                        target.src = activeModalReport.bug.screenshotPath;
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            )}
+            {activeModalReport.bug.screenshotPath && <AuthenticatedAttachment path={activeModalReport.bug.screenshotPath} />}
+
           </div>
 
           {/* Footer */}

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { SessionRecovery } from '../../../shared/SessionRecovery';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserClient } from '../types';
 import { apiClient } from '../api/client';
 
@@ -15,8 +16,10 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [adminUser, setAdminUser] = useState<UserClient | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    const fetchMe = async () => {
+  const [sessionError, setSessionError] = useState(false);
+  const fetchMe = useCallback(async () => {
+      setLoading(true);
+      setSessionError(false);
       const token = localStorage.getItem('tanbox_admin_token');
       if (!token) {
         setLoading(false);
@@ -30,16 +33,19 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         } else {
           setAdminUser(res.data);
         }
-      } catch (err) {
-        localStorage.removeItem('tanbox_admin_token');
-        setAdminUser(null);
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          localStorage.removeItem('tanbox_admin_token');
+          setAdminUser(null);
+        } else {
+          setSessionError(true);
+        }
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchMe();
   }, []);
+
+  useEffect(() => { void fetchMe(); }, [fetchMe]);
 
   const loginAdmin = async (email: string, password: string, code?: string) => {
     const res = await apiClient.post('/auth/login', { email, password, code, isAdminPanel: true });
@@ -61,7 +67,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   return (
     <AdminAuthContext.Provider value={{ adminUser, loading, loginAdmin, logoutAdmin }}>
-      {children}
+      {sessionError ? <SessionRecovery retry={() => { void fetchMe(); }} loading={loading} /> : children}
     </AdminAuthContext.Provider>
   );
 };

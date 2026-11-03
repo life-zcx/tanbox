@@ -1,3 +1,4 @@
+import { LANDING_PATHS } from './routes';
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import axios from 'axios';
@@ -108,28 +109,28 @@ const AppContent: React.FC = () => {
         }
       />
       <Route
-        path={`${prefix}/calculator`}
+        path={`${prefix}${LANDING_PATHS.calculator}`}
         element={<CalculatorPage onOrderQuick={handleOpenQuickOrder} />}
       />
-      <Route path={`${prefix}/categories`} element={<CategoriesPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.categories}`} element={<CategoriesPage />} />
       <Route
-        path={`${prefix}/categories/:categoryId`}
+        path={`${prefix}${LANDING_PATHS.category}`}
         element={<CategoryDetailPage onOrderQuick={handleOpenQuickOrder} />}
       />
-      <Route path={`${prefix}/services`} element={<ServicesPage />} />
-      <Route path={`${prefix}/tariffs`} element={<ServicesPage />} />
-      <Route path={`${prefix}/articles`} element={<ArticlesPage />} />
-      <Route path={`${prefix}/articles/:articleId`} element={<ArticleDetailPage />} />
-      <Route path={`${prefix}/blog`} element={<ArticlesPage />} />
-      <Route path={`${prefix}/blog/:articleId`} element={<ArticleDetailPage />} />
-      <Route path={`${prefix}/contacts`} element={<ContactsPage />} />
-      <Route path={`${prefix}/privacy`} element={<PrivacyPolicyPage />} />
-      <Route path={`${prefix}/terms`} element={<TermsPage />} />
-      <Route path={`${prefix}/payment-procedure`} element={<PaymentProcedurePage />} />
-      <Route path={`${prefix}/payments`} element={<PaymentProcedurePage />} />
-      <Route path={`${prefix}/payment`} element={<PaymentProcedurePage />} />
-      <Route path={`${prefix}/cookies`} element={<CookiePolicyPage />} />
-      <Route path={`${prefix}/cookie-policy`} element={<CookiePolicyPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.services}`} element={<ServicesPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.tariffs}`} element={<ServicesPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.articles}`} element={<ArticlesPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.article}`} element={<ArticleDetailPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.blog}`} element={<ArticlesPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.blogArticle}`} element={<ArticleDetailPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.contacts}`} element={<ContactsPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.privacy}`} element={<PrivacyPolicyPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.terms}`} element={<TermsPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.paymentProcedure}`} element={<PaymentProcedurePage />} />
+      <Route path={`${prefix}${LANDING_PATHS.payments}`} element={<PaymentProcedurePage />} />
+      <Route path={`${prefix}${LANDING_PATHS.payment}`} element={<PaymentProcedurePage />} />
+      <Route path={`${prefix}${LANDING_PATHS.cookies}`} element={<CookiePolicyPage />} />
+      <Route path={`${prefix}${LANDING_PATHS.cookiePolicy}`} element={<CookiePolicyPage />} />
     </>
   );
 
@@ -165,12 +166,7 @@ const AppContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <BrowserRouter
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true,
-      }}
-    >
+    <BrowserRouter>
       <LanguageProvider>
         <ScrollToTop />
         <AppContent />

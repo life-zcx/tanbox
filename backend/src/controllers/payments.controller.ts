@@ -57,7 +57,7 @@ export async function freedomCheckWebhook(req: Request, res: Response) {
     }
 
     // Validate amount (allow small floating point variance < 0.01)
-    if (Math.abs(Number(payment.amount) - requestedAmount) > 0.01) {
+    if (!Number.isFinite(requestedAmount) || Math.abs(Number(payment.amount) - requestedAmount) > 0.01) {
       const xml = freedomPayService.buildXmlResponse(scriptName, 'rejected', `Неверная сумма (ожидается ${payment.amount} KZT)`);
       return res.type('application/xml').send(xml);
     }
@@ -120,7 +120,7 @@ export async function freedomResultWebhook(req: Request, res: Response) {
 
     // Strict amount verification in result webhook to protect against partial/tampered payments
     const requestedAmount = params.pg_amount !== undefined ? Number(params.pg_amount) : undefined;
-    if (requestedAmount !== undefined && !isNaN(requestedAmount) && Math.abs(Number(payment.amount) - requestedAmount) > 0.01) {
+    if (requestedAmount === undefined || !Number.isFinite(requestedAmount) || Math.abs(Number(payment.amount) - requestedAmount) > 0.01) {
       logger.warn(`[FreedomPay] Amount mismatch in result webhook: expected ${payment.amount}, received ${requestedAmount}`);
       const xml = freedomPayService.buildXmlResponse(scriptName, 'rejected', `Неверная сумма платежа (ожидается ${payment.amount} KZT)`);
       return res.type('application/xml').send(xml);
@@ -227,8 +227,8 @@ export async function freedomResultWebhook(req: Request, res: Response) {
       return res.type('application/xml').send(xml);
     } else {
       // Payment failed at gateway
-      await prisma.onlinePayment.update({
-        where: { id: payment.id },
+      await prisma.onlinePayment.updateMany({
+        where: { id: payment.id, status: { not: OnlinePaymentStatus.PAID } },
         data: {
           status: OnlinePaymentStatus.FAILED,
           rawResponse: params,

@@ -5,14 +5,15 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    dedupe: ['react', 'react-dom', 'lucide-react', 'react-router-dom', 'clsx', 'tailwind-merge'],
     alias: {
-      '@shared': path.resolve(__dirname, '../shared'),
+      '@shared': path.resolve(import.meta.dirname, '../shared'),
     },
   },
   server: {
     host: '0.0.0.0',
     port: 3002,
-    allowedHosts: true,
+    allowedHosts: ['.tanbox.local', '.tanbox.kz'],
     hmr: {
       clientPort: 3002,
       overlay: false,

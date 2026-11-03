@@ -4,30 +4,30 @@ import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 import { ToastProvider } from '@shared';
 import { AdminSidebar } from './components/common/AdminSidebar';
 import { AdminLoginPage } from './pages/AdminLoginPage';
-import { AdminDashboardPage } from './pages/AdminDashboardPage';
-import { AdminOrdersPage } from './pages/AdminOrdersPage';
-import { AdminLeadsPage } from './pages/AdminLeadsPage';
-import { AdminBugReportsPage } from './pages/AdminBugReportsPage';
-import { AdminUsersPage } from './pages/AdminUsersPage';
-import { AdminTariffsPage } from './pages/AdminTariffsPage';
-import { AdminPriceBuilderPage } from './pages/AdminPriceBuilderPage';
-import { AdminInvoicesPage } from './pages/AdminInvoicesPage';
-import { AdminLabelDesignerPage } from './pages/AdminLabelDesignerPage';
-import { AdminLabelsRegistryPage } from './pages/AdminLabelsRegistryPage';
-import { AdminOrderDetailPage } from './pages/AdminOrderDetailPage';
-import { AdminUserDetailPage } from './pages/AdminUserDetailPage';
-import { AdminStickeringCalcPage } from './pages/AdminStickeringCalcPage';
-import { AdminSystemLayout } from './pages/AdminSystemLayout';
-import { AdminSystemLogsPage } from './pages/system/AdminSystemLogsPage';
-import { AdminSystemBackupsPage } from './pages/system/AdminSystemBackupsPage';
-import { AdminSystemTelegramPage } from './pages/system/AdminSystemTelegramPage';
-import { AdminSystemStoragePage } from './pages/system/AdminSystemStoragePage';
-import { AdminSystemPdfQueuePage } from './pages/system/AdminSystemPdfQueuePage';
-import { AdminMarkirovkaAccountsPage } from './pages/AdminMarkirovkaAccountsPage';
-import { AdminMarkirovkaNktPage } from './pages/AdminMarkirovkaNktPage';
-import { AdminMarkirovkaOrdersPage } from './pages/AdminMarkirovkaOrdersPage';
-import { AdminMarkirovkaUtilisationPage } from './pages/AdminMarkirovkaUtilisationPage';
-import { AdminMarkirovkaActivityPage } from './pages/AdminMarkirovkaActivityPage';
+const AdminDashboardPage = React.lazy(() => import('./pages/AdminDashboardPage').then(module => ({ default: module.AdminDashboardPage })));
+const AdminOrdersPage = React.lazy(() => import('./pages/AdminOrdersPage').then(module => ({ default: module.AdminOrdersPage })));
+const AdminLeadsPage = React.lazy(() => import('./pages/AdminLeadsPage').then(module => ({ default: module.AdminLeadsPage })));
+const AdminBugReportsPage = React.lazy(() => import('./pages/AdminBugReportsPage').then(module => ({ default: module.AdminBugReportsPage })));
+const AdminUsersPage = React.lazy(() => import('./pages/AdminUsersPage').then(module => ({ default: module.AdminUsersPage })));
+const AdminTariffsPage = React.lazy(() => import('./pages/AdminTariffsPage').then(module => ({ default: module.AdminTariffsPage })));
+const AdminPriceBuilderPage = React.lazy(() => import('./pages/AdminPriceBuilderPage').then(module => ({ default: module.AdminPriceBuilderPage })));
+const AdminInvoicesPage = React.lazy(() => import('./pages/AdminInvoicesPage').then(module => ({ default: module.AdminInvoicesPage })));
+const AdminLabelDesignerPage = React.lazy(() => import('./pages/AdminLabelDesignerPage').then(module => ({ default: module.AdminLabelDesignerPage })));
+const AdminLabelsRegistryPage = React.lazy(() => import('./pages/AdminLabelsRegistryPage').then(module => ({ default: module.AdminLabelsRegistryPage })));
+const AdminOrderDetailPage = React.lazy(() => import('./pages/AdminOrderDetailPage').then(module => ({ default: module.AdminOrderDetailPage })));
+const AdminUserDetailPage = React.lazy(() => import('./pages/AdminUserDetailPage').then(module => ({ default: module.AdminUserDetailPage })));
+const AdminStickeringCalcPage = React.lazy(() => import('./pages/AdminStickeringCalcPage').then(module => ({ default: module.AdminStickeringCalcPage })));
+const AdminSystemLayout = React.lazy(() => import('./pages/AdminSystemLayout').then(module => ({ default: module.AdminSystemLayout })));
+const AdminSystemLogsPage = React.lazy(() => import('./pages/system/AdminSystemLogsPage').then(module => ({ default: module.AdminSystemLogsPage })));
+const AdminSystemBackupsPage = React.lazy(() => import('./pages/system/AdminSystemBackupsPage').then(module => ({ default: module.AdminSystemBackupsPage })));
+const AdminSystemTelegramPage = React.lazy(() => import('./pages/system/AdminSystemTelegramPage').then(module => ({ default: module.AdminSystemTelegramPage })));
+const AdminSystemStoragePage = React.lazy(() => import('./pages/system/AdminSystemStoragePage').then(module => ({ default: module.AdminSystemStoragePage })));
+const AdminSystemPdfQueuePage = React.lazy(() => import('./pages/system/AdminSystemPdfQueuePage').then(module => ({ default: module.AdminSystemPdfQueuePage })));
+const AdminMarkirovkaAccountsPage = React.lazy(() => import('./pages/AdminMarkirovkaAccountsPage').then(module => ({ default: module.AdminMarkirovkaAccountsPage })));
+const AdminMarkirovkaNktPage = React.lazy(() => import('./pages/AdminMarkirovkaNktPage').then(module => ({ default: module.AdminMarkirovkaNktPage })));
+const AdminMarkirovkaOrdersPage = React.lazy(() => import('./pages/AdminMarkirovkaOrdersPage').then(module => ({ default: module.AdminMarkirovkaOrdersPage })));
+const AdminMarkirovkaUtilisationPage = React.lazy(() => import('./pages/AdminMarkirovkaUtilisationPage').then(module => ({ default: module.AdminMarkirovkaUtilisationPage })));
+const AdminMarkirovkaActivityPage = React.lazy(() => import('./pages/AdminMarkirovkaActivityPage').then(module => ({ default: module.AdminMarkirovkaActivityPage })));
 
 const AdminOrderLabelsRedirect: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -69,7 +69,7 @@ export const App: React.FC = () => {
     <AdminAuthProvider>
       <ToastProvider>
         <BrowserRouter>
-          <Routes>
+          <React.Suspense fallback={<LoadingScreen />}><Routes>
             <Route path="/login" element={<AdminLoginPage />} />
 
             <Route
@@ -269,7 +269,7 @@ export const App: React.FC = () => {
 
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
+          </Routes></React.Suspense>
         </BrowserRouter>
       </ToastProvider>
     </AdminAuthProvider>

@@ -7,7 +7,7 @@ const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
-const ALLOW_SELF_SIGNED = process.env.ALLOW_SELF_SIGNED_SMTP !== 'false';
+const ALLOW_SELF_SIGNED = process.env.ALLOW_SELF_SIGNED_SMTP === 'true';
 
 const SMTP_SECURE = process.env.SMTP_SECURE !== undefined ? process.env.SMTP_SECURE === 'true' : (SMTP_PORT === 465 || SMTP_PORT === 2465);
 
@@ -25,6 +25,8 @@ const getTransporter = () => {
     },
     tls: {
       rejectUnauthorized: !ALLOW_SELF_SIGNED,
+      // Allows an IP transport address with a provider-confirmed DNS identity.
+      ...(process.env.SMTP_TLS_SERVERNAME ? { servername: process.env.SMTP_TLS_SERVERNAME } : {}),
     },
     connectionTimeout: 10000,
     greetingTimeout: 10000,
