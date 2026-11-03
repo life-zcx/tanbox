@@ -92,13 +92,13 @@ app.use('/api/uploads/product-cards', express.static(path.resolve(process.cwd(),
 // Apply general API rate limiting
 app.use('/api/', generalApiLimiter);
 
-// Request logging middleware (health checks are excluded to keep logs clean)
+// Successful health probes are routine noise; failed probes remain visible.
 app.use((req, res, next) => {
-  if (req.path === '/api/health' || req.originalUrl === '/api/health') {
-    return next();
-  }
+  const isHealthProbe = (req.method === 'GET' || req.method === 'HEAD') &&
+    ['/api/health', '/api/ready'].includes(req.path.replace(/\/$/, ''));
   const start = Date.now();
   res.on('finish', () => {
+    if (isHealthProbe && res.statusCode >= 200 && res.statusCode < 300) return;
     const duration = Date.now() - start;
     logger.info(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`, {
       ip: req.ip || req.headers['x-forwarded-for'],
