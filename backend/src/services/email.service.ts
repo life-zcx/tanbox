@@ -70,21 +70,26 @@ export const sendEmail = async ({ to, subject, html, attachments }: SendEmailOpt
     logger.info(`Email sent successfully to ${to} (MessageId: ${info.messageId})`);
     return { id: info.messageId };
   } catch (error: any) {
-    logger.error(`SMTP Send Error to ${to}: ${error?.message || error}`);
+    // SMTP errors may echo message content; never persist the original response or body.
+    logger.error('SMTP delivery failed', {
+      code: typeof error?.code === 'string' && /^[A-Z_]{1,30}$/.test(error.code) ? error.code : 'SMTP_ERROR',
+      responseCode: typeof error?.responseCode === 'number' ? error.responseCode : undefined,
+    });
     if (process.env.NODE_ENV === 'development') {
       logger.warn(`[DEV SMTP FALLBACK] Continuing in development mode.`);
       return { id: 'mock-dev-id', mock: true };
     }
-    throw error;
+    throw new Error('Не удалось отправить письмо. Повторите попытку позже.');
   }
 };
 
+async function sendOtpEmail(options: SendEmailOptions): Promise<void> {
+  const delivery = await sendEmail(options);
+  if (delivery.mock) throw new Error('Доставка кода требует настроенного SMTP');
+}
+
 export const sendVerificationOtpEmail = async (to: string, code: string): Promise<void> => {
   const cleanEmail = to.trim().toLowerCase();
-  
-  if (process.env.NODE_ENV === 'development') {
-    logger.info(`🔑 [DEV OTP] Код подтверждения для ${cleanEmail}: >>> ${code} <<<`);
-  }
 
   // Official logo attachment
   const logoPath = path.resolve(__dirname, '../assets/tanbox-logo.png');
@@ -151,9 +156,9 @@ export const sendVerificationOtpEmail = async (to: string, code: string): Promis
 </html>
   `;
 
-  await sendEmail({
+  await sendOtpEmail({
     to: cleanEmail,
-    subject: `${code} — код подтверждения TANBOX`,
+    subject: 'Код подтверждения TANBOX',
     html,
     attachments,
   });
@@ -162,9 +167,6 @@ export const sendVerificationOtpEmail = async (to: string, code: string): Promis
 export const sendPasswordResetOtpEmail = async (to: string, code: string): Promise<void> => {
   const cleanEmail = to.trim().toLowerCase();
 
-  if (process.env.NODE_ENV === 'development') {
-    logger.info(`🔑 [DEV OTP] Код сброса пароля для ${cleanEmail}: >>> ${code} <<<`);
-  }
 
   const logoPath = path.resolve(__dirname, '../assets/tanbox-logo.png');
   const hasLogo = fs.existsSync(logoPath);
@@ -230,9 +232,9 @@ export const sendPasswordResetOtpEmail = async (to: string, code: string): Promi
 </html>
   `;
 
-  await sendEmail({
+  await sendOtpEmail({
     to: cleanEmail,
-    subject: `${code} — код для сброса пароля TANBOX`,
+    subject: 'Код для сброса пароля TANBOX',
     html,
     attachments,
   });
@@ -245,7 +247,6 @@ export const sendAdminLoginOtpEmail = async (
 ): Promise<void> => {
   const cleanEmail = to.trim().toLowerCase();
 
-  logger.info(`🔑 [ADMIN 2FA CODE] Код подтверждения входа для ${cleanEmail}: >>> ${code} <<<`);
 
   const logoPath = path.resolve(__dirname, '../assets/tanbox-logo.png');
   const hasLogo = fs.existsSync(logoPath);
@@ -323,9 +324,9 @@ export const sendAdminLoginOtpEmail = async (
 </html>
   `;
 
-  await sendEmail({
+  await sendOtpEmail({
     to: cleanEmail,
-    subject: `${code} — код для входа в систему TANBOX`,
+    subject: 'Код для входа в систему TANBOX',
     html,
     attachments,
   });

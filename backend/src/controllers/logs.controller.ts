@@ -4,6 +4,7 @@ import path from 'path';
 import { logger, resetLogStreams } from '../utils/logger';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { telegram } from '../services/telegram.service';
+import { redactLogText } from '../utils/redact';
 
 const logsDir = path.join(__dirname, '../../logs');
 
@@ -97,7 +98,7 @@ export const getSystemLogs = async (req: AuthRequest, res: Response) => {
         await fd.close();
       }
     }
-    let lines = content.split('\n').filter((l) => l.trim().length > 0);
+    let lines = content.split('\n').filter((l) => l.trim().length > 0).map(redactLogText);
 
     // Keep error.log strictly for backend server errors
     if (type === 'error') {

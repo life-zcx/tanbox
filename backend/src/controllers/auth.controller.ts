@@ -7,7 +7,6 @@ import { env } from '../config/env';
 import { AuthRequest, invalidateUserBlockCache } from '../middleware/auth.middleware';
 import { sendVerificationOtpEmail, sendPasswordResetOtpEmail, sendAdminLoginOtpEmail } from '../services/email.service';
 import { clientTelegramBot } from '../services/clientTelegram.service';
-import { telegram } from '../services/telegram.service';
 import { logger } from '../utils/logger';
 
 // In-memory rate limiting / anti-abuse store
@@ -373,6 +372,7 @@ export const login = async (req: Request, res: Response) => {
     if (user.role === 'ADMIN') {
       const now = Date.now();
       const ip = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '—';
+      const otpIdentity = `admin-login:${cleanEmail}`;
 
       // STEP 1: If OTP code was not yet supplied, generate code and send email
       if (!code) {
@@ -387,51 +387,47 @@ export const login = async (req: Request, res: Response) => {
           });
         }
 
-        const otpCode = crypto.randomInt(100000, 999999).toString();
+        memoryCooldowns.set(`admin_otp_${cleanEmail}`, now);
+        const otpCode = crypto.randomInt(100000, 1000000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-        await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+        await prisma.verificationCode.deleteMany({ where: { email: otpIdentity } });
         await prisma.verificationCode.create({
           data: {
-            email: cleanEmail,
+            email: otpIdentity,
             code: hashOtpCode(otpCode),
             expiresAt,
           },
         });
 
-        memoryCooldowns.set(`admin_otp_${cleanEmail}`, now);
-        logger.info(`🔑 [ADMIN OTP] Сгенерирован код подтверждения для ${cleanEmail}: >>> ${otpCode} <<<`);
-
-        // 1. Отправляем в Telegram (мгновенная и надежная доставка)
-        try {
-          await telegram.sendAdminLoginOtp(cleanEmail, otpCode, ip);
-        } catch (tgErr: any) {
-          logger.warn(`[ADMIN OTP] Ошибка отправки кода в Telegram: ${tgErr?.message || tgErr}`);
-        }
-
-        // 2. Отправляем на почту (если SMTP доступен)
         try {
           await sendAdminLoginOtpEmail(cleanEmail, otpCode, { ip });
-        } catch (mailErr: any) {
-          logger.warn(`[ADMIN OTP] Ошибка отправки кода на почту: ${mailErr?.message || mailErr}`);
+        } catch {
+          await prisma.verificationCode.deleteMany({ where: { email: otpIdentity } });
+          memoryCooldowns.delete(`admin_otp_${cleanEmail}`);
+          logger.warn('[ADMIN OTP] Email delivery failed; challenge invalidated');
+          return res.status(503).json({ message: 'Не удалось отправить код на почту. Повторите попытку позже.' });
         }
+        memoryCooldowns.set(`admin_otp_${cleanEmail}`, Date.now());
+        memoryAttempts.delete(`admin_otp_${cleanEmail}`);
+        logger.info('[ADMIN OTP] Email challenge issued');
 
         return res.status(200).json({
           requireOtp: true,
           email: cleanEmail,
-          message: `Код подтверждения отправлен в Telegram и на почту ${cleanEmail}`,
+          message: `Код подтверждения отправлен на почту ${cleanEmail}`,
           cooldownRemaining: 60,
         });
       }
 
       // STEP 2: Verify supplied OTP code
-      const cleanCode = String(code).trim().replace(/\D/g, '');
+      const cleanCode = String(code).trim();
       const attemptsKey = `admin_otp_${cleanEmail}`;
       const currentAttempts = (memoryAttempts.get(attemptsKey) || 0) + 1;
       memoryAttempts.set(attemptsKey, currentAttempts);
 
       if (currentAttempts > 5) {
-        await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+        await prisma.verificationCode.deleteMany({ where: { email: otpIdentity } });
         memoryCooldowns.delete(`admin_otp_${cleanEmail}`);
         memoryAttempts.delete(attemptsKey);
         return res.status(429).json({
@@ -440,11 +436,11 @@ export const login = async (req: Request, res: Response) => {
       }
 
       const storedCode = await prisma.verificationCode.findFirst({
-        where: { email: cleanEmail },
+        where: { email: otpIdentity },
         orderBy: { createdAt: 'desc' },
       });
 
-      if (!storedCode || !verifyOtpMatch(storedCode.code, cleanCode)) {
+      if (!/^\d{6}$/.test(cleanCode) || !storedCode || !verifyOtpMatch(storedCode.code, cleanCode)) {
         const remaining = 5 - currentAttempts;
         return res.status(400).json({
           message: `Неверный код подтверждения из письма. Осталось попыток: ${remaining > 0 ? remaining : 0}`,
@@ -452,14 +448,17 @@ export const login = async (req: Request, res: Response) => {
       }
 
       if (new Date() > storedCode.expiresAt) {
-        await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+        await prisma.verificationCode.deleteMany({ where: { email: otpIdentity } });
         return res.status(400).json({
           message: 'Срок действия кода подтверждения истек (10 минут). Запросите новый код.',
         });
       }
 
-      // OTP verified successfully
-      await prisma.verificationCode.deleteMany({ where: { email: cleanEmail } });
+      // Consume this exact challenge once; concurrent replays cannot both create sessions.
+      const consumed = await prisma.verificationCode.deleteMany({
+        where: { id: storedCode.id, email: otpIdentity, expiresAt: { gt: new Date() } },
+      });
+      if (consumed.count !== 1) return res.status(401).json({ message: 'Код уже использован или истек. Начните вход заново.' });
       memoryAttempts.delete(attemptsKey);
       memoryCooldowns.delete(`admin_otp_${cleanEmail}`);
     }
