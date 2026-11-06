@@ -1,3 +1,4 @@
+import { BUSINESS_TIME_ZONE, businessDateKey } from '../config/timezone';
 import { Response } from 'express';
 import { prisma } from '../config/db';
 import { AuthRequest } from '../middleware/auth.middleware';
@@ -43,8 +44,8 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
       prevEndDate = new Date(startDate.getTime() - 1);
       prevStartDate = new Date(prevEndDate.getFullYear(), 0, 1, 0, 0, 0);
     } else if (period === 'custom' && from && to) {
-      startDate = new Date(from);
-      endDate = new Date(to);
+      startDate = new Date(from.length === 10 ? from + 'T00:00:00' : from);
+      endDate = new Date(to.length === 10 ? to + 'T00:00:00' : to);
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         return res.status(400).json({ message: 'Некорректный формат дат' });
       }
@@ -66,233 +67,31 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
       prevStartDate = new Date(prevEndDate.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    // 2. Fetch Data in Parallel
-    const [
-      orders,
-      prevOrders,
-      leads,
-      prevLeadsCount,
-      newClientsCount,
-      prevClientsCount,
-      totalClientsAllTime,
-    ] = await Promise.all([
-      // Current period orders with selected fields to optimize memory
-      prisma.order.findMany({
-        where: {
-          createdAt: {
-            gte: startDate,
-            lte: endDate,
-          },
-        },
-        select: {
-          id: true,
-          totalPrice: true,
-          itemsCount: true,
-          paymentStatus: true,
-          status: true,
-          tariffType: true,
-          category: true,
-          createdAt: true,
-          userId: true,
-          user: {
-            select: {
-              id: true,
-              companyName: true,
-              binIin: true,
-              email: true,
-              phone: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'asc' },
-      }),
-
-      // Previous period orders for growth comparisons
-      period === 'all'
-        ? Promise.resolve([])
-        : prisma.order.findMany({
-            where: {
-              createdAt: {
-                gte: prevStartDate,
-                lte: prevEndDate,
-              },
-            },
-            select: {
-              totalPrice: true,
-              itemsCount: true,
-            },
-          }),
-
-      // Current period leads
-      prisma.serviceLead.findMany({
-        where: {
-          createdAt: {
-            gte: startDate,
-            lte: endDate,
-          },
-        },
-      }),
-
-      // Previous period leads
-      period === 'all'
-        ? Promise.resolve(0)
-        : prisma.serviceLead.count({
-            where: {
-              createdAt: {
-                gte: prevStartDate,
-                lte: prevEndDate,
-              },
-            },
-          }),
-
-      // New clients in current period
-      prisma.user.count({
-        where: {
-          role: 'CLIENT',
-          createdAt: {
-            gte: startDate,
-            lte: endDate,
-          },
-        },
-      }),
-
-      // New clients in previous period
-      period === 'all'
-        ? Promise.resolve(0)
-        : prisma.user.count({
-            where: {
-              role: 'CLIENT',
-              createdAt: {
-                gte: prevStartDate,
-                lte: prevEndDate,
-              },
-            },
-          }),
-
-      // All-time registered clients
-      prisma.user.count({
-        where: { role: 'CLIENT' },
-      }),
+    if (startDate > endDate) return res.status(400).json({ message: 'Invalid date range' });
+    const currentWhere = { createdAt: { gte: startDate, lte: endDate } };
+    const previousWhere = { createdAt: { gte: prevStartDate, lte: prevEndDate } };
+    const [current, previous, tariffGroups, categoryGroups, statusGroups, paymentGroups, leadGroups, previousLeads, clients, previousClients, allClients, rankedClients] = await Promise.all([
+      prisma.order.aggregate({ where: currentWhere, _count: { _all: true }, _sum: { totalPrice: true, itemsCount: true } }),
+      period === 'all' ? null : prisma.order.aggregate({ where: previousWhere, _count: { _all: true }, _sum: { totalPrice: true, itemsCount: true } }),
+      prisma.order.groupBy({ by: ['tariffType'], where: currentWhere, _count: { _all: true }, _sum: { totalPrice: true } }),
+      prisma.order.groupBy({ by: ['category'], where: currentWhere, _count: { _all: true }, _sum: { totalPrice: true, itemsCount: true } }),
+      prisma.order.groupBy({ by: ['status'], where: currentWhere, _count: { _all: true }, _sum: { totalPrice: true } }),
+      prisma.order.groupBy({ by: ['paymentStatus'], where: currentWhere, _sum: { totalPrice: true } }),
+      prisma.serviceLead.groupBy({ by: ['status'], where: currentWhere, _count: { _all: true } }),
+      period === 'all' ? 0 : prisma.serviceLead.count({ where: previousWhere }),
+      prisma.user.count({ where: { role: 'CLIENT', ...currentWhere } }),
+      period === 'all' ? 0 : prisma.user.count({ where: { role: 'CLIENT', ...previousWhere } }),
+      prisma.user.count({ where: { role: 'CLIENT' } }),
+      prisma.order.groupBy({ by: ['userId'], where: currentWhere, _count: { _all: true }, _sum: { totalPrice: true, itemsCount: true }, orderBy: { _sum: { totalPrice: 'desc' } }, take: 10 }),
     ]);
-
-    // 3. Compute Financial & Operational Metrics
-    const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.totalPrice || 0)), 0);
-    const totalItemsCodes = orders.reduce((sum, o) => sum + (o.itemsCount || 0), 0);
-    const paidRevenue = orders
-      .filter((o) => o.paymentStatus === 'PAID')
-      .reduce((sum, o) => sum + (Number(o.totalPrice || 0)), 0);
-    const unpaidRevenue = totalRevenue - paidRevenue;
-
-    const estimatedProfitMargin = Math.round(totalRevenue * 0.72);
-    const averageOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
-    const averageItemsPerOrder = totalOrders > 0 ? Math.round(totalItemsCodes / totalOrders) : 0;
-
-    const activeOrders = orders.filter(
-      (o) =>
-        o.status === OrderStatus.NEW ||
-        o.status === OrderStatus.PROCESSING ||
-        o.status === OrderStatus.PRINTING ||
-        o.status === OrderStatus.STICKERING
-    ).length;
-
-    const completedOrders = orders.filter((o) => o.status === OrderStatus.COMPLETED).length;
-    const cancelledOrders = orders.filter((o) => o.status === OrderStatus.CANCELLED).length;
-    const completionRate =
-      totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 100;
-
-    // 4. Compute Growth Percentage vs Previous Period
-    const calcGrowth = (curr: number, prev: number): number => {
-      if (prev === 0) return curr > 0 ? 100 : 0;
-      return Number((((curr - prev) / prev) * 100).toFixed(1));
-    };
-
-    const prevRevenue = prevOrders.reduce((sum, o) => sum + (Number(o.totalPrice || 0)), 0);
-    const prevTotalOrders = prevOrders.length;
-    const prevItemsCodes = prevOrders.reduce((sum, o) => sum + (o.itemsCount || 0), 0);
-
-    const revenueGrowth = period === 'all' ? 0 : calcGrowth(totalRevenue, prevRevenue);
-    const ordersGrowth = period === 'all' ? 0 : calcGrowth(totalOrders, prevTotalOrders);
-    const codesGrowth = period === 'all' ? 0 : calcGrowth(totalItemsCodes, prevItemsCodes);
-    const clientsGrowth = period === 'all' ? 0 : calcGrowth(newClientsCount, prevClientsCount);
-
-    // 5. Timeline / Chart Data (Daily aggregation)
-    const timelineMap: Record<
-      string,
-      { date: string; label: string; revenue: number; orders: number; codes: number }
-    > = {};
-
-    // Helper for formatting date key (YYYY-MM-DD)
-    const toDateKey = (d: Date) => d.toISOString().slice(0, 10);
-
-    // Pre-fill days if period <= 31 days so chart is continuous
-    const diffDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays <= 31 && period !== 'all') {
-      for (let i = 0; i <= diffDays; i++) {
-        const curD = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
-        if (curD > endDate) break;
-        const key = toDateKey(curD);
-        timelineMap[key] = {
-          date: key,
-          label: curD.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
-          revenue: 0,
-          orders: 0,
-          codes: 0,
-        };
-      }
-    }
-
-    orders.forEach((o) => {
-      const key = toDateKey(new Date(o.createdAt));
-      if (!timelineMap[key]) {
-        timelineMap[key] = {
-          date: key,
-          label: new Date(o.createdAt).toLocaleDateString('ru-RU', {
-            day: 'numeric',
-            month: 'short',
-          }),
-          revenue: 0,
-          orders: 0,
-          codes: 0,
-        };
-      }
-      timelineMap[key].revenue += Number(o.totalPrice || 0);
-      timelineMap[key].orders += 1;
-      timelineMap[key].codes += o.itemsCount || 0;
-    });
-
-    const dailyTimeline = Object.values(timelineMap).sort((a, b) =>
-      a.date.localeCompare(b.date)
-    );
-
-    // 6. Distribution by Tariff
-    const tariffMap: Record<
-      string,
-      { key: string; name: string; count: number; revenue: number; percentage: number }
-    > = {
-      DIGITAL: { key: 'DIGITAL', name: 'Только коды (Digital)', count: 0, revenue: 0, percentage: 0 },
-      PRINT: { key: 'PRINT', name: 'Печать рулонов', count: 0, revenue: 0, percentage: 0 },
-      STANDARD: { key: 'STANDARD', name: 'Стандарт (Печать + проверка)', count: 0, revenue: 0, percentage: 0 },
-      PRO: { key: 'PRO', name: 'Под ключ (PRO)', count: 0, revenue: 0, percentage: 0 },
-    };
-
-    orders.forEach((o) => {
-      const tKey = o.tariffType || 'STANDARD';
-      if (!tariffMap[tKey]) {
-        tariffMap[tKey] = { key: tKey, name: tKey, count: 0, revenue: 0, percentage: 0 };
-      }
-      tariffMap[tKey].count += 1;
-      tariffMap[tKey].revenue += Number(o.totalPrice || 0);
-    });
-
-    Object.values(tariffMap).forEach((t) => {
-      t.percentage = totalRevenue > 0 ? Number(((t.revenue / totalRevenue) * 100).toFixed(1)) : 0;
-    });
-
-    const tariffDistribution = Object.values(tariffMap);
-
-    // 7. Distribution by Category
-    const categoryNamesMap: Record<string, string> = {
+    const clientProfiles = await prisma.user.findMany({ where: { id: { in: rankedClients.map(row => row.userId) } }, select: { id: true, companyName: true, binIin: true, email: true, phone: true } });
+    const totalRevenue = Number(current._sum.totalPrice || 0), totalOrders = current._count._all;
+    const totalItemsCodes = current._sum.itemsCount || 0;
+    const paidRevenue = Number(paymentGroups.find(row => row.paymentStatus === 'PAID')?._sum.totalPrice || 0);
+    const growth = (value: number, old: number) => period === 'all' ? 0 : old === 0 ? value > 0 ? 100 : 0 : Number(((value - old) / old * 100).toFixed(1));
+    const percentage = (value: number) => totalRevenue ? Number((value / totalRevenue * 100).toFixed(1)) : 0;
+    const tariffNames: Record<string, string> = {"DIGITAL": "Только коды (Digital)", "PRINT": "Печать рулонов", "STANDARD": "Стандарт (Печать + проверка)", "PRO": "Под ключ (PRO)"};
+    const categoryNames: Record<string, string> = {
       SHOES: 'Обувные товары',
       CLOTHES: 'Одежда и текстиль',
       TEXTILE: 'Постельное белье',
@@ -301,140 +100,54 @@ export const getAdminMetrics = async (req: AuthRequest, res: Response) => {
       WATER: 'Вода и напитки',
       OTHER: 'Прочие товары',
     };
-
-    const categoryMap: Record<
-      string,
-      { key: string; name: string; count: number; codes: number; revenue: number; percentage: number }
-    > = {};
-
-    orders.forEach((o) => {
-      const cKey = o.category || 'OTHER';
-      if (!categoryMap[cKey]) {
-        categoryMap[cKey] = {
-          key: cKey,
-          name: categoryNamesMap[cKey] || cKey,
-          count: 0,
-          codes: 0,
-          revenue: 0,
-          percentage: 0,
-        };
-      }
-      categoryMap[cKey].count += 1;
-      categoryMap[cKey].codes += o.itemsCount || 0;
-      categoryMap[cKey].revenue += Number(o.totalPrice || 0);
+    const statusNames: Record<string, string> = {"NEW": "Новый заказ", "PROCESSING": "Согласование макета", "PRINTING": "Печать кодов", "STICKERING": "Оклейка на складе", "COMPLETED": "Выполнен", "CANCELLED": "Отменен"};
+    const tariffDistribution = Object.values(TariffType).map(key => {
+      const row = tariffGroups.find(row => row.tariffType === key); const revenue = Number(row?._sum.totalPrice || 0);
+      return { key, name: tariffNames[key] || key, count: row?._count._all || 0, revenue, percentage: percentage(revenue) };
     });
-
-    Object.values(categoryMap).forEach((c) => {
-      c.percentage = totalRevenue > 0 ? Number(((c.revenue / totalRevenue) * 100).toFixed(1)) : 0;
+    const categoryDistribution = categoryGroups.map(row => ({ key: row.category, name: categoryNames[row.category] || row.category, count: row._count._all,
+      codes: row._sum.itemsCount || 0, revenue: Number(row._sum.totalPrice || 0), percentage: percentage(Number(row._sum.totalPrice || 0)) })).sort((a,b) => b.revenue - a.revenue);
+    const statusFunnel = Object.values(OrderStatus).map(key => {
+      const row = statusGroups.find(row => row.status === key);
+      return { key, name: statusNames[key] || key, count: row?._count._all || 0, revenue: Number(row?._sum.totalPrice || 0) };
     });
-
-    const categoryDistribution = Object.values(categoryMap).sort((a, b) => b.revenue - a.revenue);
-
-    // 8. Order Status Funnel
-    const statusMap: Record<string, { key: string; name: string; count: number; revenue: number }> = {
-      NEW: { key: 'NEW', name: 'Новый заказ', count: 0, revenue: 0 },
-      PROCESSING: { key: 'PROCESSING', name: 'Согласование макета', count: 0, revenue: 0 },
-      PRINTING: { key: 'PRINTING', name: 'Печать кодов', count: 0, revenue: 0 },
-      STICKERING: { key: 'STICKERING', name: 'Оклейка на складе', count: 0, revenue: 0 },
-      COMPLETED: { key: 'COMPLETED', name: 'Выполнен', count: 0, revenue: 0 },
-      CANCELLED: { key: 'CANCELLED', name: 'Отменен', count: 0, revenue: 0 },
-    };
-
-    orders.forEach((o) => {
-      const sKey = o.status;
-      if (statusMap[sKey]) {
-        statusMap[sKey].count += 1;
-        statusMap[sKey].revenue += Number(o.totalPrice || 0);
+    const countStatus = (key: OrderStatus) => statusGroups.find(row => row.status === key)?._count._all || 0;
+    const bucket = endDate.getTime() - startDate.getTime() > 366 * 86400000 ? 'month' : 'day';
+    const timeline = await prisma.$queryRaw<Array<{ date: string; revenue: any; orders: number; codes: any }>>`
+      SELECT date_trunc(${bucket}, ("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE ${BUSINESS_TIME_ZONE})::date::text AS date,
+             SUM("totalPrice") AS revenue, COUNT(*)::int AS orders, SUM("itemsCount") AS codes
+      FROM "Order" WHERE "createdAt" >= ${startDate} AND "createdAt" <= ${endDate}
+      GROUP BY 1 ORDER BY 1`;
+    const timelineMap = new Map(timeline.map(row => [row.date, { date: row.date, label: row.date, revenue: Number(row.revenue || 0), orders: Number(row.orders), codes: Number(row.codes || 0) }]));
+    if (bucket === 'day' && endDate.getTime() - startDate.getTime() <= 31 * 86400000) {
+      for (let time = startDate.getTime(); time <= endDate.getTime(); time += 86400000) {
+        const key = businessDateKey(new Date(time));
+        if (!timelineMap.has(key)) timelineMap.set(key, { date: key, label: key, revenue: 0, orders: 0, codes: 0 });
       }
-    });
-
-    const statusFunnel = Object.values(statusMap);
-
-    // 9. Top Clients by Revenue
-    const clientAggMap: Record<
-      string,
-      {
-        userId: string;
-        companyName: string;
-        binIin: string;
-        email: string;
-        phone: string;
-        ordersCount: number;
-        totalRevenue: number;
-        totalCodes: number;
-      }
-    > = {};
-
-    orders.forEach((o) => {
-      const u = o.user;
-      if (!u) return;
-      if (!clientAggMap[u.id]) {
-        clientAggMap[u.id] = {
-          userId: u.id,
-          companyName: u.companyName,
-          binIin: u.binIin,
-          email: u.email,
-          phone: u.phone,
-          ordersCount: 0,
-          totalRevenue: 0,
-          totalCodes: 0,
-        };
-      }
-      clientAggMap[u.id].ordersCount += 1;
-      clientAggMap[u.id].totalRevenue += Number(o.totalPrice || 0);
-      clientAggMap[u.id].totalCodes += o.itemsCount || 0;
-    });
-
-    const topClients = Object.values(clientAggMap)
-      .sort((a, b) => b.totalRevenue - a.totalRevenue)
-      .slice(0, 10);
-
-    // 10. Service Leads Metrics
-    const totalLeads = leads.length;
-    const completedLeads = leads.filter((l) => l.status === 'COMPLETED').length;
-    const leadsConversionRate =
-      totalLeads > 0 ? Math.round((completedLeads / totalLeads) * 100) : 0;
-
+    }
+    const totalLeads = leadGroups.reduce((sum, row) => sum + row._count._all, 0);
+    const completedLeads = leadGroups.find(row => row.status === 'COMPLETED')?._count._all || 0;
+    const completedOrders = countStatus('COMPLETED'), cancelledOrders = countStatus('CANCELLED');
     return res.json({
-      period,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      summary: {
-        totalRevenue,
-        estimatedProfitMargin,
-        paidRevenue,
-        unpaidRevenue,
-        averageOrderValue,
-        averageItemsPerOrder,
-        totalOrders,
-        activeOrders,
-        completedOrders,
-        cancelledOrders,
-        completionRate,
-        totalItemsCodes,
-        newClientsCount,
-        totalClientsAllTime,
-      },
-      growth: {
-        revenue: revenueGrowth,
-        orders: ordersGrowth,
-        codes: codesGrowth,
-        clients: clientsGrowth,
-      },
-      dailyTimeline,
-      tariffDistribution,
-      categoryDistribution,
-      statusFunnel,
-      topClients,
-      leads: {
-        total: totalLeads,
-        completed: completedLeads,
-        conversionRate: leadsConversionRate,
-        growth: period === 'all' ? 0 : calcGrowth(totalLeads, prevLeadsCount),
-      },
+      period, startDate: startDate.toISOString(), endDate: endDate.toISOString(),
+      summary: { totalRevenue, estimatedProfitMargin: Math.round(totalRevenue * .72), paidRevenue, unpaidRevenue: totalRevenue - paidRevenue,
+        averageOrderValue: totalOrders ? Math.round(totalRevenue / totalOrders) : 0,
+        averageItemsPerOrder: totalOrders ? Math.round(totalItemsCodes / totalOrders) : 0,
+        totalOrders, activeOrders: totalOrders - completedOrders - cancelledOrders, completedOrders, cancelledOrders,
+        completionRate: totalOrders ? Math.round(completedOrders / totalOrders * 100) : 100, totalItemsCodes,
+        newClientsCount: clients, totalClientsAllTime: allClients },
+      growth: { revenue: growth(totalRevenue, Number(previous?._sum.totalPrice || 0)), orders: growth(totalOrders, previous?._count._all || 0),
+        codes: growth(totalItemsCodes, previous?._sum.itemsCount || 0), clients: growth(clients, previousClients) },
+      dailyTimeline: [...timelineMap.values()].sort((a,b) => a.date.localeCompare(b.date)), tariffDistribution, categoryDistribution, statusFunnel,
+      topClients: rankedClients.map(row => {
+        const profile = clientProfiles.find(profile => profile.id === row.userId);
+        return { userId: row.userId, companyName: profile?.companyName || '', binIin: profile?.binIin || '', email: profile?.email || '', phone: profile?.phone || '',
+          ordersCount: row._count._all, totalRevenue: Number(row._sum.totalPrice || 0), totalCodes: row._sum.itemsCount || 0 };
+      }),
+      leads: { total: totalLeads, completed: completedLeads, conversionRate: totalLeads ? Math.round(completedLeads / totalLeads * 100) : 0, growth: growth(totalLeads, previousLeads) },
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('getAdminMetrics error:', error);
-    return res.status(500).json({ message: 'Ошибка при формировании расширенной аналитики' });
+    return res.status(500).json({ message: 'Metrics unavailable' });
   }
 };

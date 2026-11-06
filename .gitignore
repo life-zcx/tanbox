@@ -39,3 +39,6 @@ backend/storage/
 # Python diagnostic/test cache
 __pycache__/
 *.py[cod]
+
+.env.*
+!.env.example

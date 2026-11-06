@@ -2,7 +2,7 @@ const sensitiveKey = /^(?:authorization|cookie|password|currentPassword|newPassw
 
 export function redactLogText(value: string): string {
   return value
-    .replace(/([?&](?:token|access_token|refresh_token|api_key|secret|code|otp|otpCode)=)[^\s&#"']*/gi, '$1[REDACTED]')
+    .replace(/([?&](?:password|token|access_token|refresh_token|api_key|secret|code|otp|otpCode)=)[^\s&#"']*/gi, '$1[REDACTED]')
     .replace(/(>>>\s*)\d{6}(\s*<<<)/g, '$1[REDACTED]$2')
     .replace(/((?:\botp(?:Code)?|verificationCode|oneTimeCode|код\s+(?:подтверждения|сброса\s+пароля|входа))\s*[=:]\s*)\d{6}\b/gi, '$1[REDACTED]')
     .replace(/\bBearer\s+[A-Za-z0-9._~+\/-]+/gi, 'Bearer [REDACTED]');

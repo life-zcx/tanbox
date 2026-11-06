@@ -1,3 +1,5 @@
+import { pagination, nextPage } from '../utils/pagination';
+import { isValidPassword } from '../utils/passwordPolicy';
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../config/db';
@@ -7,7 +9,9 @@ import { logger } from '../utils/logger';
 
 export const getUsers = async (req: AuthRequest, res: Response) => {
   try {
+    const { take, skip, page } = pagination(req, res);
     const users = await prisma.user.findMany({
+      take, skip,
       select: {
         id: true,
         email: true,
@@ -29,6 +33,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
 
+    nextPage(res, users.length, take, page);
     return res.json(users);
   } catch (error: any) {
     logger.error('getUsers error:', error);
@@ -218,9 +223,9 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
     }
 
     // 6. Optional Password reset / change
-    if (password !== undefined && password !== null && String(password).trim().length > 0) {
-      const cleanPassword = String(password).trim();
-      if (cleanPassword.length < 8) {
+    if (password !== undefined && password !== null && password !== '') {
+      const cleanPassword = password;
+      if (!isValidPassword(cleanPassword)) {
         return res.status(400).json({ message: 'Новый пароль должен содержать минимум 8 символов' });
       }
       updateData.password = await bcrypt.hash(cleanPassword, 10);

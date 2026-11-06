@@ -27,6 +27,7 @@ function escapeHtml(str?: string | null): string {
 }
 
 export const submitBugReport = async (req: AuthRequest, res: Response) => {
+  let reportSaved = false;
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -40,7 +41,7 @@ export const submitBugReport = async (req: AuthRequest, res: Response) => {
       screenResolution,
     } = req.body;
 
-    if (!description || !description.trim()) {
+    if (typeof description !== 'string' || !description.trim()) {
       return res.status(400).json({ message: 'Пожалуйста, опишите обнаруженную ошибку' });
     }
 
@@ -97,8 +98,18 @@ export const submitBugReport = async (req: AuthRequest, res: Response) => {
           2
         ),
         status: 'NEW',
+        ...(req.file ? {
+          attachments: {
+            create: {
+              filename: req.file.filename,
+              originalName: req.file.originalname,
+              ownerId: user.id,
+            },
+          },
+        } : {}),
       },
     });
+    reportSaved = true;
 
     // Notify Telegram Admin / DevOps chat
     telegram
@@ -170,6 +181,17 @@ export const submitBugReport = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({
       message: 'Ошибка при сохранении отчета об ошибке: ' + error.message,
     });
+  } finally {
+    // Multer writes before validation. Remove rejected/uncommitted uploads, confined to its directory.
+    if (req.file && !reportSaved) {
+      const directory = path.resolve(process.cwd(), 'uploads/bug-reports');
+      const uploadedPath = path.resolve(req.file.path);
+      if (path.dirname(uploadedPath) === directory && path.basename(uploadedPath) === req.file.filename) {
+        await fs.promises.unlink(uploadedPath).catch((error: NodeJS.ErrnoException) => {
+          if (error.code !== 'ENOENT') logger.warn('Failed to remove rejected bug report upload:', error);
+        });
+      }
+    }
   }
 };
 
@@ -185,26 +207,23 @@ export const getBugReportAttachment = async (req: AuthRequest, res: Response) =>
     }
 
     const { filename } = req.params;
-    const safeFilename = path.basename(filename);
-    if (safeFilename !== filename || filename.includes('..')) {
+    if (typeof filename !== 'string' || filename === '.' || !/^[a-zA-Z0-9_.-]+$/.test(filename) || filename.includes('..')) {
       return res.status(400).json({ message: 'Некорректное имя файла' });
     }
 
-    const filePath = path.resolve(process.cwd(), 'uploads/bug-reports', safeFilename);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'Файл не найден' });
-    }
-
     if (user.role !== 'ADMIN') {
-      const isOwner = await prisma.serviceLead.findFirst({
-        where: {
-          email: user.email,
-          notes: { contains: safeFilename },
-        },
+      const attachment = await prisma.supportAttachment.findUnique({
+        where: { filename },
+        select: { ownerId: true },
       });
-      if (!isOwner) {
+      if (!attachment || attachment.ownerId !== user.id) {
         return res.status(403).json({ message: 'Нет доступа к данному файлу' });
       }
+    }
+
+    const filePath = path.resolve(process.cwd(), 'uploads/bug-reports', filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'Файл не найден' });
     }
 
     return res.sendFile(filePath);

@@ -144,3 +144,8 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
   }
   next();
 };
+
+export const optionalAuthenticateJWT = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!req.headers.authorization) return next();
+  return authenticateJWT(req, res, next);
+};

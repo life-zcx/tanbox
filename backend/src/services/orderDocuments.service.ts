@@ -1,3 +1,4 @@
+import '../config/timezone';
 import { renderHtmlToPdf } from './pdfRenderer.service';
 import { COMPANY_CONFIG } from '../config/companyConfig';
 
@@ -39,12 +40,21 @@ export const numberToWordsTenge = (num: number): string => {
     return result.trim();
   };
 
-  const integerPart = Math.floor(Math.abs(num));
+  if (!Number.isFinite(num)) throw new Error('Invalid monetary amount');
+  const cents = Math.round((Math.abs(num) + Number.EPSILON * Math.abs(num)) * 100);
+  const fraction = String(cents % 100).padStart(2, '0');
+  const integerPart = Math.floor(cents / 100);
+  const billions = Math.floor(integerPart / 1_000_000_000) % 1000;
   const millions = Math.floor(integerPart / 1_000_000) % 1000;
   const thousands = Math.floor(integerPart / 1000) % 1000;
   const units = integerPart % 1000;
 
   let words = '';
+  if (billions) {
+    const last = billions % 10, last2 = billions % 100;
+    const suffix = last2 >= 11 && last2 <= 19 ? '\u043c\u0438\u043b\u043b\u0438\u0430\u0440\u0434\u043e\u0432' : last === 1 ? '\u043c\u0438\u043b\u043b\u0438\u0430\u0440\u0434' : last >= 2 && last <= 4 ? '\u043c\u0438\u043b\u043b\u0438\u0430\u0440\u0434\u0430' : '\u043c\u0438\u043b\u043b\u0438\u0430\u0440\u0434\u043e\u0432';
+    words += convertGroup(billions) + ' ' + suffix + ' ';
+  }
 
   if (millions > 0) {
     words += convertGroup(millions) + ' ';
@@ -71,9 +81,9 @@ export const numberToWordsTenge = (num: number): string => {
   }
 
   const trimmed = words.trim();
-  if (!trimmed) return 'ноль теңге 00 тиын';
+  if (!trimmed) return `ноль теңге ${fraction} тиын`;
   const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-  return `${capitalized} теңге 00 тиын`;
+  return `${num < 0 ? "-" : ""}${capitalized} теңге ${fraction} тиын`;
 };
 
 export function parseStickeringEstimateFromNotes(notes?: string | null) {

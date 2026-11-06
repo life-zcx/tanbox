@@ -1,3 +1,6 @@
+import { pagination, nextPage } from '../utils/pagination';
+import { createHash } from 'crypto';
+import { syncPendingOrderInvoices, updateOrderQuote, updateOrderAdministrativeState } from '../services/orderFinancials.service';
 import { payWithBalance, BalancePaymentError } from '../services/balancePayment.service';
 import { Response } from 'express';
 import path from 'path';
@@ -27,6 +30,7 @@ import { syncOrderPositionsFromNkt, resolveNktProduct } from '../services/nktCat
 import { getNktSettings } from '../services/nktSettings.service';
 import { clientTelegramBot } from '../services/clientTelegram.service';
 import { advanceOrderStatus } from '../utils/orderLifecycle';
+import { canAccessOrderCodes, clientOrderCodeAccessWhere, orderPrintAccessError, orderWithCodeAccess } from '../utils/orderCodeAccess';
 export { getDefaultStickerLayout };
 
 function isSafeUrl(url?: string | null): boolean {
@@ -53,7 +57,7 @@ function escapeHtml(str?: string | null): string {
 }
 
 async function findOrderByIdOrNumber(identifier: string) {
-  return prisma.order.findFirst({
+  const order = await prisma.order.findFirst({
     where: {
       OR: [
         { id: identifier },
@@ -71,23 +75,18 @@ async function findOrderByIdOrNumber(identifier: string) {
       },
       positions: {
         orderBy: { index: 'asc' },
+        take: 1001,
       },
+      codeItems: { select: { index: true }, orderBy: { index: 'asc' }, take: 1 },
       markirovkaOrders: {
-        include: {
-          account: {
-            select: {
-              id: true,
-              name: true,
-              environment: true,
-              login: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
+        select: { id: true, accountId: true, orderId: true, externalOrderId: true, category: true, gtin: true,
+          quantityRequested: true, quantityReceived: true, status: true, errorDetails: true, createdAt: true, updatedAt: true,
+          account: { select: { id: true, name: true, environment: true, login: true } } },
+        orderBy: { createdAt: 'desc' }, take: 1000,
       },
       markirovkaReports: {
-        orderBy: { createdAt: 'desc' },
-        take: 5,
+        select: { id: true, status: true, codesCount: true, submittedAt: true, externalReportId: true, createdAt: true },
+        orderBy: { createdAt: 'desc' }, take: 5,
       },
       _count: {
         select: {
@@ -96,6 +95,8 @@ async function findOrderByIdOrNumber(identifier: string) {
       },
     },
   });
+  if ((order?.positions?.length || 0) > 1000) throw Object.assign(new Error('Заказ превышает лимит 1000 позиций. Требуется разделение партии.'), { status: 413 });
+  return order;
 }
 
 
@@ -103,9 +104,21 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
 
+    const createKey = String(req.headers['idempotency-key'] || req.body.idempotencyKey || '');
+    if (!/^[a-zA-Z0-9_-]{16,128}$/.test(createKey)) return res.status(400).json({ message: 'Idempotency-Key required (16-128 characters)' });
+    const stable = (value: any): any => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object'
+      ? Object.fromEntries(Object.keys(value).sort().filter(key => key !== 'idempotencyKey').map(key => [key, stable(value[key])])) : value;
+    const requestHash = createHash('sha256').update(JSON.stringify(stable(req.body))).digest('hex');
+    const previous = await prisma.order.findUnique({ where: { userId_createKey: { userId: req.user.id, createKey } } });
+    if (previous) {
+      if (previous.createRequestHash !== requestHash) return res.status(409).json({ message: 'Idempotency key belongs to another request' });
+      return res.status(200).json({ order: orderWithCodeAccess(previous, req.user), replayed: true });
+    }
+
     const { category, tariffType, itemsCount, extraServices, ssccNeeded, notes, positions, items } = req.body;
     const rawPositions = Array.isArray(positions) && positions.length > 0 ? positions : (Array.isArray(items) && items.length > 0 ? items : []);
 
+    if (rawPositions.length > 1000 || rawPositions.some((position: unknown) => JSON.stringify(position).length > 10000)) return res.status(413).json({ message: 'Maximum 1000 positions per order, 10KB per position' });
     let countNum = parseInt(itemsCount, 10);
     if (rawPositions.length > 0) {
       const computedSum = rawPositions.reduce((acc: number, p: any) => acc + (Math.max(1, parseInt(p.quantity, 10) || 1)), 0);
@@ -126,7 +139,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Недопустимый тариф' });
     }
 
-    if (isNaN(countNum) || countNum <= 0 || countNum > 10000000) {
+    if (isNaN(countNum) || countNum <= 0 || countNum > 100000) {
       return res.status(400).json({ message: 'Количество должно быть положительным целым числом до 10 000 000' });
     }
 
@@ -226,6 +239,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     }
 
     // Authoritative server-side price calculation (tamper-proof)
+    if (Buffer.byteLength(JSON.stringify(initialLayout)) > 100000) return res.status(413).json({ message: 'Макет превышает допустимый размер 100 КБ.' });
     const parsedBoxes = req.body.boxesCount ? parseInt(String(req.body.boxesCount), 10) : undefined;
     const pricing = await computeOrderPricing({
       tariffType: tariffType as TariffType,
@@ -261,6 +275,10 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     const gtinPositions = rawPositions.filter((p: any) => p.gtin && String(p.gtin).trim().length >= 8);
 
     if (markirovkaMode === 'EMISSION') {
+      const account = await prisma.markirovkaAccount.findUnique({ where: { id: String(markirovkaAccountId || '') } });
+      if (!account || account.status !== 'ACTIVE' || (req.user.role !== 'ADMIN' && account.userId !== req.user.id)) {
+        return res.status(403).json({ message: 'Integration account unavailable' });
+      }
       if (!markirovkaAccountId) {
         return res.status(400).json({ message: 'Пожалуйста, выберите подключенный аккаунт / станцию ИС МПТ' });
       }
@@ -333,16 +351,38 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
             totalPrice: pricing.totalPrice,
             extraServices: servicesList,
             ssccNeeded: Boolean(ssccNeeded),
+            boxesCount: parsedBoxes && parsedBoxes > 0 ? parsedBoxes : null,
+            includeOfficialCodeFee: Boolean(req.body.includeOfficialCodeFee),
+            createKey, createRequestHash: requestHash,
             notes: sanitizedNotes,
             status: OrderStatus.NEW,
             templateId: resolvedTemplateId,
             stickerLayout: initialLayout,
             stickerApprovalStatus: initialApprovalStatus,
             warehouseAddress: extractedAddress,
+            positions: rawPositions.length ? { create: rawPositions.map((p: any, index: number) => ({
+              index: index + 1, name: String(p.name || `Position ${index + 1}`).trim(),
+              article: p.article ? String(p.article) : null, size: p.size ? String(p.size) : null,
+              color: p.color ? String(p.color) : null, gtin: p.gtin ? String(p.gtin).trim() : null,
+              quantity: Math.max(1, parseInt(p.quantity, 10) || 1), customData: p.customData || undefined,
+            })) } : undefined,
+            invoices: { create: {
+              invoiceNumber: `INV-${orderNumber}`, date: new Date(), status: 'PENDING',
+              userId: req.user.id, orderNumber, customerName: req.user.companyName,
+              customerBinIin: req.user.binIin, customerAddress: extractedAddress || '', customerPhone: req.user.phone,
+              totalAmount: pricing.totalPrice,
+              items: { create: { index: 1, name: 'Marking services', unit: 'pcs', quantity: pricing.safeItemsCount,
+                price: pricing.unitPrice, totalPrice: pricing.totalPrice } },
+            } },
           },
         });
       } catch (err: any) {
         if (err.code === 'P2002') {
+          const duplicate = await prisma.order.findUnique({ where: { userId_createKey: { userId: req.user.id, createKey } } });
+          if (duplicate) {
+            if (duplicate.createRequestHash !== requestHash) return res.status(409).json({ message: 'Idempotency key conflict' });
+            return res.status(200).json({ order: orderWithCodeAccess(duplicate, req.user), replayed: true });
+          }
           // Unique constraint collision on orderNumber, retry with incremented candidate
           continue;
         }
@@ -352,39 +392,6 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     if (!newOrder) {
       throw new Error('Не удалось сгенерировать уникальный номер заказа, попробуйте еще раз');
-    }
-
-    // Save order positions (multi-item / multi-SKU specification)
-    if (rawPositions.length > 0) {
-      await prisma.orderPosition.createMany({
-        data: rawPositions.map((p: any, idx: number) => ({
-          orderId: newOrder.id,
-          index: idx + 1,
-          name: String(p.name || `Позиция ${idx + 1}`).trim(),
-          article: p.article ? String(p.article).trim() : null,
-          size: p.size ? String(p.size).trim() : null,
-          color: p.color ? String(p.color).trim() : null,
-          gtin: p.gtin ? String(p.gtin).trim() : null,
-          quantity: Math.max(1, parseInt(p.quantity, 10) || 1),
-          customData: p.customData || null,
-        })),
-      });
-
-      newOrder.positions = await prisma.orderPosition.findMany({
-        where: { orderId: newOrder.id },
-        orderBy: { index: 'asc' },
-      });
-    }
-
-    // Automatically generate invoice record in DB for client order
-    syncOrderInvoices(newOrder.userId).catch((err) => logger.warn(`Failed to auto-sync invoices for order ${newOrder.orderNumber}: ${err.message}`));
-
-    // If order includes layout approval for user template, unlock it in library
-    if (resolvedTemplateId && servicesList.includes('STICKER_LAYOUT_APPROVAL')) {
-      prisma.userStickerTemplate.update({
-        where: { id: resolvedTemplateId },
-        data: { isPaid: true, paidAt: new Date() },
-      }).catch((e) => console.warn('Could not mark template as paid on order creation:', e));
     }
 
     // Process turnkey automatic Markirovka emission if requested
@@ -418,6 +425,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
                     category: category as OrderCategory,
                     gtin: itemGtin,
                     quantityRequested: itemQty,
+                    dispatchStartedAt: new Date(),
                     status: 'PENDING',
                   },
                 });
@@ -509,6 +517,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
                 category: category as OrderCategory,
                 gtin: String(markirovkaGtin).trim(),
                 quantityRequested: countNum,
+                dispatchStartedAt: new Date(),
                 status: 'PENDING',
               },
             });
@@ -664,7 +673,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     return res.status(201).json({
       message: 'Заказ успешно создан и отправлен на обработку',
-      order: newOrder,
+      order: orderWithCodeAccess(newOrder, req.user),
     });
   } catch (error: any) {
     console.error('Create order error:', error);
@@ -683,7 +692,9 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
       whereClause = { userId: req.user.id };
     }
 
+    const { take, skip, page } = pagination(req, res);
     const orders = await prisma.order.findMany({
+      take, skip,
       where: whereClause,
       include: {
         user: {
@@ -695,7 +706,7 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
           },
         },
         positions: {
-          orderBy: { index: 'asc' },
+          orderBy: { index: 'asc' }, take: 5, select: { id: true, index: true, name: true, article: true, size: true, color: true, gtin: true, quantity: true },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -718,13 +729,14 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
     const enhancedOrders = orders.map((o) => {
       const r = rangeMap.get(o.id);
       return {
-        ...o,
+        ...orderWithCodeAccess(o, req.user!),
         startLabelNumber: r?.min || null,
         endLabelNumber: r?.max || null,
         labelRange: r ? `№ ${r.min} — № ${r.max}` : null,
       };
     });
 
+    nextPage(res, orders.length, take, page);
     return res.json(enhancedOrders);
   } catch (error: any) {
     console.error('Get orders error:', error);
@@ -782,7 +794,7 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
     const endLabelNumber = lastItem?.index || null;
 
     return res.json({
-      ...order,
+      ...orderWithCodeAccess(order, req.user),
       startLabelNumber,
       endLabelNumber,
       labelRange: startLabelNumber && endLabelNumber ? `№ ${startLabelNumber} — № ${endLabelNumber}` : null,
@@ -816,24 +828,16 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Заказ не найден' });
     }
 
-    const updatedOrder = await prisma.order.update({
-      where: { id: existing.id },
-      data: {
+    const updatedOrder = await updateOrderAdministrativeState(existing.id, {
         ...(status ? { status: status as OrderStatus } : {}),
         ...(pdfUrl !== undefined ? { pdfUrl } : {}),
         ...(printAllowed !== undefined ? { printAllowed: Boolean(printAllowed) } : {}),
         ...(paymentStatus && Object.values(PaymentStatus).includes(paymentStatus as PaymentStatus)
           ? { paymentStatus: paymentStatus as PaymentStatus }
           : {}),
-      },
-    });
+      });
 
-    if (paymentStatus) {
-      prisma.invoice.updateMany({
-        where: { orderId: existing.id },
-        data: { status: paymentStatus === 'PAID' ? 'PAID' : (paymentStatus === 'REFUNDED' ? 'CANCELLED' : 'PENDING') },
-      }).catch(() => {});
-    }
+
 
     // Trigger Telegram notifications to client if linked
     if (status && status !== existing.status) {
@@ -845,7 +849,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
 
     return res.json({
       message: 'Статус заказа обновлен',
-      order: updatedOrder,
+      order: orderWithCodeAccess(updatedOrder, req.user),
     });
   } catch (error: any) {
     return res.status(500).json({ message: 'Ошибка при обновлении статуса заказа' });
@@ -866,15 +870,12 @@ export const updateOrderPrintPermission = async (req: AuthRequest, res: Response
       return res.status(404).json({ message: 'Заказ не найден' });
     }
 
-    const updatedOrder = await prisma.order.update({
-      where: { id: existing.id },
-      data: {
+    const updatedOrder = await updateOrderAdministrativeState(existing.id, {
         ...(printAllowed !== undefined ? { printAllowed: Boolean(printAllowed) } : {}),
         ...(paymentStatus && Object.values(PaymentStatus).includes(paymentStatus as PaymentStatus)
           ? { paymentStatus: paymentStatus as PaymentStatus }
           : {}),
-      },
-    });
+      });
 
     if (paymentStatus && paymentStatus !== existing.paymentStatus) {
       clientTelegramBot.notifyPaymentStatusChanged(existing.id, paymentStatus).catch(() => {});
@@ -882,7 +883,7 @@ export const updateOrderPrintPermission = async (req: AuthRequest, res: Response
 
     return res.json({
       message: 'Доступ к печати партии обновлен',
-      order: updatedOrder,
+      order: orderWithCodeAccess(updatedOrder, req.user),
     });
   } catch (error: any) {
     return res.status(500).json({ message: 'Ошибка при обновлении прав на печать' });
@@ -897,6 +898,7 @@ export const updateStickerLayout = async (req: AuthRequest, res: Response) => {
 
     const { id } = req.params;
     const { stickerLayout, sendToClient, pdfUrl } = req.body;
+    if (stickerLayout && Buffer.byteLength(JSON.stringify(stickerLayout)) > 100000) return res.status(413).json({ message: 'Макет превышает допустимый размер 100 КБ.' });
 
     const existing = await findOrderByIdOrNumber(id);
     if (!existing) {
@@ -959,7 +961,7 @@ export const updateStickerLayout = async (req: AuthRequest, res: Response) => {
 
     const updatedOrder = await prisma.order.update({
       where: { id: existing.id },
-      data: updateData,
+      data: { ...updateData, documentVersion: { increment: 1 } },
     });
 
     if (sendToClient) {
@@ -970,7 +972,7 @@ export const updateStickerLayout = async (req: AuthRequest, res: Response) => {
       message: sendToClient
         ? 'Макет сохранён в БД и передан клиенту на согласование'
         : 'Макет сохранён в БД',
-      order: updatedOrder,
+      order: orderWithCodeAccess(updatedOrder, req.user),
     });
   } catch (error: any) {
     console.error('Update sticker layout error:', error);
@@ -1062,7 +1064,7 @@ export const updateStickerApproval = async (req: AuthRequest, res: Response) => 
 
     return res.json({
       message: approvalStatus === 'APPROVED' ? 'Макет успешно утвержден' : 'Запрос на доработку передан дизайнеру',
-      order: updatedOrder,
+      order: orderWithCodeAccess(updatedOrder, req.user),
     });
   } catch (error: any) {
     console.error('Update sticker approval error:', error);
@@ -1188,119 +1190,9 @@ export const uploadOrderCodesFile = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // 5. Invalidate cached PDFs since codes changed
-    const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', existing.id);
-    if (!fs.existsSync(orderDir)) {
-      fs.mkdirSync(orderDir, { recursive: true });
-    } else {
-      try {
-        const files = fs.readdirSync(orderDir);
-        for (const f of files) {
-          if (f.toLowerCase().endsWith('.pdf')) {
-            fs.unlinkSync(path.join(orderDir, f));
-          }
-        }
-      } catch (cacheErr) {
-        console.warn('Could not clear cached PDFs:', cacheErr);
-      }
-    }
-
-    // Save cleaned file with only accepted unique codes
-    const targetFilePath = path.join(orderDir, req.file.filename);
-    const cleanedFileContent = acceptedItems.map((it) => it.code).join('\n');
-    await fs.promises.writeFile(targetFilePath, cleanedFileContent, 'utf-8');
-
-    if (req.file.path !== targetFilePath && fs.existsSync(req.file.path)) {
-      try { fs.unlinkSync(req.file.path); } catch {}
-    }
-
-    const relativeUrl = `/uploads/orders/${existing.id}/${req.file.filename}`;
-
-    // Authoritative server-side price recalculation with the updated codes count
-    const newItemsCount = acceptedItems.length;
-    const pricing = await computeOrderPricing({
-      tariffType: existing.tariffType,
-      itemsCount: newItemsCount,
-      extraServices: existing.extraServices,
-      ssccNeeded: existing.ssccNeeded,
-    });
-
-    const updatedOrder = await prisma.order.update({
-      where: { id: existing.id },
-      data: {
-        codesFileUrl: relativeUrl,
-        codesFileName: req.file.originalname,
-        itemsCount: newItemsCount,
-        pricePerItem: pricing.unitPrice,
-        totalPrice: pricing.totalPrice,
-        pdfUrl: null,
-        printAllowed: false,
-      },
-      include: {
-        user: {
-          select: { companyName: true, binIin: true, email: true, phone: true },
-        },
-      },
-    });
-
-    // 6. Populate OrderCodeItem with only accepted, non-duplicate codes
-    try {
-      await prisma.orderCodeItem.deleteMany({ where: { orderId: existing.id } });
-      const startIndex = await getClientOrderStartIndex(existing.userId, existing.id, existing.createdAt);
-      const items = acceptedItems.map((item, idx) => {
-        let gtin: string | null = null;
-        let serial: string | null = null;
-        const m = item.code.match(/^01(\d{14})21([^\u001d\s]+)/);
-        if (m) {
-          gtin = m[1];
-          serial = m[2];
-        }
-        return {
-          orderId: existing.id,
-          index: startIndex + idx,
-          code: item.code,
-          gtin,
-          serial,
-          status: CodeItemStatus.NEW,
-        };
-      });
-
-      const BATCH_SIZE = 2000;
-      for (let b = 0; b < items.length; b += BATCH_SIZE) {
-        await prisma.orderCodeItem.createMany({ data: items.slice(b, b + BATCH_SIZE) });
-      }
-
-      // Reindex client orders to guarantee unbroken numbering sequence across all orders
-      await reindexClientOrders(existing.userId);
-
-      // If order has no positions, auto-create them from uploaded codes grouped by GTIN
-      const currentPosCount = await prisma.orderPosition.count({ where: { orderId: existing.id } });
-      if (currentPosCount === 0) {
-        const gtinGroups = new Map<string, number>();
-        for (const item of items) {
-          const g = item.gtin || 'UNKNOWN';
-          gtinGroups.set(g, (gtinGroups.get(g) || 0) + 1);
-        }
-        let pIdx = 1;
-        const autoPositions = [];
-        const baseName = req.file.originalname ? req.file.originalname.replace(/\.[^/.]+$/, '') : 'Товар';
-        for (const [gtin, qty] of gtinGroups.entries()) {
-          autoPositions.push({
-            orderId: existing.id,
-            index: pIdx,
-            name: gtinGroups.size === 1 ? baseName : `${baseName} (Позиция ${pIdx})`,
-            gtin: gtin !== 'UNKNOWN' ? gtin : null,
-            quantity: qty,
-          });
-          pIdx++;
-        }
-        if (autoPositions.length > 0) {
-          await prisma.orderPosition.createMany({ data: autoPositions });
-        }
-      }
-    } catch (dbErr) {
-      console.warn('Failed to populate OrderCodeItem on upload:', dbErr);
-    }
+    await attachCodesToOrder(existing.id, acceptedItems.map(item => item.code), undefined, 'upload', { reprice: true, originalName: req.file.originalname });
+    if (fs.existsSync(req.file.path)) await fs.promises.unlink(req.file.path);
+    const updatedOrder = await prisma.order.findUniqueOrThrow({ where: { id: existing.id } });
 
     // 7. Formulate feedback message
     let message = `Файл кодов успешно загружен (${acceptedItems.length} шт.). Дубликатов в базе не обнаружено.`;
@@ -1317,7 +1209,7 @@ export const uploadOrderCodesFile = async (req: AuthRequest, res: Response) => {
 
     return res.json({
       message,
-      order: finalOrder || updatedOrder,
+      order: orderWithCodeAccess(finalOrder || updatedOrder, req.user),
       totalInFile: rows.length,
       loadedCount: acceptedItems.length,
       skippedDbCount,
@@ -1458,7 +1350,7 @@ export const downloadOrderCodesFile = async (req: AuthRequest, res: Response) =>
     }
 
     if (req.user.role !== 'ADMIN') {
-      const isPaidOrAllowed = (existing as any).printAllowed === true || (existing as any).paymentStatus === 'PAID';
+      const isPaidOrAllowed = canAccessOrderCodes(existing, req.user);
       if (!isPaidOrAllowed) {
         return res.status(403).json({
           message: 'Выгрузка файла кодов заблокирована: ожидается подтверждение оплаты заказа.',
@@ -1512,7 +1404,7 @@ export const getOrderCodesContent = async (req: AuthRequest, res: Response) => {
     }
 
     if (req.user.role !== 'ADMIN') {
-      const isPaidOrAllowed = (existing as any).printAllowed === true || (existing as any).paymentStatus === 'PAID';
+      const isPaidOrAllowed = canAccessOrderCodes(existing, req.user);
       if (!isPaidOrAllowed) {
         return res.status(403).json({
           message: 'Доступ к кодам маркировки заблокирован: ожидается подтверждение оплаты заказа.',
@@ -1626,7 +1518,7 @@ export const syncMarkirovkaOrderCodes = async (req: AuthRequest, res: Response) 
         message: `Все ${markOrder.codes.length} кодов маркировки успешно синхронизированы в заказ!`,
         codesCount: markOrder.codes.length,
         status: MarkirovkaOrderStatus.COMPLETED,
-        order: updatedOrder,
+        order: orderWithCodeAccess(updatedOrder, req.user),
       });
     }
 
@@ -1635,6 +1527,11 @@ export const syncMarkirovkaOrderCodes = async (req: AuthRequest, res: Response) 
     // If order was not yet created in IS MPT (or failed before externalOrderId)
     let externalId = markOrder.externalOrderId;
     if (!externalId) {
+      const claim = await prisma.markirovkaOrder.updateMany({
+        where: { id: markOrder.id, externalOrderId: null, dispatchStartedAt: null },
+        data: { dispatchStartedAt: new Date() },
+      });
+      if (claim.count !== 1) return res.status(409).json({ code: 'EMISSION_RECONCILIATION_REQUIRED', message: 'Previous emission outcome is unknown; reconcile with the provider before retrying.' });
       const emission = await client.createEmissionOrder({
         category: markOrder.category,
         gtin: markOrder.gtin,
@@ -1681,7 +1578,7 @@ export const syncMarkirovkaOrderCodes = async (req: AuthRequest, res: Response) 
         message: `Успешно получено и сохранено в БД ${pollRes.codes.length} кодов маркировки!`,
         codesCount: pollRes.codes.length,
         status: MarkirovkaOrderStatus.COMPLETED,
-        order: updatedOrder,
+        order: orderWithCodeAccess(updatedOrder, req.user),
       });
     }
 
@@ -1753,7 +1650,7 @@ export const generateTestCodesForOrder = async (req: AuthRequest, res: Response)
       success: true,
       message: `Тестовые коды (${mockCodes.length} шт.) успешно сгенерированы и сохранены в БД!`,
       codesCount: mockCodes.length,
-      order: updatedOrder,
+      order: orderWithCodeAccess(updatedOrder, req.user),
     });
   } catch (err: any) {
     return res.status(500).json({ message: err.message });
@@ -1871,7 +1768,7 @@ export const submitOrderUtilisationReport = async (req: AuthRequest, res: Respon
         reportId: result.reportId,
         codesCount: codes.length,
         message: `Отчет о нанесении ${codes.length} кодов успешно принят ИС МПТ (ID: ${result.reportId})`,
-        order: updatedOrder,
+        order: orderWithCodeAccess(updatedOrder, req.user),
       });
     } catch (reportErr: any) {
       await prisma.markirovkaUtilisationReport.update({
@@ -1900,7 +1797,7 @@ export const adjustOrderItemsCount = async (req: AuthRequest, res: Response) => 
     const { itemsCount } = req.body;
 
     const count = parseInt(String(itemsCount), 10);
-    if (isNaN(count) || count < 1 || count > 10000000) {
+    if (isNaN(count) || count < 1 || count > 100000) {
       return res.status(400).json({ message: 'Недопустимое количество этикеток в заказе' });
     }
 
@@ -1927,10 +1824,13 @@ export const adjustOrderItemsCount = async (req: AuthRequest, res: Response) => 
       }
     }
 
+    if (existing.tariffType === 'PRO' && count < 500) return res.status(400).json({ message: 'PRO minimum is 500 items' });
     // Recompute pricing with the new count
     const pricing = await computeOrderPricing({
       tariffType: existing.tariffType,
       itemsCount: count,
+      boxesCount: existing.boxesCount ?? undefined,
+      includeOfficialCodeFee: existing.includeOfficialCodeFee,
       extraServices: existing.extraServices,
       ssccNeeded: existing.ssccNeeded,
     });
@@ -1950,57 +1850,14 @@ export const adjustOrderItemsCount = async (req: AuthRequest, res: Response) => 
       }
     }
 
-    const updatedOrder = await prisma.order.update({
-      where: { id: existing.id },
-      data: {
-        itemsCount: pricing.safeItemsCount,
-        pricePerItem: pricing.unitPrice,
-        totalPrice: pricing.totalPrice,
-        pdfUrl: null,
-        printAllowed: false,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            companyName: true,
-            binIin: true,
-            phone: true,
-          },
-        },
-      },
+    const updatedOrder = await updateOrderQuote(existing.id, {
+      itemsCount: pricing.safeItemsCount, pricePerItem: pricing.unitPrice,
+      totalPrice: pricing.totalPrice, pdfUrl: null, printAllowed: false,
     });
-
-    // Sync any pending invoices and invoice items for this order so amounts remain consistent
-    try {
-      const pendingInvoices = await prisma.invoice.findMany({
-        where: { orderId: existing.id, status: 'PENDING' },
-        include: { items: true },
-      });
-      for (const inv of pendingInvoices) {
-        await prisma.invoice.update({
-          where: { id: inv.id },
-          data: { totalAmount: pricing.totalPrice },
-        });
-        if (inv.items.length === 1) {
-          await prisma.invoiceItem.update({
-            where: { id: inv.items[0].id },
-            data: {
-              quantity: pricing.safeItemsCount,
-              price: pricing.unitPrice,
-              totalPrice: pricing.totalPrice,
-            },
-          });
-        }
-      }
-    } catch (invErr) {
-      console.warn('Could not sync pending invoices after count adjustment:', invErr);
-    }
 
     return res.json({
       message: `Объем заказа успешно скорректирован до ${pricing.safeItemsCount.toLocaleString('ru-RU')} шт.`,
-      order: updatedOrder,
+      order: orderWithCodeAccess(updatedOrder, req.user),
     });
   } catch (error: any) {
     console.error('Adjust order items count error:', error);
@@ -2027,28 +1884,16 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
     const rollQuery = req.query.roll ? parseInt(String(req.query.roll), 10) : undefined;
     const offsetQuery = req.query.offset !== undefined ? parseInt(String(req.query.offset), 10) : undefined;
     const limitQuery = req.query.limit !== undefined ? parseInt(String(req.query.limit), 10) : undefined;
+    if (limitQuery !== undefined && (!Number.isInteger(limitQuery) || limitQuery < 1 || limitQuery > 2000)) return res.status(400).json({ message: 'Roll limit must be 1..2000' });
     const isRoll = !isSample && (rollQuery !== undefined || (offsetQuery !== undefined && limitQuery !== undefined));
 
-    // Guard: Clients can only print production batch/rolls if layout is approved (when custom design was ordered) AND admin permitted print (payment confirmed)
+    // Production printing requires code entitlement and approval of any custom layout.
     // Calibration sample (?sample=true) remains accessible for printer test
-    if (req.user.role !== 'ADMIN' && !isSample) {
-      const hasDesignService = Array.isArray(existing.extraServices) && existing.extraServices.includes('STICKER_LAYOUT_DESIGN');
-      if (hasDesignService && existing.stickerApprovalStatus !== 'APPROVED') {
-        return res.status(403).json({
-          message: 'Печать партии заблокирована: индивидуальный макет этикетки ещё не согласован. Сначала согласуйте макет.',
-        });
-      }
-
-      const isPrintAllowed = (existing as any).printAllowed === true || (existing as any).paymentStatus === 'PAID';
-      if (!isPrintAllowed) {
-        return res.status(403).json({
-          message: 'Печать партии заблокирована: ожидается подтверждение оплаты и разрешение администратора.',
-        });
-      }
-    }
+    const printError = orderPrintAccessError(existing, req.user, isSample);
+    if (printError) return res.status(403).json({ message: printError });
 
     const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', existing.id);
-    const pdfPath = path.join(orderDir, 'labels.pdf');
+    const pdfPath = path.join(orderDir, `labels_v${existing.documentVersion || 1}_s${existing.codeItems?.[0]?.index || 0}.pdf`);
 
     const forceRegenerate = req.query.force === 'true' || req.query.refresh === 'true';
 
@@ -2071,7 +1916,7 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
     // Return cached roll PDF if already generated on disk
     if (isRoll && !forceRegenerate) {
       const rollNum = rollQuery || Math.floor((offsetQuery || 0) / (limitQuery || 1000)) + 1;
-      const rollCacheFile = path.join(orderDir, `roll_${rollNum}_${offsetQuery || 0}_${limitQuery || 1000}.pdf`);
+      const rollCacheFile = path.join(orderDir, `roll_${rollNum}_${offsetQuery || 0}_${limitQuery || 1000}_v${existing.documentVersion || 1}_s${existing.codeItems?.[0]?.index || 0}.pdf`);
       if (fs.existsSync(rollCacheFile)) {
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="Roll_${rollNum}_${existing.orderNumber}.pdf"`);
@@ -2116,6 +1961,8 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
 
     let rows: Record<string, string>[] = [];
     const dbCount = await prisma.orderCodeItem.count({ where: { orderId: existing.id } });
+    if (!isSample && !isRoll && dbCount > 2000) return res.status(400).json({ message: 'Full PDF limit is 2000 labels; download rolls.', totalItems: dbCount });
+    if (!isSample && dbCount > 0 && dbCount !== existing.itemsCount) return res.status(409).json({ message: 'Количество кодов не соответствует заказу. Требуется сверка исходного файла.' });
     const isFromDb = dbCount > 0;
     if (isFromDb) {
       // Memory protection: only fetch the needed slice for sample / roll from DB
@@ -2130,7 +1977,8 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
         select: { index: true, code: true, gtin: true, serial: true },
       });
       const orderPositions = await prisma.orderPosition.findMany({
-        where: { orderId: existing.id },
+        where: { orderId: existing.id, OR: [{ gtin: { in: dbItems.map(item => item.gtin).filter((gtin): gtin is string => Boolean(gtin)) } }, { gtin: null }] },
+        take: 2000,
       });
       const posMap = new Map<string, any>();
       for (const p of orderPositions) {
@@ -2405,10 +2253,10 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
       }
 
       const queueKey = isRoll
-        ? `order_${existing.id}_roll_${rollNum}_${offsetQuery || 0}_${limitQuery || 1000}`
+        ? `order_${existing.id}_roll_${rollNum}_${offsetQuery || 0}_${limitQuery || 1000}_v${existing.documentVersion || 1}_s${existing.codeItems?.[0]?.index || 0}`
         : isSample
-        ? `order_${existing.id}_sample`
-        : `order_${existing.id}_full`;
+        ? `order_${existing.id}_sample_v${existing.documentVersion || 1}_s${existing.codeItems?.[0]?.index || 0}`
+        : `order_${existing.id}_full_v${existing.documentVersion || 1}_s${existing.codeItems?.[0]?.index || 0}`;
 
       const taskDesc = isRoll
         ? `Заказ ${existing.orderNumber} - Рулон ${rollNum} (${rowsToGenerate.length} шт.)`
@@ -2418,7 +2266,7 @@ export const downloadOrderPdf = async (req: AuthRequest, res: Response) => {
 
       // Cancel dangling generation if client disconnects before job completes
       const targetPdfFile = isRoll
-        ? path.join(orderDir, `roll_${rollNum}_${offsetQuery || 0}_${limitQuery || 1000}.pdf`)
+        ? path.join(orderDir, `roll_${rollNum}_${offsetQuery || 0}_${limitQuery || 1000}_v${existing.documentVersion || 1}_s${existing.codeItems?.[0]?.index || 0}.pdf`)
         : pdfPath;
 
       const onClientClose = () => {
@@ -2577,7 +2425,7 @@ export const getOrderCodeItems = async (req: AuthRequest, res: Response) => {
     }
 
     if (req.user.role !== 'ADMIN') {
-      const isPaidOrAllowed = (existing as any).printAllowed === true || (existing as any).paymentStatus === 'PAID';
+      const isPaidOrAllowed = canAccessOrderCodes(existing, req.user);
       if (!isPaidOrAllowed) {
         return res.status(403).json({
           message: 'Доступ к реестру кодов маркировки заблокирован: заказ ожидает подтверждения оплаты.',
@@ -2655,7 +2503,7 @@ export const getCodesRegistry = async (req: AuthRequest, res: Response) => {
     if (isClient) {
       const emptyUserOrders = await prisma.order.findMany({
         where: {
-          userId: req.user.id,
+          ...clientOrderCodeAccessWhere(req.user.id),
           codeItems: { none: {} },
           codesFileUrl: { not: null },
         },
@@ -2684,7 +2532,7 @@ export const getCodesRegistry = async (req: AuthRequest, res: Response) => {
     const orderWhere: any = {};
 
     if (isClient) {
-      orderWhere.userId = req.user.id;
+      Object.assign(orderWhere, clientOrderCodeAccessWhere(req.user.id));
     } else if (userId) {
       orderWhere.userId = userId;
     }
@@ -2741,7 +2589,6 @@ export const getCodesRegistry = async (req: AuthRequest, res: Response) => {
               status: true,
               printAllowed: true,
               itemsCount: true,
-              stickerLayout: true,
               createdAt: true,
               user: {
                 select: {
@@ -2769,7 +2616,7 @@ export const getCodesRegistry = async (req: AuthRequest, res: Response) => {
 
     // Available orders for filter dropdown
     const availableOrders = await prisma.order.findMany({
-      where: isClient ? { userId: req.user.id } : {},
+      where: isClient ? clientOrderCodeAccessWhere(req.user.id) : {},
       select: {
         id: true,
         orderNumber: true,
@@ -2834,22 +2681,9 @@ export const downloadSingleItemPdf = async (req: AuthRequest, res: Response) => 
     const isSample = req.query.sample === 'true' || req.query.sample === '1';
 
     // Free calibration sample without payment is strictly restricted to label #1 only.
-    // Labels 2..N strictly require order payment and administrator print permission.
-    if (req.user.role !== 'ADMIN' && (!isSample || idx !== 1)) {
-      const hasDesignService = Array.isArray(existing.extraServices) && existing.extraServices.includes('STICKER_LAYOUT_DESIGN');
-      if (hasDesignService && existing.stickerApprovalStatus !== 'APPROVED') {
-        return res.status(403).json({
-          message: 'Печать заблокирована: индивидуальный макет этикетки ещё не согласован. Сначала согласуйте макет.',
-        });
-      }
-
-      const isPrintAllowed = (existing as any).printAllowed === true || (existing as any).paymentStatus === 'PAID';
-      if (!isPrintAllowed) {
-        return res.status(403).json({
-          message: 'Печать заблокирована: данный заказ ещё не оплачен. Для калибровки принтера доступен только образец №1 (?sample=true).',
-        });
-      }
-    }
+    // Labels 2..N require payment or an explicit administrator grant.
+    const printError = orderPrintAccessError(existing, req.user, isSample && idx === 1);
+    if (printError) return res.status(403).json({ message: printError });
 
     const item = await prisma.orderCodeItem.findUnique({
       where: { orderId_index: { orderId: existing.id, index: idx } },
@@ -2997,21 +2831,8 @@ export const downloadRangeItemsPdf = async (req: AuthRequest, res: Response) => 
       return res.status(403).json({ message: 'Нет доступа к этому заказу' });
     }
 
-    if (req.user.role !== 'ADMIN') {
-      const hasDesignService = Array.isArray(existing.extraServices) && existing.extraServices.includes('STICKER_LAYOUT_DESIGN');
-      if (hasDesignService && existing.stickerApprovalStatus !== 'APPROVED') {
-        return res.status(403).json({
-          message: 'Печать диапазона заблокирована: индивидуальный макет этикетки ещё не согласован.',
-        });
-      }
-
-      const isPrintAllowed = (existing as any).printAllowed === true || (existing as any).paymentStatus === 'PAID';
-      if (!isPrintAllowed) {
-        return res.status(403).json({
-          message: 'Печать диапазона заблокирована: ожидается подтверждение оплаты и разрешение администратора.',
-        });
-      }
-    }
+    const printError = orderPrintAccessError(existing, req.user, false);
+    if (printError) return res.status(403).json({ message: printError });
 
     const fromIdx = Math.max(1, parseInt(String(req.query.from || req.body?.from), 10) || 1);
     const toIdx = Math.max(fromIdx, parseInt(String(req.query.to || req.body?.to), 10) || fromIdx);
@@ -3219,9 +3040,9 @@ export const getOrderPdfStatus = async (req: AuthRequest, res: Response) => {
 
     // Check if files are cached on disk
     const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', order.id);
-    const pdfPath = path.join(orderDir, 'labels.pdf');
+    const pdfPath = path.join(orderDir, `labels_v${order.documentVersion || 1}_s${order.codeItems?.[0]?.index || 0}.pdf`);
     const legacyPdfPath = path.join(orderDir, `order_${order.orderNumber}.pdf`);
-    const foundPath = fs.existsSync(pdfPath) ? pdfPath : fs.existsSync(legacyPdfPath) ? legacyPdfPath : null;
+    const foundPath = fs.existsSync(pdfPath) ? pdfPath : null;
     const hasFullPdf = Boolean(foundPath);
     let fullPdfSizeMb = 0;
     if (foundPath) {
@@ -3237,7 +3058,7 @@ export const getOrderPdfStatus = async (req: AuthRequest, res: Response) => {
         const files = fs.readdirSync(orderDir);
         for (const f of files) {
           const m = f.match(/^roll_(\d+)_/i);
-          if (m && f.endsWith('.pdf')) {
+          if (m && f.endsWith(`_v${order.documentVersion || 1}_s${order.codeItems?.[0]?.index || 0}.pdf`)) {
             const stat = fs.statSync(path.join(orderDir, f));
             cachedRolls.push({
               rollNum: parseInt(m[1], 10),
@@ -3277,27 +3098,8 @@ export const triggerAsyncOrderPdfGeneration = async (req: AuthRequest, res: Resp
     }
 
     // Permission checks
-    if (req.user.role !== 'ADMIN') {
-      const isCustomDesignOrder =
-        order.extraServices?.includes('STICKER_LAYOUT_DESIGN') ||
-        (order.notes && /Разработка макета|STICKER_LAYOUT_DESIGN/i.test(order.notes));
-      const isApprovedByClient =
-        (order as any).stickerApprovalStatus === 'APPROVED' ||
-        Boolean((order as any).stickerApprovedAt);
-
-      if (isCustomDesignOrder && !isApprovedByClient) {
-        return res.status(403).json({
-          message: 'Печать партии заблокирована: индивидуальный макет этикетки ещё не согласован. Сначала согласуйте макет.',
-        });
-      }
-
-      const isPrintAllowed = (order as any).printAllowed === true || (order as any).paymentStatus === 'PAID';
-      if (!isPrintAllowed) {
-        return res.status(403).json({
-          message: 'Печать партии заблокирована: ожидается подтверждение оплаты и разрешение администратора.',
-        });
-      }
-    }
+    const printError = orderPrintAccessError(order, req.user, false);
+    if (printError) return res.status(403).json({ message: printError });
 
     // Check if task is already running or queued
     const jobInfo = pdfQueue.getOrderJobs(order.id);
@@ -3314,7 +3116,7 @@ export const triggerAsyncOrderPdfGeneration = async (req: AuthRequest, res: Resp
     // Check cache unless force
     const force = req.query.force === 'true' || req.query.refresh === 'true';
     const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', order.id);
-    const pdfPath = path.join(orderDir, 'labels.pdf');
+    const pdfPath = path.join(orderDir, `labels_v${order.documentVersion || 1}_s${order.codeItems?.[0]?.index || 0}.pdf`);
     if (!force && fs.existsSync(pdfPath)) {
       return res.json({
         success: true,
@@ -3324,6 +3126,8 @@ export const triggerAsyncOrderPdfGeneration = async (req: AuthRequest, res: Resp
       });
     }
 
+    const totalCodes = await prisma.orderCodeItem.count({ where: { orderId: order.id } });
+    if (totalCodes > 2000 || order.itemsCount > 2000) return res.status(413).json({ message: 'Async PDF limit is 2000; download rolls.' });
     // Fetch genuine codes
     const codeItems = await prisma.orderCodeItem.findMany({
       where: { orderId: order.id },
@@ -3416,7 +3220,7 @@ export const triggerAsyncOrderPdfGeneration = async (req: AuthRequest, res: Resp
       fs.mkdirSync(orderDir, { recursive: true });
     }
 
-    const queueKey = `order_${order.id}_full`;
+    const queueKey = `order_${order.id}_full_v${order.documentVersion || 1}_s${order.codeItems?.[0]?.index || 0}`;
     const taskDesc = `Заказ ${order.orderNumber} - Вся партия (${rows.length} шт.)`;
 
     let activeMicroReq: http.ClientRequest | null = null;
@@ -3645,7 +3449,7 @@ export const updateOrderStickeringEstimate = async (req: AuthRequest, res: Respo
     return res.json({
       success: true,
       message: 'Смета выезда успешно отправлена в заказ и обновлена',
-      order: updated,
+      order: orderWithCodeAccess(updated, req.user),
     });
   } catch (err: any) {
     console.error('Update stickering estimate error:', err);
@@ -3693,7 +3497,7 @@ export const syncOrderNkt = async (req: AuthRequest, res: Response) => {
       message,
       updatedCount,
       notFoundGtins,
-      order: updated,
+      order: orderWithCodeAccess(updated, req.user),
     });
   } catch (err: any) {
     logger.error('Error syncing order from NKT:', err);
@@ -3714,10 +3518,20 @@ export async function payOrderWithBalance(req: AuthRequest, res: Response) {
       advanceOrderStatus(result.orderId, 'PAYMENT_RECEIVED').catch(err => logger.warn('Payment lifecycle follow-up failed', { error: String(err) }));
       clientTelegramBot.notifyPaymentStatusChanged(result.orderId, 'PAID').catch(() => {});
     }
-    return res.json({ success: true, message: 'Заказ успешно оплачен с баланса', newBalance: result.newBalance, order: result.order });
+    return res.json({ success: true, message: 'Заказ успешно оплачен с баланса', newBalance: result.newBalance, order: orderWithCodeAccess(result.order, req.user) });
   } catch (error) {
     if (error instanceof BalancePaymentError) return res.status(error.status).json({ code: error.code, message: error.message });
     logger.error('Balance payment failed:', error);
     return res.status(500).json({ message: 'Ошибка при оплате с баланса' });
   }
 }
+
+export const confirmOrderPricingInputs = async (req: AuthRequest, res: Response) => {
+  if (!req.user || req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Admin required' });
+  const { boxesCount, includeOfficialCodeFee } = req.body;
+  if ((boxesCount != null && (!Number.isInteger(boxesCount) || boxesCount < 1)) || typeof includeOfficialCodeFee !== 'boolean') return res.status(400).json({ message: 'Explicit box count and code-fee choice required' });
+  try {
+    const order = await updateOrderQuote(req.params.id, { boxesCount: boxesCount ?? null, includeOfficialCodeFee, pricingInputsKnown: true });
+    return res.json({ order });
+  } catch (error: any) { return res.status(409).json({ message: error.message }); }
+};

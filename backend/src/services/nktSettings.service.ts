@@ -1,3 +1,4 @@
+import { integrationFetch, validateTrustedIntegrationUrl, fetchPublicImage } from './integrationHttp.service';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '../config/db';
@@ -106,8 +107,6 @@ export async function saveNktSettings(updates: Partial<NktSettings>, updatedBy?:
     updatedBy: updatedBy || current.updatedBy,
   };
 
-  cachedSettings = next;
-
   // Persist to DB
   try {
     await (prisma as any).systemSetting.upsert({
@@ -134,18 +133,10 @@ export async function saveNktSettings(updates: Partial<NktSettings>, updatedBy?:
     logger.info(`[NKT Settings] Saved to DB: enabled=${next.enabled}`);
   } catch (err: any) {
     logger.error(`[NKT Settings] Failed to save to DB: ${err.message}`);
+    throw err;
   }
 
-  // Backup to file for redundancy
-  try {
-    const dir = path.dirname(SETTINGS_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), 'utf-8');
-  } catch (err: any) {
-    logger.warn(`[NKT Settings] Failed to backup to file: ${err.message}`);
-  }
+  cachedSettings = next;
 
   return next;
 }
@@ -169,7 +160,7 @@ export async function testNktApiConnection(
     (baseUrl && baseUrl.trim()) ||
     settings.baseUrl ||
     'https://nationalcatalog.kz/gwp';
-  const cleanBaseUrl = effectiveBaseUrl.replace(/\/+$/, '');
+  const cleanBaseUrl = validateTrustedIntegrationUrl(effectiveBaseUrl).toString().replace(/\/+$/, '');
 
   if (!rawKey) {
     return {
@@ -182,7 +173,7 @@ export async function testNktApiConnection(
 
   try {
     const url = `${cleanBaseUrl}/portal/api/v1/dictionaries`;
-    const res = await fetch(url, {
+    const res = await integrationFetch(url, {
       method: 'GET',
       headers: {
         'X-API-KEY': rawKey,

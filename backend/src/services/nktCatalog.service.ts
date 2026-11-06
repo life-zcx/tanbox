@@ -1,3 +1,4 @@
+import { integrationFetch, validateTrustedIntegrationUrl, fetchPublicImage } from './integrationHttp.service';
 import { prisma } from '../config/db';
 import { MarkirovkaClient } from './markirovkaClient.service';
 import { OrderCategory } from '@prisma/client';
@@ -151,19 +152,19 @@ async function queryNationalCatalogApi(tin: string, account?: any): Promise<any 
   // Targets: user account NKT settings first, then global settings
   const targets: { baseUrl: string; apiKey: string }[] = [];
   if (account?.nktApiKey && account?.nktBaseUrl) {
-    targets.push({ baseUrl: account.nktBaseUrl.replace(/\/+$/, ''), apiKey: account.nktApiKey.trim() });
+    targets.push({ baseUrl: validateTrustedIntegrationUrl(account.nktBaseUrl).toString().replace(/\/+$/, ''), apiKey: account.nktApiKey.trim() });
   }
 
   const settings = getNktSettings();
   if (settings.enabled && settings.apiKey && settings.baseUrl) {
-    targets.push({ baseUrl: settings.baseUrl.replace(/\/+$/, ''), apiKey: settings.apiKey.trim() });
+    targets.push({ baseUrl: validateTrustedIntegrationUrl(settings.baseUrl).toString().replace(/\/+$/, ''), apiKey: settings.apiKey.trim() });
   }
 
   for (const target of targets) {
     for (const candidate of candidates) {
       try {
         const url = `${target.baseUrl}/portal/api/v1/products/${encodeURIComponent(candidate)}`;
-        const res = await fetch(url, {
+        const res = await integrationFetch(url, {
           method: 'GET',
           headers: {
             'X-API-KEY': target.apiKey,

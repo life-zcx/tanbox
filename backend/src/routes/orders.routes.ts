@@ -1,6 +1,8 @@
+import { limitPdfRequests, limitHeavyRequests } from '../middleware/pdfAdmission.middleware';
 import { Router } from 'express';
 import { 
-  createOrder, 
+  createOrder,
+  confirmOrderPricingInputs,
   getOrders, 
   getOrderById, 
   updateOrderStatus,
@@ -39,35 +41,36 @@ const router = Router();
 
 router.use(authenticateJWT);
 
-router.post('/check-codes', orderCodesUpload.single('file'), checkCodesFile);
-router.post('/', createOrder);
+router.post('/check-codes', limitHeavyRequests(orderCodesUpload.single('file')), checkCodesFile);
+router.post('/', limitHeavyRequests(createOrder));
 router.get('/', getOrders);
 router.get('/queue/status', requireAdmin, getPdfQueueStatus);
 router.post('/queue/concurrency', requireAdmin, updatePdfQueueConcurrency);
 router.delete('/queue/jobs/:id', requireAdmin, cancelPdfQueueJob);
 router.delete('/queue/clear', requireAdmin, clearPdfQueue);
-router.get('/registry/codes', getCodesRegistry);
+router.get('/registry/codes', limitHeavyRequests(getCodesRegistry));
 router.get('/:id/pdf-status', getOrderPdfStatus);
-router.post('/:id/generate-async', triggerAsyncOrderPdfGeneration);
+router.post('/:id/generate-async', limitPdfRequests(triggerAsyncOrderPdfGeneration));
 router.get('/:id', getOrderById);
 router.post('/:id/pay-balance', payOrderWithBalance);
 router.patch('/:id/status', requireAdmin, updateOrderStatus);
 router.patch('/:id/print-permission', requireAdmin, updateOrderPrintPermission);
 router.patch('/:id/sticker-layout', requireAdmin, updateStickerLayout);
 router.patch('/:id/sticker-approval', updateStickerApproval);
+router.patch('/:id/pricing-inputs', requireAdmin, confirmOrderPricingInputs);
 router.patch('/:id/adjust-count', adjustOrderItemsCount);
 router.patch('/:id/stickering-estimate', requireAdmin, updateOrderStickeringEstimate);
-router.post('/:id/upload-codes', orderCodesUpload.single('file'), uploadOrderCodesFile);
+router.post('/:id/upload-codes', limitHeavyRequests(orderCodesUpload.single('file')), uploadOrderCodesFile);
 router.post('/:id/sync-markirovka', syncMarkirovkaOrderCodes);
 router.post('/:id/sync-nkt', syncOrderNkt);
 router.post('/:id/generate-test-codes', requireAdmin, generateTestCodesForOrder);
 router.post('/:id/submit-utilisation', requireAdmin, submitOrderUtilisationReport);
 router.get('/:id/codes-file', downloadOrderCodesFile);
-router.get('/:id/codes-content', getOrderCodesContent);
-router.get('/:id/items', getOrderCodeItems);
-router.get('/:id/items/:itemIndex/pdf', downloadSingleItemPdf);
-router.get('/:id/items-range/pdf', downloadRangeItemsPdf);
-router.get('/:id/pdf', downloadOrderPdf);
+router.get('/:id/codes-content', limitHeavyRequests(getOrderCodesContent));
+router.get('/:id/items', limitHeavyRequests(getOrderCodeItems));
+router.get('/:id/items/:itemIndex/pdf', limitPdfRequests(downloadSingleItemPdf));
+router.get('/:id/items-range/pdf', limitPdfRequests(downloadRangeItemsPdf));
+router.get('/:id/pdf', limitPdfRequests(downloadOrderPdf));
 router.get('/:id/act', downloadOrderAct);
 router.get('/:id/invoice', downloadOrderInvoice);
 

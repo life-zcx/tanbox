@@ -89,6 +89,7 @@ model User {
   markirovkaAccounts MarkirovkaAccount[]
   invoices         Invoice[]
   onlinePayments   OnlinePayment[]
+  supportAttachments SupportAttachment[]
   productCards     MarkirovkaProductCard[]
 
   @@index([binIin])
@@ -109,6 +110,12 @@ model Order {
   status                OrderStatus           @default(NEW)
   extraServices         String[]              @default([])
   ssccNeeded            Boolean               @default(false)
+  boxesCount            Int?
+  includeOfficialCodeFee Boolean              @default(false)
+  pricingInputsKnown    Boolean               @default(true)
+  createKey             String?
+  createRequestHash     String?
+  documentVersion       Int                   @default(1)
   pdfUrl                String?
   codesFileUrl          String?
   codesFileName         String?
@@ -135,6 +142,7 @@ model Order {
   onlinePayments        OnlinePayment[]
 
   @@index([userId])
+  @@unique([userId, createKey])
   @@index([status])
   @@index([createdAt])
 }
@@ -171,7 +179,7 @@ model OrderCodeItem {
 
   @@id([orderId, index])
   @@index([orderId, code])
-  @@index([code])
+  @@unique([code])
 }
 
 model Tariff {
@@ -241,8 +249,29 @@ model ServiceLead {
   status       LeadStatus @default(NEW)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  attachments  SupportAttachment[]
 
   @@index([status, createdAt])
+}
+
+model SupportAttachment {
+  id           String      @id @default(uuid())
+  filename     String      @unique
+  originalName String
+  ownerId      String
+  owner        User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  leadId       String
+  lead         ServiceLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+
+  @@index([ownerId])
+  @@index([leadId])
+}
+
+model SsccAllocation {
+  code        String   @id
+  createdById String
+  createdAt   DateTime @default(now())
 }
 
 model LabelTemplate {
@@ -384,6 +413,7 @@ model MarkirovkaOrder {
   orderId           String?
   order             Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
   externalOrderId   String?
+  dispatchStartedAt DateTime?
   category          OrderCategory
   gtin              String
   quantityRequested Int

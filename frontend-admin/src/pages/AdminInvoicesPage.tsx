@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { apiClient } from '../api/client';
+import { apiClient, getAllPages } from '../api/client';
 import { PageHeader, useModalBehavior } from '@shared';
 import html2pdf from 'html2pdf.js';
 import {
@@ -234,8 +234,8 @@ export const AdminInvoicesPage: React.FC = () => {
     try {
       // 1. Fetch Orders to populate existing invoices and Users for client selection
       const [ordersRes, usersRes] = await Promise.allSettled([
-        apiClient.get('/orders'),
-        apiClient.get('/users'),
+        getAllPages('/orders'),
+        getAllPages('/users'),
       ]);
 
       let loadedOrders: any[] = [];

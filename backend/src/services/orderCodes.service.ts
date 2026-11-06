@@ -1,3 +1,6 @@
+import { randomUUID } from 'crypto';
+import { computeOrderPricing } from '../utils/pricing';
+import { syncPendingOrderInvoices } from './orderFinancials.service';
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../config/db';
@@ -22,7 +25,7 @@ export function parseCodesFile(raw: string): { headers: string[]; rows: Record<s
     if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
       if (s.length >= 2) s = s.slice(1, -1);
     }
-    return s.replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, '').trim();
+    return s.replace(/[\u0000-\u0008\u000B-\u001C\u001E-\u001F\u007F]/g, '').trim();
   };
 
   const parseCsvTokens = (line: string, delimiter: string): string[] => {
@@ -147,16 +150,23 @@ export const ensureOrderCodesPopulated = async (orderId: string): Promise<number
   const taskPromise = (async (): Promise<number> => {
     try {
       const count = await prisma.orderCodeItem.count({ where: { orderId } });
-      if (count > 0) return count;
 
       const order = await prisma.order.findUnique({
         where: { id: orderId },
         select: { id: true, orderNumber: true, itemsCount: true, codesFileUrl: true, notes: true, userId: true, createdAt: true },
       });
-      if (!order || !order.codesFileUrl) return 0;
+      if (!order) return 0;
+      if (count === order.itemsCount && count > 0) return count;
+      if (!order.codesFileUrl) {
+        if (count > 0) throw new Error('Incomplete order code set: authoritative source file required');
+        return 0;
+      }
 
       const filePath = path.resolve(process.cwd(), '.' + order.codesFileUrl);
-      if (!fs.existsSync(filePath)) return 0;
+      if (!fs.existsSync(filePath)) {
+        if (count > 0) throw new Error('Incomplete order code set and missing source file');
+        return 0;
+      }
 
       const rawContent = await fs.promises.readFile(filePath, 'utf-8');
       const { rows } = parseCodesFile(rawContent);
@@ -172,51 +182,11 @@ export const ensureOrderCodesPopulated = async (orderId: string): Promise<number
         }
       }
 
-      // Check for codes that already exist in OTHER orders (now fast via @@index([code]))
-      const existingInDb = new Set<string>();
-      for (let i = 0; i < fileCodes.length; i += 2000) {
-        const chunk = fileCodes.slice(i, i + 2000);
-        const found = await prisma.orderCodeItem.findMany({
-          where: {
-            code: { in: chunk },
-            orderId: { not: order.id },
-          },
-          select: { code: true },
-        });
-        for (const f of found) existingInDb.add(f.code);
-      }
-
-      const accepted = fileCodes.filter((c) => !existingInDb.has(c));
-      if (accepted.length === 0) return 0;
-
-      const startIndex = await getClientOrderStartIndex(order.userId, order.id, order.createdAt);
-      const items = accepted.map((code, idx) => {
-        let gtin: string | null = null;
-        let serial: string | null = null;
-        const m = code.match(/^01(\d{14})21([^\u001d\s]+)/);
-        if (m) {
-          gtin = m[1];
-          serial = m[2];
-        }
-        return {
-          orderId: order.id,
-          index: startIndex + idx,
-          code,
-          gtin,
-          serial,
-          status: CodeItemStatus.NEW,
-        };
-      });
-
-      const BATCH_SIZE = 2000;
-      for (let b = 0; b < items.length; b += BATCH_SIZE) {
-        await prisma.orderCodeItem.createMany({ data: items.slice(b, b + BATCH_SIZE) });
-      }
-      await reindexClientOrders(order.userId);
-      return items.length;
+      if (fileCodes.length !== order.itemsCount) throw new Error('Source file count differs from order obligation; reconciliation required');
+      const result = await attachCodesToOrder(order.id, fileCodes, undefined, 'restored');
+      return result.count;
     } catch (err) {
-      console.warn('Error reading codes file in ensureOrderCodesPopulated:', err);
-      return 0;
+      throw err;
     } finally {
       activePopulations.delete(orderId);
     }
@@ -230,72 +200,63 @@ export const attachCodesToOrder = async (
   orderId: string,
   codes: string[],
   gtin?: string | null,
-  fileNamePrefix: string = 'markirovka_emission'
+  fileNamePrefix: string = 'markirovka_emission',
+  options: { reprice?: boolean; originalName?: string } = {},
 ): Promise<{ count: number; filePath: string; relativeUrl: string }> => {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { id: true, orderNumber: true, userId: true, createdAt: true },
-  });
-  if (!order) throw new Error(`Order ${orderId} not found`);
-
+  if (!codes.length || codes.length > 100000 || codes.some(code => typeof code !== 'string' || !code.trim() || code.length > 2048)) throw new Error('Invalid code batch (1..100000 codes, maximum 2048 characters per code)');
+  const cleanCodes = codes.map(code => code.trim());
+  if (new Set(cleanCodes).size !== cleanCodes.length) throw new Error('Duplicate codes in batch');
+  const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
   const orderDir = path.resolve(process.cwd(), 'uploads', 'orders', order.id);
-  if (!fs.existsSync(orderDir)) {
-    fs.mkdirSync(orderDir, { recursive: true });
-  }
-
-  const cleanCodes = codes.map((c) => (c || '').trim()).filter((c) => c.length > 0);
-  const fileName = `${fileNamePrefix}_${order.orderNumber}.csv`;
+  await fs.promises.mkdir(orderDir, { recursive: true });
+  const safePrefix = fileNamePrefix.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const fileName = `${safePrefix}_${randomUUID()}.csv`;
   const targetFilePath = path.join(orderDir, fileName);
   const relativeUrl = `/uploads/orders/${order.id}/${fileName}`;
-
-  // Write CSV content with all emitted codes
-  const csvContent = cleanCodes.join('\n');
-  await fs.promises.writeFile(targetFilePath, csvContent, 'utf-8');
-
-  // Populate OrderCodeItem in DB
-  await prisma.orderCodeItem.deleteMany({ where: { orderId: order.id } });
-  const startIndex = await getClientOrderStartIndex(order.userId, order.id, order.createdAt);
-
-  const items = cleanCodes.map((codeStr, idx) => {
-    let itemGtin: string | null = gtin || null;
-    let itemSerial: string | null = null;
-    const m = codeStr.match(/^01(\d{14})21([^\u001d\s]+)/);
-    if (m) {
-      itemGtin = m[1];
-      itemSerial = m[2];
-    }
-    return {
-      orderId: order.id,
-      index: startIndex + idx,
-      code: codeStr,
-      gtin: itemGtin,
-      serial: itemSerial,
-      status: CodeItemStatus.NEW,
-    };
-  });
-
-  const BATCH_SIZE = 2000;
-  for (let b = 0; b < items.length; b += BATCH_SIZE) {
-    await prisma.orderCodeItem.createMany({
-      data: items.slice(b, b + BATCH_SIZE),
-      skipDuplicates: true,
-    });
+  await fs.promises.writeFile(targetFilePath, cleanCodes.join('\n'), { encoding: 'utf8', flag: 'wx' });
+  try {
+    await prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${order.id} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${order.userId} FOR UPDATE`;
+      const current = await tx.order.findUniqueOrThrow({ where: { id: order.id } });
+      if (current.status === 'CANCELLED' || current.paymentStatus === 'REFUNDED') throw new Error('Cancelled/refunded order cannot accept codes');
+      if (options.reprice && (current.paymentStatus === 'PAID' || await tx.invoice.count({ where: { orderId, status: 'PAID' } }))) throw new Error('Paid order cannot be repriced');
+      if (options.reprice && current.pricingInputsKnown === false) throw new Error('Confirm legacy pricing inputs before uploading a new quote');
+      if (current.paymentStatus === 'PAID' && current.itemsCount !== cleanCodes.length) throw new Error('Code count does not match paid order');
+      if (options.reprice && current.tariffType === 'PRO' && cleanCodes.length < 500) throw new Error('PRO minimum is 500 items');
+      const existing = await tx.orderCodeItem.findMany({ where: { orderId }, orderBy: { index: 'asc' }, select: { code: true } });
+      const unchanged = existing.length === cleanCodes.length && existing.every((value, index) => value.code === cleanCodes[index]);
+      if (!unchanged) {
+        const startIndex = await getClientOrderStartIndex(current.userId, current.id, current.createdAt, tx);
+        await tx.orderCodeItem.deleteMany({ where: { orderId } });
+        const items = cleanCodes.map((code, index) => {
+          const match = code.match(/^01(\d{14})21([^\u001d\s]+)/);
+          return { orderId, index: startIndex + index, code, gtin: match?.[1] || gtin || null, serial: match?.[2] || null, status: CodeItemStatus.NEW };
+        });
+        if (new Set(items.map(item => item.gtin).filter(Boolean)).size > 1000) throw new Error('Maximum 1000 product positions per order');
+        for (let offset = 0; offset < items.length; offset += 1000) await tx.orderCodeItem.createMany({ data: items.slice(offset, offset + 1000) });
+        await reindexClientOrders(current.userId, tx);
+        if (await tx.orderPosition.count({ where: { orderId } }) === 0) {
+          const groups = new Map<string, number>();
+          for (const item of items) groups.set(item.gtin || '', (groups.get(item.gtin || '') || 0) + 1);
+          await tx.orderPosition.createMany({ data: [...groups].map(([gtin, quantity], index) => ({ orderId, index: index + 1, name: options.originalName || 'Product', gtin: gtin || null, quantity })) });
+        }
+      }
+      const pricing = options.reprice ? await computeOrderPricing({
+        tariffType: current.tariffType, itemsCount: cleanCodes.length, extraServices: current.extraServices,
+        ssccNeeded: current.ssccNeeded, boxesCount: current.boxesCount ?? undefined, includeOfficialCodeFee: current.includeOfficialCodeFee,
+      }) : null;
+      const updated = await tx.order.update({ where: { id: orderId }, data: {
+        codesFileUrl: relativeUrl, codesFileName: options.originalName || fileName, itemsCount: cleanCodes.length,
+        ...(!unchanged || options.reprice ? { pdfUrl: null, documentVersion: { increment: 1 } } : {}),
+        ...(pricing ? { pricePerItem: pricing.unitPrice, totalPrice: pricing.totalPrice, printAllowed: false } : {}),
+      } });
+      if (pricing) await syncPendingOrderInvoices(tx, updated);
+    }, { timeout: 120000 });
+  } catch (error) {
+    await fs.promises.unlink(targetFilePath).catch(() => {});
+    throw error;
   }
-
-  await reindexClientOrders(order.userId);
-
-  // Update Order with the new codes file URL and name
-  await prisma.order.update({
-    where: { id: order.id },
-    data: {
-      codesFileUrl: relativeUrl,
-      codesFileName: fileName,
-      itemsCount: items.length > 0 ? items.length : undefined,
-    },
-  });
-
-  // Advance order lifecycle status (e.g. NEW -> PROCESSING or COMPLETED if DIGITAL & paid)
   await advanceOrderStatus(order.id, 'CODES_ATTACHED').catch(() => {});
-
-  return { count: items.length, filePath: targetFilePath, relativeUrl };
+  return { count: cleanCodes.length, filePath: targetFilePath, relativeUrl };
 };

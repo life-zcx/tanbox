@@ -31,6 +31,13 @@ async function run() {
       const message = JSON.parse(event.data);
       if (message.id) { pending.get(message.id)?.(message); pending.delete(message.id); }
       else if (message.method === 'Runtime.exceptionThrown') exceptions.push(message.params.exceptionDetails.exception?.description || message.params.exceptionDetails.text);
+      else if (message.method === 'Fetch.requestPaused') {
+        const url = new URL(message.params.request.url);
+        const local = ['data:', 'blob:'].includes(url.protocol) || ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname);
+        command(local ? 'Fetch.continueRequest' : 'Fetch.failRequest', {
+          requestId: message.params.requestId, ...(local ? {} : { errorReason: 'BlockedByClient' }),
+        }).catch(() => {});
+      }
     };
     const command = (method, params = {}) => new Promise((resolve, reject) => {
       const n = ++id;
@@ -44,7 +51,8 @@ async function run() {
       throw new Error('Browser condition failed: ' + expression);
     };
     await command('Page.enable'); await command('Runtime.enable'); await command('Network.enable');
-    await command('Network.setBlockedURLs', { urls: ['*://*.google*/*', '*://mc.yandex.*/*', '*://static.cloudflareinsights.com/*'] });
+    await command('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] });
+    await command('Network.setBlockedURLs', { urls: ['*://*.google*/*', '*://mc.yandex.*/*', '*://static.cloudflareinsights.com/*', '*://tanbox.kz/*', '*://*.tanbox.kz/*', '*://api.mymemory.translated.net/*', '*://api.telegram.org/*'] });
     for (const project of ['frontend-landing', 'frontend-lk', 'frontend-admin']) {
       const dist = path.join(root, project, 'dist');
       const server = http.createServer((req, res) => {
@@ -56,6 +64,9 @@ async function run() {
           else if (pathname === '/api/tariffs') res.end(JSON.stringify({ tariffs: [], pricingSettings: {} }));
           else res.end('{}');
           return;
+        }
+        if (project === 'frontend-landing' && /^\/(?:en\/|kz\/)?blog(?:\/|$)/.test(pathname)) {
+          res.writeHead(301, { Location: pathname.replace('/blog', '/articles') }); res.end(); return;
         }
         let file = path.resolve(dist, '.' + decodeURIComponent(pathname));
         if (!file.startsWith(dist + path.sep) && file !== dist) { res.writeHead(403); res.end(); return; }
@@ -86,7 +97,10 @@ async function run() {
         for (const route of ['/kz/payments', '/en/payment', '/en/cookie-policy', '/kz/cookie-policy']) assert.equal((await fetch(base + route)).status, 200, route);
         const article = fs.readdirSync(path.join(dist, 'articles'), { withFileTypes: true }).find(entry => entry.isDirectory());
         assert.ok(article, 'article fixture missing');
-        assert.equal((await fetch(base + '/en/blog/' + article.name)).status, 200, 'localized article alias');
+        const alias = await fetch(base + '/en/blog/' + article.name, { redirect: 'manual' });
+        assert.equal(alias.status, 301);
+        assert.equal(alias.headers.get('location'), '/en/articles/' + article.name);
+        assert.equal((await fetch(base + alias.headers.get('location'))).status, 200, 'canonical article');
         console.log('PASS landing: mobile, cookie consent and localized direct routes');
       } else {
         const key = project === 'frontend-lk' ? 'tanbox_token' : 'tanbox_admin_token';

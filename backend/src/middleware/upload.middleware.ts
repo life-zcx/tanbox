@@ -1,6 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { randomUUID } from 'crypto';
 
 const uploadsTempDir = path.resolve(process.cwd(), 'uploads/temp');
 
@@ -22,7 +23,7 @@ const storage = multer.diskStorage({
 export const orderCodesUpload = multer({
   storage,
   limits: {
-    fileSize: 50 * 1024 * 1024, // up to 50MB
+    fileSize: 10 * 1024 * 1024, // bounded code parsing memory
   },
   fileFilter: (req, file, cb) => {
     const allowedExts = ['.csv', '.txt'];
@@ -46,8 +47,7 @@ const bugReportStorage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    const cleanName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_\-]/g, '_');
-    cb(null, `bug_${Date.now()}_${cleanName}${ext}`);
+    cb(null, `bug_${randomUUID()}${ext}`);
   },
 });
 

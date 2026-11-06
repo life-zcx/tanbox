@@ -68,3 +68,18 @@ apiClient.interceptors.response.use(
   }
 );
 
+
+// Read bounded server pages; fail explicitly rather than silently truncate large workspaces.
+export async function getAllPages(url: string, config: any = {}): Promise<any> {
+  let page = 1;
+  const first = await apiClient.get(url, { ...config, params: { ...config.params, page, limit: 200 } });
+  const data = [...first.data];
+  let current = first;
+  while (current.headers['x-next-page']) {
+    if (data.length >= 10000) throw new Error('Too many records for this view; use paginated API or narrow the report.');
+    page = Number(current.headers['x-next-page']);
+    current = await apiClient.get(url, { ...config, params: { ...config.params, page, limit: 200 } });
+    data.push(...current.data);
+  }
+  return { ...first, data };
+}

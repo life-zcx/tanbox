@@ -1,0 +1,49 @@
+{
+  "baseCommit": "46768a9890204b93657973316f783fec4667dcc7",
+  "fixedLocally": 23,
+  "operationalPending": [
+    "A01"
+  ],
+  "deployed": false,
+  "findings": {
+    "A01": "operational_completion_required",
+    "A02": "fixed_locally",
+    "A03": "fixed_locally",
+    "A04": "fixed_locally",
+    "A05": "fixed_locally",
+    "A06": "fixed_locally",
+    "A07": "fixed_locally",
+    "A08": "fixed_locally",
+    "A09": "fixed_locally",
+    "A10": "fixed_locally",
+    "A11": "fixed_locally",
+    "A12": "fixed_locally",
+    "A13": "fixed_locally",
+    "A14": "fixed_locally",
+    "A15": "fixed_locally",
+    "A16": "fixed_locally",
+    "A17": "fixed_locally",
+    "A18": "fixed_locally",
+    "A19": "fixed_locally",
+    "A20": "fixed_locally",
+    "A21": "fixed_locally",
+    "A22": "fixed_locally",
+    "A23": "fixed_locally",
+    "A24": "fixed_locally"
+  },
+  "verification": {
+    "buildsPassed": 5,
+    "backendTestsPassed": 107,
+    "backendTestsFailed": 0,
+    "backupScriptTestsPassed": 3,
+    "browserSmoke": "PASS",
+    "composeProduction": "PASS",
+    "composeDevelopment": "PASS",
+    "dependencyFilesUnchanged": 10,
+    "gitDiffCheck": "PASS",
+    "workingDatabaseConnected": false,
+    "realNotificationsSent": false
+  },
+  "historyBundle": "C:\\Users\\admin\\AppData\\Local\\Temp\\tanbox-remediated-final-f9728eaf5560425dae4801d1a2ca4486.bundle",
+  "runbook": "REMEDIATION.md"
+}

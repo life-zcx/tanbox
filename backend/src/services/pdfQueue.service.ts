@@ -286,6 +286,8 @@ export class PdfGenerationQueue extends EventEmitter {
       return this.inFlightMap.get(key) as Promise<T>;
     }
 
+    if (this.waitingQueue.length >= 8) return Promise.reject(Object.assign(new Error('PDF queue is full'), { status: 429 }));
+
     const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const queuedAt = Date.now();
     const orderId = this.extractOrderId(key);

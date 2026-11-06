@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { markirovkaCardsService } from '../services/markirovkaCards.service';
+import { CardAccountAccessError, markirovkaCardsService } from '../services/markirovkaCards.service';
 import { CATEGORY_SCHEMAS } from '../config/categorySchemas';
 import { OrderCategory } from '@prisma/client';
 import { prisma } from '../config/db';
@@ -45,7 +45,7 @@ export const getCardByIdHandler = async (req: AuthRequest, res: Response) => {
     return res.json({ card, schema });
   } catch (err: any) {
     logger.error('getCardByIdHandler error:', err);
-    return res.status(500).json({ message: err.message || 'Ошибка получения карточки' });
+    return res.status(err instanceof CardAccountAccessError ? 403 : 500).json({ message: err.message || 'Ошибка получения карточки' });
   }
 };
 
@@ -80,7 +80,7 @@ export const updateCardHandler = async (req: AuthRequest, res: Response) => {
     });
   } catch (err: any) {
     logger.error('updateCardHandler error:', err);
-    return res.status(400).json({ message: err.message || 'Ошибка обновления карточки' });
+    return res.status(err instanceof CardAccountAccessError ? 403 : 400).json({ message: err.message || 'Ошибка обновления карточки' });
   }
 };
 
@@ -97,7 +97,7 @@ export const deleteCardHandler = async (req: AuthRequest, res: Response) => {
     });
   } catch (err: any) {
     logger.error('deleteCardHandler error:', err);
-    return res.status(400).json({ message: err.message || 'Ошибка удаления карточки' });
+    return res.status(err instanceof CardAccountAccessError ? 403 : 400).json({ message: err.message || 'Ошибка удаления карточки' });
   }
 };
 
@@ -115,7 +115,7 @@ export const submitCardToNktHandler = async (req: AuthRequest, res: Response) =>
     });
   } catch (err: any) {
     logger.error('submitCardToNktHandler error:', err);
-    return res.status(400).json({ message: err.message || 'Ошибка отправки в Национальный каталог' });
+    return res.status(err instanceof CardAccountAccessError ? 403 : 400).json({ message: err.message || 'Ошибка отправки в Национальный каталог' });
   }
 };
 
@@ -143,7 +143,7 @@ export const checkCardStatusHandler = async (req: AuthRequest, res: Response) =>
     });
   } catch (err: any) {
     logger.error('checkCardStatusHandler error:', err);
-    return res.status(400).json({ message: err.message || 'Ошибка проверки статуса' });
+    return res.status(err instanceof CardAccountAccessError ? 403 : 400).json({ message: err.message || 'Ошибка проверки статуса' });
   }
 };
 
@@ -160,7 +160,7 @@ export const publishCardToNktHandler = async (req: AuthRequest, res: Response) =
     });
   } catch (err: any) {
     logger.error('publishCardToNktHandler error:', err);
-    return res.status(400).json({ message: err.message || 'Ошибка публикации карточки в НКТ' });
+    return res.status(err instanceof CardAccountAccessError ? 403 : 400).json({ message: err.message || 'Ошибка публикации карточки в НКТ' });
   }
 };
 

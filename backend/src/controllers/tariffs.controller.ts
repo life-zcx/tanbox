@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import { prisma } from '../config/db';
-import { env } from '../config/env';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { Role } from '@prisma/client';
 
@@ -86,20 +84,7 @@ export const getTariffs = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if requester is Admin
-    let isAdmin = false;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, env.JWT_SECRET) as any;
-        if (decoded?.role === Role.ADMIN) {
-          isAdmin = true;
-        }
-      } catch {
-        // Not admin or invalid token, treat as public
-      }
-    }
+    const isAdmin = (req as AuthRequest).user?.role === Role.ADMIN;
 
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 

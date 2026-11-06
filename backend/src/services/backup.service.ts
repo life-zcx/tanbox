@@ -1,111 +1,91 @@
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
-import util from 'util';
-import { logger } from '../utils/logger';
+import { spawn } from 'child_process';
+import { randomUUID } from 'crypto';
+import { pipeline, finished } from 'stream/promises';
+import { createGunzip } from 'zlib';
 
-const execPromise = util.promisify(exec);
 export const backupsDir = path.resolve(process.cwd(), 'backups');
+export interface BackupItem { fileName: string; filePath: string; sizeBytes: number; sizeFormatted: string; createdAt: Date }
+let active = false;
 
-if (!fs.existsSync(backupsDir)) {
-  fs.mkdirSync(backupsDir, { recursive: true });
+async function dumpTo(file: string, docker: boolean) {
+  const url = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL) : null;
+  const user = process.env.POSTGRES_USER || (url && decodeURIComponent(url.username)) || 'tanbox_user';
+  const database = process.env.POSTGRES_DB || url?.pathname.slice(1) || 'tanbox_db';
+  const host = process.env.POSTGRES_HOST || url?.hostname || 'postgres';
+  const port = process.env.POSTGRES_PORT || url?.port || '5432';
+  const env = { ...process.env, PGPASSWORD: process.env.POSTGRES_PASSWORD || (url && decodeURIComponent(url.password)) || '' };
+  const args = docker
+    ? ['exec', '-e', 'PGPASSWORD', process.env.POSTGRES_CONTAINER || 'tanbox_postgres', 'pg_dump', '--no-password', '-U', user, '-d', database]
+    : ['--no-password', '-h', host, '-p', port, '-U', user, '-d', database];
+  const child = spawn(docker ? 'docker' : 'pg_dump', args, { env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  let errorText = '';
+  child.stderr.on('data', chunk => { errorText = (errorText + String(chunk)).slice(-4096); });
+  const exit = new Promise<void>((resolve, reject) => {
+    child.on('error', reject);
+    child.on('close', code => code === 0 ? resolve() : reject(new Error(`pg_dump failed (exit ${code})`)));
+  });
+  const output = fs.createWriteStream(file, { flags: 'wx' });
+  try { await Promise.all([pipeline(child.stdout, output), exit]); }
+  catch (error) { child.kill(); output.destroy(); await finished(output).catch(() => {}); throw error; }
 }
 
-export interface BackupItem {
-  fileName: string;
-  filePath: string;
-  sizeBytes: number;
-  sizeFormatted: string;
-  createdAt: Date;
-}
-
-/**
- * Creates a database backup dump (.sql)
- */
-export async function createDatabaseBackup(): Promise<BackupItem> {
-  const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
-  const fileName = `tanbox_backup_${timestamp}.sql`;
-  const targetPath = path.join(backupsDir, fileName);
-
-  let dbUser = process.env.POSTGRES_USER || 'tanbox_user';
-  let dbPassword = process.env.POSTGRES_PASSWORD || '';
-  let dbName = process.env.POSTGRES_DB || 'tanbox_db';
-  let dbHost = process.env.POSTGRES_HOST || 'postgres';
-
-  if (!dbPassword && process.env.DATABASE_URL) {
-    try {
-      const parsedUrl = new URL(process.env.DATABASE_URL);
-      if (parsedUrl.username) dbUser = parsedUrl.username;
-      if (parsedUrl.password) dbPassword = decodeURIComponent(parsedUrl.password);
-      if (parsedUrl.pathname) dbName = parsedUrl.pathname.replace(/^\//, '');
-      if (parsedUrl.hostname) dbHost = parsedUrl.hostname;
-    } catch {}
-  }
-
-  const envWithPgPass = {
-    ...process.env,
-    PGPASSWORD: dbPassword,
-  };
-
-  // Validate identifiers to prevent shell command injection
-  const safeIdentifier = (val: string) => val.replace(/[^a-zA-Z0-9_\-]/g, '');
-  const safeUser = safeIdentifier(dbUser);
-  const safeName = safeIdentifier(dbName);
-  const safeHost = safeIdentifier(dbHost);
-
-  let command = `pg_dump -h ${safeHost} -U ${safeUser} -d ${safeName} -f "${targetPath}"`;
-  if (process.platform === 'win32') {
-    command = `docker exec tanbox_postgres pg_dump -U ${safeUser} -d ${safeName} > "${targetPath}"`;
-  }
-
+export async function isCompleteBackup(file: string): Promise<boolean> {
+  let head = '', tail = '';
   try {
-    await execPromise(command, { env: envWithPgPass });
-  } catch (cmdErr: any) {
-    // Only attempt docker exec fallback if not already on win32 and if primary command was direct pg_dump
-    if (process.platform !== 'win32') {
+    if (file.endsWith('.gz')) {
+      const input = fs.createReadStream(file); const unzip = createGunzip();
+      input.on('error', error => unzip.destroy(error)); input.pipe(unzip);
       try {
-        logger.warn(`Primary pg_dump command failed (${cmdErr.message}), trying docker exec fallback...`);
-        await execPromise(`docker exec tanbox_postgres pg_dump -U ${safeUser} -d ${safeName} > "${targetPath}"`, { env: envWithPgPass });
-      } catch (fallbackErr: any) {
-        throw new Error(`Ошибка создания дампа БД: ${cmdErr.message}`);
-      }
+        for await (const chunk of unzip) { const text = String(chunk); head = (head + text).slice(0, 8192); tail = (tail + text).slice(-8192); }
+      } finally { input.destroy(); unzip.destroy(); }
     } else {
-      throw cmdErr;
+      const handle = await fs.promises.open(file, 'r');
+      try {
+        const stat = await handle.stat(); const first = Buffer.alloc(8192), last = Buffer.alloc(8192);
+        const a = await handle.read(first, 0, first.length, 0);
+        const b = await handle.read(last, 0, last.length, Math.max(0, stat.size - last.length));
+        head = first.subarray(0, a.bytesRead).toString(); tail = last.subarray(0, b.bytesRead).toString();
+      } finally { await handle.close(); }
     }
-  }
-
-  const stat = await fs.promises.stat(targetPath);
-  return {
-    fileName,
-    filePath: targetPath,
-    sizeBytes: stat.size,
-    sizeFormatted: `${(stat.size / (1024 * 1024)).toFixed(2)} MB`,
-    createdAt: stat.mtime,
-  };
+    return head.includes('-- PostgreSQL database dump') && tail.includes('-- PostgreSQL database dump complete');
+  } catch { return false; }
 }
 
-/**
- * Returns list of existing database backups sorted newest first
- */
-export async function getBackupsList(): Promise<BackupItem[]> {
-  if (!fs.existsSync(backupsDir)) {
-    return [];
-  }
-  const files = await fs.promises.readdir(backupsDir);
-  const backups: BackupItem[] = [];
-  for (const fileName of files) {
-    if (fileName.startsWith('tanbox_') && (fileName.endsWith('.sql') || fileName.endsWith('.sql.gz'))) {
-      const filePath = path.join(backupsDir, fileName);
-      const stat = await fs.promises.stat(filePath);
-      backups.push({
-        fileName,
-        filePath,
-        sizeBytes: stat.size,
-        sizeFormatted: `${(stat.size / (1024 * 1024)).toFixed(2)} MB`,
-        createdAt: stat.mtime,
-      });
+export async function createDatabaseBackup(): Promise<BackupItem> {
+  if (active) throw new Error('A backup is already running');
+  active = true;
+  const fileName = `tanbox_backup_${new Date().toISOString().replace(/[-:T.Z]/g, '')}_${randomUUID()}.sql`;
+  const filePath = path.join(backupsDir, fileName), temporary = filePath + '.part';
+  try {
+    await fs.promises.mkdir(backupsDir, { recursive: true });
+    try { await dumpTo(temporary, process.platform === 'win32'); }
+    catch (error: any) {
+      if (process.platform === 'win32' || error.code !== 'ENOENT') throw error;
+      await fs.promises.unlink(temporary).catch(() => {});
+      await dumpTo(temporary, true);
     }
+    if (!await isCompleteBackup(temporary)) throw new Error('Backup is incomplete');
+    await fs.promises.rename(temporary, filePath);
+    return await describe(fileName);
+  } finally {
+    active = false;
+    await fs.promises.unlink(temporary).catch(() => {});
   }
-  backups.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  return backups;
+}
+
+async function describe(fileName: string): Promise<BackupItem> {
+  const filePath = path.join(backupsDir, fileName), stat = await fs.promises.stat(filePath);
+  return { fileName, filePath, sizeBytes: stat.size, sizeFormatted: `${(stat.size / 1048576).toFixed(2)} MB`, createdAt: stat.mtime };
+}
+
+export async function getBackupsList(): Promise<BackupItem[]> {
+  if (!fs.existsSync(backupsDir)) return [];
+  const backups: BackupItem[] = [];
+  for (const entry of await fs.promises.readdir(backupsDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !/^tanbox_[a-zA-Z0-9_.-]+\.sql(?:\.gz)?$/.test(entry.name)) continue;
+    if (await isCompleteBackup(path.join(backupsDir, entry.name))) backups.push(await describe(entry.name));
+  }
+  return backups.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }

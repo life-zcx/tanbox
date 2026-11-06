@@ -1,10 +1,29 @@
+import { allocateSscc } from '../services/sscc.service';
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../config/db';
-import { MarkirovkaOperationType, MarkirovkaOperationStatus } from '@prisma/client';
+import { MarkirovkaOperationType, MarkirovkaOperationStatus, OrderCategory } from '@prisma/client';
 import { MarkirovkaClient, CATEGORY_TO_OMS_EXTENSION, generateValidSscc18, normalizeSscc18, extractIdentificationCode, mapMptProductGroupsToCategories } from '../services/markirovkaClient.service';
 import { resolveNktProduct } from '../services/nktCatalog.service';
 import { logger } from '../utils/logger';
+import { canAccessOrderCodes, CodeAccessUser, orderCodeAccessSelect } from '../utils/orderCodeAccess';
+import { normalizeUtilisationCodes, requireFullUtilisationCodes, resolveUtilisationAccount, restoreOrderUtilisationCodes, UtilisationValidationError } from '../services/utilisationCodes.service';
+
+async function operationPayloadsWithCodeAccess<T extends { requestPayload: unknown; responsePayload: unknown; errorDetails: string | null }>(items: T[], user: CodeAccessUser | undefined): Promise<T[]> {
+  if (user?.role === 'ADMIN') return items;
+  const orderIds = [...new Set(items.map(item => (item.requestPayload as any)?.orderId).filter(Boolean).map(String))];
+  if (!orderIds.length) return items;
+  const orders = await prisma.order.findMany({
+    where: { id: { in: orderIds } }, select: { id: true, ...orderCodeAccessSelect },
+  });
+  const accessible = new Set(orders.filter(order => canAccessOrderCodes(order, user)).map(order => order.id));
+  return items.map(item => {
+    const orderId = (item.requestPayload as any)?.orderId;
+    return orderId && !accessible.has(String(orderId))
+      ? { ...item, requestPayload: { orderId }, responsePayload: null, errorDetails: null }
+      : item;
+  });
+}
 
 /**
  * Helper to resolve MarkirovkaAccount respecting user isolation:
@@ -36,7 +55,8 @@ async function resolveAccountForUser(user: any, accountId?: string) {
   });
 }
 
-function mapOrderToOperation(ord: any) {
+function mapOrderToOperation(ord: any, user: CodeAccessUser | undefined) {
+  const codesAccessible = user?.role === 'ADMIN' || canAccessOrderCodes(ord.order, user);
   const opStatus: MarkirovkaOperationStatus =
     ord.status === 'COMPLETED'
       ? MarkirovkaOperationStatus.COMPLETED
@@ -76,7 +96,7 @@ function mapOrderToOperation(ord: any) {
     responsePayload: {
       orderId: ord.id,
       externalOrderId: ord.externalOrderId,
-      codes: Array.isArray(ord.codes) ? ord.codes.slice(0, 5) : [],
+      codes: codesAccessible && Array.isArray(ord.codes) ? ord.codes.slice(0, 5) : [],
       details: {
         gtin: ord.gtin,
         category: ord.category,
@@ -85,7 +105,7 @@ function mapOrderToOperation(ord: any) {
         externalOrderId: ord.externalOrderId,
       },
     },
-    errorDetails: ord.errorDetails,
+    errorDetails: codesAccessible ? ord.errorDetails : null,
     createdById: ord.order?.userId || null,
     createdAt: ord.createdAt,
     updatedAt: ord.updatedAt,
@@ -155,9 +175,7 @@ export async function getOperations(req: AuthRequest, res: Response) {
               },
             },
             order: {
-              select: {
-                userId: true,
-              },
+              select: orderCodeAccessSelect,
             },
           },
         }),
@@ -167,7 +185,7 @@ export async function getOperations(req: AuthRequest, res: Response) {
         total,
         page: Number(page),
         totalPages: Math.ceil(total / take),
-        operations: orders.map(mapOrderToOperation),
+        operations: orders.map(order => mapOrderToOperation(order, req.user)),
       });
     }
 
@@ -199,7 +217,7 @@ export async function getOperations(req: AuthRequest, res: Response) {
         total,
         page: Number(page),
         totalPages: Math.ceil(total / take),
-        operations: items,
+        operations: await operationPayloadsWithCodeAccess(items, req.user),
       });
     }
 
@@ -244,17 +262,15 @@ export async function getOperations(req: AuthRequest, res: Response) {
             },
           },
           order: {
-            select: {
-              userId: true,
-            },
+            select: orderCodeAccessSelect,
           },
         },
       }),
     ]);
 
     const combined = [
-      ...items,
-      ...orders.map(mapOrderToOperation),
+      ...await operationPayloadsWithCodeAccess(items, req.user),
+      ...orders.map(order => mapOrderToOperation(order, req.user)),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const pagedOperations = combined.slice(safeSkip, safeSkip + safeTake);
@@ -285,6 +301,7 @@ export async function validateCodes(req: AuthRequest, res: Response) {
     const cleanCodes = codes.map((c: string) => extractIdentificationCode(c)).filter(Boolean);
 
     let account = await resolveAccountForUser(req.user, accountId);
+    if (!account || account.status !== 'ACTIVE') return res.status(400).json({ message: 'Active integration account required' });
 
     let isMptResponse: any = null;
     let results: any[] = [];
@@ -377,13 +394,14 @@ export async function createAggregation(req: AuthRequest, res: Response) {
     }
 
     const cleanCodes = codes.map((c: string) => extractIdentificationCode(c)).filter(Boolean);
-    const targetSscc = sscc?.trim() ? normalizeSscc18(sscc) : generateValidSscc18();
 
     let account = await resolveAccountForUser(req.user, accountId);
+    if (!account || account.status !== 'ACTIVE') return res.status(400).json({ message: 'Active integration account required' });
+    const targetSscc = sscc?.trim() ? normalizeSscc18(sscc) : await allocateSscc(req.user!.id);
 
     const docNumber = `AGG-${Date.now().toString().slice(-6)}`;
     let apiResponse: any = { message: 'Запрос отправлен в ИС МПТ' };
-    let isSuccess = true;
+    let isSuccess = false;
 
     if (account) {
       try {
@@ -400,7 +418,7 @@ export async function createAggregation(req: AuthRequest, res: Response) {
           documentId: aggRes.documentId,
           data: aggRes.response,
         };
-        isSuccess = aggRes.success;
+        isSuccess = aggRes.success && Boolean(aggRes.documentId);
       } catch (e: any) {
         logger.warn('ICOM aggregation error:', e.message);
         apiResponse = { error: e.message };
@@ -454,10 +472,11 @@ export async function createDisaggregation(req: AuthRequest, res: Response) {
     if (!sscc) return res.status(400).json({ message: 'Укажите код агрегата (SSCC) для расформирования' });
 
     let account = await resolveAccountForUser(req.user, accountId);
+    if (!account || account.status !== 'ACTIVE') return res.status(400).json({ message: 'Active integration account required' });
 
     const docNumber = `DIS-${Date.now().toString().slice(-6)}`;
     let apiResponse: any = { status: 'DISAGGREGATED', timestamp: new Date().toISOString() };
-    let isSuccess = true;
+    let isSuccess = false;
 
     const targetSscc = normalizeSscc18(sscc);
 
@@ -473,7 +492,7 @@ export async function createDisaggregation(req: AuthRequest, res: Response) {
           documentId: disRes.documentId,
           response: disRes.response,
         };
-        isSuccess = disRes.success;
+        isSuccess = disRes.success && Boolean(disRes.documentId);
       } catch (err: any) {
         apiResponse = { error: err.message };
         isSuccess = false;
@@ -538,6 +557,7 @@ export async function createImportNotification(req: AuthRequest, res: Response) 
     const docNumber = `IMP-${Date.now().toString().slice(-6)}`;
 
     let account = await resolveAccountForUser(req.user, accountId);
+    if (!account || account.status !== 'ACTIVE') return res.status(400).json({ message: 'Active integration account required' });
 
     if (!account) {
       return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден.' });
@@ -684,6 +704,7 @@ export async function createRetirement(req: AuthRequest, res: Response) {
     const docNumber = `RET-${Date.now().toString().slice(-6)}`;
 
     let account = await resolveAccountForUser(req.user, accountId);
+    if (!account || account.status !== 'ACTIVE') return res.status(400).json({ message: 'Active integration account required' });
 
     if (!account) {
       return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден.' });
@@ -775,6 +796,7 @@ export async function createCorrection(req: AuthRequest, res: Response) {
     const docNumber = `COR-${Date.now().toString().slice(-6)}`;
 
     let account = await resolveAccountForUser(req.user, accountId);
+    if (!account || account.status !== 'ACTIVE') return res.status(400).json({ message: 'Active integration account required' });
 
     if (!account) {
       return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден.' });
@@ -912,37 +934,36 @@ export async function authSimpleSignIn(req: AuthRequest, res: Response) {
  */
 export async function createUtilisation(req: AuthRequest, res: Response) {
   try {
-    const { accountId, category = 'OILS', codes, releaseType, productionDate, expirationDate, manufacturerCountry, orderId } = req.body;
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
+    const { accountId, category: requestedCategory, codes, releaseType, productionDate, expirationDate, manufacturerCountry, orderId: rawOrderId } = req.body;
 
     if (!Array.isArray(codes) || codes.length === 0) {
       return res.status(400).json({ message: 'Укажите коды маркировки для отчета о нанесении' });
     }
 
-    let cleanCodes = codes.map((c: string) => c.replace(/[\r\n]/g, '').trim()).filter(Boolean);
+    if (rawOrderId != null && typeof rawOrderId !== 'string') {
+      return res.status(400).json({ message: 'Некорректный идентификатор заказа.' });
+    }
+    const orderId = rawOrderId?.trim() || undefined;
+    const order = orderId ? await prisma.order.findUnique({
+      where: { id: orderId }, select: { id: true, category: true, ...orderCodeAccessSelect },
+    }) : null;
+    if (orderId && !canAccessOrderCodes(order, req.user)) {
+      return res.status(403).json({ message: 'Доступ к кодам данного заказа запрещён: проверьте принадлежность и оплату заказа.' });
+    }
+
+    const category = requestedCategory ?? order?.category ?? 'OILS';
+    if (!Object.values(OrderCategory).includes(category) || (order && category !== order.category)) {
+      return res.status(400).json({ message: 'Товарная группа должна соответствовать заказу.' });
+    }
+
+    const requestedCodes = normalizeUtilisationCodes(codes);
+    const account = await resolveUtilisationAccount(req.user, accountId, order);
+    const cleanCodes = order
+      ? await restoreOrderUtilisationCodes(order.id, requestedCodes)
+      : requireFullUtilisationCodes(requestedCodes);
+
     const docNumber = `UTL-${Date.now().toString().slice(-6)}`;
-
-    // If codes are truncated to AI_REDUCED (without crypto-tail) and orderId is provided,
-    // recover the authentic full DataMatrix strings with crypto-tail from database orderCodeItem:
-    if (orderId && cleanCodes.some((c: string) => !c.includes('\u001d') && !c.includes('92'))) {
-      try {
-        const dbItems = await prisma.orderCodeItem.findMany({
-          where: { orderId: String(orderId) },
-          orderBy: { index: 'asc' },
-          take: cleanCodes.length || 500,
-        });
-        if (dbItems.length > 0 && dbItems[0].code.includes('\u001d')) {
-          cleanCodes = dbItems.map((item) => item.code);
-        }
-      } catch (err: any) {
-        logger.warn('Failed restoring full codes from orderCodeItem for utilisation:', err.message);
-      }
-    }
-
-    let account = await resolveAccountForUser(req.user, accountId);
-
-    if (!account) {
-      return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден.' });
-    }
 
     const client = new MarkirovkaClient(account);
     const reportRes = await client.submitUtilisationReport({
@@ -977,24 +998,21 @@ export async function createUtilisation(req: AuthRequest, res: Response) {
       },
     });
 
-    if (orderId) {
+    if (order) {
       try {
-        const orderExists = await prisma.order.findUnique({ where: { id: String(orderId) } });
-        if (orderExists) {
-          await prisma.markirovkaUtilisationReport.create({
-            data: {
-              accountId: account.id,
-              orderId: String(orderId),
-              externalReportId: reportRes?.reportId || docNumber,
-              category: (category as any) || orderExists.category,
-              codesCount: cleanCodes.length,
-              status: isSuccess ? 'SUBMITTED' : 'REJECTED',
-              submittedAt: new Date(),
-              reportData: responsePayload,
-              errorDetails: isSuccess ? null : 'Failed to submit',
-            },
-          });
-        }
+        await prisma.markirovkaUtilisationReport.create({
+          data: {
+            accountId: account.id,
+            orderId: order.id,
+            externalReportId: reportRes?.reportId || docNumber,
+            category,
+            codesCount: cleanCodes.length,
+            status: isSuccess ? 'SUBMITTED' : 'REJECTED',
+            submittedAt: new Date(),
+            reportData: responsePayload,
+            errorDetails: isSuccess ? null : 'Failed to submit',
+          },
+        });
       } catch (err: any) {
         logger.warn('Failed linking MarkirovkaUtilisationReport to order:', err.message);
       }
@@ -1010,7 +1028,7 @@ export async function createUtilisation(req: AuthRequest, res: Response) {
     });
   } catch (err: any) {
     logger.error('Error creating utilisation report:', err);
-    return res.status(400).json({ message: err.message || 'Ошибка регистрации отчета о нанесении в ИС МПТ' });
+    return res.status(err instanceof UtilisationValidationError ? err.status : 400).json({ message: err.message || 'Ошибка регистрации отчета о нанесении в ИС МПТ' });
   }
 }
 
@@ -1038,6 +1056,7 @@ export async function createReturnToTurnover(req: AuthRequest, res: Response) {
     const docNumber = `RET-TURN-${Date.now().toString().slice(-6)}`;
 
     let account = await resolveAccountForUser(req.user, accountId);
+    if (!account || account.status !== 'ACTIVE') return res.status(400).json({ message: 'Active integration account required' });
 
     if (!account) {
       return res.status(400).json({ message: 'Активный аккаунт ИС МПТ не найден.' });
@@ -1158,6 +1177,7 @@ export async function getProductByGtin(req: AuthRequest, res: Response) {
  */
 export async function getOperationReceipt(req: AuthRequest, res: Response) {
   try {
+    if (!req.user) return res.status(401).json({ message: 'Не авторизован' });
     const { id } = req.params;
     const op = await prisma.markirovkaOperation.findUnique({
       where: { id },
@@ -1169,7 +1189,7 @@ export async function getOperationReceipt(req: AuthRequest, res: Response) {
         where: { id },
         include: {
           account: true,
-          order: { select: { userId: true } },
+          order: { select: orderCodeAccessSelect },
         },
       });
 
@@ -1183,7 +1203,11 @@ export async function getOperationReceipt(req: AuthRequest, res: Response) {
         }
       }
 
-      const mappedOp = mapOrderToOperation(markOrder);
+      if (req.user.role !== 'ADMIN' && !canAccessOrderCodes(markOrder.order, req.user)) {
+        return res.status(403).json({ message: 'Квитанция с кодами недоступна до оплаты или разрешения администратора.' });
+      }
+
+      const mappedOp = mapOrderToOperation(markOrder, req.user);
       let localCodes: any[] = [];
       if (Array.isArray(markOrder.codes)) {
         localCodes = (markOrder.codes as string[]).map((c: string) => ({
@@ -1233,6 +1257,14 @@ export async function getOperationReceipt(req: AuthRequest, res: Response) {
     if (req.user?.role !== 'ADMIN') {
       if (op.createdById !== req.user?.id && op.account?.userId !== req.user?.id) {
         return res.status(403).json({ message: 'Доступ к данной операции запрещен' });
+      }
+    }
+
+    const linkedOrderId = (op.requestPayload as any)?.orderId;
+    if (linkedOrderId && req.user.role !== 'ADMIN') {
+      const order = await prisma.order.findUnique({ where: { id: String(linkedOrderId) }, select: orderCodeAccessSelect });
+      if (!canAccessOrderCodes(order, req.user)) {
+        return res.status(403).json({ message: 'Квитанция с кодами недоступна до оплаты или разрешения администратора.' });
       }
     }
 
@@ -1616,3 +1648,9 @@ export async function checkPartyStatus(req: AuthRequest, res: Response) {
 }
 
 
+
+export async function allocateSsccHandler(req: AuthRequest, res: Response) {
+  if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+  try { return res.json({ sscc: await allocateSscc(req.user.id) }); }
+  catch (error) { logger.error('SSCC allocation failed', error); return res.status(503).json({ message: 'SSCC allocation unavailable' }); }
+}

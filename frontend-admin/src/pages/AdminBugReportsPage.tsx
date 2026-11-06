@@ -17,7 +17,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { PageHeader, Modal } from '@shared';
-import { apiClient } from '../api/client';
+import { apiClient, getAllPages } from '../api/client';
 
 export interface ServiceLeadItem {
   id: string;
@@ -126,7 +126,7 @@ export const AdminBugReportsPage: React.FC = () => {
   const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get('/leads/admin', {
+      const res = await getAllPages('/leads/admin', {
         params: { type: 'BUGS' },
       });
       const list: ServiceLeadItem[] = Array.isArray(res.data) ? res.data : [];

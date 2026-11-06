@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../api/client';
+import { apiClient, getAllPages } from '../api/client';
 
 export interface ServiceLeadItem {
   id: string;
@@ -21,7 +21,7 @@ export const useAdminLeads = () => {
   const fetchAdminLeads = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/leads/admin');
+      const res = await getAllPages('/leads/admin');
       const serverLeads: ServiceLeadItem[] = res.data;
       const list = serverLeads.sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()

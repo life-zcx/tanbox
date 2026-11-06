@@ -1,3 +1,4 @@
+import { limitPdfRequests } from '../middleware/pdfAdmission.middleware';
 import { Router } from 'express';
 import { authenticateJWT, requireAdmin } from '../middleware/auth.middleware';
 import {
@@ -16,6 +17,7 @@ import {
 } from '../controllers/markirovka.controller';
 import {
   getOperations,
+  allocateSsccHandler,
   validateCodes,
   createAggregation,
   createDisaggregation,
@@ -59,7 +61,7 @@ router.post('/accounts', createAccount);
 router.put('/accounts/:id', updateAccount);
 router.delete('/accounts/:id', deleteAccount);
 router.post('/test-connection', testConnection);
-router.post('/generate-labels-pdf', generateLabelsPdf);
+router.post('/generate-labels-pdf', limitPdfRequests(generateLabelsPdf));
 
 // Party & National Catalog lookups & settings
 router.get('/nkt-settings', getNktSettingsHandler);
@@ -95,6 +97,7 @@ router.get('/catalog', getMptCatalogHandler);
 router.post('/catalog/sync', syncMptCatalogHandler);
 
 // Operations routes (True API & OMS)
+router.post('/operations/sscc', allocateSsccHandler);
 router.get('/operations', getOperations);
 router.get('/operations/auth-challenge', getAuthChallenge);
 router.post('/operations/auth-simple', authSimpleSignIn);

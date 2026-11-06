@@ -1,3 +1,4 @@
+import { pagination, nextPage } from '../utils/pagination';
 import { Request, Response } from 'express';
 import { prisma } from '../config/db';
 import { logger } from '../utils/logger';
@@ -73,11 +74,14 @@ export const getLeads = async (req: Request, res: Response) => {
       where = { NOT: { serviceTitle: { startsWith: '[БАГ-РЕПОРТ]' } } };
     }
 
+    const { take, skip, page } = pagination(req, res);
     const leads = await prisma.serviceLead.findMany({
+      take, skip,
       where,
       orderBy: { createdAt: 'desc' },
     });
 
+    nextPage(res, leads.length, take, page);
     return res.json(leads);
   } catch (error: any) {
     logger.error('Error fetching leads:', error);

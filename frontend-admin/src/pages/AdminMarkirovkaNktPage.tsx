@@ -23,6 +23,7 @@ import { MarkirovkaNav } from '../components/markirovka/MarkirovkaNav';
 interface NktSettings {
   enabled: boolean;
   apiKey: string;
+  hasApiKey?: boolean;
   baseUrl: string;
   updatedAt?: string;
   updatedBy?: string;
@@ -105,14 +106,14 @@ export const AdminMarkirovkaNktPage: React.FC = () => {
 
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!apiKeyInput.trim()) {
+    if (!apiKeyInput.trim() && !settings?.hasApiKey) {
       showToast('Укажите API-ключ НКТ', 'error');
       return;
     }
     setSavingKey(true);
     try {
       const res = await apiClient.put('/markirovka/nkt-settings', {
-        apiKey: apiKeyInput.trim(),
+        apiKey: apiKeyInput.trim() || undefined,
         baseUrl: baseUrlInput.trim() || 'https://nationalcatalog.kz/gwp',
       });
       if (res.data?.settings) {

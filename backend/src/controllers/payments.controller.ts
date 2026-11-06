@@ -1,3 +1,5 @@
+import { grantPaidTemplate } from '../services/orderFinancials.service';
+import { computeOrderPricing } from '../utils/pricing';
 import { Request, Response } from 'express';
 import { prisma } from '../config/db';
 import { AuthRequest } from '../middleware/auth.middleware';
@@ -129,6 +131,28 @@ export async function freedomResultWebhook(req: Request, res: Response) {
     if (isSuccess) {
       // 1. Atomic status transition: ensure only ONE webhook process executes the credit/status change
       const wasUpdated = await prisma.$transaction(async (tx) => {
+        if (payment.orderId) {
+          await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${payment.orderId} FOR UPDATE`;
+          const order = await tx.order.findUniqueOrThrow({ where: { id: payment.orderId } });
+          const latest = await tx.onlinePayment.findUniqueOrThrow({ where: { id: payment.id } });
+          if (latest.status === 'PAID') return false;
+          const fullOrderPayment = payment.type === OnlinePaymentType.ORDER || payment.type === OnlinePaymentType.INVOICE;
+          if (order.status === 'CANCELLED' || order.paymentStatus === 'REFUNDED' || order.userId !== payment.userId
+            || (fullOrderPayment && (!order.totalPrice.equals(payment.amount) || order.paymentStatus === 'PAID'))) {
+            throw new Error('Payment obligation changed; manual reconciliation required');
+          }
+          if (payment.type === OnlinePaymentType.INVOICE && payment.invoiceId) {
+            const invoice = await tx.invoice.findUniqueOrThrow({ where: { id: payment.invoiceId } });
+            if (invoice.orderId !== order.id || invoice.status === 'CANCELLED' || !invoice.totalAmount.equals(payment.amount)) throw new Error('Invoice payment changed; reconciliation required');
+          }
+          if (payment.type === OnlinePaymentType.STICKER_LAYOUT) {
+            const quote = await computeOrderPricing({ tariffType: order.tariffType, itemsCount: order.itemsCount,
+              extraServices: order.extraServices, ssccNeeded: order.ssccNeeded, boxesCount: order.boxesCount ?? undefined,
+              includeOfficialCodeFee: order.includeOfficialCodeFee });
+            if (quote.breakdown.layoutTotal <= 0 || Number(payment.amount) !== quote.breakdown.layoutTotal) throw new Error('Layout payment changed; reconciliation required');
+          }
+          await grantPaidTemplate(tx, order);
+        }
         const updateResult = await tx.onlinePayment.updateMany({
           where: {
             id: payment.id,
@@ -175,13 +199,7 @@ export async function freedomResultWebhook(req: Request, res: Response) {
             });
           }
         } else if (payment.type === OnlinePaymentType.STICKER_LAYOUT && payment.orderId) {
-          await tx.order.update({
-            where: { id: payment.orderId },
-            data: {
-              stickerApprovalStatus: StickerApprovalStatus.APPROVED,
-              printAllowed: true,
-            },
-          });
+          // A layout fee grants only the template entitlement, never order payment or batch printing.
         } else if (payment.type === OnlinePaymentType.BALANCE) {
           // Increment user balance atomically inside transaction
           await tx.user.update({

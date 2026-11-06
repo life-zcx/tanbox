@@ -132,59 +132,20 @@ export const MARKIROVKA_CATEGORIES = [
   { value: 'DIETARY_SUPPLEMENTS', label: 'Биологически активные добавки (БАД)' },
 ];
 
-export function generateValidSscc18(companyPrefix = '0487000'): string {
-  const ext = '0';
-  const prefix = companyPrefix.replace(/\D/g, '').slice(0, 7).padStart(7, '0');
-  const serial = Date.now().toString().slice(-9);
-  const base17 = `${ext}${prefix}${serial}`.slice(0, 17);
-
-  let sum = 0;
-  for (let i = 0; i < 17; i++) {
-    const weight = i % 2 === 0 ? 3 : 1;
-    sum += parseInt(base17[i], 10) * weight;
-  }
-  const checkDigit = (10 - (sum % 10)) % 10;
-  return `00${base17}${checkDigit}`;
+export async function generateValidSscc18(): Promise<string> {
+  const response = await apiClient.post('/markirovka/operations/sscc');
+  return response.data.sscc;
 }
 
 export function normalizeSscc18(input?: string): string {
-  if (!input || !input.trim()) return generateValidSscc18();
-  let clean = input.replace(/\D/g, '').trim();
-
-  if (clean.length === 20 && clean.startsWith('00')) {
-    const payload17 = clean.slice(2, 19);
-    let sum = 0;
-    for (let i = 0; i < 17; i++) {
-      const weight = i % 2 === 0 ? 3 : 1;
-      sum += parseInt(payload17[i], 10) * weight;
-    }
-    const checkDigit = (10 - (sum % 10)) % 10;
-    return `00${payload17}${checkDigit}`;
-  }
-
-  if (clean.length === 18) {
-    const payload17 = clean.slice(0, 17);
-    let sum = 0;
-    for (let i = 0; i < 17; i++) {
-      const weight = i % 2 === 0 ? 3 : 1;
-      sum += parseInt(payload17[i], 10) * weight;
-    }
-    const checkDigit = (10 - (sum % 10)) % 10;
-    return `00${payload17}${checkDigit}`;
-  }
-
-  if (clean.length >= 17) {
-    const payload17 = clean.replace(/^00/, '').slice(0, 17).padEnd(17, '0');
-    let sum = 0;
-    for (let i = 0; i < 17; i++) {
-      const weight = i % 2 === 0 ? 3 : 1;
-      sum += parseInt(payload17[i], 10) * weight;
-    }
-    const checkDigit = (10 - (sum % 10)) % 10;
-    return `00${payload17}${checkDigit}`;
-  }
-
-  return generateValidSscc18();
+  if (typeof input !== 'string') throw new Error('SSCC required');
+  const clean = input.trim().replace(/^\(00\)/, '00');
+  const value = /^00\d{18}$/.test(clean) ? clean.slice(2) : /^\d{18}$/.test(clean) ? clean : '';
+  if (!value) throw new Error('SSCC must contain 18 digits (optionally prefixed with AI 00)');
+  const base = value.slice(0, 17);
+  const sum = [...base].reduce((acc, digit, index) => acc + Number(digit) * (index % 2 === 0 ? 3 : 1), 0);
+  if ((10 - sum % 10) % 10 !== Number(value[17])) throw new Error('Invalid SSCC checksum');
+  return '00' + value;
 }
 
 export function extractIdentificationCode(raw?: string): string {
@@ -531,7 +492,8 @@ export const OperationModal: React.FC<OperationModalProps> = ({
           }
           docPayload = JSON.stringify(sortedDoc);
         } else if (operationType === 'AGGREGATION') {
-          const targetSscc = sscc?.trim() ? normalizeSscc18(sscc) : generateValidSscc18();
+          const targetSscc = sscc?.trim() ? normalizeSscc18(sscc) : await generateValidSscc18();
+          setSscc(targetSscc);
           const sortedDoc = {
             aggregationUnits: [
               {
@@ -608,7 +570,8 @@ export const OperationModal: React.FC<OperationModalProps> = ({
           expirationDate: hasExpiration && expirationDate ? `${expirationDate}T23:59:59.000Z` : undefined,
         });
       } else if (operationType === 'AGGREGATION') {
-        const targetSscc = sscc?.trim() ? normalizeSscc18(sscc) : generateValidSscc18();
+        const targetSscc = sscc?.trim() ? normalizeSscc18(sscc) : await generateValidSscc18();
+          setSscc(targetSscc);
         await apiClient.post('/markirovka/operations/aggregation', {
           accountId,
           category,

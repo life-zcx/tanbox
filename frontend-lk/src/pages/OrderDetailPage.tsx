@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { apiClient } from '../api/client';
+import { apiClient, getAllPages } from '../api/client';
 import { OrderItem } from '../types';
 import { StatusBadge, parseOrderNotes, toast, useModalBehavior } from '@shared';
 import { getCategoryLabel } from '../data/categories';
@@ -330,7 +330,7 @@ export const OrderDetailPage: React.FC = () => {
     } catch (err: any) {
       // Fallback: try fetching all orders and finding by id if single GET fails
       try {
-        const listRes = await apiClient.get('/orders');
+        const listRes = await getAllPages('/orders');
         const found = (listRes.data as OrderItem[]).find((o) => o.id === id || o.orderNumber === id);
         if (found) {
           setOrder(found);

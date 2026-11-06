@@ -1,3 +1,4 @@
+import { integrationFetch, validateTrustedIntegrationUrl } from './integrationHttp.service';
 import { OrderCategory, MarkirovkaEnvironment, MarkirovkaAccount } from '@prisma/client';
 import { prisma } from '../config/db';
 import { decryptText } from '../utils/encryption';
@@ -143,7 +144,8 @@ export function getDefaultBaseUrl(env: MarkirovkaEnvironment): string {
 }
 
 export function isBlockedSsrfHostname(hostname: string): boolean {
-  const norm = hostname.toLowerCase().trim();
+  const norm = hostname.toLowerCase().trim().replace(/\.$/, '');
+  if (norm.startsWith('[') || norm.includes(':')) return true;
   const blockedHosts = [
     'localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.169.254',
     'postgres', 'backend', 'caddy', 'label-generator',
@@ -187,6 +189,7 @@ export function validateAndSanitizeBaseUrl(rawUrl?: string | null, env: Markirov
     throw new Error('Разрешены только протоколы https:// или http:// для сервера маркировки');
   }
 
+  validateTrustedIntegrationUrl(parsed.toString());
   const hostname = parsed.hostname.toLowerCase();
 
   if (isBlockedSsrfHostname(hostname)) {
@@ -216,6 +219,7 @@ export function validateAndSanitizeNktBaseUrl(rawUrl?: string | null): string {
     throw new Error('Разрешены только протоколы https:// или http:// для сервера Национального Каталога');
   }
 
+  validateTrustedIntegrationUrl(parsed.toString());
   const hostname = parsed.hostname.toLowerCase();
 
   if (isBlockedSsrfHostname(hostname)) {
@@ -255,10 +259,11 @@ export function sortKeysAlphabetically(obj: any): any {
  * 9 digits: Serial reference (timestamp)
  * 1 digit: GS1 Modulo-10 checksum
  */
-export function generateValidSscc18(companyPrefix: string = '0487000'): string {
+export function generateValidSscc18(companyPrefix: string = '0487000', serialValue?: string): string {
   const ext = '0';
   const prefix = companyPrefix.replace(/\D/g, '').slice(0, 7).padStart(7, '0');
-  const serial = Date.now().toString().slice(-9);
+  if (!serialValue || !/^\d{1,9}$/.test(serialValue)) throw new Error('Allocate SSCC on the server first');
+  const serial = serialValue.padStart(9, '0');
   const base17 = `${ext}${prefix}${serial}`.slice(0, 17);
 
   let sum = 0;
@@ -271,53 +276,16 @@ export function generateValidSscc18(companyPrefix: string = '0487000'): string {
 }
 
 export function normalizeSscc18(input?: string): string {
-  if (!input || !input.trim()) return generateValidSscc18();
-  let clean = input.replace(/\D/g, '').trim();
-
-  // If already 20 digits starting with 00:
-  if (clean.length === 20 && clean.startsWith('00')) {
-    const payload17 = clean.slice(2, 19);
-    let sum = 0;
-    for (let i = 0; i < 17; i++) {
-      const weight = i % 2 === 0 ? 3 : 1;
-      sum += parseInt(payload17[i], 10) * weight;
-    }
-    const checkDigit = (10 - (sum % 10)) % 10;
-    return `00${payload17}${checkDigit}`;
-  }
-
-  // If 18 digits (payload without AI 00):
-  if (clean.length === 18) {
-    const payload17 = clean.slice(0, 17);
-    let sum = 0;
-    for (let i = 0; i < 17; i++) {
-      const weight = i % 2 === 0 ? 3 : 1;
-      sum += parseInt(payload17[i], 10) * weight;
-    }
-    const checkDigit = (10 - (sum % 10)) % 10;
-    return `00${payload17}${checkDigit}`;
-  }
-
-  // If other length >= 17:
-  if (clean.length >= 17) {
-    const payload17 = clean.replace(/^00/, '').slice(0, 17).padEnd(17, '0');
-    let sum = 0;
-    for (let i = 0; i < 17; i++) {
-      const weight = i % 2 === 0 ? 3 : 1;
-      sum += parseInt(payload17[i], 10) * weight;
-    }
-    const checkDigit = (10 - (sum % 10)) % 10;
-    return `00${payload17}${checkDigit}`;
-  }
-
-  return generateValidSscc18();
+  if (typeof input !== 'string') throw new Error('SSCC required');
+  const clean = input.trim().replace(/^\(00\)/, '00');
+  const value = /^00\d{18}$/.test(clean) ? clean.slice(2) : /^\d{18}$/.test(clean) ? clean : '';
+  if (!value) throw new Error('SSCC must contain 18 digits (optionally prefixed with AI 00)');
+  const base = value.slice(0, 17);
+  const sum = [...base].reduce((acc, digit, index) => acc + Number(digit) * (index % 2 === 0 ? 3 : 1), 0);
+  if ((10 - sum % 10) % 10 !== Number(value[17])) throw new Error('Invalid SSCC checksum');
+  return '00' + value;
 }
 
-/**
- * Извлекает чистый Код Идентификации (КИ) или нормализованный SSCC из полного кода маркировки DataMatrix.
- * В юридические документы xTrace ICOM (ввод в оборот/импорт, агрегация, вывод из оборота, списание)
- * согласно регламенту ИС МПТ передается ТОЛЬКО Код Идентификации (без криптохвоста 91 и 92).
- */
 export function extractIdentificationCode(raw?: string): string {
   if (!raw) return '';
   let code = raw.trim();
@@ -481,7 +449,7 @@ export class MarkirovkaClient {
     for (const candidate of candidateEndpoints) {
       try {
         const fullUrl = `${this.baseUrl}${candidate.path}`;
-        const res = await fetch(fullUrl, {
+        const res = await integrationFetch(fullUrl, {
           method: candidate.method,
           headers: {
             'Content-Type': 'application/json',
@@ -601,7 +569,7 @@ export class MarkirovkaClient {
         headers['omsId'] = this.account.omsId;
       }
 
-      const res = await fetch(fullUrl, {
+      const res = await integrationFetch(fullUrl, {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
@@ -740,20 +708,20 @@ export class MarkirovkaClient {
     const auth = await this.authenticate(false);
 
     try {
-      const ordersRes = await fetch(`${this.baseUrl}/api/facade/orders?gridType=own&limit=1`, {
+      const ordersRes = await integrationFetch(`${this.baseUrl}/api/facade/orders?gridType=own&limit=1`, {
         headers: { 'Authorization': `Bearer ${auth.token}`, 'Accept': 'application/json' },
       });
       if (ordersRes.ok) {
         const data: any = await ordersRes.json();
         const tin = data?.orderInfos?.[0]?.issuerTin;
         if (tin) {
-          const contractorRes = await fetch(`${this.baseUrl}/api/v1/party/parties/contractors/${tin}`, {
+          const contractorRes = await integrationFetch(`${this.baseUrl}/api/v1/party/parties/contractors/${tin}`, {
             headers: { 'Authorization': `Bearer ${auth.token}`, 'Accept': 'application/json' },
           });
           const contractorData: any = await contractorRes.json().catch(() => null);
           const partyId = contractorData?.partyId || contractorData?.id;
           if (partyId) {
-            const partyRes = await fetch(`${this.baseUrl}/api/v1/party/parties/${partyId}`, {
+            const partyRes = await integrationFetch(`${this.baseUrl}/api/v1/party/parties/${partyId}`, {
               headers: { 'Authorization': `Bearer ${auth.token}`, 'Accept': 'application/json' },
             });
             if (partyRes.ok) {
@@ -783,7 +751,7 @@ export class MarkirovkaClient {
     headers.set('Authorization', `Bearer ${auth.token}`);
     if (!headers.has('Accept')) headers.set('Accept', 'application/json');
 
-    let res = await fetch(`${this.baseUrl}${path}`, {
+    let res = await integrationFetch(`${this.baseUrl}${path}`, {
       ...init,
       headers,
     });
@@ -792,7 +760,7 @@ export class MarkirovkaClient {
       logger.warn(`Token 401 for account ${this.account.name}, refreshing token...`);
       auth = await this.authenticate(true);
       headers.set('Authorization', `Bearer ${auth.token}`);
-      res = await fetch(`${this.baseUrl}${path}`, {
+      res = await integrationFetch(`${this.baseUrl}${path}`, {
         ...init,
         headers,
       });
@@ -1216,7 +1184,7 @@ export class MarkirovkaClient {
     logger.info(`[ICOM REST API] Submitting import document to ${targetUrl}...`);
 
     try {
-      let res = await fetch(targetUrl, {
+      let res = await integrationFetch(targetUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1239,7 +1207,7 @@ export class MarkirovkaClient {
       if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
         logger.info(`[ICOM REST API] Token inactive or expired, refreshing token and retrying...`);
         auth = await this.authenticate(true);
-        res = await fetch(targetUrl, {
+        res = await integrationFetch(targetUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${auth.token}`,
@@ -1327,7 +1295,7 @@ export class MarkirovkaClient {
     };
 
     try {
-      let res = await fetch(targetUrl, {
+      let res = await integrationFetch(targetUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1344,7 +1312,7 @@ export class MarkirovkaClient {
 
       if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
         auth = await this.authenticate(true);
-        res = await fetch(targetUrl, {
+        res = await integrationFetch(targetUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${auth.token}`,
@@ -1405,7 +1373,7 @@ export class MarkirovkaClient {
     const base64Body = Buffer.from(JSON.stringify(sortedDoc), 'utf-8').toString('base64');
 
     try {
-      let res = await fetch(targetUrl, {
+      let res = await integrationFetch(targetUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1422,7 +1390,7 @@ export class MarkirovkaClient {
 
       if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
         auth = await this.authenticate(true);
-        res = await fetch(targetUrl, {
+        res = await integrationFetch(targetUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${auth.token}`,
@@ -1510,7 +1478,7 @@ export class MarkirovkaClient {
     };
 
     try {
-      let res = await fetch(targetUrl, {
+      let res = await integrationFetch(targetUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1527,7 +1495,7 @@ export class MarkirovkaClient {
 
       if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
         auth = await this.authenticate(true);
-        res = await fetch(targetUrl, {
+        res = await integrationFetch(targetUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${auth.token}`,
@@ -1577,7 +1545,7 @@ export class MarkirovkaClient {
     const cleanCodes = codes.map((c) => extractIdentificationCode(c)).filter(Boolean);
 
     try {
-      let res = await fetch(targetUrl, {
+      let res = await integrationFetch(targetUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1592,7 +1560,7 @@ export class MarkirovkaClient {
 
       if (res.status === 401 || data?.context?._cause === 'inactive-token') {
         auth = await this.authenticate(true);
-        res = await fetch(targetUrl, {
+        res = await integrationFetch(targetUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${auth.token}`,
@@ -1632,7 +1600,7 @@ export class MarkirovkaClient {
   public async getIcomDocumentStatus(documentId: string): Promise<any> {
     let auth = await this.authenticate(false);
     const targetUrl = `${this.baseUrl}/public/api/v1/doc/storage/docs/${documentId}`;
-    let res = await fetch(targetUrl, {
+    let res = await integrationFetch(targetUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${auth.token}`,
@@ -1642,7 +1610,7 @@ export class MarkirovkaClient {
     });
     if (res.status === 401) {
       auth = await this.authenticate(true);
-      res = await fetch(targetUrl, {
+      res = await integrationFetch(targetUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1661,7 +1629,7 @@ export class MarkirovkaClient {
   public async getIcomDocumentCodes(documentId: string, limit: number = 500): Promise<any[]> {
     let auth = await this.authenticate(false);
     const targetUrl = `${this.baseUrl}/public/api/v1/doc/storage/docs/${documentId}/codes?limit=${limit}`;
-    let res = await fetch(targetUrl, {
+    let res = await integrationFetch(targetUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${auth.token}`,
@@ -1671,7 +1639,7 @@ export class MarkirovkaClient {
     });
     if (res.status === 401) {
       auth = await this.authenticate(true);
-      res = await fetch(targetUrl, {
+      res = await integrationFetch(targetUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1691,7 +1659,7 @@ export class MarkirovkaClient {
   public async getIcomDocumentErrors(documentId: string): Promise<any> {
     let auth = await this.authenticate(false);
     const targetUrl = `${this.baseUrl}/public/api/v1/doc/storage/errors/${documentId}`;
-    let res = await fetch(targetUrl, {
+    let res = await integrationFetch(targetUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${auth.token}`,
@@ -1701,7 +1669,7 @@ export class MarkirovkaClient {
     });
     if (res.status === 401) {
       auth = await this.authenticate(true);
-      res = await fetch(targetUrl, {
+      res = await integrationFetch(targetUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1733,7 +1701,7 @@ export class MarkirovkaClient {
 
     for (const pg of candidateGroups) {
       const targetUrl = `${this.baseUrl}/public/api/v1/product-registry/product?productGroup=${encodeURIComponent(pg)}&gtin=${encodeURIComponent(cleanGtin)}`;
-      let res = await fetch(targetUrl, {
+      let res = await integrationFetch(targetUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1744,7 +1712,7 @@ export class MarkirovkaClient {
 
       if (res && res.status === 401) {
         auth = await this.authenticate(true);
-        res = await fetch(targetUrl, {
+        res = await integrationFetch(targetUrl, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${auth.token}`,
@@ -1794,7 +1762,7 @@ export class MarkirovkaClient {
       targetUrl += `&status=${encodeURIComponent(options.status)}`;
     }
 
-    let res = await fetch(targetUrl, {
+    let res = await integrationFetch(targetUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${auth.token}`,
@@ -1805,7 +1773,7 @@ export class MarkirovkaClient {
 
     if (res && res.status === 401) {
       auth = await this.authenticate(true);
-      res = await fetch(targetUrl, {
+      res = await integrationFetch(targetUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1841,7 +1809,7 @@ export class MarkirovkaClient {
     let auth = await this.authenticate(false);
     const targetUrl = `${this.baseUrl}/api/v1/product-registry/product/${encodeURIComponent(productId)}`;
 
-    let res = await fetch(targetUrl, {
+    let res = await integrationFetch(targetUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${auth.token}`,
@@ -1852,7 +1820,7 @@ export class MarkirovkaClient {
 
     if (res && res.status === 401) {
       auth = await this.authenticate(true);
-      res = await fetch(targetUrl, {
+      res = await integrationFetch(targetUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1878,7 +1846,7 @@ export class MarkirovkaClient {
     const cleanTin = tin.trim();
     const targetUrl = `${this.baseUrl}/public/api/v1/party/parties/${encodeURIComponent(cleanTin)}/status`;
 
-    let res = await fetch(targetUrl, {
+    let res = await integrationFetch(targetUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${auth.token}`,
@@ -1889,7 +1857,7 @@ export class MarkirovkaClient {
 
     if (res.status === 401) {
       auth = await this.authenticate(true);
-      res = await fetch(targetUrl, {
+      res = await integrationFetch(targetUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1956,7 +1924,7 @@ export class MarkirovkaClient {
     };
 
     try {
-      let res = await fetch(targetUrl, {
+      let res = await integrationFetch(targetUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -1973,7 +1941,7 @@ export class MarkirovkaClient {
 
       if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
         auth = await this.authenticate(true);
-        res = await fetch(targetUrl, {
+        res = await integrationFetch(targetUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${auth.token}`,
@@ -2051,7 +2019,7 @@ export class MarkirovkaClient {
     };
 
     try {
-      let res = await fetch(targetUrl, {
+      let res = await integrationFetch(targetUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${auth.token}`,
@@ -2068,7 +2036,7 @@ export class MarkirovkaClient {
 
       if (res.status === 401 || responseData?.context?._cause === 'inactive-token') {
         auth = await this.authenticate(true);
-        res = await fetch(targetUrl, {
+        res = await integrationFetch(targetUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${auth.token}`,
@@ -2122,7 +2090,7 @@ export class MarkirovkaClient {
    */
   public async getTrueApiChallenge(): Promise<{ uuid: string; data: string }> {
     const trueApiBase = this.getTrueApiBaseUrl();
-    const res = await fetch(`${trueApiBase}/auth/key`, {
+    const res = await integrationFetch(`${trueApiBase}/auth/key`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
       signal: AbortSignal.timeout(15000),
@@ -2143,7 +2111,7 @@ export class MarkirovkaClient {
 
     logger.info(`[IS MPT True-API] Submitting simpleSignIn to ${trueApiBase}/auth/simpleSignIn (uuid=${uuid}, sigLen=${cleanSig.length})`);
 
-    const res = await fetch(`${trueApiBase}/auth/simpleSignIn`, {
+    const res = await integrationFetch(`${trueApiBase}/auth/simpleSignIn`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

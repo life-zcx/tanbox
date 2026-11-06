@@ -1,3 +1,4 @@
+import { isValidPassword } from '../utils/passwordPolicy';
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -76,7 +77,7 @@ export const sendRegisterCode = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Укажите корректный адрес электронной почты' });
     }
 
-    if (password.length < 8) {
+    if (!isValidPassword(password)) {
       return res.status(400).json({ message: 'Пароль должен содержать минимум 8 символов' });
     }
 
@@ -202,7 +203,7 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Укажите корректный адрес электронной почты' });
     }
 
-    if (password.length < 8) {
+    if (!isValidPassword(password)) {
       return res.status(400).json({ message: 'Пароль должен содержать минимум 8 символов' });
     }
 
@@ -570,7 +571,7 @@ export const updateMe = async (req: AuthRequest, res: Response) => {
       if (!currentPassword) {
         return res.status(400).json({ message: 'Для смены пароля введите текущий пароль' });
       }
-      if (newPassword.length < 8) {
+      if (!isValidPassword(newPassword)) {
         return res.status(400).json({ message: 'Новый пароль должен содержать минимум 8 символов' });
       }
 
@@ -685,7 +686,7 @@ export const resetPasswordWithCode = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Email, код подтверждения и новый пароль обязательны' });
     }
 
-    if (String(newPassword).length < 8) {
+    if (!isValidPassword(newPassword)) {
       return res.status(400).json({ message: 'Новый пароль должен содержать минимум 8 символов' });
     }
 
@@ -736,7 +737,7 @@ export const resetPasswordWithCode = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
-    const hashedPassword = await bcrypt.hash(String(newPassword).trim(), 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({
       where: { id: user.id },
       data: {

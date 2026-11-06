@@ -10,6 +10,15 @@ const { PdfGenerationQueue } = require(path.join(root, 'dist/services/pdfQueue.s
 let index = 0;
 const queue = n => new PdfGenerationQueue(n, path.join(sandbox, `${++index}.json`));
 const tick = () => new Promise(resolve => setImmediate(resolve));
+
+test('queue rejects excess waiting jobs instead of retaining an unbounded backlog', async () => {
+  const q = queue(1); let finish;
+  const first = q.enqueue('capacity-first', 'first', () => new Promise(resolve => { finish = resolve; }));
+  const waiting = [];
+  for (let i = 0; i < 8; i++) waiting.push(q.enqueue('capacity-' + i, 'waiting', async () => i));
+  await assert.rejects(q.enqueue('excess', 'excess', async () => 99), error => error.status === 429);
+  finish(0); await first; await Promise.all(waiting);
+});
 after(() => {
   process.chdir(root);
   assert.ok(path.resolve(sandbox).startsWith(path.resolve(os.tmpdir()) + path.sep));

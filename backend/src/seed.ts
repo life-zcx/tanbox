@@ -17,7 +17,8 @@ async function main() {
     );
   }
 
-  const effectiveAdminPass = initialAdminPass || 'Admin_Tanbox_2026!Secure';
+  if (!initialAdminPass || initialAdminPass.length < 16) throw new Error('Set a strong INITIAL_ADMIN_PASSWORD');
+  const effectiveAdminPass = initialAdminPass;
   const adminPassword = await bcrypt.hash(effectiveAdminPass, 10);
 
   // 2. Admin User - only create if not exists

@@ -1,0 +1,1340 @@
+[
+  {
+    "key": "auth:post:/send-register-code",
+    "name": "auth",
+    "method": "post",
+    "path": "/auth/send-register-code",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "auth:post:/register",
+    "name": "auth",
+    "method": "post",
+    "path": "/auth/register",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "auth:post:/login",
+    "name": "auth",
+    "method": "post",
+    "path": "/auth/login",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "auth:post:/forgot-password",
+    "name": "auth",
+    "method": "post",
+    "path": "/auth/forgot-password",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "auth:post:/reset-password",
+    "name": "auth",
+    "method": "post",
+    "path": "/auth/reset-password",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "auth:get:/me",
+    "name": "auth",
+    "method": "get",
+    "path": "/auth/me",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "auth:patch:/me",
+    "name": "auth",
+    "method": "patch",
+    "path": "/auth/me",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "auth:get:/me/telegram-status",
+    "name": "auth",
+    "method": "get",
+    "path": "/auth/me/telegram-status",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "auth:post:/me/telegram-link",
+    "name": "auth",
+    "method": "post",
+    "path": "/auth/me/telegram-link",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "auth:post:/me/telegram-unlink",
+    "name": "auth",
+    "method": "post",
+    "path": "/auth/me/telegram-unlink",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "calculator:post:/calculate",
+    "name": "calculator",
+    "method": "post",
+    "path": "/calculator/calculate",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "invoices:get:/",
+    "name": "invoices",
+    "method": "get",
+    "path": "/invoices/",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "invoices:get:/:id/pdf",
+    "name": "invoices",
+    "method": "get",
+    "path": "/invoices/fixture/pdf",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "invoices:get:/:id",
+    "name": "invoices",
+    "method": "get",
+    "path": "/invoices/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "invoices:post:/:id/pay-balance",
+    "name": "invoices",
+    "method": "post",
+    "path": "/invoices/fixture/pay-balance",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "invoices:post:/",
+    "name": "invoices",
+    "method": "post",
+    "path": "/invoices/",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "invoices:patch:/:id/status",
+    "name": "invoices",
+    "method": "patch",
+    "path": "/invoices/fixture/status",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "invoices:delete:/:id",
+    "name": "invoices",
+    "method": "delete",
+    "path": "/invoices/fixture",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "labels:post:/parse-csv",
+    "name": "labels",
+    "method": "post",
+    "path": "/labels/parse-csv",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "labels:post:/generate-pdf",
+    "name": "labels",
+    "method": "post",
+    "path": "/labels/generate-pdf",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "labels:post:/preview",
+    "name": "labels",
+    "method": "post",
+    "path": "/labels/preview",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "labels:get:/progress/:trackId",
+    "name": "labels",
+    "method": "get",
+    "path": "/labels/progress/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "labelTemplates:get:/",
+    "name": "labelTemplates",
+    "method": "get",
+    "path": "/labelTemplates/",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "labelTemplates:get:/:id",
+    "name": "labelTemplates",
+    "method": "get",
+    "path": "/labelTemplates/fixture",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "labelTemplates:post:/",
+    "name": "labelTemplates",
+    "method": "post",
+    "path": "/labelTemplates/",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "labelTemplates:put:/:id",
+    "name": "labelTemplates",
+    "method": "put",
+    "path": "/labelTemplates/fixture",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "labelTemplates:delete:/:id",
+    "name": "labelTemplates",
+    "method": "delete",
+    "path": "/labelTemplates/fixture",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "leads:post:/",
+    "name": "leads",
+    "method": "post",
+    "path": "/leads/",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "leads:get:/admin",
+    "name": "leads",
+    "method": "get",
+    "path": "/leads/admin",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "leads:patch:/admin/:id",
+    "name": "leads",
+    "method": "patch",
+    "path": "/leads/admin/fixture",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "logs:post:/frontend",
+    "name": "logs",
+    "method": "post",
+    "path": "/logs/frontend",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "logs:get:/system",
+    "name": "logs",
+    "method": "get",
+    "path": "/logs/system",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "logs:post:/system/clear",
+    "name": "logs",
+    "method": "post",
+    "path": "/logs/system/clear",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "logs:delete:/system",
+    "name": "logs",
+    "method": "delete",
+    "path": "/logs/system",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "markirovka:get:/accounts",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/accounts",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/accounts",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/accounts",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:put:/accounts/:id",
+    "name": "markirovka",
+    "method": "put",
+    "path": "/markirovka/accounts/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:delete:/accounts/:id",
+    "name": "markirovka",
+    "method": "delete",
+    "path": "/markirovka/accounts/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/test-connection",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/test-connection",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/generate-labels-pdf",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/generate-labels-pdf",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:get:/nkt-settings",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/nkt-settings",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:put:/nkt-settings",
+    "name": "markirovka",
+    "method": "put",
+    "path": "/markirovka/nkt-settings",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "markirovka:post:/nkt-test",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/nkt-test",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "markirovka:get:/party/status",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/party/status",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:get:/products/search-by-gtin",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/products/search-by-gtin",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:get:/cards/categories",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/cards/categories",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:get:/cards/categories/:category/schema",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/cards/categories/fixture/schema",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/cards/translate-kk",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/cards/translate-kk",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:get:/cards",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/cards",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/cards",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/cards",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/cards/upload-photo",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/cards/upload-photo",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:get:/cards/:id",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/cards/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:put:/cards/:id",
+    "name": "markirovka",
+    "method": "put",
+    "path": "/markirovka/cards/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:delete:/cards/:id",
+    "name": "markirovka",
+    "method": "delete",
+    "path": "/markirovka/cards/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/cards/:id/submit-nkt",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/cards/fixture/submit-nkt",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:get:/cards/:id/check-status",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/cards/fixture/check-status",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/cards/:id/publish-nkt",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/cards/fixture/publish-nkt",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:get:/catalog",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/catalog",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/catalog/sync",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/catalog/sync",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:get:/operations",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/operations",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:get:/operations/auth-challenge",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/operations/auth-challenge",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/operations/auth-simple",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/operations/auth-simple",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/operations/validate",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/operations/validate",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/operations/aggregation",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/operations/aggregation",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/operations/disaggregation",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/operations/disaggregation",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/operations/import-notification",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/operations/import-notification",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/operations/retirement",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/operations/retirement",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/operations/correction",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/operations/correction",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/operations/utilisation",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/operations/utilisation",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/operations/return-to-turnover",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/operations/return-to-turnover",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:get:/operations/:id/receipt",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/operations/fixture/receipt",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "markirovka:post:/sandbox/order-codes",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/sandbox/order-codes",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "markirovka:post:/sandbox/utilisation",
+    "name": "markirovka",
+    "method": "post",
+    "path": "/markirovka/sandbox/utilisation",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "markirovka:get:/activity",
+    "name": "markirovka",
+    "method": "get",
+    "path": "/markirovka/activity",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "metrics:get:/",
+    "name": "metrics",
+    "method": "get",
+    "path": "/metrics/",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "orders:post:/check-codes",
+    "name": "orders",
+    "method": "post",
+    "path": "/orders/check-codes",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:post:/",
+    "name": "orders",
+    "method": "post",
+    "path": "/orders/",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:get:/",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:get:/queue/status",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/queue/status",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "orders:post:/queue/concurrency",
+    "name": "orders",
+    "method": "post",
+    "path": "/orders/queue/concurrency",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "orders:delete:/queue/jobs/:id",
+    "name": "orders",
+    "method": "delete",
+    "path": "/orders/queue/jobs/fixture",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "orders:delete:/queue/clear",
+    "name": "orders",
+    "method": "delete",
+    "path": "/orders/queue/clear",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "orders:get:/registry/codes",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/registry/codes",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:get:/:id/pdf-status",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/fixture/pdf-status",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:post:/:id/generate-async",
+    "name": "orders",
+    "method": "post",
+    "path": "/orders/fixture/generate-async",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:get:/:id",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:post:/:id/pay-balance",
+    "name": "orders",
+    "method": "post",
+    "path": "/orders/fixture/pay-balance",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:patch:/:id/status",
+    "name": "orders",
+    "method": "patch",
+    "path": "/orders/fixture/status",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "orders:patch:/:id/print-permission",
+    "name": "orders",
+    "method": "patch",
+    "path": "/orders/fixture/print-permission",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "orders:patch:/:id/sticker-layout",
+    "name": "orders",
+    "method": "patch",
+    "path": "/orders/fixture/sticker-layout",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "orders:patch:/:id/sticker-approval",
+    "name": "orders",
+    "method": "patch",
+    "path": "/orders/fixture/sticker-approval",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:patch:/:id/adjust-count",
+    "name": "orders",
+    "method": "patch",
+    "path": "/orders/fixture/adjust-count",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:patch:/:id/stickering-estimate",
+    "name": "orders",
+    "method": "patch",
+    "path": "/orders/fixture/stickering-estimate",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "orders:post:/:id/upload-codes",
+    "name": "orders",
+    "method": "post",
+    "path": "/orders/fixture/upload-codes",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:post:/:id/sync-markirovka",
+    "name": "orders",
+    "method": "post",
+    "path": "/orders/fixture/sync-markirovka",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:post:/:id/sync-nkt",
+    "name": "orders",
+    "method": "post",
+    "path": "/orders/fixture/sync-nkt",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:post:/:id/generate-test-codes",
+    "name": "orders",
+    "method": "post",
+    "path": "/orders/fixture/generate-test-codes",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "orders:post:/:id/submit-utilisation",
+    "name": "orders",
+    "method": "post",
+    "path": "/orders/fixture/submit-utilisation",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "orders:get:/:id/codes-file",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/fixture/codes-file",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:get:/:id/codes-content",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/fixture/codes-content",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:get:/:id/items",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/fixture/items",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:get:/:id/items/:itemIndex/pdf",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/fixture/items/fixture/pdf",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:get:/:id/items-range/pdf",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/fixture/items-range/pdf",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:get:/:id/pdf",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/fixture/pdf",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:get:/:id/act",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/fixture/act",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "orders:get:/:id/invoice",
+    "name": "orders",
+    "method": "get",
+    "path": "/orders/fixture/invoice",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "payments:post:/init",
+    "name": "payments",
+    "method": "post",
+    "path": "/payments/init",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "payments:post:/freedom/check",
+    "name": "payments",
+    "method": "post",
+    "path": "/payments/freedom/check",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "payments:post:/freedom/check.php",
+    "name": "payments",
+    "method": "post",
+    "path": "/payments/freedom/check.php",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "payments:post:/freedom/result",
+    "name": "payments",
+    "method": "post",
+    "path": "/payments/freedom/result",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "payments:post:/freedom/result.php",
+    "name": "payments",
+    "method": "post",
+    "path": "/payments/freedom/result.php",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "payments:get:/my",
+    "name": "payments",
+    "method": "get",
+    "path": "/payments/my",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "payments:get:/balance",
+    "name": "payments",
+    "method": "get",
+    "path": "/payments/balance",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "payments:get:/history",
+    "name": "payments",
+    "method": "get",
+    "path": "/payments/history",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "support:post:/bug-report",
+    "name": "support",
+    "method": "post",
+    "path": "/support/bug-report",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "support:get:/bug-reports/attachment/:filename",
+    "name": "support",
+    "method": "get",
+    "path": "/support/bug-reports/attachment/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "system:get:/health",
+    "name": "system",
+    "method": "get",
+    "path": "/system/health",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "system:get:/backups",
+    "name": "system",
+    "method": "get",
+    "path": "/system/backups",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "system:post:/backups",
+    "name": "system",
+    "method": "post",
+    "path": "/system/backups",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "system:get:/backups/:fileName/download",
+    "name": "system",
+    "method": "get",
+    "path": "/system/backups/fixture/download",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "system:get:/storage",
+    "name": "system",
+    "method": "get",
+    "path": "/system/storage",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "system:post:/storage/clean-cache",
+    "name": "system",
+    "method": "post",
+    "path": "/system/storage/clean-cache",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "system:post:/maintenance",
+    "name": "system",
+    "method": "post",
+    "path": "/system/maintenance",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "system:post:/telegram/test",
+    "name": "system",
+    "method": "post",
+    "path": "/system/telegram/test",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "system:get:/telegram/overview",
+    "name": "system",
+    "method": "get",
+    "path": "/system/telegram/overview",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "system:post:/telegram/send-message",
+    "name": "system",
+    "method": "post",
+    "path": "/system/telegram/send-message",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "system:post:/telegram/send-daily-report",
+    "name": "system",
+    "method": "post",
+    "path": "/system/telegram/send-daily-report",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "system:post:/telegram/send-server-report",
+    "name": "system",
+    "method": "post",
+    "path": "/system/telegram/send-server-report",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "tariffs:get:/",
+    "name": "tariffs",
+    "method": "get",
+    "path": "/tariffs/",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "key": "tariffs:put:/",
+    "name": "tariffs",
+    "method": "put",
+    "path": "/tariffs/",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "users:get:/",
+    "name": "users",
+    "method": "get",
+    "path": "/users/",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "users:get:/:id",
+    "name": "users",
+    "method": "get",
+    "path": "/users/fixture",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "users:patch:/:id",
+    "name": "users",
+    "method": "patch",
+    "path": "/users/fixture",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "users:patch:/:id/block",
+    "name": "users",
+    "method": "patch",
+    "path": "/users/fixture/block",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "users:delete:/:id",
+    "name": "users",
+    "method": "delete",
+    "path": "/users/fixture",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "users:post:/:id/balance",
+    "name": "users",
+    "method": "post",
+    "path": "/users/fixture/balance",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "users:get:/:id/balance-history",
+    "name": "users",
+    "method": "get",
+    "path": "/users/fixture/balance-history",
+    "protected": true,
+    "admin": true,
+    "anonymousStatus": 401,
+    "clientStatus": 403
+  },
+  {
+    "key": "userTemplates:get:/",
+    "name": "userTemplates",
+    "method": "get",
+    "path": "/userTemplates/",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "userTemplates:get:/:id",
+    "name": "userTemplates",
+    "method": "get",
+    "path": "/userTemplates/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "userTemplates:post:/",
+    "name": "userTemplates",
+    "method": "post",
+    "path": "/userTemplates/",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "userTemplates:post:/order-designer",
+    "name": "userTemplates",
+    "method": "post",
+    "path": "/userTemplates/order-designer",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "userTemplates:post:/:id/pay",
+    "name": "userTemplates",
+    "method": "post",
+    "path": "/userTemplates/fixture/pay",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "userTemplates:put:/:id",
+    "name": "userTemplates",
+    "method": "put",
+    "path": "/userTemplates/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "userTemplates:patch:/:id",
+    "name": "userTemplates",
+    "method": "patch",
+    "path": "/userTemplates/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  },
+  {
+    "key": "userTemplates:delete:/:id",
+    "name": "userTemplates",
+    "method": "delete",
+    "path": "/userTemplates/fixture",
+    "protected": true,
+    "admin": false,
+    "anonymousStatus": 401
+  }
+]

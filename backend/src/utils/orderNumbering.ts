@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/db';
 
 /**
@@ -7,14 +8,15 @@ import { prisma } from '../config/db';
 export async function getClientOrderStartIndex(
   userId: string,
   orderId: string,
-  orderCreatedAt: Date
+  orderCreatedAt: Date,
+  client: Prisma.TransactionClient = prisma
 ): Promise<number> {
-  const lastPrecedingItem = await prisma.orderCodeItem.findFirst({
+  const lastPrecedingItem = await client.orderCodeItem.findFirst({
     where: {
       order: {
         userId,
         id: { not: orderId },
-        createdAt: { lt: orderCreatedAt },
+        OR: [{ createdAt: { lt: orderCreatedAt } }, { createdAt: orderCreatedAt, id: { lt: orderId } }],
       },
     },
     orderBy: { index: 'desc' },
@@ -31,16 +33,24 @@ export async function getClientOrderStartIndex(
  * Order 3: (N1 + N2 + 1) .. (N1 + N2 + N3)
  * Guarantees continuous, gapless, client-wide sequential label numbering.
  */
-export async function reindexClientOrders(userId: string): Promise<void> {
-  const orders = await prisma.order.findMany({
+export async function reindexClientOrders(userId: string, client?: Prisma.TransactionClient): Promise<void> {
+  if (client) return reindexInTransaction(userId, client);
+  await prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+    await reindexInTransaction(userId, tx);
+  }, { timeout: 60000 });
+}
+
+async function reindexInTransaction(userId: string, client: Prisma.TransactionClient): Promise<void> {
+  const orders = await client.order.findMany({
     where: { userId },
-    orderBy: { createdAt: 'asc' },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     select: { id: true, orderNumber: true },
   });
 
   let runningIndex = 1;
   for (const ord of orders) {
-    const stats = await prisma.orderCodeItem.aggregate({
+    const stats = await client.orderCodeItem.aggregate({
       where: { orderId: ord.id },
       _count: { _all: true },
       _min: { index: true },
@@ -60,13 +70,13 @@ export async function reindexClientOrders(userId: string): Promise<void> {
     }
 
     // First, make indices negative to avoid transient unique constraint collisions on @@unique([orderId, index])
-    await prisma.$executeRawUnsafe(
+    await client.$executeRawUnsafe(
       'UPDATE "OrderCodeItem" SET "index" = -ABS("index") WHERE "orderId" = $1',
       ord.id
     );
 
     // Then, assign sequential indices starting from runningIndex
-    await prisma.$executeRawUnsafe(
+    await client.$executeRawUnsafe(
       `WITH ranked AS (
          SELECT "orderId", "index" AS old_idx, ($2 - 1 + row_number() OVER (ORDER BY ABS("index") ASC))::integer AS new_idx
          FROM "OrderCodeItem"

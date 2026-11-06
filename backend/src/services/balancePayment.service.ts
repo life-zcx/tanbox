@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { InvoiceStatus, OnlinePaymentStatus, OnlinePaymentType, PaymentStatus } from '@prisma/client';
 import { prisma } from '../config/db';
+import { grantPaidTemplate } from './orderFinancials.service';
 
 export class BalancePaymentError extends Error {
   constructor(public code: string, public status: number, message: string) { super(message); }
@@ -33,6 +34,9 @@ export async function payWithBalance(userId: string, isAdmin: boolean, kind: 'or
       throw new BalancePaymentError('ALREADY_PAID', 409, 'Оплата связанного счета уже учтена');
     }
     const amount = invoice ? invoice.totalAmount : order!.totalPrice;
+    if (invoice && order && (!invoice.totalAmount.equals(order.totalPrice) || invoice.userId !== order.userId)) {
+      throw new BalancePaymentError('STALE_INVOICE', 409, 'Счёт не соответствует актуальному заказу. Запросите обновлённый счёт.');
+    }
     if (amount.lessThanOrEqualTo(0)) throw new BalancePaymentError('INVALID_AMOUNT', 400, 'Сумма оплаты должна быть положительной');
     const debit = await tx.user.updateMany({
       where: { id: userId, balance: { gte: amount } }, data: { balance: { decrement: amount } },
@@ -42,6 +46,7 @@ export async function payWithBalance(userId: string, isAdmin: boolean, kind: 'or
     if (orderId) {
       await tx.order.update({ where: { id: orderId }, data: { paymentStatus: PaymentStatus.PAID, printAllowed: true } });
       await tx.invoice.updateMany({ where: { orderId, status: { not: InvoiceStatus.CANCELLED } }, data: { status: InvoiceStatus.PAID } });
+      await grantPaidTemplate(tx, order!);
     } else {
       await tx.invoice.update({ where: { id }, data: { status: InvoiceStatus.PAID } });
     }

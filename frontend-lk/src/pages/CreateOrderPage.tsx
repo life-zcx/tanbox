@@ -555,6 +555,15 @@ export const CreateOrderPage: React.FC = () => {
   // Calculation state
   const [calculated, setCalculated] = useState<{ unitPrice: number; totalPrice: number } | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [requestKey] = useState(() => {
+    const generate = () => [...crypto.getRandomValues(new Uint8Array(16))].map(value => value.toString(16).padStart(2, '0')).join('');
+    try {
+      const existing = sessionStorage.getItem('tanbox_order_request_key');
+      if (existing) return existing;
+      const key = generate(); sessionStorage.setItem('tanbox_order_request_key', key); return key;
+    } catch { return generate(); }
+  });
+  const createdOrderId = useRef<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [codesFile, setCodesFile] = useState<File | null>(null);
@@ -841,6 +850,8 @@ export const CreateOrderPage: React.FC = () => {
   useEffect(() => {
     if (!tariffType || !itemsCount || itemsCount < 1) return;
 
+    let cancelled = false;
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
@@ -849,7 +860,8 @@ export const CreateOrderPage: React.FC = () => {
           itemsCount,
           extraServices,
           ssccNeeded: tariffType === 'PRO' ? true : ssccNeeded,
-        });
+        }, { signal: controller.signal });
+        if (cancelled) return;
         setCalculated({
           unitPrice: res.data.unitPrice,
           totalPrice: res.data.totalPrice,
@@ -858,11 +870,11 @@ export const CreateOrderPage: React.FC = () => {
       } catch (e) {
         console.error('Calculation error:', e);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }, 400);
 
-    return () => clearTimeout(timer);
+    return () => { cancelled = true; controller.abort(); clearTimeout(timer); };
   }, [tariffType, itemsCount, ssccNeeded, extraServices]);
 
   // Filtered categories
@@ -1153,7 +1165,8 @@ export const CreateOrderPage: React.FC = () => {
       .join('\n\n');
 
     try {
-      const res = await createOrder({
+      const res = createdOrderId.current ? { order: { id: createdOrderId.current } } : await createOrder({
+        idempotencyKey: requestKey,
         category,
         tariffType,
         itemsCount: finalCount,
@@ -1187,6 +1200,7 @@ export const CreateOrderPage: React.FC = () => {
       } as any);
 
       const newOrderId = res?.order?.id || res?.id;
+      createdOrderId.current = newOrderId || null;
 
       // If user attached codes file during creation, upload it now
       if (newOrderId && (uploadedCsvFiles.length > 0 || codesFile)) {
@@ -1208,13 +1222,14 @@ export const CreateOrderPage: React.FC = () => {
             });
           }
         } catch (uploadErr) {
-          console.warn('Codes file upload failed:', uploadErr);
+          throw Object.assign(new Error('ORDER_FILE_UPLOAD_FAILED'), { cause: uploadErr });
         }
       }
 
       // Clear pending order storage on success
       try {
         localStorage.removeItem('tanbox_pending_order');
+        sessionStorage.removeItem('tanbox_order_request_key');
       } catch {}
 
       // Save warehouse address to profile if user kept option checked
@@ -1230,6 +1245,10 @@ export const CreateOrderPage: React.FC = () => {
         },
       });
     } catch (err: any) {
+      if (createdOrderId.current) {
+        setErrorMsg('Заказ уже создан, но файл кодов не загружен. Повторите отправку — файл будет загружен в этот же заказ.');
+        return;
+      }
       console.error('Submit order error:', err);
       setErrorMsg(
         err.response?.data?.message ||

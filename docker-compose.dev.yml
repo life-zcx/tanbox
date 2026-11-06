@@ -5,7 +5,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-tanbox_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tanbox_pass_2026}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-tanbox_db}
     ports:
       - "5433:5432"
@@ -27,11 +27,14 @@ services:
       - "5050:5050"
     environment:
       PORT: ${PORT:-5050}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://tanbox_user:tanbox_pass_2026@postgres:5432/tanbox_db?schema=public}
-      JWT_SECRET: ${JWT_SECRET:-dev_only_local_secret_please_change_in_env_file}
-      ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:-tanbox_markirovka_encryption_secret_key_2026_32bytes!!}
-      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-Admin_Tanbox_2026!Secure}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:?Set ENCRYPTION_SECRET in .env}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?Set INITIAL_ADMIN_PASSWORD in .env}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
+      BUSINESS_TIME_ZONE: ${BUSINESS_TIME_ZONE:-Asia/Qyzylorda}
+      SSCC_COMPANY_PREFIX: ${SSCC_COMPANY_PREFIX:-0487000}
+      INTEGRATION_ALLOWED_HOSTS: ${INTEGRATION_ALLOWED_HOSTS:-}
       NODE_ENV: development
       NODE_OPTIONS: "--max-old-space-size=512"
       CHOKIDAR_USEPOLLING: "true"

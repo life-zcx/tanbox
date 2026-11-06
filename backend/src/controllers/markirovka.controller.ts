@@ -1,3 +1,4 @@
+import { orderCodeAccessSelect, orderPrintAccessError } from '../utils/orderCodeAccess';
 import { Request, Response } from 'express';
 import http from 'http';
 import { prisma } from '../config/db';
@@ -595,53 +596,38 @@ export async function generateLabelsPdf(req: Request, res: Response) {
     let codesList: string[] = Array.isArray(codes) ? codes : [];
 
     const user = (req as any).user;
+    if (!user) return res.status(401).json({ message: 'Не авторизован' });
+    if (user.role !== 'ADMIN' && !orderId) {
+      return res.status(403).json({ message: 'Для печати укажите заказ с оплатой или разрешением администратора.' });
+    }
 
-    if (codesList.length === 0 && orderId) {
+    if (orderId && (user.role !== 'ADMIN' || codesList.length === 0)) {
       const cleanOrderId = String(orderId).trim();
-
-      // Authorization guard: non-admin users can only generate labels for their own orders
-      if (user?.role !== 'ADMIN') {
-        const userOrder = await prisma.order.findFirst({
-          where: {
-            OR: [{ id: cleanOrderId }, { orderNumber: cleanOrderId }],
-            userId: user?.id,
-          },
-          select: { id: true },
-        });
-
-        const userMarkOrder = !userOrder
-          ? await prisma.markirovkaOrder.findFirst({
-              where: {
-                id: cleanOrderId,
-                account: { userId: user?.id },
-              },
-              select: { id: true },
-            })
-          : null;
-
-        if (!userOrder && !userMarkOrder) {
-          return res.status(403).json({ message: 'Доступ к кодам данного заказа запрещен' });
-        }
-      }
-
-      const markOrder = await prisma.markirovkaOrder.findUnique({ where: { id: cleanOrderId } });
-      if (markOrder?.codes && Array.isArray(markOrder.codes)) {
-        codesList = markOrder.codes as string[];
-      } else {
-        const orderRecord = await prisma.order.findFirst({
-          where: {
-            OR: [{ id: cleanOrderId }, { orderNumber: cleanOrderId }],
-          },
-          select: { id: true },
-        });
-        const resolvedId = orderRecord?.id || cleanOrderId;
-
+      const orderRecord = await prisma.order.findFirst({
+        where: { OR: [{ id: cleanOrderId }, { orderNumber: cleanOrderId }] },
+        select: { id: true, ...orderCodeAccessSelect },
+      });
+      if (orderRecord) {
+        const printError = orderPrintAccessError(orderRecord, user);
+        if (printError) return res.status(403).json({ message: printError });
         const codeItems = await prisma.orderCodeItem.findMany({
-          where: { orderId: resolvedId },
+          where: { orderId: orderRecord.id },
           orderBy: { index: 'asc' },
-          select: { code: true },
+          select: { code: true }, take: 2001,
         });
-        codesList = codeItems.map((c) => c.code);
+        codesList = codeItems.map(item => item.code);
+      } else {
+        const markOrder = await prisma.markirovkaOrder.findUnique({
+          where: { id: cleanOrderId },
+          include: { order: { select: orderCodeAccessSelect } },
+        });
+        if (!markOrder) return res.status(404).json({ message: 'Заказ не найден' });
+        if (user.role !== 'ADMIN') {
+          if (!markOrder.order) return res.status(403).json({ message: 'Эмиссия не связана с заказом, разрешённым для печати.' });
+          const printError = orderPrintAccessError(markOrder.order, user);
+          if (printError) return res.status(403).json({ message: printError });
+        }
+        codesList = Array.isArray(markOrder.codes) ? markOrder.codes as string[] : [];
       }
     }
 
@@ -649,6 +635,7 @@ export async function generateLabelsPdf(req: Request, res: Response) {
       return res.status(400).json({ message: 'Список кодов маркировки пуст' });
     }
 
+    if (codesList.length > 2000 || codesList.some(code => typeof code !== 'string' || code.length > 2048)) return res.status(413).json({ message: 'Maximum 2000 labels per request' });
     const is58x40 = templateType === '58x40';
     const widthMm = is58x40 ? 58 : 40;
     const heightMm = is58x40 ? 40 : 30;
@@ -734,7 +721,7 @@ export async function getNktSettingsHandler(req: Request, res: Response) {
     const settings = getNktSettings();
     return res.json({
       success: true,
-      settings,
+      settings: { enabled: settings.enabled, baseUrl: settings.baseUrl, apiKey: '', hasApiKey: Boolean(settings.apiKey), updatedAt: settings.updatedAt, updatedBy: settings.updatedBy },
     });
   } catch (err: any) {
     logger.error('Failed to get NKT settings:', err);
@@ -769,7 +756,7 @@ export async function updateNktSettingsHandler(req: Request, res: Response) {
     return res.json({
       success: true,
       message: `Настройки Национального Каталога успешно сохранены. Поиск товаров: ${updated.enabled ? 'ВКЛЮЧЕН' : 'ОТКЛЮЧЕН'}.`,
-      settings: updated,
+      settings: { enabled: updated.enabled, baseUrl: updated.baseUrl, apiKey: '', hasApiKey: Boolean(updated.apiKey), updatedAt: updated.updatedAt, updatedBy: updated.updatedBy },
     });
   } catch (err: any) {
     logger.error('Failed to update NKT settings:', err);

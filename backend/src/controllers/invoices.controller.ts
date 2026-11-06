@@ -1,3 +1,4 @@
+import { grantPaidTemplate } from '../services/orderFinancials.service';
 import { payWithBalance, BalancePaymentError } from '../services/balancePayment.service';
 import { Response } from 'express';
 import { prisma } from '../config/db';
@@ -358,26 +359,27 @@ export async function updateInvoiceStatus(req: AuthRequest, res: Response) {
       return res.status(400).json({ message: 'Некорректный статус счета' });
     }
 
-    const updated = await prisma.invoice.update({
-      where: { id },
-      data: { status: status as InvoiceStatus },
-      include: { items: true },
+    const updated = await prisma.$transaction(async tx => {
+      const initial = await tx.invoice.findUniqueOrThrow({ where: { id } });
+      if (initial.orderId) await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${initial.orderId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM "Invoice" WHERE id = ${id} FOR UPDATE`;
+      const invoice = await tx.invoice.findUniqueOrThrow({ where: { id } });
+      if (invoice.orderId) {
+        const order = await tx.order.findUniqueOrThrow({ where: { id: invoice.orderId } });
+        if (invoice.status === 'PAID' && status !== 'PAID' && order.paymentStatus === 'PAID') throw Object.assign(new Error('Сначала оформите возврат или корректировку заказа.'), { status: 409 });
+        if (status === 'PAID' && (order.status === 'CANCELLED' || !order.totalPrice.equals(invoice.totalAmount))) throw Object.assign(new Error('Счёт не соответствует заказу.'), { status: 409 });
+        if (status === 'PAID') {
+          await tx.order.update({ where: { id: order.id }, data: { paymentStatus: 'PAID', printAllowed: true } });
+          await grantPaidTemplate(tx, order);
+        }
+      }
+      return tx.invoice.update({ where: { id }, data: { status }, include: { items: true } });
     });
 
-    // If invoice is linked to an order and marked PAID, optionally update order paymentStatus
-    if (status === 'PAID' && updated.orderId) {
-      await prisma.order.update({
-        where: { id: updated.orderId },
-        data: { paymentStatus: 'PAID' },
-      }).catch((e) => logger.warn(`Failed to auto-update order payment status: ${e}`));
-
-      clientTelegramBot.notifyPaymentStatusChanged(updated.orderId, 'PAID').catch(() => {});
-    }
-
     return res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error updating invoice status:', error);
-    return res.status(500).json({ message: 'Ошибка при изменении статуса счета' });
+    return res.status(error.status || 500).json({ message: error.status ? error.message : 'Ошибка при изменении статуса счета' });
   }
 }
 

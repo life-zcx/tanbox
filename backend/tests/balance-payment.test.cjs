@@ -5,7 +5,7 @@ const { prisma } = require('../dist/config/db');
 const { payWithBalance } = require('../dist/services/balancePayment.service');
 
 // Transactional double: serializes row-lock users and rolls back all changes on failure.
-function database({ failHistory = false, balance = 1000 } = {}) {
+function database({ failHistory = false, balance = 1000, invoiceAmount = 100 } = {}) {
   let state = { balance, order: { id: 'order', userId: 'owner', orderNumber: '1', totalPrice: 100, status: 'NEW', paymentStatus: 'UNPAID' }, invoice: { id: 'invoice', orderId: 'order', userId: 'owner', invoiceNumber: '1', totalAmount: 100, status: 'PENDING' }, payments: [] };
   let tail = Promise.resolve();
   prisma.$transaction = async callback => {
@@ -13,7 +13,7 @@ function database({ failHistory = false, balance = 1000 } = {}) {
     tail = new Promise(resolve => { release = resolve; });
     await previous;
     const next = structuredClone(state);
-    const target = name => ({ ...next[name], totalPrice: new Prisma.Decimal(100), totalAmount: new Prisma.Decimal(100) });
+    const target = name => ({ ...next[name], totalPrice: new Prisma.Decimal(100), totalAmount: new Prisma.Decimal(invoiceAmount) });
     const tx = {
       $queryRaw: async () => [],
       user: {
@@ -43,6 +43,14 @@ test('concurrent invoice and order payments charge the shared obligation only on
   assert.equal(state().payments.length, 1);
   assert.equal(state().invoice.status, 'PAID');
   assert.equal(state().order.paymentStatus, 'PAID');
+});
+
+test('a stale lower invoice cannot debit balance or unlock a more expensive order', async () => {
+  const state = database({ invoiceAmount: 8 });
+  await assert.rejects(payWithBalance('owner', false, 'invoice', 'invoice'), error => error.code === 'STALE_INVOICE');
+  assert.equal(state().balance, 1000);
+  assert.equal(state().order.paymentStatus, 'UNPAID');
+  assert.equal(state().payments.length, 0);
 });
 
 test('a failed history write rolls back the debit and both statuses', async () => {

@@ -11,8 +11,8 @@ const PORT = process.env.PORT || 5060;
 // Enable CORS for all internal origins and admin panel
 app.use(cors({ origin: true, credentials: true }));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Healthcheck
 app.get('/health', (req, res) => {

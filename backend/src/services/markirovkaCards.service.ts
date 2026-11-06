@@ -1,11 +1,39 @@
+import { integrationFetch, validateTrustedIntegrationUrl, fetchPublicImage } from './integrationHttp.service';
+import { mapNktStatus } from '../utils/nktStatus';
 import { prisma } from '../config/db';
-import { OrderCategory, MarkirovkaCardStatus } from '@prisma/client';
+import { OrderCategory, MarkirovkaCardStatus, MarkirovkaProductCard, MarkirovkaAccount } from '@prisma/client';
 import { CATEGORY_SCHEMAS } from '../config/categorySchemas';
 import { getNktSettings } from './nktSettings.service';
 import { isBlockedSsrfHostname, validateAndSanitizeNktBaseUrl } from './markirovkaClient.service';
 import { logger } from '../utils/logger';
 import fs from 'fs';
 import path from 'path';
+
+export class CardAccountAccessError extends Error {
+  constructor() {
+    super('Аккаунт маркировки не принадлежит владельцу карточки');
+  }
+}
+
+type CardAccountSummary = Pick<MarkirovkaAccount, 'id' | 'userId' | 'name' | 'login' | 'categories'>;
+
+function toCardResponse<T extends MarkirovkaProductCard & { account?: CardAccountSummary | null }>(card: T) {
+  const { account, ...fields } = card;
+  if (account === undefined) return fields;
+  return {
+    ...fields,
+    account: account && account.userId === card.userId
+      ? { id: account.id, name: account.name, login: account.login, categories: account.categories }
+      : null,
+  };
+}
+
+function assertCardAccountOwnership(card: MarkirovkaProductCard & { account: MarkirovkaAccount | null }) {
+  // Check existing links as well as new assignments; legacy invalid links must not use credentials.
+  if (card.accountId && (!card.account || card.account.userId !== card.userId)) {
+    throw new CardAccountAccessError();
+  }
+}
 
 export interface CreateCardInput {
   accountId?: string;
@@ -151,7 +179,16 @@ export class MarkirovkaCardsService {
     }
 
     const updateData: any = {};
-    if (data.accountId !== undefined) updateData.accountId = data.accountId || null;
+    if (data.accountId !== undefined) {
+      if (data.accountId) {
+        const account = await prisma.markirovkaAccount.findFirst({
+          where: { id: data.accountId, userId: existing.userId },
+          select: { id: true },
+        });
+        if (!account) throw new CardAccountAccessError();
+      }
+      updateData.accountId = data.accountId || null;
+    }
     if (data.name !== undefined) updateData.name = data.name.trim();
     if (data.nameKk !== undefined) updateData.nameKk = data.nameKk?.trim() || null;
     if (data.brand !== undefined) updateData.brand = data.brand?.trim() || null;
@@ -205,6 +242,7 @@ export class MarkirovkaCardsService {
   public async deleteCard(cardId: string, userId: string, isAdmin: boolean) {
     const existing = await prisma.markirovkaProductCard.findUnique({
       where: { id: cardId },
+      include: { account: true },
     });
 
     if (!existing) {
@@ -217,22 +255,22 @@ export class MarkirovkaCardsService {
       throw new Error('Утвержденную карточку нельзя удалить');
     }
 
+    assertCardAccountOwnership(existing);
+
     // If card was submitted to NKT and has a request ID, also delete request from NKT
     if (existing.nktRequestId) {
       try {
-        let account = existing.accountId
-          ? await prisma.markirovkaAccount.findUnique({ where: { id: existing.accountId } })
-          : await prisma.markirovkaAccount.findFirst({ where: { userId: existing.userId } });
+        const account = existing.account || await prisma.markirovkaAccount.findFirst({ where: { userId: existing.userId } });
 
         const settings = getNktSettings();
         const cleanUserKey = account?.nktApiKey ? account.nktApiKey.replace(/[^\x20-\x7E]/g, '').trim() : '';
         const effectiveApiKey = cleanUserKey || settings.apiKey;
-        const rawBaseUrl = (account?.nktBaseUrl && account.nktBaseUrl.trim()) || settings.baseUrl || 'https://nationalcatalog.kz/gwp';
+        const rawBaseUrl = (cleanUserKey && account?.nktBaseUrl?.trim()) || settings.baseUrl || 'https://nationalcatalog.kz/gwp';
         const effectiveBaseUrl = validateAndSanitizeNktBaseUrl(rawBaseUrl);
 
         if (effectiveApiKey) {
           logger.info(`[NKT Delete] Removing request #${existing.nktRequestId} from NKT for card ${cardId}`);
-          await fetch(`${effectiveBaseUrl}/portal/api/v1/products/requests/${encodeURIComponent(existing.nktRequestId)}`, {
+          await integrationFetch(`${effectiveBaseUrl}/portal/api/v1/products/requests/${encodeURIComponent(existing.nktRequestId)}`, {
             method: 'DELETE',
             headers: { 'X-API-KEY': effectiveApiKey, 'Accept': 'application/json' },
             signal: AbortSignal.timeout(5000),
@@ -265,6 +303,8 @@ export class MarkirovkaCardsService {
     if (!isAdmin && card.userId !== userId) {
       throw new Error('Нет доступа к данной карточке товара');
     }
+
+    assertCardAccountOwnership(card);
 
     // Validate completeness
     if (!card.tnved || card.tnved.length < 4) {
@@ -300,7 +340,7 @@ export class MarkirovkaCardsService {
     const cleanUserKey = account?.nktApiKey ? account.nktApiKey.replace(/[^\x20-\x7E]/g, '').trim() : '';
     const effectiveApiKey = cleanUserKey || settings.apiKey;
     const rawBaseUrl =
-      (account?.nktBaseUrl && account.nktBaseUrl.trim()) ||
+      (cleanUserKey && account?.nktBaseUrl?.trim()) ||
       settings.baseUrl ||
       'https://nationalcatalog.kz/gwp';
     const effectiveBaseUrl = validateAndSanitizeNktBaseUrl(rawBaseUrl);
@@ -477,7 +517,7 @@ export class MarkirovkaCardsService {
     if (nktRequestId) {
       try {
         const checkStatusUrl = `${effectiveBaseUrl}/portal/api/v1/products/requests/${encodeURIComponent(nktRequestId)}/status`;
-        const checkRes = await fetch(checkStatusUrl, {
+        const checkRes = await integrationFetch(checkStatusUrl, {
           headers: { 'X-API-KEY': effectiveApiKey, 'Accept': 'application/json' },
           signal: AbortSignal.timeout(6000),
         });
@@ -506,7 +546,7 @@ export class MarkirovkaCardsService {
       if (isUpdateRequest) {
         const url = `${effectiveBaseUrl}/portal/api/v1/products/requests/${encodeURIComponent(nktRequestId)}`;
         logger.info(`[NKT Request] Updating existing request #${nktRequestId} for card ${card.id} at ${url}`);
-        const res = await fetch(url, {
+        const res = await integrationFetch(url, {
           method: 'PUT',
           headers: {
             'X-API-KEY': effectiveApiKey,
@@ -527,7 +567,7 @@ export class MarkirovkaCardsService {
       if (!isUpdateRequest) {
         const url = `${effectiveBaseUrl}/portal/api/v1/products/requests`;
         logger.info(`[NKT Request] Submitting product card ${card.id} to ${url} with ${card.account?.nktApiKey ? 'user personal' : 'system'} key`);
-        const res = await fetch(url, {
+        const res = await integrationFetch(url, {
           method: 'POST',
           headers: {
             'X-API-KEY': effectiveApiKey,
@@ -577,17 +617,12 @@ export class MarkirovkaCardsService {
                 logger.warn(`[NKT Storage] Заблокирована попытка SSRF для фото: ${photoItem}`);
                 continue;
               }
-              const fetchImg = await fetch(photoItem, { signal: AbortSignal.timeout(10000) });
-              if (fetchImg.ok) {
-                const arrBuf = await fetchImg.arrayBuffer();
-                const mime = fetchImg.headers.get('content-type') || 'image/jpeg';
-                fileBlob = new Blob([arrBuf], { type: mime });
-              }
+              fileBlob = await fetchPublicImage(photoItem);
             } else {
               // Local file in uploads/product-cards
               const localFilename = path.basename(photoItem);
               const localPath = path.resolve(process.cwd(), 'uploads/product-cards', localFilename);
-              if (fs.existsSync(localPath)) {
+              if (fs.existsSync(localPath) && fs.statSync(localPath).size <= 10 * 1024 * 1024) {
                 const buf = fs.readFileSync(localPath);
                 const ext = path.extname(localFilename).toLowerCase();
                 const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
@@ -600,7 +635,7 @@ export class MarkirovkaCardsService {
               const form = new FormData();
               form.append('file', fileBlob, filename);
               const uploadUrl = `${effectiveBaseUrl}/portal/api/v1/storage/${encodeURIComponent(nktRequestId)}/upload?imageType=${imageType}`;
-              const upRes = await fetch(uploadUrl, {
+              const upRes = await integrationFetch(uploadUrl, {
                 method: 'POST',
                 headers: {
                   'X-API-KEY': effectiveApiKey,
@@ -636,7 +671,7 @@ export class MarkirovkaCardsService {
 
       const updateReqUrl = `${effectiveBaseUrl}/portal/api/v1/products/requests/${encodeURIComponent(nktRequestId)}`;
       logger.info(`[NKT Request] Attaching imageFiles (${uploadedImageFiles.length} photos) to request #${nktRequestId}`);
-      await fetch(updateReqUrl, {
+      await integrationFetch(updateReqUrl, {
         method: 'PUT',
         headers: {
           'X-API-KEY': effectiveApiKey,
@@ -656,7 +691,7 @@ export class MarkirovkaCardsService {
         const moderationUrl = `${effectiveBaseUrl}/portal/api/v1/products/requests/${encodeURIComponent(nktRequestId)}/moderation`;
         logger.info(`[NKT Request] Transitioning card ${card.id} (req #${nktRequestId}) to moderation at ${moderationUrl}`);
 
-        const modRes = await fetch(moderationUrl, {
+        const modRes = await integrationFetch(moderationUrl, {
           method: 'PUT',
           headers: {
             'X-API-KEY': effectiveApiKey,
@@ -682,11 +717,7 @@ export class MarkirovkaCardsService {
       // If NKT immediately assigned GTIN (auto-approval)
       const assignedGtin = responseData?.gtin || responseData?.ntin || responseData?.data?.gtin || null;
 
-      const finalStatus = assignedGtin
-        ? MarkirovkaCardStatus.APPROVED
-        : moderationSucceeded
-        ? MarkirovkaCardStatus.PENDING_MODERATION
-        : MarkirovkaCardStatus.DRAFT;
+      const finalStatus = moderationSucceeded ? MarkirovkaCardStatus.PENDING_MODERATION : MarkirovkaCardStatus.DRAFT;
 
       const updated = await prisma.markirovkaProductCard.update({
         where: { id: card.id },
@@ -723,9 +754,9 @@ export class MarkirovkaCardsService {
       include: { account: true },
     });
 
-    if (!card || !card.nktRequestId) {
-      return card;
-    }
+    if (!card) return null;
+    assertCardAccountOwnership(card);
+    if (!card.nktRequestId) return toCardResponse(card);
 
     let account = card.account;
     if (!account && card.userId) {
@@ -745,7 +776,7 @@ export class MarkirovkaCardsService {
     const cleanUserKey = account?.nktApiKey ? account.nktApiKey.replace(/[^\x20-\x7E]/g, '').trim() : '';
     const effectiveApiKey = cleanUserKey || settings.apiKey;
     const rawBaseUrl =
-      (account?.nktBaseUrl && account.nktBaseUrl.trim()) ||
+      (cleanUserKey && account?.nktBaseUrl?.trim()) ||
       settings.baseUrl ||
       'https://nationalcatalog.kz/gwp';
     const effectiveBaseUrl = validateAndSanitizeNktBaseUrl(rawBaseUrl);
@@ -757,7 +788,7 @@ export class MarkirovkaCardsService {
     try {
       // 1. Query official status endpoint
       const statusUrl = `${effectiveBaseUrl}/portal/api/v1/products/requests/${encodeURIComponent(card.nktRequestId)}/status`;
-      const res = await fetch(statusUrl, {
+      const res = await integrationFetch(statusUrl, {
         headers: {
           'X-API-KEY': effectiveApiKey,
           'Accept': 'application/json',
@@ -811,74 +842,14 @@ export class MarkirovkaCardsService {
           }
         }
 
-        let newStatus = card.status;
-        if (
-          code.includes('complet') ||
-          code.includes('approv') ||
-          code.includes('publish') ||
-          value.includes('выполн') ||
-          value.includes('одобр') ||
-          value.includes('опублик') ||
-          Boolean(gtin)
-        ) {
-          newStatus = MarkirovkaCardStatus.APPROVED;
-        } else if (
-          code.includes('reject') ||
-          code.includes('declin') ||
-          code.includes('revis') ||
-          value.includes('отклон') ||
-          value.includes('доработ')
-        ) {
-          newStatus = MarkirovkaCardStatus.REJECTED;
-        } else if (
-          code.includes('moderat') ||
-          code.includes('progress') ||
-          code.includes('pending') ||
-          code.includes('review') ||
-          value.includes('рассмотр') ||
-          value.includes('модерац')
-        ) {
-          newStatus = MarkirovkaCardStatus.PENDING_MODERATION;
-        } else if (
-          code.includes('new') ||
-          code.includes('draft') ||
-          value.includes('чернов') ||
-          value.includes('новая')
-        ) {
-          newStatus = MarkirovkaCardStatus.DRAFT;
-        }
+        const newStatus = mapNktStatus(data, card.status);
 
         const productUrl = data.productUrl || data.data?.productUrl || null;
         let finalProductUrl = productUrl;
 
-        // If card was approved but not published yet, auto-publish it via PUT /publish
-        if (newStatus === MarkirovkaCardStatus.APPROVED && !finalProductUrl && card.nktRequestId) {
-          try {
-            const pubUrl = `${effectiveBaseUrl}/portal/api/v1/products/requests/${encodeURIComponent(card.nktRequestId)}/publish`;
-            const pubRes = await fetch(pubUrl, {
-              method: 'PUT',
-              headers: { 'X-API-KEY': effectiveApiKey, 'Accept': 'application/json' },
-              signal: AbortSignal.timeout(10000),
-            });
-            if (pubRes.ok) {
-              logger.info(`[NKT Auto-Publish] Published card ${card.id} (req #${card.nktRequestId})`);
-              const sRes = await fetch(statusUrl, {
-                headers: { 'X-API-KEY': effectiveApiKey, 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(5000),
-              });
-              if (sRes.ok) {
-                const sData: any = await sRes.json().catch(() => null);
-                if (sData?.productUrl) finalProductUrl = sData.productUrl;
-              }
-            }
-          } catch (pubErr: any) {
-            logger.warn(`[NKT Auto-Publish] Failed for #${card.nktRequestId}: ${pubErr.message}`);
-          }
-        }
-
         const customAttrs = (card.attributes as any) || {};
         if (finalProductUrl) customAttrs.productUrl = finalProductUrl;
-        if (finalProductUrl || Boolean(data.ntinCode)) customAttrs.isPublished = true;
+        if (finalProductUrl) customAttrs.isPublished = true;
 
         return await prisma.markirovkaProductCard.update({
           where: { id: card.id },
@@ -896,7 +867,7 @@ export class MarkirovkaCardsService {
       throw e;
     }
 
-    return card;
+    return toCardResponse(card);
   }
 
   /**
@@ -914,6 +885,7 @@ export class MarkirovkaCardsService {
     if (!isAdmin && card.userId !== userId) {
       throw new Error('Нет доступа к данной карточке');
     }
+    assertCardAccountOwnership(card);
     if (!card.nktRequestId) {
       throw new Error('Карточка еще не была отправлена в НКТ');
     }
@@ -930,7 +902,7 @@ export class MarkirovkaCardsService {
     const cleanUserKey = account?.nktApiKey ? account.nktApiKey.replace(/[^\x20-\x7E]/g, '').trim() : '';
     const effectiveApiKey = cleanUserKey || settings.apiKey;
     const rawBaseUrl =
-      (account?.nktBaseUrl && account.nktBaseUrl.trim()) ||
+      (cleanUserKey && account?.nktBaseUrl?.trim()) ||
       settings.baseUrl ||
       'https://nationalcatalog.kz/gwp';
     const effectiveBaseUrl = validateAndSanitizeNktBaseUrl(rawBaseUrl);
@@ -942,7 +914,7 @@ export class MarkirovkaCardsService {
     const publishUrl = `${effectiveBaseUrl}/portal/api/v1/products/requests/${encodeURIComponent(card.nktRequestId)}/publish`;
     logger.info(`[NKT Publish] Publishing request #${card.nktRequestId} at ${publishUrl}`);
 
-    const res = await fetch(publishUrl, {
+    const res = await integrationFetch(publishUrl, {
       method: 'PUT',
       headers: {
         'X-API-KEY': effectiveApiKey,
@@ -962,7 +934,7 @@ export class MarkirovkaCardsService {
     let productUrl: string | null = null;
     let ntinCode: string | null = null;
     try {
-      const sRes = await fetch(statusUrl, {
+      const sRes = await integrationFetch(statusUrl, {
         headers: { 'X-API-KEY': effectiveApiKey, 'Accept': 'application/json' },
         signal: AbortSignal.timeout(10000),
       });
@@ -1051,7 +1023,7 @@ export class MarkirovkaCardsService {
             select: { id: true, companyName: true, binIin: true, email: true },
           },
           account: {
-            select: { id: true, name: true, login: true, categories: true },
+            select: { id: true, userId: true, name: true, login: true, categories: true },
           },
         },
       }),
@@ -1076,7 +1048,7 @@ export class MarkirovkaCardsService {
     }
 
     return {
-      cards,
+      cards: cards.map(toCardResponse),
       pagination: {
         page,
         limit,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { OrderItem } from '../types';
-import { apiClient } from '../api/client';
+import { apiClient, getAllPages } from '../api/client';
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<OrderItem[]>([]);
@@ -10,7 +10,7 @@ export const useOrders = () => {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/orders');
+      const res = await getAllPages('/orders');
       setOrders(res.data);
       setError(null);
     } catch (err: any) {

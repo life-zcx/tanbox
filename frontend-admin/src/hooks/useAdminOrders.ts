@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { OrderAdminItem, OrderStatus } from '../types';
-import { apiClient } from '../api/client';
+import { apiClient, getAllPages } from '../api/client';
 
 export const useAdminOrders = () => {
   const [orders, setOrders] = useState<OrderAdminItem[]>([]);
@@ -9,7 +9,7 @@ export const useAdminOrders = () => {
   const fetchAdminOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/orders');
+      const res = await getAllPages('/orders');
       setOrders(res.data);
     } catch (err) {
       console.error('Failed to fetch admin orders:', err);

@@ -38,6 +38,9 @@ services:
       DATABASE_URL: "${DATABASE_URL:?Error: DATABASE_URL must be defined in .env}"
       JWT_SECRET: "${JWT_SECRET:?Error: JWT_SECRET must be defined in .env}"
       ENCRYPTION_SECRET: "${ENCRYPTION_SECRET:?Error: ENCRYPTION_SECRET must be defined in .env}"
+      BUSINESS_TIME_ZONE: ${BUSINESS_TIME_ZONE:-Asia/Qyzylorda}
+      SSCC_COMPANY_PREFIX: ${SSCC_COMPANY_PREFIX:-0487000}
+      INTEGRATION_ALLOWED_HOSTS: ${INTEGRATION_ALLOWED_HOSTS:-}
       NODE_ENV: production
       NODE_OPTIONS: "--max-old-space-size=${BACKEND_HEAP_MB:-384}"
       LABEL_GENERATOR_HOST: label-generator
