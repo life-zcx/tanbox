@@ -1232,9 +1232,10 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
             </div>
 
             {/* Bottom summary bar */}
-            <div className="pt-6 border-t border-gray-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="pt-4 sm:pt-6 border-t border-gray-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
               <div>
-                <span className="text-xs text-gray-400 font-bold uppercase block">
+                <span className="sm:hidden block text-xs font-semibold text-slate-500">{lang === 'kz' ? 'Барлығы' : lang === 'en' ? 'Total' : 'Итого'}</span>
+                <span className="hidden sm:block text-xs text-gray-400 font-bold uppercase">
                   Итого за {skuCount.toLocaleString('ru-RU')} {skuCount === 1 ? 'товар' : skuCount < 5 ? 'товара' : 'товаров'}:
                 </span>
                 <span className="text-2xl sm:text-3xl font-black text-[#111827]">
@@ -1245,7 +1246,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                 </span>
               </div>
 
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="grid grid-cols-2 sm:flex items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() =>
@@ -1255,10 +1256,11 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       }, ${currentCardsTotal.toLocaleString('ru-RU')} ₸)`
                     )
                   }
-                  className="flex-1 sm:flex-none bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 px-7 rounded-xl transition-all shadow-md shadow-[#0082FB]/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                  className="min-w-0 h-11 sm:h-auto flex-1 sm:flex-none bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs sm:text-sm py-2.5 sm:py-3.5 px-2 sm:px-7 rounded-xl transition-all sm:shadow-md sm:shadow-[#0082FB]/20 active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap"
                 >
-                  <span>Оставить заявку</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span className="sm:hidden">{lang === 'kz' ? 'Өтінім' : lang === 'en' ? 'Request' : 'Заявка'}</span>
+                  <span className="hidden sm:inline">Оставить заявку</span>
+                  <ArrowRight className="w-4 h-4 shrink-0" />
                 </button>
 
                 <a
@@ -1269,7 +1271,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3.5 px-5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  className="min-w-0 h-11 sm:h-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm py-2.5 sm:py-3.5 px-2 sm:px-5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer sm:shadow-sm whitespace-nowrap"
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>WhatsApp</span>
