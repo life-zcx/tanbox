@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { TariffCode, CalculationResult, TariffItem, PricingSettings, PriceBracket } from '../types';
 import { apiClient } from '../api/client';
+import { usePublicPricing } from '../context/PublicPricingContext';
+import { DEFAULT_PUBLIC_PRICING } from '../data/publicPricing';
 
 export const computeInstantPrice = (
   tariffType: TariffCode,
@@ -12,13 +14,13 @@ export const computeInstantPrice = (
   dbTariffs?: TariffItem[],
   dbSettings?: PricingSettings | null
 ): CalculationResult => {
-  const found = dbTariffs?.find((t) => t.code === tariffType);
+  const found = (dbTariffs || DEFAULT_PUBLIC_PRICING.tariffs).find((t) => t.code === tariffType);
   const tier1 = dbSettings ? Number(dbSettings.volumeTier1) : 5000;
   const tier2 = dbSettings ? Number(dbSettings.volumeTier2) : 25000;
 
   // Active production tariff rates
   const fallbackPrices: Record<string, { retail: number; wholesale: number; large: number }> = {
-    DIGITAL: { retail: 8, wholesale: 7, large: 5 },
+    DIGITAL: { retail: 6, wholesale: 5, large: 4 },
     PRINT: { retail: 18, wholesale: 16, large: 13 },
     STANDARD: { retail: 42, wholesale: 39, large: 32 },
     PRO: { retail: 72, wholesale: 65, large: 55 },
@@ -281,35 +283,11 @@ export const useCalculator = () => {
   const [ssccNeeded, setSsccNeeded] = useState<boolean>(false);
   const [extraServices, setExtraServices] = useState<string[]>([]);
   const [includeOfficialCodes, setIncludeOfficialCodes] = useState<boolean>(false);
-  const [dbTariffs, setDbTariffs] = useState<TariffItem[]>([]);
-  const [dbPricingSettings, setDbPricingSettings] = useState<PricingSettings | null>(null);
+  const { tariffs: dbTariffs, pricingSettings: dbPricingSettings } = usePublicPricing();
   const [result, setResult] = useState<CalculationResult>(() =>
     computeInstantPrice('STANDARD', 0, [], false, 0, false)
   );
   const [loading, setLoading] = useState<boolean>(false);
-
-  // Load active tariffs & settings from DB on mount
-  useEffect(() => {
-    let active = true;
-    apiClient
-      .get('/tariffs')
-      .then((res) => {
-        if (!active) return;
-        if (res.data?.tariffs && Array.isArray(res.data.tariffs)) {
-          setDbTariffs(res.data.tariffs);
-        }
-        if (res.data?.pricingSettings) {
-          setDbPricingSettings(res.data.pricingSettings);
-        }
-      })
-      .catch((err) => {
-        console.warn('Could not load tariffs from server:', err);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   // Synchronize estimated box count when itemsCount changes if boxesCount was not manually customized
   useEffect(() => {

@@ -1,4 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { NotFoundPage } from './NotFoundPage';
+import { RegulatorySources } from '../components/common/RegulatorySources';
+import { CommercialLinks } from '../components/common/CommercialLinks';
+import { articleCategoryId } from '../data/contentLinks';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -15,7 +19,6 @@ import {
   FileText
 } from 'lucide-react';
 import { getArticleBySlug, ARTICLES_DATA, ArticleData } from '../data/articlesData';
-import { setPageSeo } from '../utils/seo';
 import { useLanguage } from '../context/LanguageContext';
 const ServiceOrderModal = React.lazy(() => import('../components/modals/ServiceOrderModal').then(module => ({ default: module.ServiceOrderModal })));
 
@@ -25,7 +28,6 @@ export const ArticleDetailPage: React.FC = () => {
   const article = articleId ? getArticleBySlug(articleId, lang) : undefined;
 
   const [copied, setCopied] = useState(false);
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedServiceTitle, setSelectedServiceTitle] = useState(
     lang === 'kz' ? 'Кешенді аудит / Басқа сұрақ' : lang === 'en' ? 'Turnkey Audit / Inquiries' : 'Другой вопрос / Комплексный аудит'
@@ -38,97 +40,7 @@ export const ArticleDetailPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (article) {
-      setPageSeo(
-        `${article.title} | TANBOX.KZ`,
-        article.metaDescription,
-        {
-          lang: (lang as 'ru' | 'kz' | 'en') || 'ru',
-          keywords: article.metaKeywords,
-        }
-      );
-
-      // Inject Schema.org Article and FAQ structured data (Rich Snippets for Google & Yandex)
-      const pageUrl = `https://tanbox.kz${lang === 'ru' ? '' : `/${lang}`}/articles/${article.slug}`;
-      const articleSchema: any = {
-        '@context': 'https://schema.org',
-        '@type': 'Article',
-        headline: article.title,
-        description: article.metaDescription,
-        inLanguage: lang === 'kz' ? 'kk' : lang,
-        author: {
-          '@type': 'Organization',
-          name: article.author,
-          url: 'https://tanbox.kz',
-        },
-        publisher: {
-          '@type': 'Organization',
-          name: 'TANBOX.KZ',
-          logo: {
-            '@type': 'ImageObject',
-            url: 'https://tanbox.kz/tanbox-white.svg',
-          },
-        },
-        mainEntityOfPage: {
-          '@type': 'WebPage',
-          '@id': pageUrl,
-        },
-      };
-
-      const graph: any[] = [articleSchema];
-
-      if (article.faq && article.faq.length > 0) {
-        graph.push({
-          '@type': 'FAQPage',
-          mainEntity: article.faq.map((item) => ({
-            '@type': 'Question',
-            name: item.q,
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: item.a,
-            },
-          })),
-        });
-      }
-
-      let schemaScript = document.querySelector('#article-schema-org') as HTMLScriptElement | null;
-      if (!schemaScript) {
-        schemaScript = document.createElement('script');
-        schemaScript.id = 'article-schema-org';
-        schemaScript.type = 'application/ld+json';
-        document.head.appendChild(schemaScript);
-      }
-      schemaScript.textContent = JSON.stringify(
-        graph.length === 1 ? graph[0] : { '@context': 'https://schema.org', '@graph': graph }
-      );
-    }
-  }, [articleId, article]);
-
-  if (!article) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4 px-6 text-center">
-        <h2 className="text-3xl font-extrabold text-[#111827]">
-          {lang === 'kz' ? 'Мақала табылмады' : lang === 'en' ? 'Article Not Found' : 'Статья не найдена'}
-        </h2>
-        <p className="text-gray-600 max-w-md">
-          {lang === 'kz'
-            ? 'Сұралған мақала жоқ немесе жылжытылған.'
-            : lang === 'en'
-            ? 'The requested article does not exist or has been moved.'
-            : 'Запрошенная статья не существует или была перемещена.'}
-        </p>
-        <Link
-          to={getLocalizedPath('/articles')}
-          className="inline-flex items-center gap-2 bg-[#0082FB] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#0070DA] transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>{lang === 'kz' ? 'Базаға оралу' : lang === 'en' ? 'Back to Knowledge Base' : 'Вернуться в базу знаний'}</span>
-        </Link>
-      </div>
-    );
-  }
+  if (!article) return <NotFoundPage />;
 
   const handleCopyLink = () => {
     try {
@@ -269,6 +181,7 @@ export const ArticleDetailPage: React.FC = () => {
               <div className="flex items-center gap-1.5 text-xs text-[#64748B] font-medium">
                 <Calendar className="w-3.5 h-3.5" />
                 <span>{article.date}</span>
+                {article.updatedAt && <span className="ml-2">{lang === 'kz' ? 'Жаңартылды:' : lang === 'en' ? 'Updated:' : 'Обновлено:'} <time dateTime={article.updatedAt}>{article.updatedAt}</time></span>}
               </div>
               <span className="text-gray-300">•</span>
               <div className="flex items-center gap-1.5 text-xs text-[#64748B] font-medium">
@@ -326,7 +239,9 @@ export const ArticleDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
           {/* Left Column: Article Body (8 cols) */}
-          <main className="lg:col-span-8 space-y-10">
+          <div className="lg:col-span-8 space-y-10">
+            <CommercialLinks categoryId={articleCategoryId(article.slug, article.targetCategoryCode)} />
+            <RegulatorySources categoryId={articleCategoryId(article.slug, article.targetCategoryCode)} />
             {article.contentSections.map((sec) => (
               <section
                 key={sec.id}
@@ -364,32 +279,15 @@ export const ArticleDetailPage: React.FC = () => {
                 </h2>
 
                 <div className="space-y-3">
-                  {article.faq.map((item, idx) => {
-                    const isOpen = openFaqIndex === idx;
-                    return (
-                      <div
-                        key={idx}
-                        className="rounded-2xl border border-gray-200/80 overflow-hidden transition-all duration-200"
-                      >
-                        <button
-                          onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                          className="w-full text-left px-5 py-4 flex items-center justify-between gap-4 font-bold text-sm text-[#111827] hover:bg-gray-50/80 cursor-pointer"
-                        >
-                          <span>{item.q}</span>
-                          <ChevronDown
-                            className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${
-                              isOpen ? 'rotate-180 text-[#0082FB]' : ''
-                            }`}
-                          />
-                        </button>
-                        {isOpen && (
-                          <div className="px-5 pb-4 pt-1 text-xs sm:text-sm text-[#64748B] leading-relaxed border-t border-gray-100 bg-[#FBFDFF]">
-                            {item.a}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {article.faq.map((item, idx) => (
+                    <details key={idx} open={idx === 0} className="group rounded-2xl border border-gray-200/80 overflow-hidden">
+                      <summary className="list-none text-left px-5 py-4 flex items-center justify-between gap-4 font-bold text-sm text-[#111827] hover:bg-gray-50/80 cursor-pointer">
+                        <span>{item.q}</span>
+                        <ChevronDown className="w-4 h-4 text-gray-400 shrink-0 group-open:rotate-180" />
+                      </summary>
+                      <div className="px-5 pb-4 pt-1 text-xs sm:text-sm text-[#64748B] leading-relaxed border-t border-gray-100 bg-[#FBFDFF]">{item.a}</div>
+                    </details>
+                  ))}
                 </div>
               </section>
             )}
@@ -428,7 +326,7 @@ export const ArticleDetailPage: React.FC = () => {
                 </div>
               </section>
             )}
-          </main>
+          </div>
 
           {/* Right Column: Sticky Navigation & Lead Magnet (4 cols) */}
           <aside className="lg:col-span-4 space-y-6">

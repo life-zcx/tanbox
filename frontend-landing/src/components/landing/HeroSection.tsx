@@ -22,12 +22,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
     const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
     checkDesktop();
     window.addEventListener('resize', checkDesktop);
-
-    // Delay video load until main thread is idle and critical resources are loaded
-    const timer = setTimeout(() => {
-      setLoadVideo(true);
-    }, 1800);
-
+    const timer = setTimeout(() => setLoadVideo(true), 1800);
     return () => {
       window.removeEventListener('resize', checkDesktop);
       clearTimeout(timer);
@@ -64,37 +59,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
       id="hero"
       className="relative min-h-screen min-h-[100dvh] w-full flex flex-col justify-between items-center overflow-hidden pt-16 sm:pt-24 pb-4 sm:pb-8 bg-[#0B0F19] text-white select-none"
     >
-      {/* Background Video / Image with Darkening */}
+      {/* Desktop video and mobile warehouse photo. */}
       <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
-        {/* Mobile Background: Real authentic warehouse (matches desktop video) */}
-        <picture className="block md:hidden w-full h-full">
-          <source srcSet="/hero-bg-poster-mobile.webp" type="image/webp" />
-          <img
-            src="/hero-bg-mobile.jpg"
-            alt="TANBOX Background"
-            width={640}
-            height={1138}
-            className="w-full h-full object-cover object-center"
-            loading="eager"
-            {...({ fetchpriority: 'high' } as any)}
-          />
+        <picture className="block w-full h-full">
+          <source media="(min-width: 768px)" srcSet="/hero-bg-poster.webp" type="image/webp" />
+          <img src="/hero-warehouse-mobile-v2.webp" alt="" width={640} height={1387}
+            className="w-full h-full object-cover object-center" loading="eager" {...({ fetchpriority: 'high' } as Record<string, string>)} />
         </picture>
 
-        {/* Desktop Poster: Immediate crisp LCP paint without waiting for heavy video download */}
-        <picture className="hidden md:block w-full h-full">
-          <source srcSet="/hero-bg-poster.webp" type="image/webp" />
-          <img
-            src="/hero-bg-poster.webp"
-            alt="TANBOX Warehouse"
-            width={1920}
-            height={1080}
-            className="w-full h-full object-cover object-center"
-            loading="eager"
-            {...({ fetchpriority: 'high' } as any)}
-          />
-        </picture>
-
-        {/* Desktop Video: Loaded asynchronously on md+ screens after critical render, avoiding 2.5MB network lock */}
         {isDesktop && loadVideo && (
           <video
             autoPlay
@@ -109,8 +81,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
           </video>
         )}
 
-        {/* Затемнение фона: умеренное (60%), чтобы склад и стеллажи были отлично видны до самого верха */}
-        <div className="absolute inset-0 bg-[#0B0F19]/60 md:bg-[#0B0F19]/75" />
+        <div className="absolute inset-0 bg-[#0B0F19]/20 md:bg-[#0B0F19]/75" />
       </div>
 
       <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 sm:space-y-8 relative z-10 my-auto">
@@ -136,7 +107,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
                   <motion.span
                     key={`${lang}-${titleNumber}`}
                     className="block font-black text-[#0082FB] whitespace-nowrap"
-                    initial={{ opacity: 0, y: 14 }}
+                    initial={false}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -14 }}
                     transition={{ duration: 0.22, ease: 'easeOut' }}

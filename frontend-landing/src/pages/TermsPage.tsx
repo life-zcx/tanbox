@@ -2,32 +2,11 @@ import React, { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { COMPANY_CONTACTS, getLocalizedCompanyContacts } from '../data/companyContacts';
-import { setPageSeo } from '../utils/seo';
 import { useLanguage } from '../context/LanguageContext';
 
 export const TermsPage: React.FC = () => {
   const { lang, getLocalizedPath } = useLanguage();
   const localizedContacts = getLocalizedCompanyContacts(lang);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (lang === 'kz') {
-      setPageSeo(
-        `Жария оферта шарты | ${COMPANY_CONTACTS.legal.companyName} — TANBOX.KZ`,
-        `Қазақстан Республикасында Data Matrix цифрлық таңбалау және агрегация қызметтерін көрсетуге арналған жария оферта шарты. Орындаушы: ${COMPANY_CONTACTS.legal.companyName}.`
-      );
-    } else if (lang === 'en') {
-      setPageSeo(
-        `Public Offer Agreement | ${COMPANY_CONTACTS.legal.companyName} — TANBOX.KZ`,
-        `Public offer agreement for digital product marking (Data Matrix) and aggregation services in Kazakhstan. Contractor: ${COMPANY_CONTACTS.legal.companyName}.`
-      );
-    } else {
-      setPageSeo(
-        `Публичная оферта | ${COMPANY_CONTACTS.legal.companyName} — TANBOX.KZ`,
-        `Договор публичной оферты на оказание услуг по цифровой маркировке товаров Data Matrix и агрегации в Республике Казахстан. Исполнитель: ${COMPANY_CONTACTS.legal.companyName}.`
-      );
-    }
-  }, [lang]);
 
   return (
     <div className="bg-[#f8fafc] min-h-screen py-8 sm:py-12 text-[#1e293b]">

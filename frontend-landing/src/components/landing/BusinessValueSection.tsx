@@ -1,14 +1,11 @@
-import React from 'react';
+import React, { useId, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
-interface BusinessValueSectionProps {
-  onScrollToCalculator?: () => void;
-}
-
-export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
-  onScrollToCalculator,
-}) => {
-  const { lang, t } = useLanguage();
+export const BusinessValueSection: React.FC = () => {
+  const { lang } = useLanguage();
+  const [risksExpanded, setRisksExpanded] = useState(false);
+  const risksId = useId();
 
   // 1. 6 Steps of Marking Process (Clean numbering, no AI pastel icon boxes)
   const steps = [
@@ -149,42 +146,45 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
   ];
 
   return (
-    <section id="business-value" className="py-14 sm:py-20 bg-[#F4F6F9]">
-      <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-16 sm:space-y-24">
+    <div id="business-value">
+      <section className="bg-white py-10 sm:py-16">
+      <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* ========================================================================= */}
         {/* BLOCK 1: What is Marking & Complete Process Flow in Kazakhstan            */}
         {/* ========================================================================= */}
-        <div className="space-y-8">
-          <div className="space-y-2">
+        <div className="space-y-6">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div className="space-y-2">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#111827] tracking-tight">
               {lang === 'kz' 
-                ? 'Қазақстанда цифрлық таңбалаудың толық процесі' 
+                ? 'Таңбалаудың алты кезеңі'
                 : lang === 'en' 
-                ? 'Track & Trace Flow: 6 Steps to Complete Compliance' 
-                : 'Как устроен процесс цифровой маркировки в Казахстане'}
+                ? 'Six stages of product marking'
+                : 'Шесть этапов маркировки товара'}
             </h2>
             <p className="text-sm sm:text-base text-[#475569] max-w-3xl">
               {lang === 'kz'
-                ? '«Таңба» АЖ жүйесіндегі Data Matrix коды — тауардың мемлекеттік сандық паспорты. Процесс 6 нақты кезеңнен тұрады:'
+                ? 'Тауар деректерін дайындаудан бастап айналымға енгізуге дейінгі жұмыстарды атқарамыз.'
                 : lang === 'en'
-                ? 'Data Matrix serialization in IS Tanba is a mandatory state digital passport. The complete workflow spans 6 straightforward stages:'
-                : 'Маркировка Data Matrix в системе «ИС Танба» (АО «Казахтелеком») — это государственный цифровой паспорт товара, обязательный для импорта и продажи в РК:'}
+                ? 'We handle the work from preparing product data to releasing goods into circulation.'
+                : 'Берём на себя работы от подготовки товарных данных до ввода продукции в оборот.'}
             </p>
+            </div>
           </div>
 
-          {/* 6 Clean Minimal Cards (No AI icon boxes, no hover jumping, no awkward badges) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {/* Open process layout with numbered steps. */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {steps.map((st) => (
               <div
                 key={st.num}
-                className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-7 border border-gray-200/80 shadow-xs relative overflow-hidden group flex flex-col justify-between"
+                className="border-t border-slate-200 pt-5 flex items-start gap-4"
               >
-                <span aria-hidden="true" className="text-3xl sm:text-4xl font-black text-slate-100 absolute top-5 right-6 select-none pointer-events-none group-hover:text-blue-50 transition-colors">
+                <span aria-hidden="true" className="w-8 shrink-0 text-2xl font-bold leading-none text-[#0082FB]/50 select-none">
                   {st.num}
                 </span>
 
-                <div className="relative z-10 pr-4">
+                <div className="min-w-0">
                   <h3 className="text-base sm:text-lg font-bold text-[#111827] leading-snug">
                     {st.title}
                   </h3>
@@ -197,35 +197,43 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* BLOCK 2: Key Challenges & Considerations                                  */}
-        {/* ========================================================================= */}
-        <div className="space-y-8">
+      </div>
+      </section>
+
+      <section className="bg-[#F4F6F9] py-10 sm:py-16">
+      <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="space-y-5">
           <div className="space-y-2">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#111827] tracking-tight">
               {lang === 'kz' 
-                ? 'Тауарды өз бетінше таңбалау кезінде туындайтын қиындықтар' 
+                ? 'Өз бетінше таңбалау кезіндегі қиындықтар'
                 : lang === 'en' 
                 ? 'Challenges of In-House Track & Trace' 
-                : 'С какими сложностями сталкивается бизнес при самостоятельной маркировке'}
+                : 'Сложности самостоятельной маркировки'}
             </h2>
             <p className="text-sm sm:text-base text-[#475569] max-w-3xl">
               {lang === 'kz'
-                ? 'Процесті компания ішінде ұйымдастыру қызметкерлердің көп уақытын, мемлекеттік жүйені терең түсінуді және деректерді тұрақты бақылауды талап етеді:'
+                ? 'Деректерді, баспа сапасын және есептілікті бақылау қажет.'
                 : lang === 'en'
-                ? 'Handling track & trace internally requires significant staff hours, deep regulatory expertise, and continuous data validation:'
-                : 'Самостоятельная маркировка требует отвлечения штатных сотрудников от основной работы, глубокого знания регламентов и постоянного контроля данных:'}
+                ? 'Product data, print quality and reporting all need careful checks.'
+                : 'Нужно контролировать данные, качество печати и отчётность.'}
             </p>
           </div>
 
           {/* 4 Clean Challenge Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          <button type="button" aria-expanded={risksExpanded} aria-controls={risksId} onClick={() => setRisksExpanded(expanded => !expanded)} className="sm:hidden inline-flex items-center gap-2 py-2 text-sm font-semibold text-[#0070DA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#0082FB]">
+            {risksExpanded
+              ? (lang === 'kz' ? 'Толығырақ ақпаратты жасыру' : lang === 'en' ? 'Hide details' : 'Скрыть подробности')
+              : (lang === 'kz' ? 'Қандай қиындықтар туындайды' : lang === 'en' ? 'Explore the challenges' : 'Какие сложности возникают')}
+            <ChevronDown className={`h-4 w-4 transition-transform motion-reduce:transition-none ${risksExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
+          </button>
+          <div id={risksId} className={`${risksExpanded ? 'grid' : 'hidden'} sm:grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6`}>
             {risks.map((risk, idx) => (
               <div
                 key={idx}
                 className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-gray-200/80 shadow-xs space-y-3"
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <h3 className="text-base sm:text-lg font-bold text-[#111827] leading-snug">
                     {risk.title}
                   </h3>
@@ -243,19 +251,21 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* BLOCK 3: TANBOX Turnkey Capabilities & Solution                           */}
-        {/* ========================================================================= */}
+      </div>
+      </section>
+
+      <section className="bg-[#0B132B] py-12 sm:py-16 text-white">
+      <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="space-y-8">
           <div className="space-y-2">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#111827] tracking-tight">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
               {lang === 'kz' 
                 ? 'TANBOX шешімі: 100% міндетті кілтке дейін аламыз' 
                 : lang === 'en' 
                 ? 'Turnkey Execution: Why Leading Importers Choose TANBOX' 
                 : 'Почему бизнесу выгодно передать маркировку TANBOX'}
             </h2>
-            <p className="text-sm sm:text-base text-[#475569] max-w-3xl">
+            <p className="text-sm sm:text-base text-slate-300 max-w-3xl">
               {lang === 'kz'
                 ? 'Қойманы күрделі күнделікті рутинадан босатып, таңбалауды мамандарға тапсырыңыз. Толық циклді кепілдікпен орындаймыз:'
                 : lang === 'en'
@@ -269,12 +279,12 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
             {turnkeyFeatures.map((feat, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-gray-200/80 shadow-xs"
+                className="bg-white/[0.04] rounded-2xl p-6 sm:p-8 border border-white/10"
               >
-                <h3 className="text-base sm:text-lg font-bold text-[#111827] leading-snug">
+                <h3 className="text-base sm:text-lg font-bold text-white leading-snug">
                   {feat.title}
                 </h3>
-                <p className="text-xs sm:text-sm text-[#475569] mt-2 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
                   {feat.desc}
                 </p>
               </div>
@@ -284,7 +294,8 @@ export const BusinessValueSection: React.FC<BusinessValueSectionProps> = ({
         </div>
 
       </div>
-    </section>
+      </section>
+    </div>
   );
 };
 

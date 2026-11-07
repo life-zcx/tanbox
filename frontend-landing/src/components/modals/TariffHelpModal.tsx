@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useId, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
@@ -20,6 +20,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
   initialTab = 'batch',
 }) => {
   const { lang } = useLanguage();
+  const titleId = useId();
   const [activeTab, setActiveTab] = useState<'batch' | 'outsourcing' | 'cards' | 'training'>(initialTab);
 
 
@@ -67,7 +68,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
       id: 'training',
       label: lang === 'kz' ? 'Оқыту' : lang === 'en' ? 'Training' : 'Обучение',
     },
-  ];
+  ] as const;
 
   const batchTariffs = [
     {
@@ -127,16 +128,19 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
   return createPortal(
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-6 overflow-hidden bg-black/60 backdrop-blur-xs">
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-4xl my-auto overflow-hidden shadow-2xl border border-gray-200 flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 sm:px-8 sm:py-5 border-b border-gray-200 flex items-center justify-between gap-4 bg-white shrink-0">
+        <div className="px-4 py-4 sm:px-8 sm:py-5 border-b border-gray-200 flex items-start sm:items-center justify-between gap-3 sm:gap-4 bg-white shrink-0">
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-[#111827]">
+            <h2 id={titleId} className="text-base sm:text-xl font-bold text-[#111827] leading-snug">
               {lang === 'kz' ? 'Тарифтер мен қызметтер анықтамалығы' : lang === 'en' ? 'Pricing & Services Guide' : 'Справка по тарифам и услугам'}
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="hidden sm:block text-xs text-gray-500 mt-0.5">
               {lang === 'kz'
                 ? 'Регламент, жұмыс құрамы және жауапкершілік шекаралары'
                 : lang === 'en'
@@ -147,26 +151,27 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={lang === 'kz' ? 'Жабу' : lang === 'en' ? 'Close' : 'Закрыть'}
             className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Clean Underline Tabs - Perfectly aligned, no pills, no overflow glitch */}
-        <div className="flex border-b border-gray-200 px-6 sm:px-8 gap-6 sm:gap-8 bg-gray-50/70 shrink-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* All service choices remain visible on mobile. */}
+        <div className="grid grid-cols-2 sm:flex border-b border-gray-200 p-4 sm:py-0 sm:px-8 gap-2 sm:gap-8 bg-gray-50/70 shrink-0">
           {tabsList.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`py-3.5 text-xs sm:text-sm font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap outline-none ${
+                onClick={() => setActiveTab(tab.id)}
+                aria-pressed={isActive}
+                className={`min-h-11 px-2 sm:px-0 py-2.5 sm:py-3.5 rounded-xl sm:rounded-none text-xs sm:text-sm font-semibold border sm:border-0 sm:border-b-2 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0082FB] ${
                   isActive
-                    ? 'border-[#0082FB] text-[#0082FB]'
-                    : 'border-transparent text-gray-500 hover:text-gray-900'
+                    ? 'border-[#0082FB] bg-blue-50 sm:bg-transparent text-[#0082FB]'
+                    : 'border-gray-200 sm:border-transparent bg-white sm:bg-transparent text-gray-500 hover:text-gray-900'
                 }`}
               >
                 {tab.label}
@@ -176,7 +181,7 @@ export const TariffHelpModal: React.FC<TariffHelpModalProps> = ({
         </div>
 
         {/* Scrollable Body - Styled thin scrollbar without clunky native 17px track */}
-        <div className="p-6 sm:p-8 overflow-y-auto flex-1 space-y-6 [scrollbar-width:thin] [scrollbar-color:#CBD5E1_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
+        <div className="p-4 sm:p-8 overflow-y-auto flex-1 space-y-6 [scrollbar-width:thin] [scrollbar-color:#CBD5E1_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
           {/* TAB 1: BATCH TARIFFS */}
           {activeTab === 'batch' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

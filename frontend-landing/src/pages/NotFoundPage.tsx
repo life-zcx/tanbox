@@ -2,27 +2,9 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Home } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { setPageSeo } from '../utils/seo';
 
 export const NotFoundPage: React.FC = () => {
   const { lang, getLocalizedPath } = useLanguage();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    setPageSeo(
-      lang === 'kz'
-        ? 'Бет табылмады (404) | TANBOX.KZ'
-        : lang === 'en'
-        ? 'Page Not Found (404) | TANBOX.KZ'
-        : 'Страница не найдена (404) | TANBOX.KZ',
-      lang === 'kz'
-        ? 'Сұралған бет табылмады немесе жылжытылған.'
-        : lang === 'en'
-        ? 'The requested page was not found or has been moved.'
-        : 'Запрошенная страница не существует или была перемещена.',
-      { lang }
-    );
-  }, [lang]);
 
   return (
     <div className="w-full flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12 sm:py-20">

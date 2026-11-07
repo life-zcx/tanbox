@@ -38,8 +38,12 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
       setCookieBannerVisible(!!document.getElementById('cookie-banner'));
     };
     checkBanner();
-    const interval = setInterval(checkBanner, 400);
-    return () => clearInterval(interval);
+    window.addEventListener('storage', checkBanner);
+    window.addEventListener('tanbox:cookie-banner', checkBanner);
+    return () => {
+      window.removeEventListener('storage', checkBanner);
+      window.removeEventListener('tanbox:cookie-banner', checkBanner);
+    };
   }, []);
 
   const checkScroll = useCallback(() => {
@@ -101,7 +105,9 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
 
     const startTime = performance.now();
     // Dynamic duration based on distance so long pages feel natural (500ms - 800ms)
-    const animDuration = Math.min(Math.max(startPosition * 0.12, 500), 800);
+    const animDuration = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 0
+      : Math.min(Math.max(startPosition * 0.12, 500), duration);
 
     // Easing: cubic bezier easeInOut for silky smooth start & soft deceleration
     const easeInOutCubic = (t: number) =>
@@ -109,7 +115,7 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
 
     const step = (currentTime: number) => {
       const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / animDuration, 1);
+      const progress = animDuration === 0 ? 1 : Math.min(elapsed / animDuration, 1);
       const eased = easeInOutCubic(progress);
 
       const targetY = startPosition * (1 - eased);
@@ -133,7 +139,7 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
 
   return (
     <div
-      className={`fixed right-[18px] sm:right-[26px] z-[1000] transition-[opacity,transform] duration-300 ease-out select-none ${
+      className={`fixed right-4 sm:right-6 z-[1000] transition-[opacity,transform,bottom] duration-300 ease-out select-none motion-reduce:transition-none ${
         cookieBannerVisible ? 'bottom-[122px] sm:bottom-[92px]' : 'bottom-[76px] sm:bottom-[92px]'
       } ${
         isVisible
@@ -144,13 +150,14 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
       <button
         type="button"
         onClick={scrollToTop}
+        tabIndex={isVisible ? 0 : -1}
         aria-label={lang === 'kz' ? 'Беттің басына шығу' : lang === 'en' ? 'Scroll to top' : 'Наверх страницы'}
         title={lang === 'kz' ? 'Беттің басына шығу' : lang === 'en' ? 'Scroll to top' : 'Наверх страницы'}
-        className="group relative w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-[#0082FB] hover:bg-[#0070DA] text-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer focus:outline-none ring-2 ring-blue-400/25"
+        className="group relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border border-gray-200 bg-white/95 hover:bg-white text-gray-600 hover:text-[#0088B6] backdrop-blur-md flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.10)] hover:-translate-y-0.5 active:scale-95 transition duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0088B6] focus-visible:ring-offset-2 motion-reduce:transform-none"
       >
         {/* SVG Circular Progress Ring */}
         <svg
-          className="absolute inset-0 w-11 h-11 sm:w-13 sm:h-13 -rotate-90 pointer-events-none"
+          className="absolute inset-1 h-10 w-10 sm:inset-2 -rotate-90 pointer-events-none"
           viewBox="0 0 52 52"
         >
           {/* Background track */}
@@ -158,8 +165,8 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
             cx="26"
             cy="26"
             r={circleRadius}
-            stroke="rgba(255, 255, 255, 0.25)"
-            strokeWidth="2.5"
+            stroke="rgba(0, 136, 182, 0.08)"
+            strokeWidth="1.5"
             fill="none"
           />
           {/* Animated active progress */}
@@ -167,8 +174,8 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
             cx="26"
             cy="26"
             r={circleRadius}
-            stroke="#ffffff"
-            strokeWidth="2.5"
+            stroke="rgba(0, 136, 182, 0.45)"
+            strokeWidth="1.5"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
@@ -178,7 +185,7 @@ export const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ duration =
         </svg>
 
         {/* Up Arrow Icon with hover animation */}
-        <ArrowUp className="w-5 h-5 sm:w-5.5 sm:h-5.5 stroke-[2.5] transition-transform duration-300 group-hover:-translate-y-0.5" />
+        <ArrowUp className="w-5 h-5 stroke-2" />
       </button>
     </div>
   );

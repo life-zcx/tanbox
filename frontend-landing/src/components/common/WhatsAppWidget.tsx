@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, MessageCircle } from 'lucide-react';
+import { MessageCircle, X } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { trackWhatsAppClick, getWhatsAppConsultationUrl } from '../../utils/analytics';
 import { COMPANY_CONTACTS } from '../../data/companyContacts';
@@ -7,8 +7,18 @@ import { COMPANY_CONTACTS } from '../../data/companyContacts';
 export const WhatsAppWidget: React.FC = () => {
   const { lang } = useLanguage();
   const [cookieBannerVisible, setCookieBannerVisible] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+
+  useEffect(() => {
+    if ((!isHovered && !isFocused) || isDismissed) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsDismissed(true);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isHovered, isFocused, isDismissed]);
 
   // Check cookie banner once on mount and listen to cookie event without polling interval
   useEffect(() => {
@@ -24,31 +34,10 @@ export const WhatsAppWidget: React.FC = () => {
     };
   }, []);
 
-  // Show tooltip after 3 seconds if user has not dismissed it in this session
-  useEffect(() => {
-    try {
-      const dismissed = sessionStorage.getItem('tanbox_wa_dismissed');
-      if (dismissed === 'true') {
-        setIsDismissed(true);
-        return;
-      }
-    } catch {}
-
-    const timer = setTimeout(() => {
-      setShowTooltip(true);
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
   const handleDismissTooltip = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    setShowTooltip(false);
     setIsDismissed(true);
-    try {
-      sessionStorage.setItem('tanbox_wa_dismissed', 'true');
-    } catch {}
   };
 
   const whatsappUrl = getWhatsAppConsultationUrl(lang, COMPANY_CONTACTS.phones.hotlineRaw.replace(/\D/g, ''));
@@ -60,17 +49,17 @@ export const WhatsAppWidget: React.FC = () => {
 
   const tooltipTitle =
     lang === 'kz'
-      ? 'Желідегі менеджер (24/7)'
+      ? 'WhatsApp арқылы кеңес алу'
       : lang === 'en'
-      ? 'Manager Online (24/7)'
-      : 'Менеджер онлайн (24/7)';
+      ? 'WhatsApp consultation'
+      : 'Консультация в WhatsApp';
 
   const tooltipText =
     lang === 'kz'
-      ? 'Таңбалау бойынша сұрағыңыз бар ма? WhatsApp-қа жазыңыз — 5 минутта жауап береміз'
+      ? 'Таңбалау бойынша сұрағыңыз бар ма? WhatsApp-қа жазыңыз.'
       : lang === 'en'
-      ? 'Questions about serialization? Message us on WhatsApp — we reply in 5 min'
-      : 'Есть вопрос по маркировке? Напишите нам в WhatsApp — ответим за 5 минут';
+      ? 'Questions about serialization? Message us on WhatsApp.'
+      : 'Есть вопрос по маркировке? Напишите нам в WhatsApp.';
 
   const buttonAria =
     lang === 'kz'
@@ -81,23 +70,33 @@ export const WhatsAppWidget: React.FC = () => {
 
   return (
     <div
+      onPointerEnter={(event) => {
+        if (event.pointerType !== 'mouse') return;
+        setIsHovered(true);
+        setIsDismissed(false);
+      }}
+      onPointerLeave={() => setIsHovered(false)}
+      onFocus={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        setIsFocused(true);
+        setIsDismissed(false);
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsFocused(false);
+      }}
       className={`fixed right-4 sm:right-6 z-[1001] transition-all duration-300 select-none ${
         cookieBannerVisible ? 'bottom-[60px] sm:bottom-6' : 'bottom-4 sm:bottom-6'
       }`}
     >
       {/* Speech Bubble Tooltip - desktop only to avoid covering mobile screens */}
-      {showTooltip && !isDismissed && (
+      {(isHovered || isFocused) && !isDismissed && (
         <div
-          onClick={handleClick}
-          className="hidden sm:block absolute bottom-16 sm:bottom-18 right-0 mb-1 w-64 sm:w-72 bg-white rounded-2xl p-3.5 shadow-2xl border border-gray-100 cursor-pointer animate-fade-in group hover:shadow-xl transition-all"
+          className="hidden sm:block absolute bottom-0 right-[72px] w-72 bg-white rounded-2xl p-4 shadow-xl border border-gray-100 animate-fade-in group after:absolute after:inset-y-0 after:-right-[18px] after:w-[18px]"
         >
           {/* Header */}
           <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-gray-100">
             <div className="flex items-center gap-1.5">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
+              <MessageCircle className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
               <span className="text-[11px] font-bold text-gray-700 tracking-wide">
                 {tooltipTitle}
               </span>
@@ -118,13 +117,12 @@ export const WhatsAppWidget: React.FC = () => {
           </p>
 
           {/* Quick CTA */}
-          <div className="pt-2 flex items-center gap-1.5 text-[11px] font-bold text-[#25D366] group-hover:text-[#1EBE5D] transition-colors">
+          <button type="button" onClick={handleClick} className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-600">
             <span>{buttonAria}</span>
             <span className="text-xs transition-transform group-hover:translate-x-0.5">→</span>
-          </div>
+          </button>
 
-          {/* Tooltip triangle tail pointing down to WhatsApp button */}
-          <div className="absolute -bottom-2 right-6 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[8px] border-t-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.06)]" />
+          <div className="absolute bottom-5 -right-1.5 h-3 w-3 rotate-45 border-r border-t border-gray-100 bg-white" />
         </div>
       )}
 
@@ -134,11 +132,8 @@ export const WhatsAppWidget: React.FC = () => {
         onClick={handleClick}
         aria-label={buttonAria}
         title={buttonAria}
-        className="group relative w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#25D366] hover:bg-[#20BD5A] text-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer focus:outline-none ring-2 sm:ring-4 ring-emerald-400/25"
+        className="group relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border border-white/20 bg-[#25D366] hover:bg-[#20BD5A] text-white flex items-center justify-center shadow-[0_4px_20px_rgba(37,211,102,0.22)] hover:-translate-y-0.5 active:scale-95 transition duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 motion-reduce:transform-none"
       >
-        {/* Soft ripple pulse wave */}
-        <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-20 pointer-events-none" />
-
         {/* Official WhatsApp SVG Icon */}
         <svg
           className="w-6 h-6 sm:w-7 sm:h-7 fill-white transition-transform duration-300 group-hover:scale-110"

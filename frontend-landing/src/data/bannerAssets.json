@@ -1,0 +1,12 @@
+{
+  "/banners/services.svg": {
+    "src": "/banners/services-b7b33ba165.webp",
+    "width": 768,
+    "height": 512
+  },
+  "/banners/calculator.svg": {
+    "src": "/banners/calculator-bf0786cbb3.webp",
+    "width": 640,
+    "height": 640
+  }
+}

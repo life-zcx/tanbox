@@ -1,4 +1,5 @@
-import { CategoryData } from './categoriesData';
+import type { CategoryData } from './categoriesData';
+import { translateCategoryStages } from './categoryStageTranslations';
 
 type LocalizedFields = Omit<CategoryData, 'id' | 'status' | 'tnved' | 'iconName' | 'calcCategoryCode' | 'bannerUrl'>;
 
@@ -614,11 +615,10 @@ export const CATEGORIES_LOCALIZATION: Record<'kz' | 'en', Record<string, Localiz
 };
 
 export function getLocalizedCategory(cat: CategoryData, lang: 'kz' | 'ru' | 'en'): CategoryData {
-  if (lang === 'ru') return cat;
-  const loc = CATEGORIES_LOCALIZATION[lang]?.[cat.id];
-  if (!loc) return cat;
+  const loc = lang === 'ru' ? undefined : CATEGORIES_LOCALIZATION[lang]?.[cat.id];
   return {
     ...cat,
     ...loc,
+    stages: lang === 'ru' ? cat.stages : translateCategoryStages(cat.stages, lang),
   };
 }

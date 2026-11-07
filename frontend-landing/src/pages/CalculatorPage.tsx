@@ -1,7 +1,7 @@
+import { ResponsiveBanner } from '../components/common/ResponsiveBanner';
 import React, { useEffect } from 'react';
 import { CalculatorSection } from '../components/landing/CalculatorSection';
 import { TariffCode } from '../types';
-import { setPageSeo } from '../utils/seo';
 
 import { useLanguage } from '../context/LanguageContext';
 
@@ -11,29 +11,6 @@ interface CalculatorPageProps {
 
 export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onOrderQuick }) => {
   const { lang } = useLanguage();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (lang === 'kz') {
-      setPageSeo(
-        'Тауарларды таңбалау құнын есептеу калькуляторы (₸) | TANBOX.KZ',
-        'Қазақстанда тауарларды Data Matrix бойынша цифрлық таңбалау құнын онлайн есептеу калькуляторы. ТМБ АЖ-де кодтарды эмиссиялау, термопечать және қоймада оклейка тарифтері.',
-        { lang: 'kz', keywords: 'таңбалау бағасы калькулятор, Data Matrix бағасы, ТМБ АЖ кодтары бағасы' }
-      );
-    } else if (lang === 'en') {
-      setPageSeo(
-        'Product Serialization Cost Calculator (₸) in Kazakhstan | TANBOX.KZ',
-        'Online pricing calculator for mandatory Data Matrix product marking in Kazakhstan. Calculate code issuance, label printing, and onsite stickering fees.',
-        { lang: 'en', keywords: 'marking calculator Kazakhstan, serialization price, Data Matrix cost' }
-      );
-    } else {
-      setPageSeo(
-        'Калькулятор стоимости маркировки товаров в Казахстане (₸) | TANBOX.KZ',
-        'Онлайн-калькулятор расчета стоимости обязательной маркировки товаров Data Matrix в Республике Казахстан. Тарифы на эмиссию кодов в ИС Танба, печать этикеток и выездную оклейку на складе.',
-        { lang: 'ru', keywords: 'калькулятор маркировки Казахстан, стоимость маркировки, цена Data Matrix' }
-      );
-    }
-  }, [lang]);
 
   return (
     <div className="bg-[#F4F6F9] min-h-screen pb-16 space-y-4 sm:space-y-8">
@@ -63,11 +40,10 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onOrderQuick }) 
           </div>
 
           <div className="hidden md:flex shrink-0 items-center justify-end">
-            <img
+            <ResponsiveBanner
               src="/banners/calculator.svg?v=20261029"
-              alt="Калькулятор стоимости маркировки"
+              alt={lang === 'kz' ? 'Таңбалау құнының калькуляторы' : lang === 'en' ? 'Marking cost calculator' : 'Калькулятор стоимости маркировки'}
               className="w-40 sm:w-52 md:w-60 lg:w-72 h-auto max-h-36 sm:max-h-44 md:max-h-52 lg:max-h-56 object-contain select-none pointer-events-none drop-shadow-sm transition-transform duration-300 hover:scale-105"
-              loading="eager"
             />
           </div>
         </div>

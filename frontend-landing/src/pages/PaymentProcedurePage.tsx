@@ -2,31 +2,10 @@ import React, { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { COMPANY_CONTACTS } from '../data/companyContacts';
-import { setPageSeo } from '../utils/seo';
 import { useLanguage } from '../context/LanguageContext';
 
 export const PaymentProcedurePage: React.FC = () => {
   const { lang, getLocalizedPath } = useLanguage();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (lang === 'kz') {
-      setPageSeo(
-        'Есеп айырысу, жеткізу және қайтару тәртібі | TANBOX.KZ',
-        'TANBOX.KZ сервисінде қолма-қол ақшасыз есеп айырысу, Kaspi Pay арқылы төлеу, жеткізу және қаражатты қайтару ережелері.'
-      );
-    } else if (lang === 'en') {
-      setPageSeo(
-        'Payment Procedure, Delivery & Refund Policy | TANBOX.KZ',
-        'B2B payment terms, bank wire transfer, Kaspi Pay, delivery and refund procedure on TANBOX.KZ.'
-      );
-    } else {
-      setPageSeo(
-        'Порядок расчетов, доставки и правила возврата | TANBOX.KZ',
-        'Порядок безналичной оплаты по счету, Kaspi Pay, авансового баланса, условия доставки этикеток и правила возврата на TANBOX.KZ.'
-      );
-    }
-  }, [lang]);
 
   return (
     <div className="bg-[#f8fafc] min-h-screen py-8 sm:py-12 text-[#1e293b]">

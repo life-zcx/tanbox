@@ -1,5 +1,5 @@
 import React from 'react';
-import { Send, Mail } from 'lucide-react';
+import { ArrowUpRight, MessageCircle, Send, Mail } from 'lucide-react';
 import { COMPANY_CONTACTS } from '../../data/companyContacts';
 import { useLanguage } from '../../context/LanguageContext';
 import { trackWhatsAppClick, getWhatsAppConsultationUrl } from '../../utils/analytics';
@@ -13,20 +13,39 @@ export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = tr
   const whatsappUrl = getWhatsAppConsultationUrl(lang, COMPANY_CONTACTS.phones.hotlineRaw.replace(/\D/g, ''));
 
   return (
-    <section className={showTitle ? "py-12 sm:py-16 bg-[#F4F6F9]" : "w-full"}>
+    <section className={showTitle ? "py-8 sm:py-16 bg-[#F4F6F9]" : "w-full"}>
       <div className={showTitle ? "max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8" : "w-full"}>
         
         {/* Section Header */}
         {showTitle && (
-          <div className="mb-8">
+          <div className="mb-5 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
               {lang === 'kz' ? 'Байланыс' : lang === 'en' ? 'Contacts' : 'Контакты'}
             </h2>
           </div>
         )}
 
-        {/* 3 Contact Cards: WhatsApp, Telegram, Email */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <nav aria-label={lang === 'kz' ? 'Байланыс арналары' : lang === 'en' ? 'Contact channels' : 'Способы связи'} className="sm:hidden space-y-2">
+          {[
+            { name: 'WhatsApp', description: lang === 'kz' ? 'Кеңес алу және өтінім' : lang === 'en' ? 'Consultation and inquiries' : 'Консультация и заявка', href: whatsappUrl, icon: MessageCircle, color: 'bg-emerald-50 text-emerald-600', external: true },
+            { name: 'Telegram', description: lang === 'kz' ? 'Жаңалықтар мен жаңартулар' : lang === 'en' ? 'News and updates' : 'Новости и обновления', href: COMPANY_CONTACTS.links.telegramChannel, icon: Send, color: 'bg-blue-50 text-[#0082FB]', external: true },
+            { name: lang === 'kz' ? 'Пошта' : lang === 'en' ? 'Email' : 'Почта', description: COMPANY_CONTACTS.emails.info, href: `mailto:${COMPANY_CONTACTS.emails.info}`, icon: Mail, color: 'bg-blue-50 text-[#0082FB]', external: false },
+          ].map(contact => (
+            <a key={contact.href} href={contact.href} target={contact.external ? '_blank' : undefined} rel={contact.external ? 'noopener noreferrer' : undefined} onClick={contact.name === 'WhatsApp' ? () => trackWhatsAppClick() : undefined} className="flex min-h-[76px] items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0082FB]">
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${contact.color}`}>
+                <contact.icon className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold text-[#111827]">{contact.name}</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">{contact.description}</span>
+              </span>
+              <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+            </a>
+          ))}
+        </nav>
+
+        {/* Desktop contact cards */}
+        <div className="hidden sm:grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* WhatsApp Card */}
           <div className="bg-white rounded-3xl p-7 sm:p-8 relative overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 min-h-[200px] flex flex-col justify-between group">
@@ -53,10 +72,10 @@ export const ContactsSection: React.FC<ContactsSectionProps> = ({ showTitle = tr
               </h3>
               <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed font-normal">
                 {lang === 'kz' 
-                  ? 'Таңбалау бойынша жедел кеңес алу және өтінімді 5 минутта жіберу.' 
+                  ? 'Таңбалау бойынша кеңес алу және өтінім жіберу.'
                   : lang === 'en' 
-                  ? 'Instant consultation on serialization and fast inquiry in 5 minutes.' 
-                  : 'Оперативные консультации по маркировке и оформление заявки за 5 минут.'}
+                  ? 'Consultation on serialization and help with your inquiry.'
+                  : 'Консультации по маркировке и помощь с оформлением заявки.'}
               </p>
             </div>
 

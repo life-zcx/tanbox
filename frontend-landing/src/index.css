@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .footer-social-link {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-gray-300 transition duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-black motion-reduce:transform-none;
+  }
+
+  .footer-social-link svg {
+    @apply h-5 w-5;
+  }
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

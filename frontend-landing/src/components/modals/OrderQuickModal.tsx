@@ -82,7 +82,7 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
       );
       return;
     }
-    const serviceTitle = `Быстрый заказ (${tariffType} • ${itemsCount.toLocaleString()} шт. • ${totalPrice.toLocaleString()} ₸)`;
+    const serviceTitle = `Быстрый заказ (${tariffType} • ${itemsCount.toLocaleString('ru-RU')} шт. • ${totalPrice.toLocaleString('ru-RU')} ₸)`;
     
     // 1. Save locally for instant UI update
     const leadObject = {
@@ -215,14 +215,14 @@ export const OrderQuickModal: React.FC<OrderQuickModalProps> = ({
                   {lang === 'kz' ? 'Тариф және көлемі' : lang === 'en' ? 'Tariff & Volume' : 'Тариф и объем'}
                 </span>
                 <span className="text-black font-extrabold">
-                  {tariffType} • {itemsCount.toLocaleString()} {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}
+                  {tariffType} • {itemsCount.toLocaleString('ru-RU')} {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}
                 </span>
               </div>
               <div className="text-right">
                 <span className="text-xs text-gray-500 uppercase block font-bold">
                   {lang === 'kz' ? 'Алдын ала құны' : lang === 'en' ? 'Estimated Total' : 'Предварительно'}
                 </span>
-                <span className="text-xl font-black text-[#0082FB]">{totalPrice.toLocaleString()} ₸</span>
+                <span className="text-xl font-black text-[#0082FB]">{totalPrice.toLocaleString('ru-RU')} ₸</span>
               </div>
             </div>
 

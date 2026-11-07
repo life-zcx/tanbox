@@ -52,8 +52,8 @@ Allow: /register
 # Закрыто от индексации: Системные и динамические URL / API
 Disallow: /api/
 Disallow: /api/*
-Disallow: /*?*tariff=
-Disallow: /*?*token=
+Allow: /api/tariffs$
+Disallow: /*?*token=*
 
 # Директива для Яндекса: исключение мусорных UTM и сессионных параметров из индексации
 Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&tariff&token&gclid&fbclid /

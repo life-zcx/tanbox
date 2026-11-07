@@ -1,3 +1,4 @@
+import { localizedPath } from '../../utils/seoPaths';
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, UserCheck } from 'lucide-react';
@@ -100,17 +101,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
                 </strong>{' '}
                 <span className="hidden sm:inline">
                   {lang === 'kz'
-                    ? 'Қазақстанда зергерлік бұйымдар мен сүректі (ағашты) міндетті цифрлық таңбалау енгізіледі'
+                    ? 'Қазақстанда жеңіл өнеркәсіп тауарларын (I кезең), зергерлік бұйымдар мен сүректі міндетті таңбалау енгізіледі'
                     : lang === 'en'
-                    ? 'mandatory digital marking of jewelry and timber is introduced in Kazakhstan'
-                    : 'вводится обязательная маркировка ювелирных изделий и древесины в Казахстане'}
+                    ? 'mandatory marking of light industry goods (phase 1), jewelry and timber begins in Kazakhstan'
+                    : 'вводится обязательная маркировка товаров легпрома (I этап), ювелирных изделий и древесины в Казахстане'}
                 </span>
                 <span className="sm:hidden">
                   {lang === 'kz'
-                    ? '— зергерлік бұйымдар мен сүрек'
+                    ? '— жеңіл өнеркәсіп (I кезең), зергерлік бұйымдар мен сүрек'
                     : lang === 'en'
-                    ? '— jewelry and timber'
-                    : '— ювелирные изделия и древесина'}
+                    ? '— light industry (phase 1), jewelry and timber'
+                    : '— легпром (I этап), ювелирные изделия и древесина'}
                 </span>
               </span>
 
@@ -198,9 +199,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
                   : 'bg-gray-100 border-gray-200 text-slate-700'
               }`}
             >
-              <button
-                type="button"
-                onClick={() => setLang('kz')}
+              <Link
+
+                to={localizedPath(location.pathname, 'kz') + location.search + location.hash}
+                onClick={(event) => { if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); setLang('kz'); } }}
                 className={`h-full px-1.5 sm:px-2 rounded-lg transition-all cursor-pointer flex items-center justify-center ${
                   lang === 'kz'
                     ? 'bg-[#0082FB] text-white shadow-xs'
@@ -208,10 +210,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
                 }`}
               >
                 ҚАЗ
-              </button>
-              <button
-                type="button"
-                onClick={() => setLang('ru')}
+              </Link>
+              <Link
+
+                to={localizedPath(location.pathname, 'ru') + location.search + location.hash}
+                onClick={(event) => { if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); setLang('ru'); } }}
                 className={`h-full px-1.5 sm:px-2 rounded-lg transition-all cursor-pointer flex items-center justify-center ${
                   lang === 'ru'
                     ? 'bg-[#0082FB] text-white shadow-xs'
@@ -219,10 +222,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
                 }`}
               >
                 РУС
-              </button>
-              <button
-                type="button"
-                onClick={() => setLang('en')}
+              </Link>
+              <Link
+
+                to={localizedPath(location.pathname, 'en') + location.search + location.hash}
+                onClick={(event) => { if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); setLang('en'); } }}
                 className={`h-full px-1.5 sm:px-2 rounded-lg transition-all cursor-pointer flex items-center justify-center ${
                   lang === 'en'
                     ? 'bg-[#0082FB] text-white shadow-xs'
@@ -230,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
                 }`}
               >
                 ENG
-              </button>
+              </Link>
             </div>
 
             {/* Desktop LK Button (matched height, font and padding) */}
@@ -320,9 +324,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
           <div className="space-y-5 pt-5 border-t border-white/10 max-w-sm w-full mx-auto">
             {/* Language switcher KZ RU EN */}
             <div className="flex items-center justify-center gap-8 text-sm sm:text-base tracking-wider font-semibold">
-              <button
-                type="button"
-                onClick={() => setLang('kz')}
+              <Link
+
+                to={localizedPath(location.pathname, 'kz') + location.search + location.hash}
+                onClick={(event) => { if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); setLang('kz'); } }}
                 className={`transition-colors cursor-pointer ${
                   lang === 'kz'
                     ? 'text-[#0082FB] font-extrabold'
@@ -330,10 +335,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
                 }`}
               >
                 KZ
-              </button>
-              <button
-                type="button"
-                onClick={() => setLang('ru')}
+              </Link>
+              <Link
+
+                to={localizedPath(location.pathname, 'ru') + location.search + location.hash}
+                onClick={(event) => { if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); setLang('ru'); } }}
                 className={`transition-colors cursor-pointer ${
                   lang === 'ru'
                     ? 'text-[#0082FB] font-extrabold'
@@ -341,10 +347,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
                 }`}
               >
                 RU
-              </button>
-              <button
-                type="button"
-                onClick={() => setLang('en')}
+              </Link>
+              <Link
+
+                to={localizedPath(location.pathname, 'en') + location.search + location.hash}
+                onClick={(event) => { if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); setLang('en'); } }}
                 className={`transition-colors cursor-pointer ${
                   lang === 'en'
                     ? 'text-[#0082FB] font-extrabold'
@@ -352,7 +359,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth, maintenance }) => {
                 }`}
               >
                 EN
-              </button>
+              </Link>
             </div>
 
             {/* Cabinet Button */}

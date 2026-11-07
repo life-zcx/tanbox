@@ -17,6 +17,7 @@ export interface ArticleData {
   category: 'Законодательство' | 'Инструкции' | 'Тренды 2026' | 'Отрасли' | 'Практика';
   date: string;
   publishedAt?: string;
+  updatedAt?: string;
   readTime: string;
   author: string;
   summary: string;
@@ -1631,7 +1632,6 @@ export { getLocalizedArticle, getLocalizedArticles };
 export function getArticleBySlug(slug: string, lang?: string): ArticleData | undefined {
   const article = ARTICLES_DATA.find((a) => a.slug === slug || a.id === slug);
   if (!article) return undefined;
-  if (!lang || lang === 'ru') return article;
-  return getLocalizedArticle(article, lang);
+  return getLocalizedArticle(article, lang || 'ru');
 }
 

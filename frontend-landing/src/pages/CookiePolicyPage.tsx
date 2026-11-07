@@ -2,32 +2,11 @@ import React, { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { COMPANY_CONTACTS, getLocalizedCompanyContacts } from '../data/companyContacts';
-import { setPageSeo } from '../utils/seo';
 import { useLanguage } from '../context/LanguageContext';
 
 export const CookiePolicyPage: React.FC = () => {
   const { lang, getLocalizedPath } = useLanguage();
   const localizedContacts = getLocalizedCompanyContacts(lang);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (lang === 'kz') {
-      setPageSeo(
-        'Cookie файлдарын пайдалану саясаты | TANBOX.KZ',
-        'TANBOX.KZ веб-сервисінде cookie файлдары мен веб-аналитиканы пайдалану ережелері мен саясаты.'
-      );
-    } else if (lang === 'en') {
-      setPageSeo(
-        'Cookie Policy | TANBOX.KZ',
-        'Cookie and web analytics policy for the TANBOX.KZ digital product marking platform.'
-      );
-    } else {
-      setPageSeo(
-        'Политика использования файлов cookie | TANBOX.KZ',
-        'Политика и правила использования файлов cookie и веб-аналитики на веб-сайте сервиса цифровой маркировки TANBOX.KZ.'
-      );
-    }
-  }, [lang]);
 
   return (
     <div className="bg-[#f8fafc] min-h-screen py-8 sm:py-12 text-[#1e293b]">

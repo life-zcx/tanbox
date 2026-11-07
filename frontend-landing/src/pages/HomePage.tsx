@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { HeroSection } from '../components/landing/HeroSection';
 import { BusinessValueSection } from '../components/landing/BusinessValueSection';
 import { CategoriesSection } from '../components/landing/CategoriesSection';
@@ -8,7 +8,6 @@ import { FaqSection } from '../components/landing/FaqSection';
 import { ContactsSection } from '../components/landing/ContactsSection';
 const ServiceOrderModal = React.lazy(() => import('../components/modals/ServiceOrderModal').then(m => ({ default: m.ServiceOrderModal })));
 import { TariffCode } from '../types';
-import { setPageSeo } from '../utils/seo';
 
 import { useLanguage } from '../context/LanguageContext';
 
@@ -21,28 +20,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) 
   const { lang } = useLanguage();
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
-  useEffect(() => {
-    if (lang === 'kz') {
-      setPageSeo(
-        'TANBOX — Қазақстанда тауарларды кілтке дейін таңбалау | «Таңба» АЖ Data Matrix',
-        'Қазақстанда тауарларды цифрлық таңбалау қызметі. ТМБ АЖ (Таңба) интеграциясы, ҰТК (GS1 Kazakhstan) каталогы, Data Matrix басып шығару және қоймада оклейка. Кодтар эмиссиясынан 1С-ке дейін.',
-        { lang: 'kz', keywords: 'TANBOX, танбокс, тауарларды таңбалау Қазақстан, кілтке дейін, Data Matrix коды, ТМБ АЖ, таңбалау Алматы, ҰТК тауарлар каталогы' }
-      );
-    } else if (lang === 'en') {
-      setPageSeo(
-        'TANBOX — Turnkey Product Serialization in Kazakhstan | IS Tanba',
-        'End-to-end Data Matrix product serialization in Kazakhstan. Direct IS MPT / IS Tanba connectivity, NKT catalog setup, sticker printing, and warehouse stickering.',
-        { lang: 'en', keywords: 'TANBOX, product serialization Kazakhstan, turnkey marking, Data Matrix codes, IS Tanba, IS MPT, digital labeling Kazakhstan' }
-      );
-    } else {
-      setPageSeo(
-        'TANBOX — Маркировка товаров в Казахстане под ключ | ИС Танба',
-        'Профессиональная цифровая маркировка товаров Data Matrix под ключ в Республике Казахстан. Эмиссия кодов в ИС Танба, заведение номенклатуры в НКТ (GS1 Казахстан), термопечать стикеров, выездная оклейка на складе и агрегация SSCC по РК.',
-        { lang: 'ru', keywords: 'TANBOX, танбокс, tanbox.kz, маркировка товаров в казахстане под ключ, маркировка товаров Казахстан, Data Matrix коды, ИС Танба, ИС МПТ, оклейка товара Алматы, НКТ GS1 Казахстан' }
-      );
-    }
-  }, [lang]);
-
   const scrollToCalculator = () => {
     const el = document.getElementById('calculator');
     if (el) {
@@ -53,7 +30,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) 
   const scrollToBusinessValue = () => {
     const el = document.getElementById('business-value');
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      if (window.innerWidth < 768) {
+        const headerHeight = document.querySelector('header')?.getBoundingClientRect().height ?? 0;
+        window.scrollTo({
+          top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - headerHeight - 12),
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        });
+      } else {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   };
 
@@ -68,17 +53,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onOpenAuth, onOrderQuick }) 
       />
 
       {/* 2. Business Value, Risks & TANBOX Capabilities */}
-      <BusinessValueSection
-        onScrollToCalculator={scrollToCalculator}
-      />
+      <BusinessValueSection />
 
-      {/* 3. Regulated Categories */}
-      <CategoriesSection />
-
-      {/* 4. Calculator */}
+      {/* 3. Calculator */}
       <CalculatorSection
         onOrderQuick={onOrderQuick}
       />
+
+      {/* 4. Regulated Categories */}
+      <CategoriesSection />
 
       {/* 5. How It Works (4 Steps) */}
       <HowItWorksSection />

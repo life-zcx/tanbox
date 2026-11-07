@@ -1,3 +1,4 @@
+import { getArticleRevision } from './articleRevisions';
 import { ArticleData } from './articlesData';
 
 export type ArticleLocalization = Partial<ArticleData>;
@@ -2091,19 +2092,17 @@ At retail gas exchange stations, returned empty cylinders are scanned and assign
 };
 
 export function getLocalizedArticle(article: ArticleData, lang: string): ArticleData {
-  if (lang === 'ru') return article;
   const loc = ARTICLES_LOCALIZATION[lang as 'kz' | 'en']?.[article.id] || ARTICLES_LOCALIZATION[lang as 'kz' | 'en']?.[article.slug];
-  if (!loc) return article;
   return {
     ...article,
     ...loc,
-    tableOfContents: loc.tableOfContents || article.tableOfContents,
-    contentSections: loc.contentSections || article.contentSections,
-    faq: loc.faq || article.faq,
+    tableOfContents: loc?.tableOfContents || article.tableOfContents,
+    contentSections: loc?.contentSections || article.contentSections,
+    faq: loc?.faq || article.faq,
+    ...getArticleRevision(article.slug, lang === 'kz' || lang === 'en' ? lang : 'ru'),
   };
 }
 
 export function getLocalizedArticles(articles: ArticleData[], lang: string): ArticleData[] {
-  if (lang === 'ru') return articles;
   return articles.map((a) => getLocalizedArticle(a, lang));
 }

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { ResponsiveBanner } from '../components/common/ResponsiveBanner';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Truck, 
@@ -11,11 +12,11 @@ import {
   ArrowRight, 
   ShieldCheck, 
   PhoneCall,
-  Calculator 
+  Calculator,
+  ChevronDown
 } from 'lucide-react';
 const ServiceOrderModal = React.lazy(() => import('../components/modals/ServiceOrderModal').then(module => ({ default: module.ServiceOrderModal })));
-import { setPageSeo } from '../utils/seo';
-import { apiClient } from '../api/client';
+import { usePublicPricing } from '../context/PublicPricingContext';
 
 export interface ServiceItem {
   id: string;
@@ -32,48 +33,9 @@ import { useLanguage } from '../context/LanguageContext';
 export const ServicesPage: React.FC = () => {
   const { lang } = useLanguage();
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (lang === 'kz') {
-      setPageSeo(
-        'Қазақстанда тауарларды таңбалау қызметтері: ҰТК карточкалары, Оқыту, Аутсорсинг | TANBOX.KZ',
-        'ҚР бойынша кешенді қызметтер: Data Matrix басу 18 ₸ бастап, қоймада оклейка 48 ₸ бастап, СВХ (ИМ-70) 75 ₸ бастап, ҰТК карточкаларын енгізу 150 ₸ бастап, қызметкерлерді оқыту 85 000 ₸, аутсорсинг 85 990 ₸ бастап.',
-        { lang: 'kz', keywords: 'таңбалау қызметтері Қазақстан, ҰТК карточкалары, ИС Танба оқыту, таңбалау аутсорсингі, кедендік қойма таңбалау, Data Matrix басу' }
-      );
-    } else if (lang === 'en') {
-      setPageSeo(
-        'Turnkey Product Serialization & Marking Services in Kazakhstan — NKT Cards, Training, Outsourcing | TANBOX.KZ',
-        'Full B2B serialization services: Data Matrix printing from 18 ₸, warehouse stickering from 48 ₸, bonded warehouse (IM-70) from 75 ₸, NKT catalog registration from 150 ₸, IS Tanba staff training from 85,000 ₸, turnkey outsourcing from 85,990 ₸.',
-        { lang: 'en', keywords: 'serialization services Kazakhstan, NKT catalog registration, IS Tanba training, turnkey marking outsourcing' }
-      );
-    } else {
-      setPageSeo(
-        'Услуги маркировки товаров под ключ в Казахстане: НКТ, Data Matrix, Обучение, Аутсорсинг | TANBOX.KZ',
-        'Комплексные услуги: эмиссия Data Matrix от 4 ₸, печать от 18 ₸, оклейка от 48 ₸, СВХ (ИМ-70) от 75 ₸, заведение карточек в НКТ от 150 ₸/SKU, обучение работе в ИС Танба от 85 000 ₸, аутсорсинг под ключ от 85 990 ₸.',
-        { lang: 'ru', keywords: 'услуги маркировки Казахстан, карточки НКТ, заведение номенклатуры, обучение ИС Танба, аутсорсинг маркировки под ключ, маркировка СВХ' }
-      );
-    }
-  }, [lang]);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedServiceTitle, setSelectedServiceTitle] = useState('');
-  const [dbTariffs, setDbTariffs] = useState<any[]>([]);
-  const [dbPricingSettings, setDbPricingSettings] = useState<any>(null);
-
-  useEffect(() => {
-    let active = true;
-    apiClient
-      .get('/tariffs')
-      .then((res) => {
-        if (!active) return;
-        if (res.data?.tariffs) setDbTariffs(res.data.tariffs);
-        if (res.data?.pricingSettings) setDbPricingSettings(res.data.pricingSettings);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { tariffs: dbTariffs, pricingSettings: dbPricingSettings } = usePublicPricing();
 
   const handleOpenModal = (title: string) => {
     setSelectedServiceTitle(title);
@@ -136,7 +98,7 @@ export const ServicesPage: React.FC = () => {
           id: 'outsourcing',
           title: 'Таңбалау процестерін кілтке дейін аутсорсингке алу',
           badge: 'B2B Аутсорсинг',
-          price: `${pOutsourcing.toLocaleString()} ₸ бастап`,
+          price: `${pOutsourcing.toLocaleString('ru-RU')} ₸ бастап`,
           desc: 'Таңбалау процестерін толық сенімді сыртқы басқаруға беру: номенклатура, кодтарға тапсырыс, есептер және 24/7 техникалық сүйемелдеу.',
           icon: ShieldCheck,
           features: [
@@ -178,7 +140,7 @@ export const ServicesPage: React.FC = () => {
           id: 'integration',
           title: 'Қызметкерлерді оқыту және «Таңба» АЖ / 1С интеграциясы',
           badge: 'АТ, Оқыту және Аудит',
-          price: `${pTraining.toLocaleString()} ₸ бастап`,
+          price: `${pTraining.toLocaleString('ru-RU')} ₸ бастап`,
           desc: 'Қоймашылар мен операторларды оқыту, есеп жүйеңізде толық прослеживаемостьты баптау және мемлекеттік тексерулерге дайындық.',
           icon: Cpu,
           features: [
@@ -239,7 +201,7 @@ export const ServicesPage: React.FC = () => {
           id: 'outsourcing',
           title: 'Turnkey Marking & Serialization Outsourcing',
           badge: 'B2B Outsourcing',
-          price: `from ${pOutsourcing.toLocaleString()} ₸`,
+          price: `from ${pOutsourcing.toLocaleString('ru-RU')} ₸`,
           desc: 'Complete delegation of track & trace compliance: catalog registrations, code issuance, reports, and 24/7 technical oversight.',
           icon: ShieldCheck,
           features: [
@@ -281,7 +243,7 @@ export const ServicesPage: React.FC = () => {
           id: 'integration',
           title: 'Staff Training & 1C / ERP IS Tanba Integration',
           badge: 'IT, Training & Audit',
-          price: `from ${pTraining.toLocaleString()} ₸`,
+          price: `from ${pTraining.toLocaleString('ru-RU')} ₸`,
           desc: 'Hands-on staff training for warehouse operators, configuring ERP data exchange, and regulatory audit compliance.',
           icon: Cpu,
           features: [
@@ -341,7 +303,7 @@ export const ServicesPage: React.FC = () => {
         id: 'outsourcing',
         title: 'Комплексный аутсорсинг процессов маркировки под ключ',
         badge: 'B2B Аутсорсинг',
-        price: `от ${pOutsourcing.toLocaleString()} ₸`,
+        price: `от ${pOutsourcing.toLocaleString('ru-RU')} ₸`,
         desc: 'Полная передача рутины по маркировке на внешнее управление: карточки, заказ кодов, ввод в оборот, отчетность и техподдержка 24/7.',
         icon: ShieldCheck,
         features: [
@@ -383,7 +345,7 @@ export const ServicesPage: React.FC = () => {
         id: 'integration',
         title: 'Обучение сотрудников и интеграция ИС Танба с 1С',
         badge: 'Обучение, ИТ и Аудит',
-        price: `от ${pTraining.toLocaleString()} ₸`,
+        price: `от ${pTraining.toLocaleString('ru-RU')} ₸`,
         desc: 'Практическое обучение персонала, настройка обмена данными в 1С / ERP и подготовка к проверкам государственных органов.',
         icon: Cpu,
         features: [
@@ -397,7 +359,7 @@ export const ServicesPage: React.FC = () => {
   }, [lang, dbTariffs, dbPricingSettings]);
 
   return (
-    <div className="bg-[#F4F6F9] min-h-screen pb-20 space-y-6 sm:space-y-12">
+    <div className="bg-[#F4F6F9] min-h-screen pb-8 sm:pb-20 space-y-6 sm:space-y-12">
       
       {/* Header Banner */}
       <section className="relative py-4 sm:py-8 lg:py-9 bg-white border-b border-gray-200/80 overflow-hidden">
@@ -425,11 +387,10 @@ export const ServicesPage: React.FC = () => {
           </div>
 
           <div className="hidden md:flex shrink-0 items-center justify-end">
-            <img
+            <ResponsiveBanner
               src="/banners/services.svg"
-              alt="Услуги маркировки Танбокс"
+              alt={lang === 'kz' ? 'TANBOX таңбалау қызметтері' : lang === 'en' ? 'TANBOX marking services' : 'Услуги маркировки TANBOX'}
               className="w-40 sm:w-52 md:w-60 lg:w-72 h-auto max-h-36 sm:max-h-44 md:max-h-52 lg:max-h-56 object-contain select-none pointer-events-none drop-shadow-sm transition-transform duration-300 hover:scale-105"
-              loading="eager"
             />
           </div>
         </div>
@@ -437,27 +398,38 @@ export const ServicesPage: React.FC = () => {
 
       {/* Services Grid */}
       <section className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {services.map((srv) => {
             return (
               <div
                 key={srv.id}
-                onClick={() => handleOpenModal(srv.title)}
-                className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-6 group relative overflow-hidden cursor-pointer"
+                className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between space-y-3 sm:space-y-6 group relative overflow-hidden"
               >
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {/* Title & Desc */}
                   <div>
-                    <h3 className="text-xl font-bold text-[#111827] leading-snug group-hover:text-[#0082FB] transition-colors">
+                    <h2 className="text-base sm:text-xl font-bold text-[#111827] leading-snug">
                       {srv.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed mt-2 font-normal">
+                    </h2>
+                    <p className="hidden sm:block text-xs sm:text-sm text-[#64748B] leading-relaxed mt-2 font-normal">
                       {srv.desc}
                     </p>
                   </div>
 
                   {/* Feature Checklist */}
-                  <div className="pt-2 space-y-2 border-t border-gray-100">
+                  <details className="sm:hidden group/service border-t border-gray-100">
+                    <summary className="flex min-h-11 list-none items-center justify-between gap-3 py-2 text-xs font-semibold text-slate-600 cursor-pointer [&::-webkit-details-marker]:hidden">
+                      {lang === 'kz' ? 'Қызметке не кіреді' : lang === 'en' ? "What's included" : 'Что входит в услугу'}
+                      <ChevronDown className="h-4 w-4 shrink-0 group-open/service:rotate-180" aria-hidden="true" />
+                    </summary>
+                    <div className="space-y-3 pb-2">
+                      <p className="text-xs leading-relaxed text-slate-500">{srv.desc}</p>
+                      <ul className="space-y-2">
+                        {srv.features.map(feature => <li key={feature} className="flex items-start gap-2 text-xs leading-relaxed text-slate-700"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0082FB]" aria-hidden="true" /><span>{feature}</span></li>)}
+                      </ul>
+                    </div>
+                  </details>
+                  <div className="hidden sm:block pt-2 space-y-2 border-t border-gray-100">
                     {srv.features.map((feat, fIdx) => (
                       <div key={fIdx} className="flex items-start gap-2.5 text-xs text-[#111827] font-medium">
                         <CheckCircle2 className="w-4 h-4 text-[#0082FB] shrink-0 mt-0.5" />
@@ -469,11 +441,11 @@ export const ServicesPage: React.FC = () => {
                 </div>
 
                 {/* Action Link / Button */}
-                <div className="pt-4 border-t border-gray-100">
+                <div className="pt-2 sm:pt-4 border-t border-gray-100">
                   <button
                     type="button"
                     onClick={() => handleOpenModal(srv.title)}
-                    className="inline-flex items-center gap-2 text-xs font-extrabold text-[#0082FB] hover:text-[#0070DA] transition-colors cursor-pointer"
+                    className="inline-flex min-h-9 sm:min-h-0 items-center gap-2 text-xs font-extrabold text-[#0082FB] hover:text-[#0070DA] transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0082FB]"
                   >
                     {lang === 'kz' ? 'Қызметке тапсырыс беру' : lang === 'en' ? 'Order service' : 'Заказать услугу'} <ArrowRight className="w-3.5 h-3.5" />
                   </button>
@@ -487,28 +459,30 @@ export const ServicesPage: React.FC = () => {
 
       {/* Bottom CTA Banner */}
       <section className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-[#0F172A] text-white rounded-3xl p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl">
-          <div className="space-y-2 max-w-2xl text-center md:text-left">
-            <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              {lang === 'kz'
+        <div className="bg-[#0F172A] text-white rounded-2xl sm:rounded-3xl p-5 sm:p-12 flex flex-col md:flex-row items-start sm:items-center justify-between gap-4 sm:gap-8 sm:shadow-xl">
+          <div className="space-y-1.5 sm:space-y-2 max-w-2xl text-left sm:text-center md:text-left">
+            <h3 className="text-base sm:text-2xl font-bold text-white tracking-tight">
+              <span className="sm:hidden">{lang === 'kz' ? 'Жеке есептеу қажет пе?' : lang === 'en' ? 'Need a custom quote?' : 'Нужен индивидуальный расчёт?'}</span>
+              <span className="hidden sm:inline">{lang === 'kz'
                 ? 'Таңбалау немесе ҰТК карточкаларын енгізу бойынша жеке есептеу қажет пе?'
                 : lang === 'en'
                 ? 'Need a custom quote for batch serialization or NKT catalog registration?'
-                : 'Нужен индивидуальный расчет маркировки партии или заведения карточек в НКТ?'}
+                : 'Нужен индивидуальный расчет маркировки партии или заведения карточек в НКТ?'}</span>
             </h3>
-            <p className="text-sm text-slate-300">
-              {lang === 'kz'
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <span className="sm:hidden">{lang === 'kz' ? '15 минутта коммерциялық ұсыныс дайындаймыз.' : lang === 'en' ? 'Get a commercial offer in 15 minutes.' : 'Подготовим коммерческое предложение за 15 минут.'}</span>
+              <span className="hidden sm:inline">{lang === 'kz'
                 ? 'Біздің мамандармен хабарласыңыз. Номенклатураңызға тегін аудит жүргізіп, 15 минутта коммерциялық ұсыныс дайындаймыз.'
                 : lang === 'en'
                 ? 'Contact our specialists. We will conduct a free SKU audit and deliver a customized commercial offer in 15 minutes.'
-                : 'Свяжитесь с нашими специалистами. Проведем бесплатный аудит вашей номенклатуры и подготовим коммерческое предложение за 15 минут.'}
+                : 'Свяжитесь с нашими специалистами. Проведем бесплатный аудит вашей номенклатуры и подготовим коммерческое предложение за 15 минут.'}</span>
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => handleOpenModal(lang === 'kz' ? 'Кешенді аудит / Басқа сұрақ' : lang === 'en' ? 'Turnkey Audit / Inquiries' : 'Другой вопрос / Комплексный аудит')}
-            className="inline-flex items-center gap-2 bg-[#0082FB] text-white font-extrabold text-sm px-8 py-4 rounded-2xl hover:bg-[#0070DA] transition-all shrink-0 active:scale-95 shadow-md cursor-pointer"
+            className="inline-flex min-h-11 items-center gap-2 bg-[#0082FB] text-white font-bold sm:font-extrabold text-xs sm:text-sm px-4 sm:px-8 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl hover:bg-[#0070DA] transition-all shrink-0 active:scale-95 sm:shadow-md cursor-pointer"
           >
             <PhoneCall className="w-4 h-4" />
             {lang === 'kz' ? 'Кеңес алу' : lang === 'en' ? 'Get Consultation' : 'Получить консультацию'}

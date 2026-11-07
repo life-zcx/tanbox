@@ -63,21 +63,21 @@ export const CookieBanner: React.FC = () => {
             {lang === 'kz' ? (
               <>
                 Біз сервистің жұмысын қамтамасыз ету және талдау үшін «Ақпараттандыру туралы» ҚР Заңы мен № 94-V ҚР Заңына сәйкес cookie файлдарын қолданамыз.{' '}
-                <Link to={getLocalizedPath('/cookies')} className="text-[#006ED3] font-semibold underline underline-offset-2">
+                <Link to={getLocalizedPath('/cookie-policy')} className="text-[#006ED3] font-semibold underline underline-offset-2">
                   Толығырақ
                 </Link>
               </>
             ) : lang === 'en' ? (
               <>
                 We use cookies in accordance with the RK Law "On Informatization" and Law No. 94-V to ensure service operation and analytics.{' '}
-                <Link to={getLocalizedPath('/cookies')} className="text-[#006ED3] font-semibold underline underline-offset-2">
+                <Link to={getLocalizedPath('/cookie-policy')} className="text-[#006ED3] font-semibold underline underline-offset-2">
                   Learn more
                 </Link>
               </>
             ) : (
               <>
                 Мы используем файлы cookie в соответствии с Законом РК «Об информатизации» и Законом РК № 94-V для обеспечения работы сервиса и аналитики.{' '}
-                <Link to={getLocalizedPath('/cookies')} className="text-[#006ED3] font-semibold underline underline-offset-2">
+                <Link to={getLocalizedPath('/cookie-policy')} className="text-[#006ED3] font-semibold underline underline-offset-2">
                   Подробнее
                 </Link>
               </>
@@ -110,7 +110,7 @@ export const CookieBanner: React.FC = () => {
                 : lang === 'en'
                 ? 'We use cookies under RK law.'
                 : 'Используем cookie по законам РК.'}{' '}
-              <Link to={getLocalizedPath('/cookies')} className="text-[#006ED3] font-semibold underline">
+              <Link to={getLocalizedPath('/cookie-policy')} className="text-[#006ED3] font-semibold underline">
                 {lang === 'kz' ? 'Мәлімет' : lang === 'en' ? 'More' : 'Инфо'}
               </Link>
             </p>

@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import { formatEstimate } from '../../utils/formatEstimate';
+import React, { useId, useMemo, useState, useEffect } from 'react';
 import { useCalculator } from '../../hooks/useCalculator';
 import { TariffCode } from '../../types';
 import { Clock,
@@ -46,6 +47,9 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
   const [isTariffModalOpen, setIsTariffModalOpen] = useState(false);
   const [tariffHelpTab, setTariffHelpTab] = useState<'batch' | 'outsourcing' | 'cards' | 'training'>('batch');
   const [inputValue, setInputValue] = useState<string>(itemsCount > 0 ? itemsCount.toLocaleString('ru-RU') : '');
+  const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false);
+  const [mobileCodeInfoOpen, setMobileCodeInfoOpen] = useState(false);
+  const mobileControlsId = useId();
 
   // Outsourcing tab state
   const [outsourcingPlan, setOutsourcingPlan] = useState<'tier1' | 'tier2' | 'tier3' | 'tier4' | 'onetime'>('tier2');
@@ -97,7 +101,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
           code: 'DIGITAL' as TariffCode,
           name: 'Сандық',
           desc: 'Тек Data Matrix кодтарының эмиссиясы',
-          priceFrom: getTariffPriceFrom('DIGITAL', 5),
+          priceFrom: getTariffPriceFrom('DIGITAL', 4),
           includes: [
             '«Таңба» АЖ-де кодтардың эмиссиясы',
             'Дайын макеттерді жүктеу (PDF / Excel)',
@@ -312,7 +316,30 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
         )}
 
         {/* Top Segmented Tabs Switcher (Clean, calm enterprise style) */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 mb-6">
+        <div className="sm:hidden pb-5">
+          <p id={`${mobileControlsId}-service-label`} className="mb-3 text-xs font-semibold text-slate-600">
+            {lang === 'kz' ? 'Қызмет' : lang === 'en' ? 'Service' : 'Услуга'}
+          </p>
+          <div role="group" aria-labelledby={`${mobileControlsId}-service-label`} className="grid grid-cols-2 gap-2">
+            {([
+              { id: 'batch', label: lang === 'kz' ? 'Топтаманы таңбалау' : lang === 'en' ? 'Batch marking' : 'Партия под ключ' },
+              { id: 'outsourcing', label: lang === 'kz' ? 'Аутсорсинг' : lang === 'en' ? 'Outsourcing' : 'Аутсорсинг' },
+              { id: 'cards', label: lang === 'kz' ? 'Тауар карточкалары' : lang === 'en' ? 'Product cards' : 'Карточки товаров' },
+              { id: 'training', label: lang === 'kz' ? 'Оқыту' : lang === 'en' ? 'Training' : 'Обучение' },
+            ] as const).map(service => (
+              <button
+                key={service.id}
+                type="button"
+                aria-pressed={activeTab === service.id}
+                onClick={() => setActiveTab(service.id)}
+                className={`flex min-h-12 items-center justify-center rounded-xl border px-3 py-3 text-center text-xs font-bold leading-snug transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0082FB] ${activeTab === service.id ? 'border-[#111827] bg-[#111827] text-white' : 'border-gray-200 bg-white text-slate-600 hover:bg-gray-50'}`}
+              >
+                {service.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="hidden sm:flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 mb-6">
           <button
             type="button"
             onClick={() => setActiveTab('batch')}
@@ -364,7 +391,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
 
         {/* TAB 1: BATCH MARKING (EXISTING FULL CALCULATOR) */}
         {activeTab === 'batch' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-8 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-4 sm:p-8 shadow-sm border border-gray-200/80 space-y-5 sm:space-y-8 animate-in fade-in duration-200">
             {/* 1. Tariff Selection */}
             <div className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -392,7 +419,38 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              <div className="sm:hidden space-y-3">
+                <div role="group" aria-label={lang === 'kz' ? 'Тариф' : lang === 'en' ? 'Tariff' : 'Тариф'} className="space-y-2">
+                  {tariffsList.map(t => (
+                    <button
+                      key={t.code}
+                      type="button"
+                      aria-pressed={tariffType === t.code}
+                      onClick={() => setTariffType(t.code)}
+                      className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0082FB] ${tariffType === t.code ? 'border-[#0082FB] bg-blue-50/50' : 'border-gray-200 bg-white'}`}
+                    >
+                      <span className="flex items-center gap-2 text-sm font-bold text-[#111827]">
+                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${tariffType === t.code ? 'border-[#0082FB] bg-[#0082FB]' : 'border-gray-300'}`} aria-hidden="true">
+                          {tariffType === t.code && <Check className="h-3 w-3 text-white" />}
+                        </span>
+                        {t.name}
+                      </span>
+                      <span className="shrink-0 text-xs font-bold text-[#0082FB]">{t.priceFrom}</span>
+                    </button>
+                  ))}
+                </div>
+                <details key={tariffType} className="group rounded-xl bg-slate-50 px-3">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-2 text-xs font-semibold text-slate-600 [&::-webkit-details-marker]:hidden">
+                    {lang === 'kz' ? `${selectedTariff.name}: не кіреді` : lang === 'en' ? `What's included in ${selectedTariff.name}` : `Что входит в «${selectedTariff.name}»`}
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+                  </summary>
+                  <ul className="space-y-2 pb-3 text-xs leading-relaxed text-slate-600">
+                    {selectedTariff.includes.map(item => <li key={item} className="flex items-start gap-2"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0082FB]" aria-hidden="true" /><span>{item}</span></li>)}
+                  </ul>
+                </details>
+              </div>
+
+              <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                 {tariffsList.map((t) => {
                   const isSelected = tariffType === t.code;
                   return (
@@ -408,9 +466,9 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       <div className="space-y-3">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <h3 className="font-extrabold text-[#111827] text-base leading-snug">
+                            <h2 className="font-extrabold text-[#111827] text-base leading-snug">
                               {t.name}
-                            </h3>
+                            </h2>
                             <p className="text-xs text-[#64748B] mt-0.5">{t.desc}</p>
                           </div>
                           <div
@@ -444,7 +502,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
             </div>
 
             {/* 2. Volume Selection */}
-            <div className="space-y-4">
+            <div className="space-y-2 sm:space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <label
                   htmlFor="calculator-quantity"
@@ -452,7 +510,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                 >
                   {lang === 'kz' ? '2. Тауар санын енгізіңіз' : lang === 'en' ? '2. Specify Quantity' : '2. Укажите количество товара'}
                 </label>
-                <span className="text-xs text-[#64748B]">
+                <span className="hidden sm:inline text-xs text-[#64748B]">
                   {lang === 'kz' ? 'Бірлігі: дана / код' : lang === 'en' ? 'Units: pcs / codes' : 'Единица: штук / кодов'}
                 </span>
               </div>
@@ -477,20 +535,25 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                         setItemsCount(parsed);
                       }}
                       placeholder="0"
-                      className="w-full bg-[#F4F6F9] border border-gray-200 focus:border-[#0082FB] focus:bg-white rounded-2xl px-5 py-3.5 text-xl font-extrabold text-[#111827] outline-none transition-all placeholder:text-gray-400"
+                      className="w-full bg-[#F4F6F9] border border-gray-200 focus:border-[#0082FB] focus:bg-white rounded-xl sm:rounded-2xl pl-3 pr-24 sm:px-5 py-2.5 sm:py-3.5 text-base sm:text-xl font-extrabold text-[#111827] outline-none transition-all placeholder:text-gray-400"
                     />
-                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#64748B] pointer-events-none uppercase">
+                    <span className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#64748B] pointer-events-none uppercase">
                       {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'}
                     </span>
+                    {itemsCount > 0 && (
+                      <button type="button" onClick={() => setItemsCount(0)} aria-label={lang === 'kz' ? 'Санын тазалау' : lang === 'en' ? 'Clear quantity' : 'Сбросить количество'} className="sm:hidden absolute right-12 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 hover:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0082FB]">
+                        <X className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    )}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  <div className="grid grid-cols-6 sm:flex sm:flex-wrap items-center gap-1 sm:gap-2">
                     {presets.map((preset) => (
                       <button
                         key={preset}
                         type="button"
                         onClick={() => setItemsCount(preset)}
-                        className={`px-3.5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        className={`min-h-9 px-1 sm:px-3.5 py-2 sm:py-3 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer shrink-0 ${
                           itemsCount === preset
                             ? 'bg-[#111827] text-white shadow-xs'
                             : 'bg-[#F4F6F9] text-[#475569] hover:bg-gray-200/80 hover:text-[#111827]'
@@ -503,7 +566,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       <button
                         type="button"
                         onClick={() => setItemsCount(0)}
-                        className="px-3 py-3 rounded-xl text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer flex items-center gap-1"
+                        className="px-3 py-3 rounded-xl text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer hidden sm:flex items-center gap-1"
                       >
                         <X className="w-3.5 h-3.5" />
                         <span>{lang === 'kz' ? 'Тазалау' : lang === 'en' ? 'Clear' : 'Сброс'}</span>
@@ -545,11 +608,18 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
 
             {/* 3. Additional Options */}
             <div className="space-y-4">
-              <label className="text-xs font-bold text-[#111827] uppercase tracking-wider block">
+              <span className="text-xs font-bold text-[#111827] uppercase tracking-wider hidden sm:block">
                 {lang === 'kz' ? '3. Қосымша опциялар' : lang === 'en' ? '3. Optional Services' : '3. Дополнительные опции'}
-              </label>
+              </span>
+              <button type="button" aria-expanded={mobileOptionsOpen} aria-controls={`${mobileControlsId}-options`} onClick={() => setMobileOptionsOpen(open => !open)} className="sm:hidden flex min-h-12 w-full items-center justify-between gap-2 rounded-xl border border-gray-200 px-3 py-3 text-left text-xs font-bold text-[#111827] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0082FB]">
+                <span>{lang === 'kz' ? 'Қосымша опциялар' : lang === 'en' ? 'Additional options' : 'Дополнительные опции'}</span>
+                <span className="flex items-center gap-2">
+                  {(extraServices.length + (ssccNeeded && tariffType !== 'PRO' ? 1 : 0)) > 0 && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[#0082FB]">{extraServices.length + (ssccNeeded && tariffType !== 'PRO' ? 1 : 0)}</span>}
+                  <ChevronDown className={`h-4 w-4 transition-transform ${mobileOptionsOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                </span>
+              </button>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div id={`${mobileControlsId}-options`} className={`${mobileOptionsOpen ? 'grid' : 'hidden'} sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3`}>
                 {/* SSCC */}
                 <div
                   onClick={() => {
@@ -634,7 +704,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       {lang === 'kz' ? 'Дизайнерлік макет әзірлеу' : lang === 'en' ? 'Designer Layout Creation' : 'Разработка дизайнером'}
                     </h4>
                     <p className="text-[11px] text-[#64748B] mt-0.5">
-                      +{(dbPricingSettings?.stickerLayoutPrice ?? 5000).toLocaleString()} ₸
+                      +{(dbPricingSettings?.stickerLayoutPrice ?? 5000).toLocaleString('ru-RU')} ₸
                     </p>
                   </div>
                 </div>
@@ -660,7 +730,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       {lang === 'kz' ? 'ҚР бойынша жедел жеткізу' : lang === 'en' ? 'Express Delivery' : 'Курьерская доставка по РК'}
                     </h4>
                     <p className="text-[11px] text-[#64748B] mt-0.5">
-                      +{(dbPricingSettings?.expressDeliveryPrice ?? 15000).toLocaleString()} ₸
+                      +{(dbPricingSettings?.expressDeliveryPrice ?? 15000).toLocaleString('ru-RU')} ₸
                     </p>
                   </div>
                 </div>
@@ -689,26 +759,35 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       +{dbPricingSettings?.urgentPercent ?? 25}% к маркировке
                     </p>
                     <span className="text-[10px] text-amber-700 font-semibold block mt-0.5">
-                      (по согласованию с менеджером)
+                      {lang === 'kz' ? '(менеджермен келісу бойынша)' : lang === 'en' ? '(subject to confirmation)' : '(по согласованию с менеджером)'}
                     </span>
                   </div>
                 </div>
               </div>
 
+              <p className="text-xs text-slate-600">{lang === 'kz' ? 'Әр сатының ставкасы сол сатыдағы дана санына ғана қолданылады. Төменгі ставка бүкіл партияның орташа бағасы емес.' : lang === 'en' ? 'Each tier rate applies only to units in that tier. The lowest tier rate is not the average price of the whole batch.' : 'Ставка каждой ступени применяется только к единицам внутри неё. Нижняя ставка не равна средней цене всей партии.'}</p>
+
               {/* Official State Codes Information Card */}
-              <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-blue-100 flex items-start gap-3.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#0082FB] flex items-center justify-center shrink-0 border border-blue-200/60 mt-0.5">
+              <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-[#F8FAFC] border border-blue-100 flex items-start gap-3.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#0082FB] hidden sm:flex items-center justify-center shrink-0 border border-blue-200/60 mt-0.5">
                   <HelpCircle className="w-4 h-4" />
                 </div>
                 <div className="space-y-1 text-xs">
-                  <h4 className="font-bold text-[#111827]">
+                  <h4 className="hidden sm:block font-bold text-[#111827]">
                     {lang === 'kz'
                       ? '«Танба» АЖ Data Matrix кодтарын төлеу'
                       : lang === 'en'
                       ? 'Official Data Matrix Code Payment'
                       : 'Оплата кодов Data Matrix в ИС «Танба»'}
                   </h4>
-                  <p className="text-[#475569] leading-relaxed">
+                  <p className="sm:hidden text-[#475569] leading-relaxed">
+                    {lang === 'kz' ? 'Оператор кодтары бөлек төленеді.' : lang === 'en' ? 'Operator codes are paid separately.' : 'Коды оператора оплачиваются отдельно.'}
+                  </p>
+                  <button type="button" aria-expanded={mobileCodeInfoOpen} aria-controls={`${mobileControlsId}-codes`} onClick={() => setMobileCodeInfoOpen(open => !open)} className="sm:hidden inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-[#0070DA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0082FB]">
+                    {mobileCodeInfoOpen ? (lang === 'kz' ? 'Жасыру' : lang === 'en' ? 'Show less' : 'Скрыть') : (lang === 'kz' ? 'Толығырақ' : lang === 'en' ? 'Learn more' : 'Подробнее')}
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${mobileCodeInfoOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                  </button>
+                  <p id={`${mobileControlsId}-codes`} className={`${mobileCodeInfoOpen ? 'block' : 'hidden'} sm:block text-[#475569] leading-relaxed`}>
                     {lang === 'kz'
                       ? 'Таңбалау кодтары тапсырыс берушімен тікелей Бірыңғай операторға («Қазақтелеком» АҚ / «Танба» АЖ) компанияңыздың дербес шотынан мемлекеттік тарифтер бойынша төленеді. TANBOX кодтар үшін комиссия алмайды — калькуляторда тек біздің қызметтеріміздің құны есептеледі (эмиссия, басу, оклейка, агрегация).'
                       : lang === 'en'
@@ -720,20 +799,23 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
             </div>
 
             {/* 4. Results Bar */}
-            <div className="pt-6 border-t border-gray-200/80 flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
-              <div className="space-y-2 min-w-0">
-                <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider block">
+            <div className="pt-4 sm:pt-6 border-t border-gray-200/80 flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-6">
+              <div className="space-y-1 sm:space-y-2 min-w-0">
+                <span className="sm:hidden block text-xs font-semibold text-[#64748B]">
+                  {lang === 'kz' ? 'Барлығы' : lang === 'en' ? 'Total' : 'Итого'}
+                </span>
+                <span className="hidden sm:block text-xs font-bold text-[#64748B] uppercase tracking-wider">
                   {lang === 'kz' ? 'Жалпы есептік құны' : lang === 'en' ? 'Total Estimated Price' : 'Итоговая расчетная стоимость'}
                 </span>
                 
                 {/* Price and average rate */}
                 <div className="flex items-baseline gap-3 flex-wrap">
-                  <span className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight whitespace-nowrap">
+                  <span className="text-2xl sm:text-4xl font-black text-[#111827] tracking-tight whitespace-nowrap">
                     {result.totalPrice > 0 ? `${result.totalPrice.toLocaleString('ru-RU')} ₸` : '0 ₸'}
                   </span>
                   {result.itemsCount > 0 && (
                     <span className="text-xs sm:text-sm font-semibold text-[#0082FB] whitespace-nowrap">
-                      ≈ {result.unitPrice} ₸ / {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'} (средняя цена)
+                      ≈ {result.unitPrice} ₸ / {lang === 'kz' ? 'дана' : lang === 'en' ? 'pcs' : 'шт.'} ({lang === 'kz' ? 'орташа баға' : lang === 'en' ? 'average price' : 'средняя цена'})
                     </span>
                   )}
                 </div>
@@ -748,7 +830,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                       <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <span>
                         {lang === 'kz' ? 'Болжамды мерзімі:' : lang === 'en' ? 'Estimated turnaround:' : 'Примерный срок:'}{' '}
-                        <strong className="text-emerald-900">{result.estimatedTimeText || `~${result.estimatedDays} ${result.estimatedDays === 1 ? 'день' : 'дня'}`}</strong>
+                        <strong className="text-emerald-900">{formatEstimate(result, lang)}</strong>
                       </span>
                     </span>
                     <span className="text-[11px] text-[#64748B]">
@@ -762,8 +844,8 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                 )}
               </div>
 
-              {/* Action buttons: Stack vertically on mobile, side-by-side on sm+ */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full lg:w-auto shrink-0">
+              {/* Action buttons */}
+              <div className="grid grid-cols-2 sm:flex sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full lg:w-auto shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -778,21 +860,22 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                     }
                     onOrderQuick(tariffType, itemsCount, result.totalPrice);
                   }}
-                  className="w-full sm:w-auto h-12 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm px-6 sm:px-7 rounded-xl transition-all shadow-md shadow-[#0082FB]/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
+                  className="w-full sm:w-auto h-11 sm:h-12 bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-xs sm:text-sm px-2 sm:px-7 rounded-xl transition-all sm:shadow-md sm:shadow-[#0082FB]/20 active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap shrink-0"
                 >
-                  <span>{lang === 'kz' ? 'Тапсырыс беру' : lang === 'en' ? 'Order Batch' : 'Оформить партию'}</span>
-                  <ArrowRight className="w-4 h-4 shrink-0" />
+                  <span className="sm:hidden">{lang === 'kz' ? 'Тапсырыс' : lang === 'en' ? 'Order' : 'Оформить'}</span>
+                  <span className="hidden sm:inline">{lang === 'kz' ? 'Тапсырыс беру' : lang === 'en' ? 'Order Batch' : 'Оформить партию'}</span>
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 </button>
 
                 <a
                   href={`https://wa.me/77003048532?text=${encodeURIComponent(
-                    `Здравствуйте! Хочу заказать маркировку партии в TANBOX:\nТариф: ${selectedTariff.name}\nКоличество: ${itemsCount.toLocaleString()} шт.\n${
+                    `Здравствуйте! Хочу заказать маркировку партии в TANBOX:\nТариф: ${selectedTariff.name}\nКоличество: ${itemsCount.toLocaleString('ru-RU')} шт.\n${
                       ssccNeeded && tariffType !== 'PRO' ? `Агрегация: ${boxesCount || Math.ceil(itemsCount / 20)} кор.\n` : ''
-                    }Примерный срок: ${result.estimatedTimeText || `~${result.estimatedDays} дн.`}\nРасчетная стоимость: ${result.totalPrice.toLocaleString()} ₸`
+                    }Примерный срок: ${result.estimatedTimeText || `~${result.estimatedDays} дн.`}\nРасчетная стоимость: ${result.totalPrice.toLocaleString('ru-RU')} ₸`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full sm:w-auto h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-5 sm:px-6 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap shrink-0"
+                  className="w-full sm:w-auto h-11 sm:h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-2 sm:px-6 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer sm:shadow-sm whitespace-nowrap shrink-0"
                 >
                   <MessageCircle className="w-4 h-4 shrink-0" />
                   <span>WhatsApp</span>
@@ -861,7 +944,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-base sm:text-lg font-black text-[#111827]">
-                    от {outsourcingOneTime.toLocaleString()} ₸
+                    от {outsourcingOneTime.toLocaleString('ru-RU')} ₸
                   </span>
                   <span className="text-xs text-gray-400 font-medium block">За заявку</span>
                 </div>
@@ -909,7 +992,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                     </div>
                     <div className="text-right shrink-0">
                       <span className="text-base sm:text-lg font-black text-[#111827]">
-                        {tier.price.toLocaleString()} ₸
+                        {tier.price.toLocaleString('ru-RU')} ₸
                       </span>
                       <span className="text-xs text-gray-400 font-medium block">В месяц</span>
                     </div>
@@ -926,7 +1009,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
               <div>
                 <span className="text-xs text-gray-400 font-bold uppercase block">Выбранный тариф:</span>
                 <span className="text-2xl sm:text-3xl font-black text-[#111827]">
-                  {currentOutsourcingPrice.toLocaleString()} ₸
+                  {currentOutsourcingPrice.toLocaleString('ru-RU')} ₸
                   <span className="text-xs text-gray-500 font-normal ml-1.5">
                     {outsourcingPlan === 'onetime' ? '/ за заявку' : '/ в месяц'}
                   </span>
@@ -940,7 +1023,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                     openLeadModal(
                       `Аутсорсинг маркировки (${
                         outsourcingPlan === 'onetime' ? 'По заявке' : `План ${outsourcingPlan.toUpperCase()}`
-                      }, ${currentOutsourcingPrice.toLocaleString()} ₸)`
+                      }, ${currentOutsourcingPrice.toLocaleString('ru-RU')} ₸)`
                     )
                   }
                   className="flex-1 sm:flex-none bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 px-7 rounded-xl transition-all shadow-md shadow-[#0082FB]/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
@@ -953,7 +1036,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   href={`https://wa.me/77003048532?text=${encodeURIComponent(
                     `Здравствуйте! Интересует аутсорсинг маркировки TANBOX (${
                       outsourcingPlan === 'onetime' ? 'По заявке' : `План ${outsourcingPlan.toUpperCase()}`
-                    }, ${currentOutsourcingPrice.toLocaleString()} ₸). Подскажите подробнее.`
+                    }, ${currentOutsourcingPrice.toLocaleString('ru-RU')} ₸). Подскажите подробнее.`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1169,7 +1252,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                     openLeadModal(
                       `Операции с карточками (${skuCount} SKU, ${
                         skuType === 'nkt' ? 'НКТ' : skuType === 'mpt' ? 'ИС МПТ' : 'GS1 + ИС МПТ + НКТ'
-                      }, ${currentCardsTotal.toLocaleString()} ₸)`
+                      }, ${currentCardsTotal.toLocaleString('ru-RU')} ₸)`
                     )
                   }
                   className="flex-1 sm:flex-none bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 px-7 rounded-xl transition-all shadow-md shadow-[#0082FB]/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
@@ -1182,7 +1265,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   href={`https://wa.me/77003048532?text=${encodeURIComponent(
                     `Здравствуйте! Нужны карточки товаров (${skuCount} SKU, ${
                       skuType === 'nkt' ? 'НКТ' : skuType === 'mpt' ? 'ИС МПТ' : 'GS1 + ИС МПТ + НКТ'
-                    }, сумма: ${currentCardsTotal.toLocaleString()} ₸). Подскажите, пожалуйста, по срокам.`
+                    }, сумма: ${currentCardsTotal.toLocaleString('ru-RU')} ₸). Подскажите, пожалуйста, по срокам.`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1262,7 +1345,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                 </div>
                 <div>
                   <span className="text-2xl sm:text-3xl font-black text-[#111827]">
-                    {trainingCoursePrice.toLocaleString()} ₸
+                    {trainingCoursePrice.toLocaleString('ru-RU')} ₸
                   </span>
                   <p className="text-xs text-gray-500 font-medium mt-1">
                     Разовая стоимость за полный курс
@@ -1276,7 +1359,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
               <div>
                 <span className="text-xs text-gray-400 font-bold uppercase block">Итого за курс:</span>
                 <span className="text-2xl sm:text-3xl font-black text-[#111827]">
-                  {trainingCoursePrice.toLocaleString()} ₸
+                  {trainingCoursePrice.toLocaleString('ru-RU')} ₸
                 </span>
               </div>
 
@@ -1285,7 +1368,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
                   type="button"
                   onClick={() =>
                     openLeadModal(
-                      `Обучение обязательной маркировке (${trainingCoursePrice.toLocaleString()} ₸, 3 онлайн-занятия)`
+                      `Обучение обязательной маркировке (${trainingCoursePrice.toLocaleString('ru-RU')} ₸, 3 онлайн-занятия)`
                     )
                   }
                   className="flex-1 sm:flex-none bg-[#0082FB] hover:bg-[#0070DA] text-white font-extrabold text-sm py-3.5 px-7 rounded-xl transition-all shadow-md shadow-[#0082FB]/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
@@ -1296,7 +1379,7 @@ export const CalculatorSection: React.FC<CalculatorSectionProps> = ({
 
                 <a
                   href={`https://wa.me/77003048532?text=${encodeURIComponent(
-                    `Здравствуйте! Интересует обучение обязательной маркировке в TANBOX (${trainingCoursePrice.toLocaleString()} ₸, 3 онлайн-занятия). Подскажите дату ближайшей группы.`
+                    `Здравствуйте! Интересует обучение обязательной маркировке в TANBOX (${trainingCoursePrice.toLocaleString('ru-RU')} ₸, 3 онлайн-занятия). Подскажите дату ближайшей группы.`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"

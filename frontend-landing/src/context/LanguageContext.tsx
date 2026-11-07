@@ -86,8 +86,8 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Categories
     'cat.badge': 'РЕГЛАМЕНТИРОВАННЫЕ ОТРАСЛИ',
-    'cat.title': 'Категории товаров обязательной маркировки в РК',
-    'cat.subtitle': 'В Казахстане перечень товаров, подлежащих обязательной цифровой идентификации Data Matrix, расширяется государством:',
+    'cat.title': 'Категории товаров и требования к маркировке в РК',
+    'cat.subtitle': 'Категории, с которыми работает TANBOX: обязательные требования, экспортные этикетки и подготовка к новым правилам.',
     'cat.btn_more': 'Подробнее',
 
     // How it works
@@ -184,7 +184,7 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Categories
     'cat.badge': 'МІНДЕТТІ САЛАЛАР',
-    'cat.title': 'Қазақстанда міндетті таңбаланатын тауар санаттары',
+    'cat.title': 'Тауар санаттары және таңбалау талаптары',
     'cat.subtitle': 'Қазақстанда Data Matrix сандық сәйкестендіруіне жататын тауарлар тізімі мемлекет тарапынан кеңейтілуде:',
     'cat.btn_more': 'Толығырақ',
 
@@ -282,7 +282,7 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Categories
     'cat.badge': 'REGULATED INDUSTRIES',
-    'cat.title': 'Mandatory Product Categories in Kazakhstan',
+    'cat.title': 'Product Categories and Marking Requirements in Kazakhstan',
     'cat.subtitle': 'The list of regulated consumer goods requiring Data Matrix identification is actively enforced by Kazakhstan law:',
     'cat.btn_more': 'Learn More',
 
@@ -320,17 +320,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return 'ru';
   }, []);
 
-  const [lang, setLangState] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
-      const fromPath = getLangFromPath(window.location.pathname);
-      if (fromPath !== 'ru') return fromPath;
-    }
-    const saved = localStorage.getItem('tanbox_lang') as Language;
-    if (saved && ['kz', 'ru', 'en'].includes(saved)) {
-      return saved;
-    }
-    return 'ru';
-  });
+  // The URL, including an unprefixed RU URL, is authoritative on both server
+  // and browser. A saved language must never change a page during hydration.
+  const [lang, setLangState] = useState<Language>(() => getLangFromPath(location.pathname));
 
   // Sync language when React Router location.pathname changes (e.g. back/forward or direct link)
   useEffect(() => {

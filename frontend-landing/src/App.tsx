@@ -7,10 +7,13 @@ import { Footer } from './components/common/Footer';
 import { CookieBanner } from './components/common/CookieBanner';
 import { ScrollToTopButton } from './components/common/ScrollToTopButton';
 import { WhatsAppWidget } from './components/common/WhatsAppWidget';
-import { HomePage } from './pages/HomePage';
+import { PageSeo } from './components/common/PageSeo';
+import { PublicPricingProvider } from './context/PublicPricingContext';
+import type { PublicPricing } from './data/publicPricing';
 import { TariffCode } from './types';
 
-// Code-split secondary pages so initial bundle only loads HomePage
+// Keep home-only animation code out of commercial and editorial routes.
+const HomePage = React.lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
 const CalculatorPage = React.lazy(() => import('./pages/CalculatorPage').then(m => ({ default: m.CalculatorPage })));
 const ServicesPage = React.lazy(() => import('./pages/ServicesPage').then(m => ({ default: m.ServicesPage })));
 const CategoriesPage = React.lazy(() => import('./pages/CategoriesPage').then(m => ({ default: m.CategoriesPage })));
@@ -99,7 +102,7 @@ const AppContent: React.FC = () => {
 
   const renderRoutes = (prefix = '') => (
     <>
-      <Route
+      <Route caseSensitive
         path={prefix ? prefix : '/'}
         element={
           <HomePage
@@ -108,29 +111,29 @@ const AppContent: React.FC = () => {
           />
         }
       />
-      <Route
+      <Route caseSensitive
         path={`${prefix}${LANDING_PATHS.calculator}`}
         element={<CalculatorPage onOrderQuick={handleOpenQuickOrder} />}
       />
-      <Route path={`${prefix}${LANDING_PATHS.categories}`} element={<CategoriesPage />} />
-      <Route
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.categories}`} element={<CategoriesPage />} />
+      <Route caseSensitive
         path={`${prefix}${LANDING_PATHS.category}`}
         element={<CategoryDetailPage onOrderQuick={handleOpenQuickOrder} />}
       />
-      <Route path={`${prefix}${LANDING_PATHS.services}`} element={<ServicesPage />} />
-      <Route path={`${prefix}${LANDING_PATHS.tariffs}`} element={<ServicesPage />} />
-      <Route path={`${prefix}${LANDING_PATHS.articles}`} element={<ArticlesPage />} />
-      <Route path={`${prefix}${LANDING_PATHS.article}`} element={<ArticleDetailPage />} />
-      <Route path={`${prefix}${LANDING_PATHS.blog}`} element={<ArticlesPage />} />
-      <Route path={`${prefix}${LANDING_PATHS.blogArticle}`} element={<ArticleDetailPage />} />
-      <Route path={`${prefix}${LANDING_PATHS.contacts}`} element={<ContactsPage />} />
-      <Route path={`${prefix}${LANDING_PATHS.privacy}`} element={<PrivacyPolicyPage />} />
-      <Route path={`${prefix}${LANDING_PATHS.terms}`} element={<TermsPage />} />
-      <Route path={`${prefix}${LANDING_PATHS.paymentProcedure}`} element={<PaymentProcedurePage />} />
-      <Route path={`${prefix}${LANDING_PATHS.payments}`} element={<PaymentProcedurePage />} />
-      <Route path={`${prefix}${LANDING_PATHS.payment}`} element={<PaymentProcedurePage />} />
-      <Route path={`${prefix}${LANDING_PATHS.cookies}`} element={<CookiePolicyPage />} />
-      <Route path={`${prefix}${LANDING_PATHS.cookiePolicy}`} element={<CookiePolicyPage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.services}`} element={<ServicesPage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.tariffs}`} element={<ServicesPage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.articles}`} element={<ArticlesPage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.article}`} element={<ArticleDetailPage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.blog}`} element={<ArticlesPage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.blogArticle}`} element={<ArticleDetailPage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.contacts}`} element={<ContactsPage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.privacy}`} element={<PrivacyPolicyPage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.terms}`} element={<TermsPage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.paymentProcedure}`} element={<PaymentProcedurePage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.payments}`} element={<PaymentProcedurePage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.payment}`} element={<PaymentProcedurePage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.cookies}`} element={<CookiePolicyPage />} />
+      <Route caseSensitive path={`${prefix}${LANDING_PATHS.cookiePolicy}`} element={<CookiePolicyPage />} />
     </>
   );
 
@@ -151,7 +154,7 @@ const AppContent: React.FC = () => {
             {renderRoutes('/en')}
 
             {/* 404 Catch-All */}
-            <Route path="*" element={<NotFoundPage />} />
+            <Route caseSensitive path="*" element={<NotFoundPage />} />
           </Routes>
         </React.Suspense>
       </main>
@@ -164,13 +167,20 @@ const AppContent: React.FC = () => {
   );
 };
 
+export const LandingApplication: React.FC<{ initialPricing?: PublicPricing }> = ({ initialPricing }) => (
+  <PublicPricingProvider initialValue={initialPricing}>
+    <LanguageProvider>
+      <ScrollToTop />
+      <PageSeo />
+      <AppContent />
+    </LanguageProvider>
+  </PublicPricingProvider>
+);
+
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <LanguageProvider>
-        <ScrollToTop />
-        <AppContent />
-      </LanguageProvider>
+      <LandingApplication />
     </BrowserRouter>
   );
 };

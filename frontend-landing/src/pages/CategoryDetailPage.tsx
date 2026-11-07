@@ -1,7 +1,10 @@
+import { NotFoundPage } from './NotFoundPage';
+import { RegulatorySources } from '../components/common/RegulatorySources';
+import { ResponsiveBanner } from '../components/common/ResponsiveBanner';
+import { getCategoryTimelineSource } from '../data/regulatoryRequirements';
 import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CATEGORIES_DATA, getLocalizedCategory } from '../data/categoriesData';
-import { setPageSeo } from '../utils/seo';
 import { useLanguage } from '../context/LanguageContext';
 import { 
   Cigarette, 
@@ -28,9 +31,12 @@ import {
   FileCheck2,
   Tag,
   ShieldCheck,
+  ChevronDown,
   MessageCircle
 } from 'lucide-react';
-import { ARTICLES_DATA } from '../data/articlesData';
+import { getArticleBySlug } from '../data/articlesData';
+import { relatedArticleSlug } from '../data/contentLinks';
+import { CommercialLinks } from '../components/common/CommercialLinks';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Cigarette,
@@ -58,49 +64,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
   const rawCategory = CATEGORIES_DATA.find((c) => c.id === categoryId);
   const category = rawCategory ? getLocalizedCategory(rawCategory, lang) : undefined;
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (category) {
-      if (lang === 'kz') {
-        setPageSeo(
-          `Қазақстанда ${category.shortTitle} таңбалау | Data Matrix ТМБ АЖ — TANBOX.KZ`,
-          `Қазақстан Республикасында ${category.shortTitle} тауарларын міндетті цифрлық таңбалау: ТМБ АЖ-де Data Matrix кодтарын эмиссиялау, ҰТК (GS1), жапсырмаларды басып шығару және қоймада жапсыру. ТН ВЭД: ${category.tnved}`,
-          { lang: 'kz', keywords: `${category.shortTitle} таңбалау, Data Matrix Қазақстан, ТМБ АЖ ${category.shortTitle}` }
-        );
-      } else if (lang === 'en') {
-        setPageSeo(
-          `${category.shortTitle} Serialization & Marking in Kazakhstan | TANBOX.KZ`,
-          `Mandatory Data Matrix serialization for ${category.shortTitle} in Kazakhstan. IS Tanba code generation, NKT registry, industrial label printing, and stickering. HS Code: ${category.tnved}`,
-          { lang: 'en', keywords: `${category.shortTitle} marking Kazakhstan, serialization ${category.shortTitle}` }
-        );
-      } else {
-        setPageSeo(
-          `Маркировка: ${category.title} в Казахстане | TANBOX.KZ`,
-          `${category.shortDesc}. Заказ кодов Data Matrix в ИС Танба, заведение в НКТ, термопечать этикеток и складская оклейка по Республике Казахстан. ТН ВЭД: ${category.tnved}`,
-          { lang: 'ru', keywords: `маркировка ${category.shortTitle} Казахстан, Data Matrix ${category.shortTitle}, ТН ВЭД ${category.tnved}` }
-        );
-      }
-    }
-  }, [categoryId, category, lang]);
-
-  if (!category) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4 px-6 text-center">
-        <h2 className="text-3xl font-extrabold text-[#111827]">
-          {lang === 'kz' ? 'Санат табылмады' : lang === 'en' ? 'Category Not Found' : 'Категория не найдена'}
-        </h2>
-        <p className="text-[#64748B]">
-          {lang === 'kz' ? 'Сұралған тауар санаты жоқ немесе жылжытылған.' : lang === 'en' ? 'The requested category does not exist.' : 'Запрошенная категория товаров не существует или была перемещена.'}
-        </p>
-        <Link
-          to={getLocalizedPath('/categories')}
-          className="inline-flex items-center gap-2 bg-[#0082FB] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#0070DA] transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" /> {lang === 'kz' ? 'Санаттар каталогына оралу' : lang === 'en' ? 'Back to categories' : 'Вернуться в каталог категорий'}
-        </Link>
-      </div>
-    );
-  }
+  if (!category) return <NotFoundPage />;
 
   const isActive = category.status === 'ACTIVE';
   const IconComponent = (category.iconName && ICON_MAP[category.iconName]) || Tag;
@@ -117,12 +81,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
   const waUrl = `https://wa.me/77003048532?text=${encodeURIComponent(waMessage)}`;
 
   // Find related article in Knowledge Base
-  const relatedArticle = ARTICLES_DATA.find((a) => {
-    if (a.targetCategoryCode === category.id) return true;
-    if (category.id === 'oils' && a.targetCategoryCode === 'oil') return true;
-    if (category.id === 'medicine' && a.targetCategoryCode === 'pharma') return true;
-    return false;
-  }) || ARTICLES_DATA.find((a) => a.slug === 'shtrafy-za-otsutstvie-markirovki-kazakhstan-2026');
+  const relatedArticle = getArticleBySlug(relatedArticleSlug(category.id), lang);
 
   // Parse TNVED codes into readable array
   const tnvedList = category.tnved
@@ -155,45 +114,34 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
           {/* Canonical H1 Heading for SEO & Screen Readers */}
           <h1 className="sr-only">{category.title}</h1>
 
-          {/* Desktop Banner */}
           {category.bannerUrl && (
             <div className="hidden md:block relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-gray-200/80 bg-white">
-              <img
-                src={category.bannerUrl}
-                alt={category.title}
-                className="w-full h-auto object-cover block"
-                loading="eager"
-              />
+              <ResponsiveBanner src={category.bannerUrl} alt={category.title} width={1600} height={520} eager
+                className="w-full h-auto object-cover block" />
             </div>
           )}
 
           {/* Mobile View (sm and below): Clean, Minimalist, Premium Typography */}
           <div className="md:hidden bg-white p-5 rounded-2xl shadow-xs border border-slate-200/80 space-y-3">
             {/* Minimal Status line */}
-            <div className="flex items-center gap-2 text-xs font-semibold text-[#64748B]">
-              <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-[#64748B]">
+              <span className={`w-2 h-2 shrink-0 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
               <span className="text-[#0F172A] font-bold">
-                {isActive
-                  ? (lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory' : 'Обязательная маркировка')
-                  : (lang === 'kz' ? 'Енгізілуде' : lang === 'en' ? 'Upcoming' : 'Внедрение')}
+                {category.statusText}
               </span>
               <span className="text-slate-300">•</span>
               <span>{category.dateFull}</span>
             </div>
 
             {/* Clear, bold heading title */}
-            <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] leading-tight tracking-tight pt-0.5">
-              {category.title}
-            </h2>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] leading-tight tracking-tight pt-0.5">{category.title}</h2>
 
             {/* Human description (fullDesc or clean summary) */}
-            <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
-              {category.fullDesc || category.shortDesc}
-            </p>
+            <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">{category.fullDesc || category.shortDesc}</p>
 
             {/* Clean, quiet metadata line */}
             <div className="pt-0.5 text-xs text-[#64748B]">
-              <span>ТН ВЭД: <strong className="text-[#0F172A] font-mono font-bold">{category.tnved}</strong></span>
+              <span>ТН ВЭД: <strong className="text-[#0F172A] font-mono font-bold break-words">{category.tnved}</strong></span>
             </div>
 
             {/* Mobile Action Buttons */}
@@ -225,9 +173,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
               <div className="flex items-center gap-2">
                 <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${isActive ? 'bg-emerald-500' : 'bg-[#0082FB]'}`} />
                 <span className="font-bold text-[#0F172A]">
-                  {isActive
-                    ? (lang === 'kz' ? 'Міндетті таңбалау' : lang === 'en' ? 'Mandatory Serialization' : 'Обязательная маркировка')
-                    : (lang === 'kz' ? 'Енгізілуде' : lang === 'en' ? 'Upcoming' : 'Внедрение')}
+                  {category.statusText}
                 </span>
               </div>
 
@@ -280,26 +226,28 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
       {/* 3. Implementation Schedule & Stages (Full Width Process Stepper) */}
       {category.stages && category.stages.length > 0 && (
         <section className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-2">
-          <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs space-y-5">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-7 border border-slate-200/80 shadow-xs space-y-4 sm:space-y-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
                 <h2 className="text-lg sm:text-xl font-extrabold text-[#0F172A] tracking-tight">
                   {lang === 'kz' ? 'Таңбалауды енгізу кезеңдері' : lang === 'en' ? 'Serialization Rollout Stages' : 'Этапы введения маркировки'}
                 </h2>
                 <p className="text-xs text-[#64748B] mt-0.5">
-                  {lang === 'kz' ? 'ҚР СИМ және ҚР ҚМ ресми нормативтік кестесі' : lang === 'en' ? 'Official regulatory roadmap of Kazakhstan' : 'Официальный утверждённый график регулятора (МТИ и МФ РК)'}
+                  {getCategoryTimelineSource(category.id) ? <a href={getCategoryTimelineSource(category.id)} target="_blank" rel="noopener noreferrer" className="underline hover:text-[#0082FB]">
+                    {lang === 'kz' ? 'Кезеңдер дереккөзі: TAÑBA' : lang === 'en' ? 'Timeline source: TAÑBA' : 'Источник этапов: TAÑBA'}
+                  </a> : (lang === 'kz' ? 'Таңбалауды енгізу кезеңдері' : lang === 'en' ? 'Marking rollout timeline' : 'Календарь введения маркировки')}
                 </p>
               </div>
-              <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-200">
+              <span className="hidden sm:inline text-xs font-semibold text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-200">
                 {category.stages.length} {lang === 'kz' ? 'кезең' : lang === 'en' ? 'stages' : 'этапов'}
               </span>
             </div>
 
-            {/* Horizontal Stepper (Full Width on Desktop, Swipeable on Mobile) */}
-            <div className="overflow-x-auto pb-2 -mx-5 px-5 sm:mx-0 sm:px-0 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-              <div className="min-w-[680px] lg:min-w-0 w-full">
+            {/* Vertical timeline on mobile; multi-column schedule on larger screens. */}
+            <div data-category-timeline>
+              <div className="min-w-0 w-full">
                 <div
-                  className={`grid grid-flow-col lg:grid-flow-row ${
+                  className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-flow-row ${
                     category.stages.length <= 3
                       ? 'lg:grid-cols-3'
                       : category.stages.length === 4
@@ -312,20 +260,20 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
                   } gap-3 sm:gap-4 relative`}
                 >
                   {category.stages.map((stg, idx) => (
-                    <div key={idx} className="flex flex-col relative group">
+                    <div key={idx} className="min-w-0 flex flex-row sm:flex-col gap-3 sm:gap-0 relative group">
                       {/* Step Marker & Connecting Track Line */}
-                      <div className="flex items-center gap-2 mb-3 relative">
-                        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-slate-200" />
+                      <div className="flex items-start sm:items-center gap-2 mt-1 sm:mt-0 sm:mb-3 relative">
+                        <div className="hidden sm:block absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-slate-200" />
                         <div className="w-3.5 h-3.5 rounded-full border-2 border-[#0082FB] bg-white relative z-10 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-125 group-hover:bg-[#0082FB] transition-all">
                           <div className="w-1.5 h-1.5 rounded-full bg-[#0082FB] group-hover:bg-white transition-colors" />
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider relative z-10 bg-white px-1">
+                        <span className="sr-only sm:not-sr-only text-[10px] font-bold text-slate-400 uppercase tracking-wider relative z-10 bg-white sm:px-1">
                           {lang === 'kz' ? `${idx + 1}-кезең` : lang === 'en' ? `Stage ${idx + 1}` : `Этап ${idx + 1}`}
                         </span>
                       </div>
 
                       {/* Clean Stage Card */}
-                      <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 sm:p-5 flex-1 flex flex-col justify-start hover:bg-white hover:border-[#0082FB]/50 hover:shadow-xs transition-all">
+                      <div className="min-w-0 pb-4 border-b border-slate-100 sm:bg-slate-50/70 sm:border sm:border-slate-200/80 sm:rounded-2xl sm:p-5 flex-1 flex flex-col justify-start sm:hover:bg-white sm:hover:border-[#0082FB]/50 transition-colors">
                         <div className="space-y-1.5">
                           <div className="text-sm sm:text-base font-extrabold text-[#0F172A] tracking-tight">
                             {stg.date}
@@ -345,7 +293,18 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
       )}
 
       {/* 4. Turnkey Services (Full Width 4-Step Process) */}
-      <section className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-2 space-y-6">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+        <div className="hidden md:block"><CommercialLinks /></div>
+        <details className="sm:hidden group rounded-xl border border-slate-200 bg-white p-3">
+          <summary className="flex min-h-6 list-none items-center justify-between gap-2 text-xs font-semibold text-slate-600 cursor-pointer [&::-webkit-details-marker]:hidden">
+            {lang === 'kz' ? 'Ресми дереккөздер' : lang === 'en' ? 'Official sources' : 'Официальные источники'}
+            <ChevronDown className="h-4 w-4 shrink-0 group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="pt-3"><RegulatorySources categoryId={category.id} /></div>
+        </details>
+        <div className="hidden sm:block"><RegulatorySources categoryId={category.id} /></div>
+      </div>
+      {(category.status === 'ACTIVE' || category.status === 'UPCOMING') && (<section className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-2 space-y-6">
         <div className="space-y-4">
           <div>
             <h2 className="text-lg sm:text-2xl font-bold text-[#111827] tracking-tight">
@@ -407,7 +366,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
               return (
                 <div
                   key={idx}
-                  className="bg-white rounded-2xl p-5 border border-slate-200/80 space-y-2.5 hover:shadow-sm hover:border-[#0082FB]/30 transition-all shadow-2xs flex flex-col justify-between"
+                  className="sm:bg-white sm:rounded-2xl py-3 sm:p-5 border-b sm:border border-slate-200/80 space-y-2.5 sm:hover:shadow-sm sm:hover:border-[#0082FB]/30 transition-all sm:shadow-2xs flex flex-col justify-between"
                 >
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
@@ -467,7 +426,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
             </a>
           </div>
         </div>
-      </section>
+      </section>)}
 
       {/* 5. Expanded Full-Width Details: Requirements, FAQ & Regulatory Article */}
       <section className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
@@ -492,7 +451,7 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
           </div>
           <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3.5 pt-1">
             {category.keyFeatures.map((feat, idx) => (
-              <li key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-[#1E293B] font-medium leading-relaxed bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+              <li key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-[#1E293B] font-medium leading-relaxed sm:bg-slate-50/70 py-1 sm:p-3.5 sm:rounded-xl sm:border sm:border-slate-100">
                 <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#0082FB] shrink-0 mt-0.5" />
                 <span>{feat}</span>
               </li>
@@ -507,12 +466,20 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
               <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6 text-[#0082FB]" />
               {lang === 'kz' ? 'Жиі қойылатын сұрақтар' : lang === 'en' ? 'Frequently Asked Questions' : 'Часто задаваемые вопросы'}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0 sm:gap-4">
               {category.faq.map((f, idx) => (
-                <div key={idx} className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-slate-200/70 space-y-2 shadow-2xs">
+                <React.Fragment key={idx}>
+                <details className="sm:hidden group border-b border-slate-200">
+                  <summary className="flex min-h-12 list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-[#111827] cursor-pointer [&::-webkit-details-marker]:hidden">
+                    <span>{f.q}</span><ChevronDown className="h-4 w-4 shrink-0 text-slate-500 group-open:rotate-180" aria-hidden="true" />
+                  </summary>
+                  <p className="pb-4 text-sm leading-relaxed text-slate-600">{f.a}</p>
+                </details>
+                <div className="hidden sm:block bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-slate-200/70 space-y-2 shadow-2xs">
                   <h3 className="text-sm font-bold text-[#111827]">{f.q}</h3>
                   <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed">{f.a}</p>
                 </div>
+                </React.Fragment>
               ))}
             </div>
           </div>
@@ -540,7 +507,8 @@ export const CategoryDetailPage: React.FC<CategoryDetailPageProps> = () => {
                   to={getLocalizedPath(`/articles/${relatedArticle.slug}`)}
                   className="hover:text-[#0082FB] transition-colors"
                 >
-                  {relatedArticle.title}
+                  <span className="sm:hidden">{relatedArticle.shortTitle}</span>
+                  <span className="hidden sm:inline">{relatedArticle.title}</span>
                 </Link>
               </h3>
 

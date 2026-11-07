@@ -1,5 +1,6 @@
 export const getLandingUrl = (path: string = ''): string => {
   const cleanPath = path ? (path.startsWith('/') ? path : `/${path}`) : '';
+  if (import.meta.env.PROD || typeof window === 'undefined') return `${(import.meta.env.VITE_LANDING_URL || 'https://tanbox.kz').replace(/\/$/, '')}${cleanPath}`;
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     if (hostname.endsWith('tanbox.kz')) {
@@ -16,6 +17,7 @@ export const getLandingUrl = (path: string = ''): string => {
 
 export const getLkUrl = (path: string = ''): string => {
   const cleanPath = path ? (path.startsWith('/') ? path : `/${path}`) : '';
+  if (import.meta.env.PROD || typeof window === 'undefined') return `${(import.meta.env.VITE_LK_URL || 'https://lk.tanbox.kz').replace(/\/$/, '')}${cleanPath}`;
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     if (hostname.endsWith('tanbox.kz')) {
@@ -32,6 +34,7 @@ export const getLkUrl = (path: string = ''): string => {
 
 export const getAdminUrl = (path: string = ''): string => {
   const cleanPath = path ? (path.startsWith('/') ? path : `/${path}`) : '';
+  if (import.meta.env.PROD || typeof window === 'undefined') return `${(import.meta.env.VITE_ADMIN_URL || 'https://admin.tanbox.kz').replace(/\/$/, '')}${cleanPath}`;
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     if (hostname.endsWith('tanbox.kz')) {

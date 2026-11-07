@@ -7,7 +7,7 @@ export interface CategoryData {
   id: string;
   title: string;
   shortTitle: string;
-  status: 'ACTIVE' | 'UPCOMING';
+  status: 'ACTIVE' | 'UPCOMING' | 'NOT_REQUIRED' | 'PILOT';
   statusText: string;
   dateBadge: string;
   dateFull: string;

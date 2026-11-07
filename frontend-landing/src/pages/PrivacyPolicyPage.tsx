@@ -2,32 +2,11 @@ import React, { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { COMPANY_CONTACTS, getLocalizedCompanyContacts } from '../data/companyContacts';
-import { setPageSeo } from '../utils/seo';
 import { useLanguage } from '../context/LanguageContext';
 
 export const PrivacyPolicyPage: React.FC = () => {
   const { lang, getLocalizedPath } = useLanguage();
   const localizedContacts = getLocalizedCompanyContacts(lang);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (lang === 'kz') {
-      setPageSeo(
-        'Құпиялылық және дербес деректерді өңдеу саясаты | TANBOX.KZ',
-        'ҚР № 94-V «Дербес деректер және оларды қорғау туралы» Заңына сәйкес TANBOX.KZ сервисінің құпиялылық саясаты.'
-      );
-    } else if (lang === 'en') {
-      setPageSeo(
-        'Privacy Policy & Personal Data Processing | TANBOX.KZ',
-        'Privacy and personal data protection policy of TANBOX.KZ in compliance with the Republic of Kazakhstan Law No. 94-V.'
-      );
-    } else {
-      setPageSeo(
-        'Политика конфиденциальности и обработки персональных данных | TANBOX.KZ',
-        'Политика конфиденциальности и защиты персональных данных пользователей сервиса TANBOX.KZ в соответствии с Законом Республики Казахстан № 94-V.'
-      );
-    }
-  }, [lang]);
 
   return (
     <div className="bg-[#f8fafc] min-h-screen py-8 sm:py-12 text-[#1e293b]">

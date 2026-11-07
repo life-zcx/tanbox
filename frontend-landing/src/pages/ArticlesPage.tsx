@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Search, 
@@ -8,14 +8,12 @@ import {
   FileText
 } from 'lucide-react';
 import { ARTICLES_DATA, ArticleData, getLocalizedArticles } from '../data/articlesData';
-import { setPageSeo } from '../utils/seo';
 import { useLanguage } from '../context/LanguageContext';
 
 const ServiceOrderModal = React.lazy(() => import('../components/modals/ServiceOrderModal').then(module => ({ default: module.ServiceOrderModal })));
 
 export const ArticlesPage: React.FC = () => {
   const { lang, getLocalizedPath } = useLanguage();
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedServiceTitle, setSelectedServiceTitle] = useState(
@@ -28,37 +26,6 @@ export const ArticlesPage: React.FC = () => {
     );
     setIsModalOpen(true);
   };
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (lang === 'kz') {
-      setPageSeo(
-        'Қазақстандағы тауарларды таңбалау бойынша білім базасы мен мақалалар | TANBOX.KZ',
-        'ТМБ АЖ, 2026 жылғы талаптар, айыппұлдар, ТН ВЭД кодтары және тауарларды таңбалау нұсқаулықтары бойынша сараптамалық мақалалар мен толық гидтер.',
-        { lang: 'kz', keywords: 'таңбалау мақалалар, тмб аж білім базасы, таңбалау айыппұлдар қазақстан' }
-      );
-    } else if (lang === 'en') {
-      setPageSeo(
-        'Product Serialization Knowledge Base & Guides Kazakhstan | TANBOX.KZ',
-        'Expert guides, regulatory updates for 2026, penalties, HS codes, and turnkey product marking instructions for businesses in Kazakhstan.',
-        { lang: 'en', keywords: 'serialization knowledge base Kazakhstan, IS Tanba guides, product marking penalties' }
-      );
-    } else {
-      setPageSeo(
-        'База знаний и статьи о цифровой маркировке товаров в Казахстане | TANBOX.KZ',
-        'Экспертные статьи, разбор законодательства РК, штрафы по КоАП, этапы маркировки масел, обуви и лекарств в 2026 году, инструкции по ИС Танба и НКТ.',
-        { lang: 'ru', keywords: 'статьи о маркировке казахстан, база знаний ис танба, штрафы за отсутствие маркировки рк, маркировка обуви масел лекарств руководство' }
-      );
-    }
-  }, [lang]);
-
-  const categories = [
-    { id: 'ALL', label: lang === 'kz' ? 'Барлық мақалалар' : lang === 'en' ? 'All articles' : 'Все материалы' },
-    { id: 'Законодательство', label: lang === 'kz' ? 'Заңнама және айыппұлдар' : lang === 'en' ? 'Regulations & Fines' : 'Законодательство и штрафы' },
-    { id: 'Тренды 2026', label: lang === 'kz' ? '2026 жылғы трендтер' : lang === 'en' ? '2026 Trends' : 'Тренды 2026 года' },
-    { id: 'Отрасли', label: lang === 'kz' ? 'Салалық нұсқаулықтар' : lang === 'en' ? 'Industry Guides' : 'Отраслевые гайды' },
-    { id: 'Практика', label: lang === 'kz' ? 'Тәжірибе және ТМБ АЖ' : lang === 'en' ? 'Practice & IS Tanba' : 'Практика и ИС Танба' },
-  ];
 
   const getCategoryLabel = (category: string) => {
     switch (category) {
@@ -83,14 +50,14 @@ export const ArticlesPage: React.FC = () => {
 
   const filteredArticles = useMemo(() => {
     const list = localizedArticles.filter((article) => {
-      const matchesCategory = selectedCategory === 'ALL' || article.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
         article.title.toLowerCase().includes(q) ||
+        article.shortTitle.toLowerCase().includes(q) ||
         article.summary.toLowerCase().includes(q) ||
         article.metaKeywords.toLowerCase().includes(q);
-      return matchesCategory && matchesSearch;
+      return matchesSearch;
     });
 
     return [...list].sort((a, b) => {
@@ -98,10 +65,10 @@ export const ArticlesPage: React.FC = () => {
       const dateB = b.publishedAt || b.date;
       return dateB.localeCompare(dateA);
     });
-  }, [localizedArticles, selectedCategory, searchQuery]);
+  }, [localizedArticles, searchQuery]);
 
   return (
-    <div className="bg-[#F8FAFC] min-h-screen pb-24">
+    <div className="bg-[#F8FAFC] min-h-screen pb-8 sm:pb-24">
       {/* Hero Header */}
       <section className="relative py-4 sm:py-8 lg:py-9 bg-white border-b border-gray-200/80 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(#0082FB_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.07] pointer-events-none" />
@@ -141,28 +108,8 @@ export const ArticlesPage: React.FC = () => {
       {/* Main Content Area */}
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-10 space-y-6 sm:space-y-8">
         
-        {/* Search bar + Category Filter Pills */}
+        {/* Article search */}
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-          {/* Category Filter Pills without scrollbar */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-1">
-            {categories.map((cat) => {
-              const isSelected = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`whitespace-nowrap px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#0082FB] text-white shadow-md shadow-[#0082FB]/25'
-                      : 'bg-white text-[#64748B] hover:text-[#111827] hover:bg-gray-50 border border-gray-200/80'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
-
           {/* Search bar */}
           <div className="relative w-full lg:w-80 shrink-0">
             <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -209,11 +156,10 @@ export const ArticlesPage: React.FC = () => {
             <button
               onClick={() => {
                 setSearchQuery('');
-                setSelectedCategory('ALL');
               }}
               className="inline-flex items-center gap-2 text-xs font-bold text-[#0082FB] hover:underline cursor-pointer"
             >
-              {lang === 'kz' ? 'Барлық мақалаларды көрсету' : lang === 'en' ? 'Reset filters' : 'Сбросить поиск и фильтры'}
+              {lang === 'kz' ? 'Барлық мақалаларды көрсету' : lang === 'en' ? 'Clear search' : 'Сбросить поиск'}
             </button>
           </div>
         ) : (
@@ -222,9 +168,9 @@ export const ArticlesPage: React.FC = () => {
               return (
                 <article
                   key={article.id}
-                  className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between group"
+                  className="bg-white rounded-3xl p-6 sm:p-7 shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100 grid grid-rows-[subgrid] row-span-4 gap-y-4 group"
                 >
-                  <div className="space-y-4">
+                  <div className="contents">
                     {/* Header info */}
                     <div className="flex items-center justify-between gap-2">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-[#EBF5FF] text-[#0082FB]">
@@ -238,19 +184,19 @@ export const ArticlesPage: React.FC = () => {
 
                     {/* Title */}
                     <h2 className="text-lg sm:text-xl font-extrabold text-[#111827] group-hover:text-[#0082FB] transition-colors leading-snug">
-                      <Link to={getLocalizedPath(`/articles/${article.slug}`)}>
-                        {article.title}
+                      <Link to={getLocalizedPath(`/articles/${article.slug}`)} title={article.title}>
+                        {article.shortTitle}
                       </Link>
                     </h2>
 
                     {/* Summary */}
-                    <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed line-clamp-3">
+                    <p className="text-sm text-[#64748B] leading-6 line-clamp-3 self-start">
                       {article.summary}
                     </p>
                   </div>
 
                   {/* Footer */}
-                  <div className="pt-6 mt-6 border-t border-gray-100 flex items-center justify-between">
+                  <div className="pt-4 mt-1 border-t border-gray-100 flex items-center justify-between gap-3">
                     <span className="text-[11px] font-semibold text-[#94A3B8]">
                       {article.date}
                     </span>
@@ -270,28 +216,30 @@ export const ArticlesPage: React.FC = () => {
         )}
 
         {/* Bottom CTA Banner */}
-        <div className="bg-[#0F172A] text-white rounded-3xl p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl mt-16">
-          <div className="space-y-2 max-w-2xl text-center md:text-left">
-            <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              {lang === 'kz'
+        <div className="bg-[#0F172A] text-white rounded-2xl sm:rounded-3xl p-5 sm:p-12 flex flex-col md:flex-row items-start sm:items-center justify-between gap-4 sm:gap-8 sm:shadow-xl mt-6 sm:mt-16">
+          <div className="space-y-1.5 sm:space-y-2 max-w-2xl text-left sm:text-center md:text-left">
+            <h3 className="text-base sm:text-2xl font-bold text-white tracking-tight">
+              <span className="sm:hidden">{lang === 'kz' ? 'Жеке есептеу қажет пе?' : lang === 'en' ? 'Need a custom quote?' : 'Нужен индивидуальный расчёт?'}</span>
+              <span className="hidden sm:inline">{lang === 'kz'
                 ? 'Таңбалау немесе ҰТК карточкаларын енгізу бойынша жеке есептеу қажет пе?'
                 : lang === 'en'
                 ? 'Need a custom quote for batch serialization or NKT catalog registration?'
-                : 'Нужен индивидуальный расчет маркировки партии или заведения карточек в НКТ?'}
+                : 'Нужен индивидуальный расчет маркировки партии или заведения карточек в НКТ?'}</span>
             </h3>
-            <p className="text-sm text-slate-300">
-              {lang === 'kz'
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <span className="sm:hidden">{lang === 'kz' ? '15 минутта коммерциялық ұсыныс дайындаймыз.' : lang === 'en' ? 'Get a commercial offer in 15 minutes.' : 'Подготовим коммерческое предложение за 15 минут.'}</span>
+              <span className="hidden sm:inline">{lang === 'kz'
                 ? 'Біздің мамандармен хабарласыңыз. Номенклатураңызға тегін аудит жүргізіп, 15 минутта коммерциялық ұсыныс дайындаймыз.'
                 : lang === 'en'
                 ? 'Contact our specialists. We will conduct a free SKU audit and deliver a customized commercial offer in 15 minutes.'
-                : 'Свяжитесь с нашими специалистами. Проведем бесплатный аудит вашей номенклатуры и подготовим коммерческое предложение за 15 минут.'}
+                : 'Свяжитесь с нашими специалистами. Проведем бесплатный аудит вашей номенклатуры и подготовим коммерческое предложение за 15 минут.'}</span>
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => handleOpenModal()}
-            className="inline-flex items-center gap-2 bg-[#0082FB] text-white font-extrabold text-sm px-8 py-4 rounded-2xl hover:bg-[#0070DA] transition-all shrink-0 active:scale-95 shadow-md cursor-pointer"
+            className="inline-flex min-h-11 items-center gap-2 bg-[#0082FB] text-white font-bold sm:font-extrabold text-xs sm:text-sm px-4 sm:px-8 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl hover:bg-[#0070DA] transition-all shrink-0 active:scale-95 sm:shadow-md cursor-pointer"
           >
             <PhoneCall className="w-4 h-4" />
             {lang === 'kz' ? 'Кеңес алу' : lang === 'en' ? 'Get Consultation' : 'Получить консультацию'}

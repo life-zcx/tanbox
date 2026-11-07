@@ -185,7 +185,7 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({ onScrollNe
   return (
     <section
       id="categories"
-      className="py-12 sm:py-16 bg-[#F4F6F9]"
+      className="py-12 sm:py-16 bg-white"
     >
       <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         

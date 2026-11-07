@@ -3,35 +3,11 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { ContactsSection } from '../components/landing/ContactsSection';
-import { setPageSeo } from '../utils/seo';
 import { trackGoogleConversion } from '../utils/analytics';
 import { useLanguage } from '../context/LanguageContext';
 
 export const ContactsPage: React.FC = () => {
   const { lang, getLocalizedPath } = useLanguage();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (lang === 'kz') {
-      setPageSeo(
-        'Цифрлық таңбалау бірыңғай сервисінің байланыс ақпараты | TANBOX.KZ',
-        'TANBOX.KZ байланыс мәліметтері. Жедел желі телефоны, онлайн-қызмет көрсету және Алматы мен Қазақстан бойынша көшпелі таңбалау бригадалары.',
-        { lang: 'kz', keywords: 'байланыс tanbox, таңбалау Алматы байланыс, кеңсе мекенжайы' }
-      );
-    } else if (lang === 'en') {
-      setPageSeo(
-        'Contact Digital Product Serialization Center | TANBOX.KZ',
-        'TANBOX.KZ contact information. Hotline telephone, online customer service, and onsite labeling teams in Almaty and throughout Kazakhstan.',
-        { lang: 'en', keywords: 'contact tanbox, product marking office Kazakhstan' }
-      );
-    } else {
-      setPageSeo(
-        'Контакты единого сервиса цифровой маркировки | TANBOX.KZ',
-        'Контакты TANBOX.KZ. Телефон горячей линии, онлайн-обслуживание и выездные бригады маркировки по Алматы и Казахстану.',
-        { lang: 'ru', keywords: 'контакты tanbox, маркировка контакты Алматы' }
-      );
-    }
-  }, [lang]);
   const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
