@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, ChevronDown } from 'lucide-react';
@@ -17,6 +17,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
   const [titleNumber, setTitleNumber] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
   const [loadVideo, setLoadVideo] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
@@ -28,6 +29,34 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
       clearTimeout(timer);
     };
   }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const hero = document.getElementById('hero');
+    if (!video || !hero) return;
+    let inView = hero.getBoundingClientRect().bottom > 0;
+    const syncPlayback = () => {
+      if (inView && !document.hidden) {
+        video.muted = true;
+        video.defaultMuted = true;
+        void video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      syncPlayback();
+    });
+    observer.observe(hero);
+    document.addEventListener('visibilitychange', syncPlayback);
+    syncPlayback();
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', syncPlayback);
+      video.pause();
+    };
+  }, [isDesktop, loadVideo]);
 
   const titles = useMemo(() => {
     if (lang === 'kz') {
@@ -62,22 +91,23 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenCalculator, onSc
       {/* Desktop video and mobile warehouse photo. */}
       <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
         <picture className="block w-full h-full">
-          <source media="(min-width: 768px)" srcSet="/hero-bg-poster.webp" type="image/webp" />
+          <source media="(min-width: 768px)" srcSet="/hero-desktop-v2-poster.webp" type="image/webp" />
           <img src="/hero-warehouse-mobile-v2.webp" alt="" width={640} height={1387}
             className="w-full h-full object-cover object-center" loading="eager" {...({ fetchpriority: 'high' } as Record<string, string>)} />
         </picture>
 
         {isDesktop && loadVideo && (
           <video
+            ref={videoRef}
             autoPlay
             loop
             muted
             playsInline
             preload="none"
+            poster="/hero-desktop-v2-poster.webp"
             className="hidden md:block absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-1000"
           >
-            <source src="/hero-bg.webm" type="video/webm" />
-            <source src="/hero-bg.mp4" type="video/mp4" />
+            <source src="/hero-desktop-v2.mp4" type="video/mp4" />
           </video>
         )}
 
